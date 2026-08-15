@@ -1,0 +1,178 @@
+/**
+ * Agro — animações e transições das telas de autenticação
+ * --------------------------------------------------------------------------
+ * Motion é aditivo ao pen.dev (que não define animações).
+ * Respeita prefers-reduced-motion em todos os efeitos.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Tokens de motion                                                           */
+/* -------------------------------------------------------------------------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 180ms;
+  --dur-med: 420ms;
+  --dur-slow: 700ms;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Entrada de página                                                          */
+/* -------------------------------------------------------------------------- */
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes auth-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes auth-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-pulse-soft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 106, 79, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(45, 106, 79, 0.12);
+  }
+}
+
+/* Painel de marca entra da esquerda */
+.auth-aside,
+.auth-aside--confirm {
+  animation: auth-slide-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* Formulário / card sobe suavemente */
+.auth-card,
+.center-stack,
+.verify-card--padded {
+  animation: auth-fade-up var(--dur-slow) var(--ease-out) both;
+  animation-delay: 80ms;
+}
+
+/* Brand central em telas centradas */
+.center-brand {
+  animation: auth-fade-in var(--dur-med) var(--ease-out) both;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feedback visual                                                            */
+/* -------------------------------------------------------------------------- */
+.form-message.is-visible {
+  animation: auth-pop var(--dur-med) var(--ease-out) both;
+}
+
+.form-message.error.is-visible,
+.auth-form.is-invalid {
+  animation: auth-shake 420ms var(--ease-soft);
+}
+
+.btn-primary:not(:disabled):hover {
+  box-shadow: 0 8px 20px rgba(45, 106, 79, 0.22);
+}
+
+.btn.is-loading {
+  animation: auth-pulse-soft 1.4s var(--ease-soft) infinite;
+}
+
+.verify-icon {
+  animation: auth-pop var(--dur-slow) var(--ease-out) both;
+  animation-delay: 160ms;
+}
+
+/* Links e botões outline: microinteração */
+.auth-link,
+.auth-footer a {
+  transition:
+    color var(--dur-fast) var(--ease-soft),
+    opacity var(--dur-fast) var(--ease-soft),
+    transform var(--dur-fast) var(--ease-soft);
+}
+
+.auth-link:hover {
+  transform: translateX(-1px);
+}
+
+/* CTAs de texto no rodapé não deslocam no hover */
+.auth-footer a:hover {
+  transform: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reduced motion                                                             */
+/* -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .auth-aside,
+  .auth-aside--confirm,
+  .auth-card,
+  .center-stack,
+  .center-brand,
+  .verify-card--padded,
+  .verify-icon,
+  .form-message.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
