@@ -9,3 +9,6 @@ finalizar o frontend do PI IV
 
 ### Stack:
 HTML, CSS, JS
+
+### Escopo parcial:
+[Ideia do projeto até agora](AgroGestao_Projeto.md)
