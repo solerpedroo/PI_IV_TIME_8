@@ -453,6 +453,158 @@ a:focus-visible {
   font-size: 12px;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Select / Dropdown (estados do pen: Closed, Open, Selected, Hover)          */
+/* -------------------------------------------------------------------------- */
+.select {
+  position: relative;
+  width: 100%;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.select-trigger:hover {
+  border-color: var(--border-strong);
+}
+
+.select-trigger:focus-visible {
+  outline: 3px solid rgba(64, 145, 108, 0.28);
+  outline-offset: 2px;
+}
+
+.select.is-open .select-trigger {
+  border-color: var(--primary);
+  border-width: 2px;
+  padding: 9px 13px;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.12);
+}
+
+.select-value.is-placeholder {
+  color: var(--text-muted);
+}
+
+.select-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.18s ease;
+}
+
+.select.is-open .select-chevron {
+  transform: rotate(180deg);
+}
+
+.select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: none;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-dropdown);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.select.is-open .select-menu {
+  display: grid;
+  gap: 2px;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.select-option:hover,
+.select-option.is-active {
+  background: var(--bg-subtle);
+}
+
+.select-option.is-selected {
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.select-option-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.select-option.is-selected .select-option-check {
+  opacity: 1;
+}
+
+.select.is-invalid .select-trigger {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+.select-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .password-toggle {
   position: absolute;
   top: 50%;
