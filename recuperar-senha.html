@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Recupere o acesso à sua conta Agro.">
+  <title>Recuperar senha — Agro</title>
+  <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Recuperar Senha (frame prDTw)
+    Layout: brand central + card 420px + link voltar
+  -->
+  <main class="auth-main auth-main--flush">
+    <div class="center-stack">
+
+      <!-- Branding -->
+      <div class="center-brand">
+        <div class="brand-lockup brand-lockup--compact">
+          <span class="brand-mark" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Agro</span>
+            <span class="brand-caption">Gestão Agrícola</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Recovery card -->
+      <section class="verify-card" aria-labelledby="recover-title">
+        <header class="auth-header">
+          <h2 id="recover-title">Recuperar senha</h2>
+          <p>Digite seu e-mail e enviaremos um link para redefinir sua senha.</p>
+        </header>
+
+        <form
+          class="auth-form"
+          data-auth-form
+          data-success-route="redefinir-senha.html"
+          novalidate
+        >
+          <div class="input-group">
+            <label for="email">E-mail</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="seu@email.com"
+              required
+              data-required-message="Informe seu e-mail."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div data-form-message class="form-message"></div>
+
+          <button class="btn btn-primary btn-block" type="submit">
+            Enviar link de recuperação
+          </button>
+        </form>
+      </section>
+
+      <a class="auth-link" href="login.html">
+        <!-- Lucide: arrow-left -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+          <path d="m12 19-7-7 7-7"/>
+          <path d="M19 12H5"/>
+        </svg>
+        Voltar para o login
+      </a>
+    </div>
+  </main>
+
+  <script src="scripts/auth.js" defer></script>
+</body>
+</html>
