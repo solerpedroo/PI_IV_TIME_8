@@ -271,7 +271,6 @@
   margin-bottom: 20px;
 }
 
-.activity-form .input-group select,
 .activity-form .input-group input {
   width: 100%;
   min-height: 42px;
@@ -283,12 +282,13 @@
   font-size: 14px;
 }
 
-.activity-form .input-group select:focus,
 .activity-form .input-group input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.14);
   outline: 0;
 }
+
+/* Select do formulário usa o componente .select do base.css (design system) */
 
 /* -------------------------------------------------------------------------- */
 /* Responsivo                                                                 */
