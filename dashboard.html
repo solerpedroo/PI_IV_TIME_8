@@ -71,7 +71,7 @@
 
       <div class="sidebar-spacer" aria-hidden="true"></div>
 
-      <!-- User row + menu de perfil -->
+      <!-- User row + menu de perfil (Flow A · Dropdown de perfil do pen.dev) -->
       <div class="sidebar-user">
         <button
           class="sidebar-user-trigger"
@@ -86,21 +86,43 @@
             <span class="sidebar-user-name">João Silva</span>
             <span class="sidebar-user-property">Fazenda Santa Rita</span>
           </span>
+          <svg class="sidebar-user-chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m18 15-6-6-6 6"/>
+          </svg>
         </button>
 
         <div class="popover profile-menu sidebar-popover" id="profile-menu" data-popover role="menu">
-          <a href="#" data-prep-link="Meu Perfil será implementado na próxima onda." role="menuitem">
+          <a
+            class="profile-menu-item"
+            href="#"
+            data-prep-link="Meu Perfil será implementado na próxima onda."
+            role="menuitem"
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Meu perfil
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Meu perfil</span>
+              <span class="profile-menu-hint">Ver e editar dados</span>
+            </span>
           </a>
-          <a href="#" data-prep-link="Configurações será implementado na próxima onda." role="menuitem">
+          <a
+            class="profile-menu-item"
+            href="#"
+            data-prep-link="Configurações será implementado na próxima onda."
+            role="menuitem"
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            Configurações
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Configurações</span>
+              <span class="profile-menu-hint">Preferências da conta</span>
+            </span>
           </a>
           <div class="profile-menu-divider" role="separator"></div>
-          <button type="button" class="is-danger" data-open-logout role="menuitem">
+          <button type="button" class="profile-menu-item is-danger" data-open-logout role="menuitem">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-            Sair
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Sair</span>
+              <span class="profile-menu-hint">Encerrar sessão → Login</span>
+            </span>
           </button>
         </div>
       </div>
@@ -421,8 +443,15 @@
           <input id="activity-name" name="activity-name" placeholder="Ex.: Plantio de milho" required>
         </div>
         <div class="input-group">
-          <label for="activity-plot">Talhão</label>
-          <select id="activity-plot" name="activity-plot" required>
+          <label for="activity-plot-trigger">Talhão</label>
+          <!-- Select Forest Sage (pen Dropdown States) — não usa o <select> nativo visível -->
+          <select
+            id="activity-plot"
+            name="activity-plot"
+            required
+            data-enhance-select
+            data-placeholder="Selecione…"
+          >
             <option value="">Selecione…</option>
             <option value="A3">Talhão A3</option>
             <option value="B1">Talhão B1</option>
@@ -453,6 +482,7 @@
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
   <script src="scripts/toast.js" defer></script>
+  <script src="scripts/select.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/dashboard.js" defer></script>
 </body>
