@@ -1,0 +1,164 @@
+/**
+ * Agro — Áreas de Cultivo (frame TaqqK)
+ * --------------------------------------------------------------------------
+ * Layout específico desta tela: grade de métricas com 3 colunas (em vez das
+ * 4 do Dashboard), mapa esquemático em SVG e composição do card de mapa +
+ * tabela lado a lado. Componentes reaproveitados (metric-card, data-table,
+ * action-menu, filter-bar…) vêm de base.css / dashboard styles / modules.css.
+ */
+
+.metrics-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Conteúdo: mapa + tabela                                                    */
+/* -------------------------------------------------------------------------- */
+.plots-content-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr);
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.plots-map-card,
+.plots-table-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.plots-map-subtitle {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.plots-map-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  overflow: auto;
+}
+
+.plots-map-svg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+}
+
+.plot-shape {
+  fill: var(--border);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.plot-shape-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+
+.plot-shape.crop-soja { fill: #bcdfcb; }
+.plot-shape.crop-milho { fill: #f3dfa4; }
+.plot-shape.crop-trigo { fill: #e7c9a1; }
+.plot-shape.crop-vazio { fill: var(--bg-subtle); stroke: var(--border); }
+
+.plots-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plots-map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-dot.crop-soja { background: #bcdfcb; }
+.legend-dot.crop-milho { background: #f3dfa4; }
+.legend-dot.crop-trigo { background: #e7c9a1; }
+.legend-dot.crop-vazio { background: var(--bg-subtle); border: 1px solid var(--border); }
+
+/* -------------------------------------------------------------------------- */
+/* Tabela                                                                     */
+/* -------------------------------------------------------------------------- */
+.plots-table-card .table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.col-plot-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.col-muted {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.plots-table-card .empty-state {
+  margin: 16px 20px;
+  border: 1px dashed var(--border);
+}
+
+/* Form genérico de modais desta tela (Novo/Editar talhão) */
+.stack-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsivo                                                                 */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .plots-content-row {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .metrics-row-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .metrics-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
