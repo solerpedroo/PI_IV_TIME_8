@@ -1,0 +1,475 @@
+/**
+ * Agro — composição das telas de autenticação
+ * --------------------------------------------------------------------------
+ * Espelha os frames do pen.dev:
+ * - Login / Criar Conta / Confirmar E-mail → split Brand Panel + Form Panel
+ * - Recuperar / Redefinir Senha → card centralizado
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Shell split (Login, Cadastro, Confirmar)                                   */
+/* -------------------------------------------------------------------------- */
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.auth-aside {
+  display: flex;
+  align-items: center;
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  padding: 80px 72px;
+}
+
+.auth-aside-inner {
+  max-width: 440px;
+  width: 100%;
+}
+
+.auth-aside .brand-mark {
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+.auth-aside .brand-name {
+  color: var(--text-inverse);
+}
+
+.auth-aside .brand-caption {
+  color: var(--accent);
+}
+
+.auth-aside h1 {
+  max-width: 440px;
+  margin: var(--space-2xl) 0 var(--space-md);
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.auth-aside p {
+  max-width: 440px;
+  margin: 0;
+  color: #a8bfb0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Variante do painel de confirmação (só marca + tagline) */
+.auth-aside--confirm {
+  padding: 64px;
+}
+
+.auth-aside--confirm .brand-sprout {
+  color: var(--accent);
+  margin-bottom: var(--space-md);
+}
+
+.auth-aside--confirm .brand-sprout svg {
+  width: 48px;
+  height: 48px;
+}
+
+.auth-aside--confirm .brand-title {
+  margin: 0 0 var(--space-md);
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--text-inverse);
+  letter-spacing: -0.02em;
+}
+
+.auth-aside--confirm p {
+  color: #a8bfb0;
+}
+
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 80px 96px;
+  background: var(--bg);
+}
+
+.auth-main--flush {
+  min-height: 100vh;
+  padding: var(--space-xl);
+}
+
+.auth-card {
+  width: min(100%, 420px);
+}
+
+.auth-card--signup {
+  width: min(100%, 480px);
+}
+
+.auth-card--compact {
+  width: min(100%, 420px);
+}
+
+.auth-card--reset {
+  width: min(100%, 440px);
+}
+
+.auth-header {
+  margin-bottom: var(--space-lg);
+}
+
+.auth-header h2 {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.auth-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.auth-form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.form-actions--end {
+  justify-content: flex-end;
+}
+
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+  color: var(--primary-hover);
+}
+
+.auth-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.auth-footer {
+  margin-top: var(--space-lg);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-footer a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Termos                                                                     */
+/* -------------------------------------------------------------------------- */
+.terms {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  column-gap: var(--space-sm);
+  row-gap: 4px;
+  align-items: start;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.terms input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.terms label {
+  cursor: pointer;
+}
+
+.terms .field-error {
+  grid-column: 2;
+  min-height: 0;
+}
+
+.terms a {
+  color: var(--primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.terms a:hover {
+  text-decoration: underline;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Brand centralizado (Recuperar / Redefinir)                                 */
+/* -------------------------------------------------------------------------- */
+.center-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-xl);
+}
+
+.center-stack {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.center-stack--reset {
+  width: min(100%, 440px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Card / verify                                                              */
+/* -------------------------------------------------------------------------- */
+.verify-card {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-lg);
+}
+
+.verify-card--padded {
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.verify-card .auth-header {
+  margin-bottom: var(--space-md);
+}
+
+.verify-card .auth-header h2 {
+  font-size: 22px;
+}
+
+.verify-card .auth-header p {
+  font-size: 14px;
+}
+
+.verify-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.verify-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.verify-card h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.verify-card > p {
+  margin: 0;
+  max-width: 360px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.verify-actions {
+  width: 100%;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.verify-card .auth-footer {
+  margin-top: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Password strength meter                                                    */
+/* -------------------------------------------------------------------------- */
+.password-meter {
+  display: grid;
+  width: 100%;
+  gap: var(--space-sm);
+}
+
+.password-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.password-meter-label[data-level="0"] { color: var(--text-muted); }
+.password-meter-label[data-level="1"] { color: var(--error); }
+.password-meter-label[data-level="2"] { color: var(--warning); }
+.password-meter-label[data-level="3"] { color: var(--accent); }
+.password-meter-label[data-level="4"] { color: var(--success); }
+
+.password-meter-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.password-meter-bar i {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background-color 0.25s ease;
+}
+
+.password-meter[data-level="1"] i:nth-child(1) { background: var(--error); }
+.password-meter[data-level="2"] i:nth-child(-n+2) { background: var(--warning); }
+.password-meter[data-level="3"] i:nth-child(-n+3) { background: var(--accent); }
+.password-meter[data-level="4"] i { background: var(--success); }
+
+.password-rules {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.password-rules span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.password-rules span::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.password-rules span.is-valid {
+  color: var(--text-secondary);
+}
+
+.password-rules span.is-valid::before {
+  border-color: var(--success);
+  background:
+    radial-gradient(circle at center, var(--success) 0 35%, transparent 36%),
+    var(--success-bg);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsivo                                                                 */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .auth-aside {
+    padding: 64px 48px;
+  }
+
+  .auth-main {
+    padding: 48px 40px;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-aside,
+  .auth-aside--confirm {
+    min-height: 240px;
+    padding: 40px 28px;
+  }
+
+  .auth-aside h1,
+  .auth-aside--confirm .brand-title {
+    margin-top: var(--space-lg);
+    font-size: 28px;
+  }
+
+  .auth-aside p {
+    font-size: 15px;
+  }
+
+  .auth-main {
+    min-height: calc(100vh - 240px);
+    padding: 36px 24px;
+  }
+
+  .auth-header h2 {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-main,
+  .auth-main--flush {
+    padding: 28px 16px;
+  }
+
+  .verify-card,
+  .verify-card--padded {
+    padding: 24px 20px;
+  }
+
+  .auth-header h2 {
+    font-size: 26px;
+  }
+}
