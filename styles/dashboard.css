@@ -1,0 +1,332 @@
+/**
+ * Agro — composição do Painel Geral (frame Dashboard ajDH7)
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Metrics                                                                    */
+/* -------------------------------------------------------------------------- */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Content row                                                                */
+/* -------------------------------------------------------------------------- */
+.content-row {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+.content-left,
+.content-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Activities table                                                           */
+/* -------------------------------------------------------------------------- */
+.activities-card {
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead th {
+  padding: 12px 20px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.data-table tbody td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(244, 247, 242, 0.7);
+}
+
+.data-table .col-activity {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.data-table .col-plot {
+  width: 140px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.data-table .col-date {
+  width: 100px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.data-table .col-status {
+  width: 120px;
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.data-table tbody tr:hover .row-actions,
+.data-table tbody tr:focus-within .row-actions {
+  opacity: 1;
+}
+
+.row-action {
+  border: 0;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.row-action:hover {
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Alerts                                                                     */
+/* -------------------------------------------------------------------------- */
+.alerts-card .card-header {
+  padding-bottom: 14px;
+}
+
+.alerts-count {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 7px;
+}
+
+.alerts-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.alert-item {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.alert-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.alert-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.alert-icon.tone-error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.alert-icon.tone-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.alert-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.alert-desc {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cultures progress                                                          */
+/* -------------------------------------------------------------------------- */
+.cultures-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.culture-item {
+  display: grid;
+  gap: 8px;
+}
+
+.culture-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.culture-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.culture-area {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.culture-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.culture-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.45s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.culture-fill.is-primary {
+  background: var(--primary);
+}
+
+.culture-fill.is-secondary {
+  background: var(--secondary);
+}
+
+.culture-fill.is-accent {
+  background: var(--accent);
+}
+
+.culture-fill.is-muted {
+  background: #5c7364;
+}
+
+.culture-progress {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modal Nova Atividade (stub)                                                */
+/* -------------------------------------------------------------------------- */
+.activity-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.activity-form .input-group select,
+.activity-form .input-group input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.activity-form .input-group select:focus,
+.activity-form .input-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.14);
+  outline: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsivo                                                                 */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .content-row {
+    grid-template-columns: 1fr;
+  }
+
+  .content-right {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .metrics-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .content-right {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table .col-plot,
+  .data-table thead th:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table .col-date,
+  .data-table thead th:nth-child(3) {
+    display: none;
+  }
+}
