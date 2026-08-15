@@ -9,6 +9,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  flex: 0 0 auto;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -16,29 +17,58 @@
 /* -------------------------------------------------------------------------- */
 .content-row {
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .content-left,
 .content-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
   min-width: 0;
+  min-height: 0;
+}
+
+/* A tabela termina na mesma guia do card "Estoque Baixo" (3ª métrica). */
+.content-left {
+  grid-column: span 3;
+  display: flex;
+}
+
+/* Alertas e culturas iniciam na mesma guia do card "Custo Safra" (4ª métrica). */
+.content-right {
+  grid-column: span 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Activities table                                                           */
 /* -------------------------------------------------------------------------- */
 .activities-card {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
+}
+
+.activities-card .table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .data-table thead th {
@@ -126,6 +156,14 @@
   padding-bottom: 14px;
 }
 
+.alerts-card,
+.cultures-card {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .alerts-count {
   min-width: 22px;
   height: 22px;
@@ -141,8 +179,11 @@
 
 .alerts-list {
   display: grid;
+  flex: 1 1 auto;
   gap: 8px;
   padding: 12px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .alert-item {
@@ -201,8 +242,11 @@
 /* -------------------------------------------------------------------------- */
 .cultures-list {
   display: grid;
+  flex: 1 1 auto;
   gap: 12px;
   padding: 16px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .culture-item {
@@ -293,25 +337,48 @@
 /* -------------------------------------------------------------------------- */
 /* Responsivo                                                                 */
 /* -------------------------------------------------------------------------- */
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .content-row {
     grid-template-columns: 1fr;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .content-left,
+  .content-right {
+    grid-column: auto;
+    min-height: auto;
+  }
+
+  .content-left {
+    display: block;
   }
 
   .content-right {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
     gap: 16px;
   }
-}
 
-@media (max-width: 900px) {
   .metrics-row {
     grid-template-columns: 1fr 1fr;
   }
 
   .content-right {
     grid-template-columns: 1fr;
+  }
+
+  .activities-card,
+  .alerts-card,
+  .cultures-card {
+    min-height: auto;
+  }
+
+  .activities-card .table-wrap,
+  .alerts-list,
+  .cultures-list {
+    overflow: visible;
   }
 
   .data-table .col-plot,
