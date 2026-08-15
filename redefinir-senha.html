@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Defina uma nova senha para sua conta Agro.">
+  <title>Redefinir senha — Agro</title>
+  <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Redefinir Senha (frame c5ewZM)
+    Layout: brand (sprout) + card 440px com medidor de força
+  -->
+  <main class="auth-main auth-main--flush">
+    <div class="center-stack center-stack--reset">
+
+      <!-- Branding -->
+      <div class="center-brand">
+        <div class="brand-lockup brand-lockup--compact">
+          <span class="brand-mark brand-mark--bare" aria-hidden="true">
+            <!-- Lucide: sprout -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 20h10"/>
+              <path d="M10 20c5.5-2.5.8-6.4 3-10"/>
+              <path d="M9.5 9.4c1.7.8 2.9 2.6 3.5 4.6.9-1.8 2.4-3.2 4.2-3.8-1.6-.5-3.2.2-4.3 1.3-1.3-2.1-3.2-3.4-5.4-3.7 1.5.6 2.4 1.8 2 1.6z"/>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Agro</span>
+            <span class="brand-caption">Gestão agrícola inteligente</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Reset card -->
+      <section class="verify-card auth-card--reset" aria-labelledby="reset-title">
+        <header class="auth-header">
+          <h2 id="reset-title">Redefinir senha</h2>
+          <p>Crie uma nova senha segura para acessar sua conta.</p>
+        </header>
+
+        <form
+          class="auth-form"
+          data-auth-form
+          data-require-strong-password
+          data-success-route="login.html"
+          data-flash-message="Senha redefinida com sucesso. Faça login com a nova senha."
+          novalidate
+        >
+          <div class="input-group">
+            <label for="password">Nova senha</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                data-password
+                data-password-meter
+                autocomplete="new-password"
+                placeholder="Digite sua nova senha"
+                required
+                data-required-message="Crie uma nova senha."
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                data-password-toggle="password"
+                aria-label="Mostrar senha"
+                aria-pressed="false"
+              >
+                <span data-toggle-label>Mostrar</span>
+              </button>
+            </div>
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <!-- Força da senha (4 segmentos + regras) -->
+          <div class="password-meter" data-meter data-level="0" aria-live="polite">
+            <div class="password-meter-header">
+              <span>Força da senha</span>
+              <span class="password-meter-label" data-meter-label data-level="0">—</span>
+            </div>
+            <div class="password-meter-bar" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+            </div>
+            <div class="password-rules">
+              <span data-rule="length">Mínimo de 8 caracteres</span>
+              <span data-rule="upper">Pelo menos uma letra maiúscula</span>
+              <span data-rule="number">Pelo menos um número</span>
+              <span data-rule="symbol">Pelo menos um caractere especial</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="password-confirm">Confirmar senha</label>
+            <div class="input-wrap">
+              <input
+                id="password-confirm"
+                name="password-confirm"
+                type="password"
+                data-password-confirm
+                autocomplete="new-password"
+                placeholder="Digite novamente sua nova senha"
+                required
+                data-required-message="Confirme sua senha."
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                data-password-toggle="password-confirm"
+                aria-label="Mostrar senha"
+                aria-pressed="false"
+              >
+                <span data-toggle-label>Mostrar</span>
+              </button>
+            </div>
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div data-form-message class="form-message"></div>
+
+          <button class="btn btn-primary btn-block" type="submit">Redefinir senha</button>
+        </form>
+      </section>
+
+      <a class="auth-link" href="login.html">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+          <path d="m12 19-7-7 7-7"/>
+          <path d="M19 12H5"/>
+        </svg>
+        Voltar ao login
+      </a>
+    </div>
+  </main>
+
+  <script src="scripts/auth.js" defer></script>
+</body>
+</html>
