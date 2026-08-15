@@ -136,6 +136,19 @@ svg {
   max-width: 100%;
 }
 
+/*
+ * Qualquer classe que declara `display` (flex/grid/table/…) tem a mesma
+ * especificidade do `[hidden]{display:none}` da UA stylesheet — como os
+ * estilos do autor carregam depois, a classe vence e o elemento continua
+ * visível mesmo com o atributo `hidden` presente. Isso já acontecia no
+ * shell (`.notif-list`) e se repetiu em cada empty state / tabela / barra
+ * de filtro dos módulos novos. Resolvido uma vez, para toda a base: o
+ * atributo `hidden` sempre esconde, não importa a classe do elemento.
+ */
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
