@@ -8,6 +8,7 @@
   <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/feedback.css">
   <link rel="stylesheet" href="styles/motion.css">
 </head>
 <body>
@@ -49,7 +50,8 @@
         <form
           class="auth-form"
           data-auth-form
-          data-success-message="Login realizado com sucesso. Bem-vindo ao Agro."
+          data-success-route="dashboard.html"
+          data-flash-message="Login realizado com sucesso. Bem-vindo ao Agro."
           novalidate
         >
           <div class="input-group">
@@ -107,6 +109,7 @@
     </section>
   </main>
 
+  <script src="scripts/toast.js" defer></script>
   <script src="scripts/auth.js" defer></script>
 </body>
 </html>
