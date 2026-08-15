@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Insumos — controle de estoque, entradas e saídas da propriedade.">
+  <title>Insumos — Agro</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/modules.css">
+  <link rel="stylesheet" href="styles/insumos.css">
+  <link rel="stylesheet" href="styles/feedback.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Insumos (frame QpBVa — designSystemProjetoAgro)
+    Layout: Sidebar 260 + Main (header, métricas, alerta crítico, tabela)
+
+    Critérios de aceite fechados nesta tela (Fluxos de Interação C — "Ações
+    do estoque" / Flow 5, Flow 6 "Insumo → Atividade → Talhão → Custo"):
+    - Alerta de estoque crítico no topo (G1 "Notificação → Destinos": clique
+      no alerta rola/realça a primeira linha crítica da tabela).
+    - Ações por linha "⋮": Ver detalhes (com rastreio operacional), Registrar
+      entrada, Registrar saída (com validação de saldo), Editar, Excluir
+      (regra: só permitido com saldo = 0).
+    - Registrar entrada/saída recalcula o status do item (Normal/Baixo/
+      Crítico) automaticamente a partir do estoque mínimo.
+    - Busca por nome + filtro por categoria.
+  -->
+  <div class="app-shell">
+
+    <!-- ================================================================== -->
+    <!-- Sidebar                                                            -->
+    <!-- ================================================================== -->
+    <aside class="app-sidebar" aria-label="Navegação principal">
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 20h10"/>
+            <path d="M10 20c5.5-2.5.8-6.4 3-10"/>
+            <path d="M9.5 9.4c1.7.8 2.9 2.6 3.5 4.6.9-1.8 2.4-3.2 4.2-3.8-1.6-.5-3.2.2-4.3 1.3-1.3-2.1-3.2-3.4-5.4-3.7 1.5.6 2.4 1.8 2 1.6z"/>
+          </svg>
+        </span>
+        <span>
+          <span class="sidebar-brand-name">Agro</span>
+          <span class="sidebar-brand-caption">Gestão Agrícola</span>
+        </span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="dashboard.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Painel</span>
+        </a>
+        <a class="sidebar-link" href="areas-cultivo.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+          <span>Áreas de Cultivo</span>
+        </a>
+        <a class="sidebar-link" href="atividades.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+          <span>Atividades</span>
+        </a>
+        <a class="sidebar-link is-active" href="insumos.html" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="m7.5 4.2 9 5.2"/></svg>
+          <span>Insumos</span>
+        </a>
+        <a class="sidebar-link" href="ocorrencias.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>Ocorrências</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Custos será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg>
+          <span>Custos</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Configurações será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer" aria-hidden="true"></div>
+
+      <div class="sidebar-user">
+        <button class="sidebar-user-trigger" type="button" data-popover-trigger aria-controls="profile-menu" aria-expanded="false" aria-haspopup="menu">
+          <span class="sidebar-avatar" aria-hidden="true">PS</span>
+          <span class="sidebar-user-meta">
+            <span class="sidebar-user-name">Pedro Silva</span>
+            <span class="sidebar-user-property">Gerente de fazenda</span>
+          </span>
+          <svg class="sidebar-user-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+
+        <div class="popover profile-menu sidebar-popover" id="profile-menu" data-popover role="menu">
+          <a class="profile-menu-item" href="#" data-prep-link="Meu Perfil será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Meu perfil</span>
+              <span class="profile-menu-hint">Ver e editar dados</span>
+            </span>
+          </a>
+          <a class="profile-menu-item" href="#" data-prep-link="Configurações será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Configurações</span>
+              <span class="profile-menu-hint">Preferências da conta</span>
+            </span>
+          </a>
+          <div class="profile-menu-divider" role="separator"></div>
+          <button type="button" class="profile-menu-item is-danger" data-open-logout role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Sair</span>
+              <span class="profile-menu-hint">Encerrar sessão → Login</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================================================================== -->
+    <!-- Main                                                               -->
+    <!-- ================================================================== -->
+    <main class="app-main">
+
+      <header class="page-header">
+        <div class="page-header-copy">
+          <h1>Insumos</h1>
+          <p>Controle de estoque · Fazenda Santa Rita · Safra 2025/26</p>
+        </div>
+        <div class="page-header-actions">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="visually-hidden">Buscar insumo</span>
+            <input type="search" placeholder="Buscar insumo..." data-stock-search autocomplete="off">
+          </label>
+          <button class="btn btn-primary" type="button" data-open-entrada data-context="header">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Registrar Entrada
+          </button>
+        </div>
+      </header>
+
+      <!-- Métricas -->
+      <section class="metrics-row" aria-label="Indicadores de estoque">
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Total de Produtos</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="total-products">47</p>
+            <span class="metric-card-change">+12%</span>
+          </div>
+          <p class="metric-card-desc">cadastrados no sistema</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Estoque Crítico</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="critical">5</p>
+            <span class="metric-card-change is-flat">abaixo do mínimo</span>
+          </div>
+          <p class="metric-card-desc">repor o quanto antes</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Valor em Estoque</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value">R$ 284K</p>
+            <span class="metric-card-change">+12%</span>
+          </div>
+          <p class="metric-card-desc">atualizado hoje</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Entradas no Mês</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="entries">12</p>
+            <span class="metric-card-change">+12%</span>
+          </div>
+          <p class="metric-card-desc">registros em agosto</p>
+        </article>
+      </section>
+
+      <!-- Alerta crítico -->
+      <div class="stat-alert" data-critical-alert>
+        <span class="stat-alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+        <div>
+          <p class="stat-alert-title"><span data-critical-count>3</span> produtos com estoque abaixo do mínimo</p>
+          <p class="stat-alert-desc" data-critical-names>Glifosato 480 SL, Semente Soja RR e Fungicida Azoxistrobina precisam de reposição.</p>
+        </div>
+      </div>
+
+      <!-- Filtro por categoria -->
+      <div class="filter-bar" role="group" aria-label="Filtrar por categoria">
+        <span class="filter-bar-label">Categoria:</span>
+        <button type="button" class="filter-chip is-active" data-filter-category="todas">Todas</button>
+        <button type="button" class="filter-chip" data-filter-category="herbicida">Herbicida</button>
+        <button type="button" class="filter-chip" data-filter-category="fertilizante">Fertilizante</button>
+        <button type="button" class="filter-chip" data-filter-category="semente">Semente</button>
+        <button type="button" class="filter-chip" data-filter-category="fungicida">Fungicida</button>
+        <button type="button" class="filter-chip" data-filter-category="inseticida">Inseticida</button>
+        <span class="filter-spacer"></span>
+        <span class="filter-results" data-stock-count>7 produtos encontrados</span>
+      </div>
+
+      <!-- Tabela de produtos -->
+      <section class="card stock-table-card" aria-labelledby="stock-title">
+        <div class="card-header">
+          <h2 class="card-title" id="stock-title">Produtos em Estoque</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" data-stock-table>
+            <thead>
+              <tr><th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Unidade</th><th>Est. Mín.</th><th>Status</th><th><span class="visually-hidden">Ações</span></th></tr>
+            </thead>
+            <tbody>
+              <tr data-product="Glifosato 480 SL" data-category="herbicida" data-qty="85" data-unit="L" data-min="200">
+                <td class="col-product-name">Glifosato 480 SL</td>
+                <td class="col-muted">Herbicida</td>
+                <td data-qty-cell>85</td>
+                <td class="col-muted">L</td>
+                <td class="col-muted">200</td>
+                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p1" aria-expanded="false" aria-label="Mais ações — Glifosato 480 SL"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p1" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="Ureia 45% N" data-category="fertilizante" data-qty="320" data-unit="kg" data-min="500">
+                <td class="col-product-name">Ureia 45% N</td>
+                <td class="col-muted">Fertilizante</td>
+                <td data-qty-cell>320</td>
+                <td class="col-muted">kg</td>
+                <td class="col-muted">500</td>
+                <td><span class="badge badge-warning" data-status-badge>Baixo</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p2" aria-expanded="false" aria-label="Mais ações — Ureia 45% N"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p2" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="Semente Soja RR" data-category="semente" data-qty="42" data-unit="sc" data-min="80">
+                <td class="col-product-name">Semente Soja RR</td>
+                <td class="col-muted">Semente</td>
+                <td data-qty-cell>42</td>
+                <td class="col-muted">sc</td>
+                <td class="col-muted">80</td>
+                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p3" aria-expanded="false" aria-label="Mais ações — Semente Soja RR"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p3" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="Herbicida 2,4-D" data-category="herbicida" data-qty="156" data-unit="L" data-min="100">
+                <td class="col-product-name">Herbicida 2,4-D</td>
+                <td class="col-muted">Herbicida</td>
+                <td data-qty-cell>156</td>
+                <td class="col-muted">L</td>
+                <td class="col-muted">100</td>
+                <td><span class="badge badge-success" data-status-badge>Normal</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p4" aria-expanded="false" aria-label="Mais ações — Herbicida 2,4-D"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p4" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="Fungicida Azoxistrobina" data-category="fungicida" data-qty="28" data-unit="L" data-min="50">
+                <td class="col-product-name">Fungicida Azoxistrobina</td>
+                <td class="col-muted">Fungicida</td>
+                <td data-qty-cell>28</td>
+                <td class="col-muted">L</td>
+                <td class="col-muted">50</td>
+                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p5" aria-expanded="false" aria-label="Mais ações — Fungicida Azoxistrobina"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p5" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="MAP 11-52-00" data-category="fertilizante" data-qty="1240" data-unit="kg" data-min="800">
+                <td class="col-product-name">MAP 11-52-00</td>
+                <td class="col-muted">Fertilizante</td>
+                <td data-qty-cell>1.240</td>
+                <td class="col-muted">kg</td>
+                <td class="col-muted">800</td>
+                <td><span class="badge badge-success" data-status-badge>Normal</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p6" aria-expanded="false" aria-label="Mais ações — MAP 11-52-00"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p6" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-product="Inseticida Lambda" data-category="inseticida" data-qty="64" data-unit="L" data-min="40">
+                <td class="col-product-name">Inseticida Lambda</td>
+                <td class="col-muted">Inseticida</td>
+                <td data-qty-cell>64</td>
+                <td class="col-muted">L</td>
+                <td class="col-muted">40</td>
+                <td><span class="badge badge-warning" data-status-badge>Baixo</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p7" aria-expanded="false" aria-label="Mais ações — Inseticida Lambda"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p7" data-popover role="menu"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" data-stock-empty hidden>
+            <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/></svg></span>
+            <h3>Estoque de insumos vazio</h3>
+            <p>Ajuste a busca/filtro ou adicione fertilizantes, defensivos e sementes ao inventário.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Registrar entrada -->
+  <div class="modal-backdrop" data-modal="entrada" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="entrada-title">
+      <h2 id="entrada-title">Registrar entrada</h2>
+      <p data-entrada-desc>Aumenta o saldo do item selecionado.</p>
+      <form class="stack-form" data-entrada-form novalidate>
+        <div class="input-group" data-entrada-produto-wrap>
+          <label for="entrada-produto-trigger">Produto *</label>
+          <!-- Sem data-enhance-select: as opções são preenchidas via JS (lista de
+               produtos da tabela) antes do enhance manual em insumos.js — se o
+               select.js montasse o dropdown agora, ele capturaria só o
+               placeholder e nunca veria as opções adicionadas depois. -->
+          <select id="entrada-produto" name="produto" required data-placeholder="Selecione o produto">
+            <option value="">Selecione o produto</option>
+          </select>
+          <p class="field-error" data-error-for="produto"></p>
+        </div>
+        <div class="input-group">
+          <label for="entrada-qty">Quantidade *</label>
+          <input id="entrada-qty" name="quantidade" type="number" min="1" step="0.1" placeholder="Ex.: 120">
+          <p class="field-error" data-error-for="quantidade"></p>
+        </div>
+        <div class="input-group">
+          <label for="entrada-fornecedor">Fornecedor</label>
+          <input id="entrada-fornecedor" name="fornecedor" placeholder="Ex.: Agropecuária Central">
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Confirmar entrada</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar saída -->
+  <div class="modal-backdrop" data-modal="saida" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="saida-title">
+      <h2 id="saida-title">Registrar saída</h2>
+      <p data-saida-desc>Reduz o saldo — opcionalmente vincule a uma atividade.</p>
+      <form class="stack-form" data-saida-form novalidate>
+        <div class="input-group">
+          <label for="saida-qty">Quantidade *</label>
+          <input id="saida-qty" name="quantidade" type="number" min="1" step="0.1" placeholder="Ex.: 20">
+          <p class="field-error" data-error-for="quantidade"></p>
+        </div>
+        <div class="input-group">
+          <label for="saida-destino">Atividade / destino</label>
+          <input id="saida-destino" name="destino" placeholder="Ex.: Pulverização Talhão B2">
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Confirmar saída</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar produto -->
+  <div class="modal-backdrop" data-modal="produto-editar" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="produto-editar-title">
+      <h2 id="produto-editar-title">Editar produto</h2>
+      <p>Ajuste categoria e estoque mínimo.</p>
+      <form class="stack-form" data-produto-editar-form novalidate>
+        <div class="input-group">
+          <label for="produto-editar-categoria-trigger">Categoria *</label>
+          <select id="produto-editar-categoria" name="categoria" required data-enhance-select data-placeholder="Selecione a categoria">
+            <option value="">Selecione a categoria</option>
+            <option value="Herbicida">Herbicida</option>
+            <option value="Fertilizante">Fertilizante</option>
+            <option value="Semente">Semente</option>
+            <option value="Fungicida">Fungicida</option>
+            <option value="Inseticida">Inseticida</option>
+          </select>
+          <p class="field-error" data-error-for="categoria"></p>
+        </div>
+        <div class="input-group">
+          <label for="produto-editar-min">Estoque mínimo *</label>
+          <input id="produto-editar-min" name="minimo" type="number" min="1" step="1">
+          <p class="field-error" data-error-for="minimo"></p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Ver detalhes (rastreio operacional) -->
+  <div class="modal-backdrop" data-modal="produto-detalhe" aria-hidden="true" role="presentation">
+    <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="produto-detalhe-title">
+      <h2 id="produto-detalhe-title" data-detalhe-title>Produto</h2>
+      <p data-detalhe-subtitle>Categoria · Unidade</p>
+      <div class="modal-body-scroll">
+        <div class="meta-grid" data-detalhe-meta></div>
+        <div class="trace-chain" data-detalhe-chain aria-label="Rastreio Insumo → Atividade → Talhão → Custo">
+          <span class="trace-node tone-primary"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/></svg>Insumo</span>
+          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <span class="trace-node tone-info"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Atividade</span>
+          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <span class="trace-node tone-secondary"><svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/></svg>Talhão</span>
+          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <span class="trace-node tone-success"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg>Custo</span>
+        </div>
+        <p class="trace-note">Cada saída vincula automaticamente o custo ao talhão da atividade selecionada.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Excluir produto (só permitido com saldo = 0) -->
+  <div class="modal-backdrop" data-modal="produto-excluir" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="produto-excluir-title">
+      <h2 id="produto-excluir-title">Excluir produto?</h2>
+      <p data-excluir-desc>Esta ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-excluir>Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Logout -->
+  <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+      <h2 id="logout-title">Sair da conta?</h2>
+      <p>Sua sessão será encerrada e você voltará para a tela de login.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-logout>Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
+
+  <script src="scripts/toast.js" defer></script>
+  <script src="scripts/select.js" defer></script>
+  <script src="scripts/shell.js" defer></script>
+  <script src="scripts/insumos.js" defer></script>
+</body>
+</html>
