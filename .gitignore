@@ -1,0 +1,8 @@
+# Segredos — nunca commitar
+.env
+.env.*
+!.env.example
+
+# SO / editor
+.DS_Store
+Thumbs.db
