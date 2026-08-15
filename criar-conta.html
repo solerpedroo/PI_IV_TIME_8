@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Crie sua conta Agro para gerenciar sua propriedade rural.">
+  <title>Criar conta — Agro</title>
+  <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Criar Conta (frame neERn)
+    Layout: Brand Panel + formulário 480px com linhas duplas (senha / propriedade)
+  -->
+  <main class="auth-shell">
+
+    <!-- Brand panel -->
+    <aside class="auth-aside">
+      <div class="auth-aside-inner">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Agro</span>
+            <span class="brand-caption">Gestão Agrícola</span>
+          </span>
+        </div>
+        <h1>Gestão integrada da sua propriedade rural</h1>
+        <p>Planeje cultivo, controle insumos, registre atividades e acompanhe custos em uma única plataforma.</p>
+      </div>
+    </aside>
+
+    <!-- Form panel -->
+    <section class="auth-main" aria-labelledby="signup-title">
+      <div class="auth-card auth-card--signup">
+        <header class="auth-header">
+          <h2 id="signup-title">Criar conta</h2>
+          <p>Cadastre-se como produtor rural</p>
+        </header>
+
+        <form
+          class="auth-form"
+          data-auth-form
+          data-success-route="confirmar-email.html"
+          data-persist-email="true"
+          novalidate
+        >
+          <div class="input-group">
+            <label for="name">Nome completo</label>
+            <input
+              id="name"
+              name="name"
+              autocomplete="name"
+              placeholder="Seu nome completo"
+              required
+              data-required-message="Informe seu nome."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div class="input-group">
+            <label for="email">E-mail</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="seu@email.com"
+              required
+              data-required-message="Informe seu e-mail."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div class="input-group">
+            <label for="phone">Telefone</label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              placeholder="(00) 00000-0000"
+              required
+              data-phone-mask
+              data-required-message="Informe seu telefone."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <!-- Linha: senha + confirmação -->
+          <div class="form-row">
+            <div class="input-group">
+              <label for="password">Senha</label>
+              <div class="input-wrap">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  data-password
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                  required
+                  data-required-message="Crie uma senha."
+                >
+                <button
+                  class="password-toggle"
+                  type="button"
+                  data-password-toggle="password"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <span data-toggle-label>Mostrar</span>
+                </button>
+              </div>
+              <span class="field-error" aria-live="polite"></span>
+            </div>
+
+            <div class="input-group">
+              <label for="password-confirm">Confirmar senha</label>
+              <div class="input-wrap">
+                <input
+                  id="password-confirm"
+                  name="password-confirm"
+                  type="password"
+                  data-password-confirm
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                  required
+                  data-required-message="Confirme sua senha."
+                >
+                <button
+                  class="password-toggle"
+                  type="button"
+                  data-password-toggle="password-confirm"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <span data-toggle-label>Mostrar</span>
+                </button>
+              </div>
+              <span class="field-error" aria-live="polite"></span>
+            </div>
+          </div>
+
+          <!-- Linha: propriedade + área -->
+          <div class="form-row">
+            <div class="input-group">
+              <label for="farm">Nome da propriedade</label>
+              <input
+                id="farm"
+                name="farm"
+                placeholder="Ex: Fazenda São João"
+                required
+                data-required-message="Informe a propriedade."
+              >
+              <span class="field-error" aria-live="polite"></span>
+            </div>
+
+            <div class="input-group">
+              <label for="area">Área da fazenda</label>
+              <input
+                id="area"
+                name="area"
+                placeholder="Ex: 150 hectares"
+                required
+                data-required-message="Informe a área."
+              >
+              <span class="field-error" aria-live="polite"></span>
+            </div>
+          </div>
+
+          <div class="terms">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              data-required-message="Aceite os termos para continuar."
+            >
+            <label for="terms">
+              Li e aceito os
+              <a href="#termos">Termos de Uso</a>
+              e a
+              <a href="#privacidade">Política de Privacidade</a>.
+            </label>
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div data-form-message class="form-message"></div>
+
+          <button class="btn btn-primary btn-block" type="submit">Criar conta</button>
+        </form>
+
+        <footer class="auth-footer">
+          Já tem uma conta? <a href="login.html">Entrar</a>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <script src="scripts/auth.js" defer></script>
+</body>
+</html>
