@@ -22,6 +22,7 @@ frontend_pi_iv/
 └── scripts/
     ├── auth.js             # validação e fluxos de auth
     ├── toast.js            # API AgroToast (4 variantes do pen)
+    ├── select.js           # Dropdown Forest Sage (substitui select nativo)
     ├── shell.js            # notificações, perfil, logout
     └── dashboard.js        # mock G4, busca, nova atividade
 ```
