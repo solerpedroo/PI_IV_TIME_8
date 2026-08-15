@@ -107,12 +107,23 @@
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Flash de sucesso (ex.: após redefinir senha)                             */
+  /* Flash de sucesso (ex.: após redefinir senha ou logout)                   */
   /* ------------------------------------------------------------------------ */
   function consumeFlashMessage() {
     const flash = sessionStorage.getItem(STORAGE.flashSuccess);
     if (!flash) return;
     sessionStorage.removeItem(STORAGE.flashSuccess);
+
+    // Prefer toast quando disponível; fallback para mensagem no formulário.
+    if (window.AgroToast) {
+      window.AgroToast.show({
+        type: "success",
+        title: "Tudo certo",
+        description: flash,
+      });
+      return;
+    }
+
     const form = $("form[data-auth-form]");
     if (form) showMessage(form, flash, "success");
   }
