@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Acesse o Agro para acompanhar sua gestão rural.">
+  <title>Entrar — Agro</title>
+  <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Login (frame H1j1X do design system)
+    Layout: Brand Panel (esquerda) + Form Panel (direita)
+  -->
+  <main class="auth-shell">
+
+    <!-- Brand panel -->
+    <aside class="auth-aside" aria-hidden="false">
+      <div class="auth-aside-inner">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">
+            <!-- Lucide: leaf -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">Agro</span>
+            <span class="brand-caption">Gestão Agrícola</span>
+          </span>
+        </div>
+        <h1>Gestão integrada da sua propriedade rural</h1>
+        <p>Planeje cultivo, controle insumos, registre atividades e acompanhe custos em uma única plataforma.</p>
+      </div>
+    </aside>
+
+    <!-- Form panel -->
+    <section class="auth-main" aria-labelledby="login-title">
+      <div class="auth-card">
+        <header class="auth-header">
+          <h2 id="login-title">Entrar</h2>
+          <p>Acesse sua conta para continuar</p>
+        </header>
+
+        <form
+          class="auth-form"
+          data-auth-form
+          data-success-message="Login realizado com sucesso. Bem-vindo ao Agro."
+          novalidate
+        >
+          <div class="input-group">
+            <label for="email">E-mail</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="seu@email.com"
+              required
+              data-required-message="Informe seu e-mail."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div class="input-group">
+            <label for="password">Senha</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+                required
+                data-required-message="Informe sua senha."
+              >
+              <button
+                class="password-toggle"
+                type="button"
+                data-password-toggle="password"
+                aria-label="Mostrar senha"
+                aria-pressed="false"
+              >
+                <span data-toggle-label>Mostrar</span>
+              </button>
+            </div>
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
+          <div class="form-actions form-actions--end">
+            <a class="auth-link" href="recuperar-senha.html">Esqueceu a senha?</a>
+          </div>
+
+          <div data-form-message class="form-message"></div>
+
+          <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        </form>
+
+        <footer class="auth-footer">
+          Não tem uma conta? <a href="criar-conta.html">Criar conta</a>
+        </footer>
+      </div>
+    </section>
+  </main>
+
+  <script src="scripts/auth.js" defer></script>
+</body>
+</html>
