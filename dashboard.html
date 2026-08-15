@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Painel geral da propriedade — Agro Gestão Agrícola.">
+  <title>Painel Geral — Agro</title>
+  <!-- Tipografia Geist carregada em styles/base.css -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/dashboard.css">
+  <link rel="stylesheet" href="styles/feedback.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Dashboard / Painel Geral (frame ajDH7 — designSystemProjetoAgro)
+    Layout: Sidebar 260 + Main (header, métricas, atividades, alertas, culturas)
+  -->
+  <div class="app-shell">
+
+    <!-- ================================================================== -->
+    <!-- Sidebar                                                            -->
+    <!-- ================================================================== -->
+    <aside class="app-sidebar" aria-label="Navegação principal">
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-icon" aria-hidden="true">
+          <!-- Lucide: sprout -->
+          <svg viewBox="0 0 24 24">
+            <path d="M7 20h10"/>
+            <path d="M10 20c5.5-2.5.8-6.4 3-10"/>
+            <path d="M9.5 9.4c1.7.8 2.9 2.6 3.5 4.6.9-1.8 2.4-3.2 4.2-3.8-1.6-.5-3.2.2-4.3 1.3-1.3-2.1-3.2-3.4-5.4-3.7 1.5.6 2.4 1.8 2 1.6z"/>
+          </svg>
+        </span>
+        <span>
+          <span class="sidebar-brand-name">Agro</span>
+          <span class="sidebar-brand-caption">Gestão Agrícola</span>
+        </span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link is-active" href="dashboard.html" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Painel</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Áreas de Cultivo será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+          <span>Áreas de Cultivo</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Atividades será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+          <span>Atividades</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Insumos será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="m7.5 4.2 9 5.2"/></svg>
+          <span>Insumos</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Ocorrências será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>Ocorrências</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Custos será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg>
+          <span>Custos</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Configurações será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer" aria-hidden="true"></div>
+
+      <!-- User row + menu de perfil -->
+      <div class="sidebar-user">
+        <button
+          class="sidebar-user-trigger"
+          type="button"
+          data-popover-trigger
+          aria-controls="profile-menu"
+          aria-expanded="false"
+          aria-haspopup="menu"
+        >
+          <span class="sidebar-avatar" aria-hidden="true">JS</span>
+          <span class="sidebar-user-meta">
+            <span class="sidebar-user-name">João Silva</span>
+            <span class="sidebar-user-property">Fazenda Santa Rita</span>
+          </span>
+        </button>
+
+        <div class="popover profile-menu sidebar-popover" id="profile-menu" data-popover role="menu">
+          <a href="#" data-prep-link="Meu Perfil será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Meu perfil
+          </a>
+          <a href="#" data-prep-link="Configurações será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Configurações
+          </a>
+          <div class="profile-menu-divider" role="separator"></div>
+          <button type="button" class="is-danger" data-open-logout role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            Sair
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================================================================== -->
+    <!-- Main                                                               -->
+    <!-- ================================================================== -->
+    <main class="app-main">
+
+      <!-- Page header -->
+      <header class="page-header">
+        <div class="page-header-copy">
+          <h1>Painel Geral</h1>
+          <p>Safra 2025/26 · Fazenda Santa Rita · 1.284 hectares</p>
+        </div>
+        <div class="page-header-actions">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="visually-hidden">Buscar</span>
+            <input type="search" placeholder="Buscar..." data-dashboard-search autocomplete="off">
+          </label>
+
+          <!-- Notificações -->
+          <div class="notif-wrap">
+            <button
+              class="icon-btn"
+              type="button"
+              data-popover-trigger
+              aria-controls="notif-panel"
+              aria-expanded="false"
+              aria-label="Notificações"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            </button>
+            <span class="notif-dot" data-notif-dot aria-hidden="true"></span>
+
+            <div class="popover" id="notif-panel" data-popover aria-label="Painel de notificações">
+              <div class="popover-header">
+                <h2>Notificações</h2>
+                <button type="button" class="popover-action" data-notif-mark-all>Marcar todas como lidas</button>
+              </div>
+              <div class="notif-list" data-notif-list>
+                <button type="button" class="notif-item is-unread" data-toast="Estoque de Glifosato abaixo do mínimo.">
+                  <span class="notif-item-icon tone-error" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                  </span>
+                  <span>
+                    <span class="notif-item-title">Estoque de NPK abaixo do mínimo</span>
+                    <span class="notif-item-desc">Restam 12 L · Repor urgente</span>
+                  </span>
+                </button>
+                <button type="button" class="notif-item is-unread" data-toast="Atividade de irrigação atrasada.">
+                  <span class="notif-item-icon tone-warning" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </span>
+                  <span>
+                    <span class="notif-item-title">Irrigação do Talhão C2 atrasada</span>
+                    <span class="notif-item-desc">2 dias de atraso</span>
+                  </span>
+                </button>
+                <button type="button" class="notif-item is-unread" data-toast="3 atividades programadas para hoje.">
+                  <span class="notif-item-icon tone-info" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                  </span>
+                  <span>
+                    <span class="notif-item-title">3 atividades para hoje</span>
+                    <span class="notif-item-desc">Revise o plano da semana</span>
+                  </span>
+                </button>
+              </div>
+              <p class="notif-empty" data-notif-empty hidden>Nenhuma notificação no momento.</p>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" type="button" data-open-new-activity>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Nova Atividade
+          </button>
+        </div>
+      </header>
+
+      <!-- Metrics -->
+      <section class="metrics-row" aria-label="Indicadores">
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Áreas Ativas</span>
+            <span class="metric-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+            </span>
+          </div>
+          <p class="metric-card-value" data-metric="areas">12</p>
+          <p class="metric-card-desc">talhões em produção</p>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Atividades Pendentes</span>
+            <span class="metric-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+            </span>
+          </div>
+          <p class="metric-card-value" data-metric="pending">8</p>
+          <p class="metric-card-desc">para esta semana</p>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Estoque Baixo</span>
+            <span class="metric-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg>
+            </span>
+          </div>
+          <p class="metric-card-value" data-metric="stock">3</p>
+          <p class="metric-card-desc">insumos críticos</p>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Custo Safra</span>
+            <span class="metric-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            </span>
+          </div>
+          <p class="metric-card-value">R$ 48.2K</p>
+          <p class="metric-card-desc">acumulado</p>
+        </article>
+      </section>
+
+      <!-- Content -->
+      <div class="content-row">
+        <div class="content-left">
+          <section class="card activities-card" aria-labelledby="activities-title">
+            <div class="card-header">
+              <h2 class="card-title" id="activities-title">Atividades da Semana</h2>
+              <a class="card-link" href="#" data-prep-link="Lista completa de atividades em preparação.">Ver todas</a>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" data-activities-table>
+                <thead>
+                  <tr>
+                    <th>Atividade</th>
+                    <th>Talhão</th>
+                    <th>Data</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="col-activity">
+                      Aplicação de herbicida
+                      <span class="row-actions">
+                        <button type="button" class="row-action" data-complete-activity>Concluir</button>
+                      </span>
+                    </td>
+                    <td class="col-plot">Talhão A3</td>
+                    <td class="col-date">08 ago</td>
+                    <td class="col-status"><span class="badge badge-warning">Pendente</span></td>
+                  </tr>
+                  <tr>
+                    <td class="col-activity">
+                      Colheita parcial
+                      <span class="row-actions">
+                        <button type="button" class="row-action" data-complete-activity>Concluir</button>
+                      </span>
+                    </td>
+                    <td class="col-plot">Talhão B1</td>
+                    <td class="col-date">09 ago</td>
+                    <td class="col-status"><span class="badge badge-info">Agendada</span></td>
+                  </tr>
+                  <tr>
+                    <td class="col-activity">
+                      Irrigação programada
+                      <span class="row-actions">
+                        <button type="button" class="row-action" data-complete-activity>Concluir</button>
+                      </span>
+                    </td>
+                    <td class="col-plot">Talhão C2</td>
+                    <td class="col-date">10 ago</td>
+                    <td class="col-status"><span class="badge badge-success">Em andamento</span></td>
+                  </tr>
+                  <tr>
+                    <td class="col-activity">
+                      Manutenção do trator
+                      <span class="row-actions">
+                        <button type="button" class="row-action" data-complete-activity>Concluir</button>
+                      </span>
+                    </td>
+                    <td class="col-plot">Oficina</td>
+                    <td class="col-date">11 ago</td>
+                    <td class="col-status"><span class="badge badge-warning">Pendente</span></td>
+                  </tr>
+                  <tr>
+                    <td class="col-activity">
+                      Análise de solo
+                      <span class="row-actions">
+                        <button type="button" class="row-action" data-complete-activity>Concluir</button>
+                      </span>
+                    </td>
+                    <td class="col-plot">Talhão D4</td>
+                    <td class="col-date">12 ago</td>
+                    <td class="col-status"><span class="badge badge-info">Agendada</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="content-right">
+          <!-- Alertas -->
+          <section class="card alerts-card" aria-labelledby="alerts-title">
+            <div class="card-header">
+              <h2 class="card-title" id="alerts-title">Alertas</h2>
+              <span class="alerts-count" data-alerts-count>4</span>
+            </div>
+            <div class="alerts-list">
+              <article class="alert-item">
+                <span class="alert-icon tone-error" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                </span>
+                <div>
+                  <p class="alert-title">Estoque crítico: Glifosato</p>
+                  <p class="alert-desc">Restam 12L · Repor urgente</p>
+                </div>
+              </article>
+              <article class="alert-item">
+                <span class="alert-icon tone-warning" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
+                </span>
+                <div>
+                  <p class="alert-title">Chuva prevista 45mm</p>
+                  <p class="alert-desc">Revisar aplicação Talhão A3</p>
+                </div>
+              </article>
+              <article class="alert-item">
+                <span class="alert-icon tone-error" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-.76a2.87 2.87 0 1 1 5.74 0v.76"/><path d="M12 11a5 5 0 0 1 5 4.5l.3 1.5H6.7l.3-1.5A5 5 0 0 1 12 11Z"/><path d="M6.7 17h10.6"/><path d="m8 22 1-4"/><path d="m16 22-1-4"/></svg>
+                </span>
+                <div>
+                  <p class="alert-title">Praga detectada</p>
+                  <p class="alert-desc">Talhão B1 · Monitorar</p>
+                </div>
+              </article>
+              <article class="alert-item">
+                <span class="alert-icon tone-warning" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <div>
+                  <p class="alert-title">Atividade atrasada</p>
+                  <p class="alert-desc">Irrigação C2 · 2 dias</p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- Culturas -->
+          <section class="card" aria-labelledby="cultures-title">
+            <div class="card-header">
+              <h2 class="card-title" id="cultures-title">Culturas em Safra</h2>
+            </div>
+            <div class="cultures-list">
+              <article class="culture-item">
+                <div class="culture-meta">
+                  <span class="culture-name">Soja</span>
+                  <span class="culture-area">420 ha</span>
+                </div>
+                <div class="culture-track" aria-hidden="true">
+                  <div class="culture-fill is-primary" style="width: 78%"></div>
+                </div>
+                <span class="culture-progress">78% do ciclo</span>
+              </article>
+              <article class="culture-item">
+                <div class="culture-meta">
+                  <span class="culture-name">Milho</span>
+                  <span class="culture-area">310 ha</span>
+                </div>
+                <div class="culture-track" aria-hidden="true">
+                  <div class="culture-fill is-secondary" style="width: 45%"></div>
+                </div>
+                <span class="culture-progress">45% do ciclo</span>
+              </article>
+              <article class="culture-item">
+                <div class="culture-meta">
+                  <span class="culture-name">Trigo</span>
+                  <span class="culture-area">180 ha</span>
+                </div>
+                <div class="culture-track" aria-hidden="true">
+                  <div class="culture-fill is-accent" style="width: 92%"></div>
+                </div>
+                <span class="culture-progress">92% do ciclo</span>
+              </article>
+              <article class="culture-item">
+                <div class="culture-meta">
+                  <span class="culture-name">Pastagem</span>
+                  <span class="culture-area">374 ha</span>
+                </div>
+                <div class="culture-track" aria-hidden="true">
+                  <div class="culture-fill is-muted" style="width: 100%"></div>
+                </div>
+                <span class="culture-progress">100% do ciclo</span>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Nova Atividade -->
+  <div class="modal-backdrop" data-modal="new-activity" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-activity-title">
+      <h2 id="new-activity-title">Nova Atividade</h2>
+      <p>Registre uma atividade operacional. Os dados são mock e atualizam o painel localmente.</p>
+      <form class="activity-form" data-new-activity-form novalidate>
+        <div class="input-group">
+          <label for="activity-name">Nome da atividade</label>
+          <input id="activity-name" name="activity-name" placeholder="Ex.: Plantio de milho" required>
+        </div>
+        <div class="input-group">
+          <label for="activity-plot">Talhão</label>
+          <select id="activity-plot" name="activity-plot" required>
+            <option value="">Selecione…</option>
+            <option value="A3">Talhão A3</option>
+            <option value="B1">Talhão B1</option>
+            <option value="C2">Talhão C2</option>
+            <option value="D4">Talhão D4</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar atividade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Logout -->
+  <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+      <h2 id="logout-title">Sair da conta?</h2>
+      <p>Sua sessão será encerrada e você voltará para a tela de login.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-logout>Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
+
+  <script src="scripts/toast.js" defer></script>
+  <script src="scripts/shell.js" defer></script>
+  <script src="scripts/dashboard.js" defer></script>
+</body>
+</html>
