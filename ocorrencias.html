@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ocorrências — registro e acompanhamento de eventos e problemas da propriedade.">
+  <title>Ocorrências — Agro</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/modules.css">
+  <link rel="stylesheet" href="styles/ocorrencias.css">
+  <link rel="stylesheet" href="styles/feedback.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <!--
+    Tela: Ocorrências (frame UX9SC — designSystemProjetoAgro)
+    Layout: Sidebar 260 + Main (header, métricas, tabela de ocorrências)
+
+    Critérios de aceite fechados nesta tela (Fluxos de Interação D —
+    "Ocorrências, Custos e Relatórios" / Flow "Registrar ocorrência" e
+    "Ações da ocorrência"):
+    - Registrar ocorrência: formulário com tipo, talhão e prioridade
+      (segmented control Baixa/Média/Alta) → validação (G3) → nova linha
+      "Aberta" → toast de sucesso.
+    - Ficha de detalhe (modal largo): meta grid + linha do tempo (timeline)
+      + campo de nova atualização que publica um novo evento na timeline.
+    - Resolver (confirmação → status "Resolvida" + evento na timeline) e
+      Excluir (confirmação destrutiva).
+    - Suporte a `?talhao=` na URL (vindo de Áreas de Cultivo) com chip
+      removível, igual ao padrão usado em Atividades.
+  -->
+  <div class="app-shell">
+
+    <!-- ================================================================== -->
+    <!-- Sidebar                                                            -->
+    <!-- ================================================================== -->
+    <aside class="app-sidebar" aria-label="Navegação principal">
+      <div class="sidebar-brand">
+        <span class="sidebar-brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 20h10"/>
+            <path d="M10 20c5.5-2.5.8-6.4 3-10"/>
+            <path d="M9.5 9.4c1.7.8 2.9 2.6 3.5 4.6.9-1.8 2.4-3.2 4.2-3.8-1.6-.5-3.2.2-4.3 1.3-1.3-2.1-3.2-3.4-5.4-3.7 1.5.6 2.4 1.8 2 1.6z"/>
+          </svg>
+        </span>
+        <span>
+          <span class="sidebar-brand-name">Agro</span>
+          <span class="sidebar-brand-caption">Gestão Agrícola</span>
+        </span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="sidebar-link" href="dashboard.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Painel</span>
+        </a>
+        <a class="sidebar-link" href="areas-cultivo.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+          <span>Áreas de Cultivo</span>
+        </a>
+        <a class="sidebar-link" href="atividades.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+          <span>Atividades</span>
+        </a>
+        <a class="sidebar-link" href="insumos.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="m7.5 4.2 9 5.2"/></svg>
+          <span>Insumos</span>
+        </a>
+        <a class="sidebar-link is-active" href="ocorrencias.html" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span>Ocorrências</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Custos será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg>
+          <span>Custos</span>
+        </a>
+        <a class="sidebar-link" href="#" data-prep-link="Configurações será a próxima tela de módulo.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-spacer" aria-hidden="true"></div>
+
+      <div class="sidebar-user">
+        <button class="sidebar-user-trigger" type="button" data-popover-trigger aria-controls="profile-menu" aria-expanded="false" aria-haspopup="menu">
+          <span class="sidebar-avatar" aria-hidden="true">PS</span>
+          <span class="sidebar-user-meta">
+            <span class="sidebar-user-name">Pedro Silva</span>
+            <span class="sidebar-user-property">Gerente de fazenda</span>
+          </span>
+          <svg class="sidebar-user-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+
+        <div class="popover profile-menu sidebar-popover" id="profile-menu" data-popover role="menu">
+          <a class="profile-menu-item" href="#" data-prep-link="Meu Perfil será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Meu perfil</span>
+              <span class="profile-menu-hint">Ver e editar dados</span>
+            </span>
+          </a>
+          <a class="profile-menu-item" href="#" data-prep-link="Configurações será implementado na próxima onda." role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Configurações</span>
+              <span class="profile-menu-hint">Preferências da conta</span>
+            </span>
+          </a>
+          <div class="profile-menu-divider" role="separator"></div>
+          <button type="button" class="profile-menu-item is-danger" data-open-logout role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            <span class="profile-menu-texts">
+              <span class="profile-menu-label">Sair</span>
+              <span class="profile-menu-hint">Encerrar sessão → Login</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================================================================== -->
+    <!-- Main                                                               -->
+    <!-- ================================================================== -->
+    <main class="app-main">
+
+      <header class="page-header">
+        <div class="page-header-copy">
+          <h1>Ocorrências</h1>
+          <p>Registro de eventos e problemas · Fazenda Santa Rita</p>
+        </div>
+        <div class="page-header-actions">
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="visually-hidden">Buscar ocorrência</span>
+            <input type="search" placeholder="Buscar ocorrência..." data-occ-search autocomplete="off">
+          </label>
+          <button class="btn btn-primary" type="button" data-open-modal="occ-form">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Registrar Ocorrência
+          </button>
+        </div>
+      </header>
+
+      <!-- Chip de filtro por talhão (aparece só quando aberto via ?talhao=) -->
+      <div class="filter-bar" data-talhao-filter-bar hidden>
+        <button type="button" class="filter-chip is-active" data-clear-talhao-filter>
+          <svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/></svg>
+          <span data-talhao-filter-label>Talhão: —</span>
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Métricas -->
+      <section class="metrics-row" aria-label="Indicadores de ocorrências">
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Abertas</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="abertas">8</p>
+            <span class="metric-card-change is-flat">aguardando ação</span>
+          </div>
+          <p class="metric-card-desc">requer avaliação</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Em Análise</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="em-analise">3</p>
+            <span class="metric-card-change is-flat">em investigação</span>
+          </div>
+          <p class="metric-card-desc">acompanhamento ativo</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Resolvidas (Mês)</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="resolvidas">14</p>
+            <span class="metric-card-change">+12%</span>
+          </div>
+          <p class="metric-card-desc">fechadas em agosto</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-card-top">
+            <span class="metric-card-label">Severidade Alta</span>
+            <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-.76a2.87 2.87 0 1 1 5.74 0v.76"/><path d="M12 11a5 5 0 0 1 5 4.5l.3 1.5H6.7l.3-1.5A5 5 0 0 1 12 11Z"/><path d="M6.7 17h10.6"/></svg></span>
+          </div>
+          <div class="metric-card-value-row">
+            <p class="metric-card-value" data-metric="severidade-alta">2</p>
+            <span class="metric-card-change is-flat">atenção imediata</span>
+          </div>
+          <p class="metric-card-desc">monitorar de perto</p>
+        </article>
+      </section>
+
+      <!-- Tabela de ocorrências -->
+      <section class="card occ-table-card" aria-labelledby="occ-title">
+        <div class="card-header">
+          <h2 class="card-title" id="occ-title">Registro de Ocorrências</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" data-occ-table>
+            <thead>
+              <tr><th>Ocorrência</th><th>Tipo</th><th>Talhão</th><th>Data</th><th>Severidade</th><th>Status</th><th><span class="visually-hidden">Ações</span></th></tr>
+            </thead>
+            <tbody>
+              <tr data-occ="Infestação de lagarta-do-cartucho" data-tipo="Praga" data-talhao="Talhão B2" data-date="05 ago" data-severity="Alta" data-status="Aberta">
+                <td class="col-occ-name">Infestação de lagarta-do-cartucho</td>
+                <td class="col-muted">Praga</td>
+                <td class="col-muted">Talhão B2</td>
+                <td class="col-muted">05 ago</td>
+                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
+                <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o1" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o1" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Chuva excessiva — 85mm em 24h" data-tipo="Clima" data-talhao="Talhão A1" data-date="04 ago" data-severity="Média" data-status="Em análise">
+                <td class="col-occ-name">Chuva excessiva — 85mm em 24h</td>
+                <td class="col-muted">Clima</td>
+                <td class="col-muted">Talhão A1</td>
+                <td class="col-muted">04 ago</td>
+                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
+                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o2" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o2" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Falha no sistema de irrigação" data-tipo="Equipamento" data-talhao="Talhão C4" data-date="03 ago" data-severity="Alta" data-status="Aberta">
+                <td class="col-occ-name">Falha no sistema de irrigação</td>
+                <td class="col-muted">Equipamento</td>
+                <td class="col-muted">Talhão C4</td>
+                <td class="col-muted">03 ago</td>
+                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
+                <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o3" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o3" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Mancha-alvo na soja" data-tipo="Doença" data-talhao="Talhão A3" data-date="01 ago" data-severity="Média" data-status="Em análise">
+                <td class="col-occ-name">Mancha-alvo na soja</td>
+                <td class="col-muted">Doença</td>
+                <td class="col-muted">Talhão A3</td>
+                <td class="col-muted">01 ago</td>
+                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
+                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o4" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o4" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Geada leve registrada" data-tipo="Clima" data-talhao="Talhão D1" data-date="28 jul" data-severity="Baixa" data-status="Resolvida">
+                <td class="col-occ-name">Geada leve registrada</td>
+                <td class="col-muted">Clima</td>
+                <td class="col-muted">Talhão D1</td>
+                <td class="col-muted">28 jul</td>
+                <td><span class="badge badge-neutral" data-severity-badge>Baixa</span></td>
+                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o5" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o5" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Percevejo-marrom detectado" data-tipo="Praga" data-talhao="Talhão B4" data-date="26 jul" data-severity="Média" data-status="Resolvida">
+                <td class="col-occ-name">Percevejo-marrom detectado</td>
+                <td class="col-muted">Praga</td>
+                <td class="col-muted">Talhão B4</td>
+                <td class="col-muted">26 jul</td>
+                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
+                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o6" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o6" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Trator MF 4275 — superaquecimento" data-tipo="Equipamento" data-talhao="Oficina" data-date="24 jul" data-severity="Alta" data-status="Resolvida">
+                <td class="col-occ-name">Trator MF 4275 — superaquecimento</td>
+                <td class="col-muted">Equipamento</td>
+                <td class="col-muted">Oficina</td>
+                <td class="col-muted">24 jul</td>
+                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
+                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o7" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o7" data-popover role="menu"></div></div></td>
+              </tr>
+              <tr data-occ="Ferrugem asiática — início" data-tipo="Doença" data-talhao="Talhão C2" data-date="22 jul" data-severity="Média" data-status="Em análise">
+                <td class="col-occ-name">Ferrugem asiática — início</td>
+                <td class="col-muted">Doença</td>
+                <td class="col-muted">Talhão C2</td>
+                <td class="col-muted">22 jul</td>
+                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
+                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
+                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o8" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o8" data-popover role="menu"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" data-occ-empty hidden>
+            <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/></svg></span>
+            <h3>Sem ocorrências registradas</h3>
+            <p>Ajuste a busca/filtro ou registre pragas, doenças ou eventos climáticos.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Registrar ocorrência -->
+  <div class="modal-backdrop" data-modal="occ-form" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-form-title">
+      <h2 id="occ-form-title">Registrar ocorrência</h2>
+      <p>Descreva o problema e vincule ao talhão. Os campos com * são obrigatórios.</p>
+      <form class="stack-form" data-occ-form novalidate>
+        <div class="input-group">
+          <label for="occ-titulo">Título *</label>
+          <input id="occ-titulo" name="titulo" placeholder="Ex.: Lagarta-do-cartucho" required>
+          <p class="field-error" data-error-for="titulo"></p>
+        </div>
+        <div class="input-group">
+          <label for="occ-tipo-trigger">Tipo *</label>
+          <select id="occ-tipo" name="tipo" required data-enhance-select data-placeholder="Selecione o tipo">
+            <option value="">Selecione o tipo</option>
+            <option value="Praga">Praga</option>
+            <option value="Doença">Doença</option>
+            <option value="Clima">Clima</option>
+            <option value="Equipamento">Equipamento</option>
+            <option value="Outro">Outro</option>
+          </select>
+          <p class="field-error" data-error-for="tipo"></p>
+        </div>
+        <div class="input-group">
+          <label for="occ-talhao-trigger">Talhão *</label>
+          <select id="occ-talhao" name="talhao" required data-enhance-select data-placeholder="Selecione o talhão">
+            <option value="">Selecione o talhão</option>
+            <option value="Talhão A1">Talhão A1</option>
+            <option value="Talhão A3">Talhão A3</option>
+            <option value="Talhão B2">Talhão B2</option>
+            <option value="Talhão B4">Talhão B4</option>
+            <option value="Talhão C2">Talhão C2</option>
+            <option value="Talhão C4">Talhão C4</option>
+            <option value="Talhão D1">Talhão D1</option>
+          </select>
+          <p class="field-error" data-error-for="talhao"></p>
+        </div>
+        <div class="input-group">
+          <label>Prioridade</label>
+          <div class="segmented" role="group" aria-label="Prioridade">
+            <button type="button" class="segmented-option" data-priority="Baixa" data-tone="baixa" aria-pressed="true">Baixa</button>
+            <button type="button" class="segmented-option" data-priority="Média" data-tone="media" aria-pressed="false">Média</button>
+            <button type="button" class="segmented-option" data-priority="Alta" data-tone="alta" aria-pressed="false">Alta</button>
+          </div>
+          <input type="hidden" name="prioridade" value="Baixa">
+        </div>
+        <div class="textarea-group">
+          <label for="occ-descricao">Descrição</label>
+          <textarea id="occ-descricao" name="descricao" placeholder="Descreva o que foi observado, área afetada e ações já tomadas..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Registrar ocorrência</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Ficha de detalhe (timeline + nova atualização + resolver/excluir) -->
+  <div class="modal-backdrop" data-modal="occ-detail" aria-hidden="true" role="presentation">
+    <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="occ-detail-title">
+      <div class="occ-detail-header">
+        <div>
+          <h2 id="occ-detail-title" data-detail-title>Ocorrência</h2>
+          <p data-detail-subtitle>Talhão · Data</p>
+        </div>
+        <div class="occ-detail-badges" data-detail-badges></div>
+      </div>
+      <div class="modal-body-scroll">
+        <div class="meta-grid" data-detail-meta></div>
+        <div>
+          <h3 class="occ-detail-subhead">Linha do tempo</h3>
+          <div class="timeline" data-detail-timeline></div>
+        </div>
+        <div class="textarea-group">
+          <label for="occ-update-text">Nova atualização</label>
+          <textarea id="occ-update-text" data-update-text placeholder="Descreva o andamento, ações tomadas e próximos passos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-actions occ-detail-actions">
+        <button class="btn btn-destructive" type="button" data-detail-delete>Excluir</button>
+        <span class="filter-spacer"></span>
+        <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
+        <button class="btn btn-secondary" type="button" data-detail-publish>Publicar atualização</button>
+        <button class="btn btn-primary" type="button" data-detail-resolve>Marcar resolvida</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmar resolução -->
+  <div class="modal-backdrop" data-modal="occ-resolve" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-resolve-title">
+      <h2 id="occ-resolve-title">Confirmar resolução</h2>
+      <p data-resolve-desc>A ocorrência será marcada como resolvida.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-primary" type="button" data-confirm-resolve>Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Excluir ocorrência -->
+  <div class="modal-backdrop" data-modal="occ-delete" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-delete-title">
+      <h2 id="occ-delete-title">Excluir ocorrência?</h2>
+      <p>Esta ação não pode ser desfeita. Atualizações registradas serão removidas.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-delete>Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Logout -->
+  <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+      <h2 id="logout-title">Sair da conta?</h2>
+      <p>Sua sessão será encerrada e você voltará para a tela de login.</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-logout>Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
+
+  <script src="scripts/toast.js" defer></script>
+  <script src="scripts/select.js" defer></script>
+  <script src="scripts/shell.js" defer></script>
+  <script src="scripts/ocorrencias.js" defer></script>
+</body>
+</html>
