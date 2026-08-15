@@ -307,6 +307,24 @@ a:focus-visible {
   color: var(--text-primary);
 }
 
+.btn-secondary {
+  background: var(--secondary-subtle);
+  color: var(--secondary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #efe3c4;
+}
+
+.btn-destructive {
+  background: var(--error);
+  color: var(--text-inverse);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: #a93226;
+}
+
 .btn-block {
   width: 100%;
 }
@@ -314,6 +332,56 @@ a:focus-visible {
 .btn.is-loading {
   position: relative;
   pointer-events: none;
+}
+
+/* Icon button (40×40 / 36×36) — chrome do app */
+.icon-btn {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+  padding: 0;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.icon-btn[aria-expanded="true"] {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn--sm {
+  width: 36px;
+  height: 36px;
+}
+
+.icon-btn--sm svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -441,6 +509,141 @@ a:focus-visible {
 .form-message.info {
   background: var(--info-bg);
   color: var(--info);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Badges (pill)                                                              */
+/* -------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.badge-error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.badge-info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.badge-neutral {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Card / Metric helpers                                                      */
+/* -------------------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-link {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.card-link:hover {
+  text-decoration: underline;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.metric-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.metric-card-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.metric-card-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.metric-card-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.metric-card-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.metric-card-desc {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* -------------------------------------------------------------------------- */
