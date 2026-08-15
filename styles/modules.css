@@ -1,0 +1,740 @@
+/**
+ * Agro — padrões compartilhados dos módulos operacionais
+ * --------------------------------------------------------------------------
+ * Componentes usados por Áreas de Cultivo, Atividades, Insumos e Ocorrências
+ * (frames TaqqK, U6jZ05, QpBVa, UX9SC do designSystemProjetoAgro), mais os
+ * estados descritos nos boards "Fluxos de Interação" (G7/G8/G9) e
+ * "Fluxos Complementares — Lacunas UX" (G3/G8):
+ *
+ * - Barra de filtros (chips clicáveis + contagem de resultados)
+ * - Menu de ações contextuais "⋮" (Ver detalhes / Editar / Concluir / …)
+ * - Faixa de alerta crítico (estoque baixo, severidade alta)
+ * - Textarea Group (variante do Input Group para descrições longas)
+ * - Grade de metadados (label/valor) usada nas fichas de detalhe
+ * - Segmented control (prioridade Baixa/Média/Alta)
+ * - Timeline (linha do tempo de ocorrências)
+ * - Kanban board (colunas de status de atividades)
+ * - Modal largo (fichas de detalhe com mais conteúdo que o modal padrão)
+ *
+ * Convém manter aqui só o que é reaproveitado por 2+ telas; regras
+ * exclusivas de uma tela ficam no CSS da própria tela (áreas-cultivo.css,
+ * atividades.css, insumos.css, ocorrencias.css).
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Grade de métricas (.metrics-row)                                           */
+/* --------------------------------------------------------------------------
+ * Mesma regra de styles/dashboard.css. Sem ela, os 4 `.metric-card` da
+ * seção viram blocos empilhados (sem grid) e — pior — a linha de métricas
+ * fica sem `flex: 0 0 auto`: dentro do `.app-main` (flex column, overflow
+ * hidden), ela então disputa espaço com o card da tabela abaixo e o
+ * espreme a poucos pixels de altura, tornando linhas "clicáveis" pelo DOM
+ * mas invisíveis/inacessíveis na tela. Áreas de Cultivo usa 3 colunas via
+ * `.metrics-row-3` (definida em areas-cultivo.css), que sobrescreve
+ * `grid-template-columns` mas herda o `flex: 0 0 auto` daqui.
+ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tabela de dados (.data-table)                                              */
+/* --------------------------------------------------------------------------
+ * Mesma anatomia usada em styles/dashboard.css (cabeçalho fixo no topo do
+ * scroll, zebra de hover, bordas entre linhas). Centralizada aqui porque
+ * Áreas de Cultivo, Atividades (Lista), Insumos e Ocorrências reaproveitam
+ * a mesma tabela em 4 telas — o Dashboard mantém a cópia local em
+ * dashboard.css por não carregar modules.css.
+ */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table thead th {
+  padding: 12px 20px;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.data-table tbody td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(244, 247, 242, 0.7);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Metric Card — variação (Value Row: valor + delta), extra ao base.css       */
+/* --------------------------------------------------------------------------
+ * base.css define .metric-card-value como bloco único (usado no Dashboard,
+ * sem delta). Os módulos novos replicam o "Value Row" do pen (valor +
+ * variação percentual lado a lado) — por isso o valor vira um <span> dentro
+ * de .metric-card-value-row em vez de <p> sozinho.
+ */
+.metric-card-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.metric-card-value-row .metric-card-value {
+  margin: 0;
+}
+
+.metric-card-change {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.metric-card-change.is-flat {
+  color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Barra de filtros (G8 — "Espécime de filtros")                              */
+/* -------------------------------------------------------------------------- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.filter-bar-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 2px;
+}
+
+/* Chip de filtro: reaproveita o visual do badge-neutral em repouso e do
+   primary-subtle quando ativo — mesma linguagem do "Badge/Neutral" do pen,
+   porém como <button> (o pen usa badges estáticos; aqui viram controles). */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.filter-chip:hover {
+  background: var(--border);
+}
+
+.filter-chip.is-active {
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.filter-chip svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.filter-spacer {
+  flex: 1;
+}
+
+.filter-results {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Wrap dos selects de filtro (Status/Talhão/Tipo) — o <select data-enhance-select>
+   assume a largura mínima definida aqui via .select-trigger (herdada do base.css). */
+.filter-select {
+  min-width: 168px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Toolbar de página: busca + botão primário (cabeçalho de cada módulo)       */
+/* -------------------------------------------------------------------------- */
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Menu de ações contextuais "⋮" (Flow 2 / Flow 5 do pen)                     */
+/* --------------------------------------------------------------------------
+ * Estrutura: <div class="action-menu-wrap"><button data-menu-trigger>⋮</button>
+ * <div class="action-menu" data-menu>…</div></div>
+ * O JS de cada tela (data-menu-trigger / data-menu) replica o padrão de
+ * popover já usado em scripts/shell.js (open/close/click-fora/Escape).
+ */
+.action-menu-wrap {
+  position: relative;
+}
+
+.action-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: none;
+  width: 240px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.action-menu.is-open {
+  display: grid;
+  gap: 2px;
+  animation: toast-enter 180ms var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.action-menu-item:hover {
+  background: var(--bg-subtle);
+}
+
+.action-menu-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.action-menu-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.action-menu-icon.tone-info { background: var(--info-bg); color: var(--info); }
+.action-menu-icon.tone-secondary { background: var(--secondary-subtle); color: var(--secondary); }
+.action-menu-icon.tone-success { background: var(--success-bg); color: var(--success); }
+.action-menu-icon.tone-primary { background: var(--primary-subtle); color: var(--primary); }
+.action-menu-icon.tone-error { background: var(--error-bg); color: var(--error); }
+
+.action-menu-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.action-menu-item.is-danger .action-menu-label {
+  color: var(--error);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Faixa de alerta crítico (Insumos: estoque abaixo do mínimo)                */
+/* -------------------------------------------------------------------------- */
+.stat-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+  flex: 0 0 auto;
+}
+
+.stat-alert-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: rgba(184, 134, 11, 0.16);
+  color: var(--warning);
+}
+
+.stat-alert-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stat-alert-title {
+  margin: 0 0 2px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stat-alert-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Textarea Group (variante do Input Group para textos longos)                */
+/* -------------------------------------------------------------------------- */
+.textarea-group {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.textarea-group label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.textarea-group textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.textarea-group textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.textarea-group textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.14);
+  outline: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Grade de metadados (label muted em cima, valor forte embaixo)              */
+/* -------------------------------------------------------------------------- */
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.meta-cell {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.meta-cell-label {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.meta-cell-value {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Segmented control (prioridade Baixa / Média / Alta)                        */
+/* -------------------------------------------------------------------------- */
+.segmented {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.segmented-option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.segmented-option:hover {
+  border-color: var(--border-strong);
+}
+
+.segmented-option[aria-pressed="true"][data-tone="baixa"] {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.segmented-option[aria-pressed="true"][data-tone="media"] {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.segmented-option[aria-pressed="true"][data-tone="alta"] {
+  background: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Timeline (linha do tempo de uma ocorrência)                                */
+/* -------------------------------------------------------------------------- */
+.timeline {
+  display: grid;
+  gap: 0;
+}
+
+.timeline-entry {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 12px;
+}
+
+.timeline-rail {
+  display: grid;
+  justify-items: center;
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  margin-top: 4px;
+}
+
+.timeline-entry.is-latest .timeline-dot {
+  background: var(--primary);
+}
+
+.timeline-line {
+  flex: 1;
+  width: 2px;
+  min-height: 28px;
+  background: var(--border);
+  margin-top: 2px;
+}
+
+.timeline-entry:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-body {
+  padding-bottom: 18px;
+}
+
+.timeline-time {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.timeline-title {
+  margin: 0 0 2px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timeline-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Kanban board (Atividades — Flow "View Toggle")                             */
+/* -------------------------------------------------------------------------- */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  gap: 10px;
+}
+
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+.kanban-column-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.kanban-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kanban-dot.tone-warning { background: var(--warning); }
+.kanban-dot.tone-info { background: var(--info); }
+.kanban-dot.tone-secondary { background: var(--secondary); }
+.kanban-dot.tone-success { background: var(--success); }
+
+.kanban-count {
+  min-width: 22px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.kanban-count.tone-warning { background: var(--warning-bg); color: var(--warning); }
+.kanban-count.tone-info { background: var(--info-bg); color: var(--info); }
+.kanban-count.tone-secondary { background: var(--secondary-subtle); color: var(--secondary); }
+.kanban-count.tone-success { background: var(--success-bg); color: var(--success); }
+
+.kanban-cards {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 40px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.kanban-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+.kanban-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kanban-card-title {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.kanban-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.kanban-card-meta svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kanban-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kanban-card-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.kanban-card-date svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.kanban-card.is-dragging {
+  opacity: 0.5;
+}
+
+.kanban-column.is-drop-target {
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modal largo (fichas de detalhe: mais campos que o modal padrão de 420px)   */
+/* -------------------------------------------------------------------------- */
+.modal-lg {
+  width: min(600px, 100%);
+}
+
+.modal-body-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0 -4px 20px;
+  padding: 0 4px;
+  display: grid;
+  gap: 16px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Toggle de visualização (Kanban / Lista)                                    */
+/* -------------------------------------------------------------------------- */
+.view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.view-toggle-option {
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.view-toggle-option[aria-pressed="true"] {
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsivo: empilha grades densas em telas estreitas                       */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .kanban-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .page-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-menu.is-open {
+    animation: none !important;
+  }
+}
