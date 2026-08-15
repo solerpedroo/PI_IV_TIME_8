@@ -1,6 +1,6 @@
-# Agro — telas de autenticação
+# Agro — frontend estático
 
-Implementação estática das telas de **login**, **criação de conta**, **recuperação de senha**, **redefinição de senha** e **confirmação de e-mail**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
+Implementação das telas de **autenticação** e do **Painel Geral (Dashboard)**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
 ## Estrutura
 
@@ -11,56 +11,57 @@ frontend_pi_iv/
 ├── recuperar-senha.html
 ├── redefinir-senha.html
 ├── confirmar-email.html
+├── dashboard.html          # Painel Geral (frame ajDH7)
 ├── styles/
-│   ├── base.css       # tokens Forest Sage + componentes compartilhados
-│   ├── auth.css       # layout das telas de autenticação
-│   └── motion.css     # animações / transições (com prefers-reduced-motion)
+│   ├── base.css            # tokens + componentes compartilhados
+│   ├── auth.css            # layout das telas de autenticação
+│   ├── shell.css           # sidebar, header, popovers, chrome
+│   ├── dashboard.css       # métricas, tabela, alertas, culturas
+│   ├── feedback.css        # toasts, empty, skeleton, modal
+│   └── motion.css          # animações / prefers-reduced-motion
 └── scripts/
-    └── auth.js        # validação, estados, navegação mock e interações
+    ├── auth.js             # validação e fluxos de auth
+    ├── toast.js            # API AgroToast (4 variantes do pen)
+    ├── shell.js            # notificações, perfil, logout
+    └── dashboard.js        # mock G4, busca, nova atividade
 ```
 
-## Fidelidade ao design system
-
-| Item | Implementação |
-|------|----------------|
-| Tokens | `$token` do pen → `--token` em `styles/base.css` |
-| Tipografia | Geist (CDN) |
-| Ícones | Lucide inline (`leaf`, `sprout`, `mail`, `arrow-left`) |
-| Login / Cadastro | Split Brand Panel + Form (420 / 480px) |
-| Recuperar / Redefinir | Card centralizado |
-| Confirmar e-mail | Split + card com ícone mail |
-
 ## Como executar
-
-Abra `login.html` diretamente no navegador ou sirva a pasta com um servidor local:
 
 ```bash
 python -m http.server 5500
 ```
 
-Depois acesse `http://localhost:5500/login.html`.
+Acesse `http://localhost:5500/login.html` (login redireciona ao painel) ou `http://localhost:5500/dashboard.html`.
 
-## Fluxo entre telas
+## Fluxos
 
 ```text
-login.html
- ├─ Esqueceu a senha? → recuperar-senha.html → redefinir-senha.html → login.html (flash)
- ├─ Criar conta → criar-conta.html → confirmar-email.html → login.html
- └─ Entrar (mock) → mensagem de sucesso na própria tela
+login.html ──sucesso──► dashboard.html
+dashboard.html ──Sair──► login.html (+ toast “Você saiu com segurança.”)
+
+Chrome no painel:
+ · Sino → painel de notificações (marcar lidas / empty)
+ · Avatar → Meu perfil / Configurações (preparatório) / Sair (modal)
+ · Nova Atividade → modal mock (+ toast + métrica)
+ · Concluir na tabela → badge + pendentes 8→7 + toast
 ```
 
-## Comportamentos incluídos
+## Toasts (Flow E)
 
-- Validação de campos obrigatórios e e-mail.
-- Mensagens de erro e sucesso acessíveis (`role="alert|status"`).
-- Estado de envio com `Aguarde…` e microanimação.
-- Mostrar/ocultar senha.
-- Confirmação de senha e medidor de força (obrigatório em redefinir).
-- Máscara de telefone no cadastro.
-- Persistência do e-mail via `sessionStorage` / query string na confirmação.
-- Flash de sucesso no login após redefinir senha.
-- Reenvio de confirmação com cooldown de 30 segundos.
-- Animações de entrada + `prefers-reduced-motion`.
-- Layout responsivo para telas menores.
+| Tipo | Uso |
+|------|-----|
+| success | Atividade registrada, login, marcar lidas |
+| error | Validação / falha mock |
+| warning | Ocorrência / estoque |
+| info | Módulo em preparação, notificação aberta |
 
-As rotas de backend, autenticação real e persistência deverão substituir a simulação `simulateRequest` em `scripts/auth.js` quando a API estiver disponível.
+API: `AgroToast.show({ type, title, description, duration })`.
+
+## Fora desta entrega
+
+Módulos lista/detalhe (áreas, atividades, insumos, ocorrências, custos, configurações), Relatórios, Safras, Meu Perfil e mobile — links do shell mostram toast “em preparação”.
+
+## Dados
+
+Mocks locais híbridos em `dashboard.js` / HTML. Substitua por `fetch` quando a API existir; a anatomia de métricas e toasts já está desacoplada.
