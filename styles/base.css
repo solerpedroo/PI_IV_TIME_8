@@ -1,0 +1,458 @@
+/**
+ * Agro — Design System Forest Sage (pen.dev)
+ * --------------------------------------------------------------------------
+ * Tokens e componentes compartilhados. Fonte de verdade: designSystemProjetoAgro.
+ * Nomenclatura: $token do pen → --token no CSS.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* Tipografia Geist (Fontsource CDN)                                          */
+/* -------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tokens                                                                     */
+/* -------------------------------------------------------------------------- */
+:root {
+  /* Superfícies */
+  --bg: #f4f7f2;
+  --bg-subtle: #e8efe4;
+  --surface: #ffffff;
+  --surface-inverse: #1a3324;
+  --border: #d4dfd0;
+  --border-strong: #b8c9b0;
+
+  /* Texto */
+  --text-primary: #1a3324;
+  --text-secondary: #5c7364;
+  --text-muted: #8fa396;
+  --text-inverse: #ffffff;
+
+  /* Marca */
+  --primary: #2d6a4f;
+  --primary-hover: #245a42;
+  --primary-subtle: #e6f2ec;
+  --secondary: #8b6914;
+  --secondary-subtle: #f5edd8;
+  --accent: #40916c;
+
+  /* Semânticas */
+  --success: #2d6a4f;
+  --success-bg: #e6f2ec;
+  --warning: #b8860b;
+  --warning-bg: #fdf6e3;
+  --error: #c0392b;
+  --error-bg: #fceae8;
+  --info: #2980b9;
+  --info-bg: #e8f4fc;
+
+  /* Tipografia (Geist via @font-face acima) */
+  --font-heading: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", monospace;
+
+  /* Raios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Espaçamento */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Sombras do pen (alpha sobre #1A3324) */
+  --shadow-dropdown: 0 4px 12px rgba(26, 51, 36, 0.125);
+  --shadow-card: 0 8px 24px rgba(26, 51, 36, 0.125);
+  --shadow-modal: 0 12px 32px rgba(26, 51, 36, 0.188);
+  --shadow-toast: 0 6px 16px rgba(26, 51, 36, 0.188);
+
+  /* Compat: aliases usados em telas antigas */
+  --ink: var(--text-primary);
+  --muted: var(--text-secondary);
+  --muted-2: var(--text-muted);
+  --focus: var(--accent);
+  --error-soft: var(--error-bg);
+  --primary-soft: var(--primary-subtle);
+  --surface-soft: var(--bg-subtle);
+  --font: var(--font-body);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reset / base                                                               */
+/* -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Brand                                                                      */
+/* -------------------------------------------------------------------------- */
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.brand-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+.brand-mark svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-mark--sm {
+  width: 36px;
+  height: 36px;
+}
+
+.brand-mark--sm svg {
+  width: 20px;
+  height: 20px;
+}
+
+.brand-mark--bare {
+  background: transparent;
+  color: var(--primary);
+  width: auto;
+  height: auto;
+}
+
+.brand-mark--bare svg {
+  width: 36px;
+  height: 36px;
+}
+
+.brand-sprout svg,
+.verify-icon svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-name {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.brand-caption {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.brand-lockup--compact .brand-name {
+  font-size: 24px;
+}
+
+.brand-lockup--compact .brand-caption {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Botões (Button/Primary, Outline, Ghost…)                                   */
+/* -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible,
+.input-group input:focus-visible,
+.auth-link:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(64, 145, 108, 0.28);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--text-inverse);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-outline {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn.is-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Inputs (Input Group reusable)                                              */
+/* -------------------------------------------------------------------------- */
+.input-group {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.input-group label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.input-group input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.input-wrap input {
+  padding-right: 72px;
+}
+
+.input-group input::placeholder {
+  color: var(--text-muted);
+}
+
+.input-group input:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-strong);
+}
+
+.input-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.14);
+  outline: 0;
+}
+
+.input-group input[aria-invalid="true"] {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+.field-error {
+  min-height: 16px;
+  color: var(--error);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.field-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.password-toggle:hover {
+  color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.password-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mensagens de formulário                                                    */
+/* -------------------------------------------------------------------------- */
+.form-message {
+  display: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.form-message.is-visible {
+  display: block;
+}
+
+.form-message.error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.form-message.success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.form-message.info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ícones utilitários                                                         */
+/* -------------------------------------------------------------------------- */
+.icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
