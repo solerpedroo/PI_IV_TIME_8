@@ -17,16 +17,23 @@
     flashSuccess: "agro.flashSuccess",
   };
 
+  /** Itens navegáveis de um popover com role="menu". */
+  const menuItems = (popover) => $$('[role="menuitem"]', popover).filter((item) => !item.hidden);
+
+  function triggerOf(popover) {
+    return document.querySelector(`[aria-controls="${popover.id}"]`);
+  }
+
   function closeAllPopovers(except) {
     $$("[data-popover]").forEach((popover) => {
       if (except && popover === except) return;
       popover.classList.remove("is-open");
-      const trigger = document.querySelector(`[aria-controls="${popover.id}"]`);
+      const trigger = triggerOf(popover);
       if (trigger) trigger.setAttribute("aria-expanded", "false");
     });
   }
 
-  function togglePopover(trigger) {
+  function togglePopover(trigger, { focusFirstItem = false } = {}) {
     const id = trigger.getAttribute("aria-controls");
     const popover = id ? document.getElementById(id) : null;
     if (!popover) return;
@@ -34,6 +41,7 @@
     closeAllPopovers(willOpen ? popover : null);
     popover.classList.toggle("is-open", willOpen);
     trigger.setAttribute("aria-expanded", String(willOpen));
+    if (willOpen && focusFirstItem) menuItems(popover)[0]?.focus();
   }
 
   function initPopoverTriggers() {
@@ -42,6 +50,42 @@
         event.stopPropagation();
         togglePopover(trigger);
       });
+
+      // Abertura por teclado já foca o primeiro item do menu (padrão de menu button).
+      trigger.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+        event.preventDefault();
+        const id = trigger.getAttribute("aria-controls");
+        const popover = id ? document.getElementById(id) : null;
+        if (!popover) return;
+        if (!popover.classList.contains("is-open")) {
+          togglePopover(trigger, { focusFirstItem: true });
+          return;
+        }
+        const items = menuItems(popover);
+        (event.key === "ArrowDown" ? items[0] : items[items.length - 1])?.focus();
+      });
+    });
+
+    // Setas / Home / End navegam entre os itens do menu aberto.
+    $$('[data-popover][role="menu"]').forEach((popover) => {
+      popover.addEventListener("keydown", (event) => {
+        const items = menuItems(popover);
+        const index = items.indexOf(document.activeElement);
+        if (index === -1) return;
+
+        const moves = {
+          ArrowDown: (index + 1) % items.length,
+          ArrowUp: (index - 1 + items.length) % items.length,
+          Home: 0,
+          End: items.length - 1,
+        };
+
+        if (event.key in moves) {
+          event.preventDefault();
+          items[moves[event.key]].focus();
+        }
+      });
     });
 
     document.addEventListener("click", (event) => {
@@ -49,11 +93,21 @@
       if (!inside) closeAllPopovers();
     });
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
+    // Tab para fora do popover encerra o overlay (não prende o foco).
+    document.addEventListener("focusin", (event) => {
+      $$("[data-popover].is-open").forEach((popover) => {
+        if (popover.contains(event.target) || triggerOf(popover) === event.target) return;
         closeAllPopovers();
-        closeModal($("[data-modal].is-open"));
-      }
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const open = $("[data-popover].is-open");
+      const trigger = open ? triggerOf(open) : null;
+      closeAllPopovers();
+      closeModal($("[data-modal].is-open"));
+      trigger?.focus();
     });
   }
 
