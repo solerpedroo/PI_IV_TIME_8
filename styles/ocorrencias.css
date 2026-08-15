@@ -1,0 +1,87 @@
+/**
+ * Agro — Ocorrências (frame UX9SC)
+ * --------------------------------------------------------------------------
+ * Layout específico: tabela cheia + ficha de detalhe com timeline (modal
+ * largo reaproveitado de modules.css: .modal-lg, .meta-grid, .timeline).
+ */
+
+.occ-table-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.occ-table-card .table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.col-occ-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.col-muted {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.col-actions {
+  text-align: right;
+}
+
+.occ-table-card .empty-state {
+  margin: 16px 20px;
+  border: 1px dashed var(--border);
+}
+
+.stack-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ficha de detalhe                                                           */
+/* -------------------------------------------------------------------------- */
+.occ-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.occ-detail-header h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.occ-detail-header p {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.occ-detail-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.occ-detail-subhead {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.occ-detail-actions {
+  flex-wrap: wrap;
+}
