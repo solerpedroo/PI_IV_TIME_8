@@ -702,11 +702,95 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .view-toggle-option[aria-pressed="true"] {
   background: var(--primary-subtle);
   color: var(--primary);
+}
+
+/* Conteúdo alternado pelo toggle (Kanban ⇄ Lista): esmaece antes de trocar
+   `hidden`, e a view que entra some de opacity:0 → 1 — ver initViewToggle()
+   em atividades.js, que orquestra as duas metades dessa transição (não dá
+   pra animar `display` diretamente). */
+[data-view-kanban],
+[data-view-list] {
+  transition: opacity 160ms ease;
+}
+
+[data-view-kanban].is-view-fading,
+[data-view-list].is-view-fading {
+  opacity: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Itens que aparecem após um filtro (busca, chip, categoria, dia da semana)  */
+/* --------------------------------------------------------------------------
+ * Puramente CSS: sempre que uma linha/card deixa de casar com `[hidden]`
+ * (ou é criado do zero, já visível), a animação "reinicia" porque o
+ * elemento volta a corresponder ao seletor — não precisa de JS extra nas
+ * 4 telas para orquestrar isso.
+ */
+@keyframes filter-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*
+ * fill-mode "none" é proposital (não "both"): um `transform` sustentado
+ * por fill-mode viraria containing block dos descendentes
+ * `position: fixed` — é exatamente o bug que acabou de ser corrigido em
+ * `.app-main` (ver comentário lá), só que reintroduzido aqui em cada
+ * linha/card teria efeito pior ainda, já que o menu "⋮" de CADA linha
+ * ganharia offset errado (dependente da posição da própria linha). "none"
+ * evita isso: assim que os 200ms passam, a linha não fica mais "animando"
+ * e o transform desaparece — sem prejuízo visual, já que o keyframe "to"
+ * já é translateY(0) (idêntico ao estado sem transform nenhum).
+ */
+.data-table tbody tr:not([hidden]),
+.kanban-card:not([hidden]) {
+  animation: filter-item-in 200ms var(--ease-out, ease) none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Select de status inline na Lista de Atividades                             */
+/* --------------------------------------------------------------------------
+ * <select> nativo de propósito (ver atividades.js) — o popup do navegador
+ * não sofre com o clipping de containers com scroll, diferente do
+ * dropdown customizado (.select-menu).
+ */
+.col-status-select {
+  width: 168px;
+}
+
+.status-select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.status-select:hover {
+  border-color: var(--border-strong);
+}
+
+.status-select:focus-visible {
+  outline: 3px solid rgba(64, 145, 108, 0.28);
+  outline-offset: 2px;
 }
 
 /* -------------------------------------------------------------------------- */
