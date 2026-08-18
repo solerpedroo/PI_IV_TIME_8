@@ -159,10 +159,10 @@
               <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
               <span class="action-menu-label">Ver ocorrências</span>
             </a>
-            <button type="button" class="action-menu-item" role="menuitem" data-prep-toast="Custos por talhão em preparação.">
+            <a class="action-menu-item" role="menuitem" href="custos.html?talhao=${encoded}">
               <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
               <span class="action-menu-label">Ver custos</span>
-            </button>
+            </a>
           </div>
         </div>
       </td>
