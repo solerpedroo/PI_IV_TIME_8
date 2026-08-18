@@ -134,8 +134,22 @@
   animation: auth-slide-in var(--dur-slow) var(--ease-out) both;
 }
 
+/*
+ * fill-mode "backwards" (não "both"): só precisamos seg`urar o estado
+ * "from" durante o animation-delay para não piscar o conteúdo antes da
+ * entrada. Manter "forwards" (via "both") depois que a animação termina
+ * é visualmente idêntico aqui — o keyframe "to" é opacity:1/translateY(0),
+ * igual ao estado sem animação nenhuma — mas tem um efeito colateral
+ * grave: um `transform` (mesmo translateY(0)) mantido por fill-mode faz
+ * o elemento virar containing block dos descendentes `position: fixed`,
+ * então qualquer popover/menu "⋮" promovido a fixed (ver shell.js) dentro
+ * de .app-main passa a ser posicionado relativo à borda do .app-main (que
+ * começa depois da sidebar de 260px) em vez da viewport, renderizando
+ * deslocado e cortado na borda direita da tela. "backwards" evita isso:
+ * assim que a animação termina, o transform é liberado.
+ */
 .app-main {
-  animation: auth-fade-up var(--dur-slow) var(--ease-out) both;
+  animation: auth-fade-up var(--dur-slow) var(--ease-out) backwards;
   animation-delay: 60ms;
 }
 
