@@ -1,6 +1,6 @@
 # Agro — frontend estático
 
-Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos** e **Ocorrências**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
+Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
 ## Estrutura
 
@@ -16,6 +16,8 @@ frontend_pi_iv/
 ├── atividades.html         # Atividades — Kanban + Lista (frame U6jZ05)
 ├── insumos.html            # Insumos — controle de estoque (frame QpBVa)
 ├── ocorrencias.html        # Ocorrências — registro + timeline (frame UX9SC)
+├── custos.html              # Custos — orçamento, gráficos e lançamentos
+├── configuracoes.html       # Configurações — perfil e preferências
 ├── styles/
 │   ├── base.css            # tokens + componentes compartilhados
 │   ├── auth.css            # layout das telas de autenticação
@@ -39,7 +41,9 @@ frontend_pi_iv/
     ├── areas-cultivo.js    # CRUD mock de talhão, filtro por cultura
     ├── atividades.js       # Kanban/Lista, concluir/duplicar/excluir
     ├── insumos.js          # entrada/saída, status automático, exclusão condicional
-    └── ocorrencias.js      # registrar, timeline, resolver/excluir
+    ├── ocorrencias.js      # registrar, timeline, resolver/excluir
+    ├── custos.js           # filtros, lançamentos, orçamento e exportação
+    └── configuracoes.js    # abas, formulários e preferências
 ```
 
 ## Como executar
@@ -56,9 +60,8 @@ Acesse `http://localhost:5500/login.html` (login redireciona ao painel) ou diret
 login.html ──sucesso──► dashboard.html
 dashboard.html ──Sair──► login.html (+ toast “Você saiu com segurança.”)
 
-Sidebar (Painel · Áreas de Cultivo · Atividades · Insumos · Ocorrências):
- todas navegáveis de verdade entre si. Custos e Configurações seguem
- como "em preparação" (fora desta entrega).
+Sidebar (Painel · Áreas de Cultivo · Atividades · Insumos · Ocorrências ·
+Custos · Configurações): todas navegáveis de verdade entre si.
 
 Áreas de Cultivo:
  · Novo Talhão / Editar → modal validado → tabela + métricas atualizadas
@@ -78,6 +81,16 @@ Insumos:
  · Registrar Saída valida saldo disponível e recalcula status
    (Normal/Baixo/Crítico)
  · Excluir só é permitido com saldo = 0
+
+Custos:
+ · Indicadores de custo total, custo por hectare, insumos e mão de obra
+ · Gráfico por categoria, orçamento da safra e custo por cultura
+ · Buscar, filtrar, registrar, editar, excluir e exportar lançamentos
+
+Configurações:
+ · Abas de perfil, propriedade, notificações e segurança
+ · Preferências com toggles e estados informativos de equipe e plano
+ · Validação dos formulários e feedback por toast
 
 Ocorrências:
  · Registrar Ocorrência (tipo, talhão, prioridade em segmented control)
@@ -110,8 +123,8 @@ API: `AgroToast.show({ type, title, description, duration })`.
 
 ## Fora desta entrega
 
-Custos, Relatórios, Safras, Meu Perfil, Configurações e mobile — os
-links do shell mostram toast "em preparação". Páginas de detalhe em
+Relatórios, Safras, Meu Perfil independente e mobile continuam fora do
+escopo. Páginas de detalhe em
 tela cheia (ex.: `/talhao/:id`, `/atividade/:id`) foram implementadas
 como **modais** dentro da própria lista, não como rotas separadas —
 decisão de escopo para manter a entrega em HTML/CSS/JS estático sem
