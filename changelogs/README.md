@@ -10,4 +10,5 @@ Ao terminar uma sessão de trabalho relevante, crie um novo arquivo
 
 ## Entradas
 
+- [2026-08-17 — Kanban arrastável, status pela Lista, fix crítico de popover cortado](2026-08-17-drag-drop-e-fix-containing-block.md)
 - [2026-08-15 — Novas telas: Áreas de Cultivo, Atividades, Insumos, Ocorrências](2026-08-15-modulos-operacionais.md)
