@@ -14,6 +14,13 @@
  *   pré-preenchido com "(cópia)")
  * - `?talhao=` na URL (vindo de Áreas de Cultivo): filtra e mostra chip
  *   removível, replicando a tela "Atividades filtradas" do pen.dev.
+ *
+ * Mover o status de uma atividade tem dois caminhos, ambos passando pela
+ * mesma função (`moveCardToStatus`) para não duplicar lógica:
+ * - Kanban: arrastar o card para outra coluna (Drag and Drop nativo).
+ * - Lista: trocar o valor do select de status na própria linha.
+ * Diferente do "Concluir" do menu "⋮" (que pede confirmação e narra a
+ * baixa de insumo), essas duas trocas são diretas — só um toast confirma.
  */
 (() => {
   "use strict";
@@ -106,23 +113,70 @@
     return true;
   }
 
-  function buildListRow(card) {
-    const statusClass = {
-      Pendente: "badge-warning",
-      Agendada: "badge-info",
-      "Em andamento": "badge-warning",
-      Concluída: "badge-success",
-    }[card.dataset.status] || "badge-neutral";
+  const STATUS_ORDER = ["Pendente", "Agendada", "Em andamento", "Concluída"];
 
+  /**
+   * A Lista também precisa permitir trocar o status (não só o Kanban) — em
+   * vez de um badge estático, a célula de status é um <select> nativo com
+   * o valor atual já selecionado (classe .status-select, estilizada em
+   * modules.css). Deliberadamente NÃO usa o dropdown customizado
+   * (AgroSelect): o popup de um <select> nativo é desenhado pelo navegador
+   * num layer próprio, imune ao `overflow: auto` da tabela — o dropdown
+   * customizado, testado aqui, abria cortado/atrás do cabeçalho fixo da
+   * tabela pelo mesmo motivo que os menus "⋮" tinham (ver shell.js).
+   */
+  function buildListRow(card) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${card.dataset.activity}</td>
-      <td>${card.dataset.tipo}</td>
-      <td>${card.dataset.talhao}</td>
-      <td>${card.dataset.date}</td>
-      <td><span class="badge ${statusClass}">${card.dataset.status}</span></td>
-    `;
+
+    const nameTd = document.createElement("td");
+    nameTd.textContent = card.dataset.activity;
+    const tipoTd = document.createElement("td");
+    tipoTd.textContent = card.dataset.tipo;
+    const talhaoTd = document.createElement("td");
+    talhaoTd.textContent = card.dataset.talhao;
+    const dateTd = document.createElement("td");
+    dateTd.textContent = card.dataset.date;
+
+    const statusTd = document.createElement("td");
+    statusTd.className = "col-status-select";
+    const select = document.createElement("select");
+    select.className = "status-select";
+    select.setAttribute("aria-label", `Status de ${card.dataset.activity}`);
+    STATUS_ORDER.forEach((status) => {
+      const opt = document.createElement("option");
+      opt.value = status;
+      opt.textContent = status;
+      if (status === card.dataset.status) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", () => {
+      const novoStatus = select.value;
+      const nomeAtividade = card.dataset.activity;
+      moveCardToStatus(card, novoStatus);
+      recomputeMetrics();
+      toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
+      applyFilters();
+    });
+    statusTd.appendChild(select);
+
+    tr.append(nameTd, tipoTd, talhaoTd, dateTd, statusTd);
     return tr;
+  }
+
+  /**
+   * Move um card para outra coluna do Kanban (arraste ou troca de status
+   * pela Lista compartilham esta função — fonte única de verdade, sem
+   * duplicar a lógica de "o que muda quando o status muda").
+   */
+  function moveCardToStatus(card, newStatus) {
+    if (card.dataset.status === newStatus) return;
+    card.dataset.status = newStatus;
+
+    const menuId = $("[data-popover]", card)?.id || `card-menu-${++cardSeq}`;
+    $(".action-menu-wrap", card).innerHTML = actionMenuMarkup(menuId, newStatus);
+
+    const targetColumn = $(`.kanban-column[data-column="${newStatus}"] [data-column-cards]`);
+    targetColumn?.appendChild(card);
   }
 
   function recomputeMetrics() {
@@ -206,20 +260,41 @@
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Alternância Kanban / Lista                                             */
-  /* ---------------------------------------------------------------------- */
+  /* Alternância Kanban / Lista (com transição suave entre as duas)         */
+  /* --------------------------------------------------------------------
+   * Trocar `hidden` direto (display:none ⇄ flex) é instantâneo — não dá
+   * pra animar `display`. Em vez disso: esmaece a view atual, só então
+   * troca `hidden` e a nova view surge já com opacidade 0, e no frame
+   * seguinte volta a 1 — o navegador anima essa transição de opacidade.
+   */
   function initViewToggle() {
     const options = $$("[data-view-option]");
     const kanbanRow = $("[data-view-kanban]");
     const listCard = $("[data-view-list]");
+    const FADE_MS = 160;
 
     options.forEach((option) => {
       option.addEventListener("click", () => {
+        if (option.getAttribute("aria-pressed") === "true") return;
+        const isKanban = option.dataset.viewOption === "kanban";
+        const showEl = isKanban ? kanbanRow : listCard;
+        const hideEl = isKanban ? listCard : kanbanRow;
+        if (!showEl || !hideEl) return;
+
         options.forEach((o) => o.setAttribute("aria-pressed", "false"));
         option.setAttribute("aria-pressed", "true");
-        const isKanban = option.dataset.viewOption === "kanban";
-        if (kanbanRow) kanbanRow.hidden = !isKanban;
-        if (listCard) listCard.hidden = isKanban;
+
+        hideEl.classList.add("is-view-fading");
+        window.setTimeout(() => {
+          hideEl.hidden = true;
+          showEl.hidden = false;
+          showEl.classList.add("is-view-fading");
+          // Força o navegador a aplicar opacity:0 antes de tirar a classe —
+          // sem isso as duas mudanças cairiam no mesmo frame e não haveria
+          // transição visível de entrada.
+          void showEl.offsetWidth;
+          requestAnimationFrame(() => showEl.classList.remove("is-view-fading"));
+        }, FADE_MS);
       });
     });
   }
@@ -248,6 +323,7 @@
     const card = document.createElement("article");
     card.className = "kanban-card";
     card.tabIndex = 0;
+    card.draggable = true;
     card.dataset.activity = values.nome;
     card.dataset.tipo = values.tipo;
     card.dataset.talhao = values.talhao;
@@ -268,6 +344,70 @@
       </div>
     `;
     return card;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Arrastar card entre colunas (mover o status pelo Kanban)               */
+  /* --------------------------------------------------------------------
+   * Drag and Drop nativo (HTML5), delegado no board: cada `.kanban-card`
+   * tem `draggable="true"` (nos cards estáticos do HTML e nos criados via
+   * buildCard). Diferente do fluxo "Concluir" do menu "⋮" — que pede
+   * confirmação e narra a baixa de insumo simulada — soltar um card numa
+   * coluna é uma ação rápida (padrão Trello): muda o status na hora, sem
+   * modal, só um toast confirmando.
+   */
+  let draggedCard = null;
+
+  function initDragAndDrop() {
+    const board = $("[data-kanban-board]");
+    if (!board) return;
+
+    board.addEventListener("dragstart", (event) => {
+      const card = event.target.closest(".kanban-card");
+      if (!card) return;
+      draggedCard = card;
+      card.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      // Alguns navegadores exigem dados setados para o drag funcionar.
+      event.dataTransfer.setData("text/plain", card.dataset.activity || "");
+    });
+
+    board.addEventListener("dragend", () => {
+      draggedCard?.classList.remove("is-dragging");
+      $$(".kanban-column", board).forEach((col) => col.classList.remove("is-drop-target"));
+      draggedCard = null;
+    });
+
+    $$(".kanban-column", board).forEach((column) => {
+      column.addEventListener("dragover", (event) => {
+        if (!draggedCard) return;
+        event.preventDefault(); // necessário para o navegador permitir o drop
+        event.dataTransfer.dropEffect = "move";
+        column.classList.add("is-drop-target");
+      });
+
+      column.addEventListener("dragleave", (event) => {
+        // dragleave dispara também ao passar por filhos internos — só
+        // remove o destaque quando realmente saiu da coluna.
+        if (!column.contains(event.relatedTarget)) column.classList.remove("is-drop-target");
+      });
+
+      column.addEventListener("drop", (event) => {
+        event.preventDefault();
+        column.classList.remove("is-drop-target");
+        if (!draggedCard) return;
+
+        const newStatus = column.dataset.column;
+        const nomeAtividade = draggedCard.dataset.activity;
+        const statusAnterior = draggedCard.dataset.status;
+        if (statusAnterior === newStatus) return;
+
+        moveCardToStatus(draggedCard, newStatus);
+        recomputeMetrics();
+        applyFilters();
+        toast("success", "Status atualizado", `${nomeAtividade} movida para "${newStatus}".`);
+      });
+    });
   }
 
   function initCardActions() {
@@ -441,11 +581,8 @@
       const name = activeCard.dataset.activity;
       const talhao = activeCard.dataset.talhao;
 
-      activeCard.dataset.status = "Concluída";
       $(".kanban-card-top .badge", activeCard).className = "badge badge-success";
-      const menuId = $("[data-popover]", activeCard)?.id || `card-menu-${++cardSeq}`;
-      $(".action-menu-wrap", activeCard).innerHTML = actionMenuMarkup(menuId, "Concluída");
-      $("[data-column='Concluída'] [data-column-cards]").appendChild(activeCard);
+      moveCardToStatus(activeCard, "Concluída");
 
       closeModal(modal);
       toast(
@@ -486,6 +623,7 @@
     initTalhaoFilterChip();
     initFilterControls();
     initViewToggle();
+    initDragAndDrop();
     initCardActions();
     initActivityForm();
     initCompleteConfirm();
