@@ -18,10 +18,10 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-  /** Estado local — espelha os valores iniciais do pen.dev (frame TaqqK). */
+  /** Estado local — calculado dinamicamente a partir da tabela no load. */
   const state = {
-    activePlots: 12,
-    totalHectares: 1284,
+    activePlots: 0,
+    totalHectares: 0,
     editingRow: null, // <tr> atualmente em edição, ou null em modo "criar"
   };
 
@@ -31,6 +31,13 @@
 
   function formatHectares(value) {
     return `${value.toLocaleString("pt-BR")} ha`;
+  }
+
+  /** Recalcula activePlots e totalHectares a partir das linhas da tabela. */
+  function computeMetricsFromTable() {
+    const rows = $$("[data-plots-table] tbody tr");
+    state.activePlots = rows.length;
+    state.totalHectares = rows.reduce((sum, row) => sum + Number(row.dataset.hectares || 0), 0);
   }
 
   function updateHectaresMetric() {
@@ -276,6 +283,9 @@
   }
 
   function init() {
+    computeMetricsFromTable();
+    updateHectaresMetric();
+    updateActivePlotsMetric();
     initPrepToasts();
     initFilters();
     initPlotForm();
