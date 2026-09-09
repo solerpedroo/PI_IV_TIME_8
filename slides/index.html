@@ -14,19 +14,24 @@
       <main id="stage" aria-live="polite"></main>
     </div>
 
+    <div id="slideCounter" aria-hidden="true">01 / 12</div>
+    <div id="progressOverlay"><div id="progressFill"></div></div>
+    <div id="hint">← → navegar · F tela cheia · P PDF</div>
+
     <template id="slides">
 
       <!-- 01 · Capa -->
       <section class="slide" data-title="Capa">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="AgroGestão" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="AgroGestão" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">01 / 12 · APRESENTAÇÃO</div>
+            <span class="section-tag">Apresentação</span>
           </div>
-          <div class="author">PI IV · PUC-Campinas</div>
+          <div class="author">PI IV · PUC-Campinas · 2026</div>
         </div>
         <div class="body cover">
           <div class="cover-main">
@@ -62,87 +67,133 @@
                 <span class="val accent">Conceito / planejamento</span>
               </div>
             </div>
+            <div class="cover-visual reveal reveal-d3">
+              <div class="cover-visual-label">Visão integrada da propriedade</div>
+              <div class="plot-grid">
+                <div class="plot active"></div>
+                <div class="plot"></div>
+                <div class="plot"></div>
+                <div class="plot"></div>
+                <div class="plot active"></div>
+                <div class="plot"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- 02 · Contexto -->
       <section class="slide" data-title="Contexto">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">02 / 12 · CONTEXTO</div>
+            <span class="section-tag">Contexto</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
-        <div class="body statement">
-          <div class="reveal reveal-d1">
-            <p class="eyebrow" style="justify-content:center;">O cenário hoje</p>
+        <div class="body statement-split">
+          <div class="statement-copy reveal reveal-d1">
+            <p class="eyebrow">O cenário hoje</p>
             <h2 class="title">A gestão da propriedade ainda vive <span class="hl">espalhada</span></h2>
-            <p class="lead">Cadernos, planilhas, WhatsApp e anotações soltas — sem uma visão única da operação.</p>
+            <p class="lead">Cadernos, planilhas, WhatsApp e anotações soltas — sem uma visão única da operação rural.</p>
+          </div>
+          <div class="chaos-panel reveal reveal-d2">
+            <h3>Fontes comuns hoje</h3>
+            <div class="chaos-tags">
+              <span class="chaos-tag">Caderno de campo</span>
+              <span class="chaos-tag">Planilhas Excel</span>
+              <span class="chaos-tag">Grupos no WhatsApp</span>
+              <span class="chaos-tag">Anotações soltas</span>
+              <span class="chaos-tag">Memória do produtor</span>
+              <span class="chaos-tag">Sistemas isolados</span>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- 03 · Problemas -->
       <section class="slide" data-title="Problemas">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">03 / 12 · PROBLEMA</div>
+            <span class="section-tag">Problema</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Dores do produtor</p>
             <h2 class="title">Informação dispersa gera retrabalho e perda de histórico</h2>
           </div>
           <div class="problem-grid">
-            <div class="problem-card reveal reveal-d2">
-              <div class="idx">01</div>
-              <h3>Informação dispersa</h3>
-              <p>Dados operacionais, produtivos e financeiros espalhados em fontes diferentes.</p>
-            </div>
-            <div class="problem-card reveal reveal-d2">
-              <div class="idx">02</div>
-              <h3>Atividades esquecidas</h3>
-              <p>Dificuldade de saber o que já foi feito e o que ainda está pendente.</p>
-            </div>
-            <div class="problem-card reveal reveal-d3">
-              <div class="idx">03</div>
-              <h3>Estoque sem controle</h3>
-              <p>Insumos sem rastreio confiável de entradas, saídas e saldo disponível.</p>
-            </div>
-            <div class="problem-card reveal reveal-d3">
-              <div class="idx">04</div>
-              <h3>Decisão no escuro</h3>
-              <p>Sem histórico integrado de talhões, ocorrências e custos para embasar decisões.</p>
-            </div>
+            <article class="problem-card reveal reveal-d2">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+              </div>
+              <div class="card-body">
+                <div class="idx">01</div>
+                <h3>Informação dispersa</h3>
+                <p>Dados operacionais, produtivos e financeiros espalhados em fontes diferentes.</p>
+              </div>
+            </article>
+            <article class="problem-card reveal reveal-d2">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </div>
+              <div class="card-body">
+                <div class="idx">02</div>
+                <h3>Atividades esquecidas</h3>
+                <p>Dificuldade de saber o que já foi feito e o que ainda está pendente.</p>
+              </div>
+            </article>
+            <article class="problem-card reveal reveal-d3">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <div class="card-body">
+                <div class="idx">03</div>
+                <h3>Estoque sem controle</h3>
+                <p>Insumos sem rastreio confiável de entradas, saídas e saldo disponível.</p>
+              </div>
+            </article>
+            <article class="problem-card reveal reveal-d3">
+              <div class="icon-wrap" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              </div>
+              <div class="card-body">
+                <div class="idx">04</div>
+                <h3>Decisão no escuro</h3>
+                <p>Sem histórico integrado de talhões, ocorrências e custos para embasar decisões.</p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
       <!-- 04 · Transição -->
       <section class="slide" data-title="Transição">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">04 / 12 · SOLUÇÃO</div>
+            <span class="section-tag">Solução</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
-        <div class="body statement">
-          <div class="reveal reveal-d1">
+        <div class="body statement-center">
+          <div class="statement-shell reveal reveal-d1">
+            <p class="eyebrow">Nossa proposta</p>
             <h2 class="title">E se existisse <span class="hl">um só lugar</span> para organizar tudo isso?</h2>
           </div>
         </div>
@@ -150,18 +201,19 @@
 
       <!-- 05 · Solução -->
       <section class="slide" data-title="Solução">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">05 / 12 · PROPOSTA</div>
+            <span class="section-tag">Proposta</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Solução proposta</p>
             <h2 class="title">Centralizar e conectar a operação da propriedade</h2>
           </div>
@@ -177,29 +229,38 @@
               <p>Uma ação na propriedade reflete automaticamente em estoque, custos, histórico e dashboard.</p>
             </div>
           </div>
-          <div class="flow-strip reveal reveal-d4">
-            Atividade concluída → Estoque − → Custo + → Histórico → Dashboard
+          <div class="flow-pipeline reveal reveal-d4" aria-label="Fluxo integrado">
+            <span class="flow-node accent">Atividade concluída</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node">Estoque −</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node">Custo +</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node">Histórico</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-node accent">Dashboard</span>
           </div>
         </div>
       </section>
 
       <!-- 06 · Validação da ideia -->
       <section class="slide" data-title="Validação da ideia">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">06 / 12 · VALIDAÇÃO DA IDEIA</div>
+            <span class="section-tag">Validação da ideia</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Validação da ideia</p>
             <h2 class="title">Um problema reconhecido, uma solução coerente</h2>
-            <p class="lead">Ainda não há produto testado — a proposta se apoia em evidências do setor e na lógica da operação agrícola.</p>
+            <p class="lead">A proposta se apoia em evidências do setor e na lógica natural da operação agrícola.</p>
           </div>
           <div class="idea-list">
             <div class="idea-item reveal reveal-d2">
@@ -219,64 +280,91 @@
               <p>A <strong>integração entre módulos</strong> é o gap que cadastros soltos não resolvem — e é o coração do AgroGestão.</p>
             </div>
           </div>
+          <p class="honesty-banner reveal reveal-d4"><strong>Transparência:</strong> ainda não há produto testado com usuários — esta é a validação conceitual da ideia.</p>
         </div>
       </section>
 
       <!-- 07 · O que fará -->
       <section class="slide" data-title="Funcionalidades">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">07 / 12 · PRODUTO PLANEJADO</div>
+            <span class="section-tag">Produto planejado</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">O que o AgroGestão fará</p>
             <h2 class="title">Módulos pensados para o dia a dia do produtor</h2>
           </div>
           <div class="feature-grid">
-            <div class="feature reveal reveal-d2">
+            <article class="feature reveal reveal-d2">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+                <span class="feature-num">01</span>
+              </div>
               <h4>Dashboard</h4>
               <p>“Como está minha propriedade hoje?” — visão central de operação, estoque e ocorrências.</p>
-            </div>
-            <div class="feature reveal reveal-d2">
+            </article>
+            <article class="feature reveal reveal-d2">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg></div>
+                <span class="feature-num">02</span>
+              </div>
               <h4>Talhões e safras</h4>
               <p>Organização da produção por área, cultura e ciclo produtivo.</p>
-            </div>
-            <div class="feature reveal reveal-d2">
+            </article>
+            <article class="feature reveal reveal-d2">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+                <span class="feature-num">03</span>
+              </div>
               <h4>Atividades</h4>
               <p>Planejar, executar e registrar plantio, adubação, pulverização, colheita e mais.</p>
-            </div>
-            <div class="feature reveal reveal-d3">
+            </article>
+            <article class="feature reveal reveal-d3">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+                <span class="feature-num">04</span>
+              </div>
               <h4>Estoque</h4>
               <p>Entradas, saídas e alertas quando insumos estiverem baixos ou críticos.</p>
-            </div>
-            <div class="feature reveal reveal-d3">
+            </article>
+            <article class="feature reveal reveal-d3">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
+                <span class="feature-num">05</span>
+              </div>
               <h4>Ocorrências</h4>
               <p>Pragas, clima, equipamentos — com acompanhamento e linha do tempo.</p>
-            </div>
-            <div class="feature reveal reveal-d3">
+            </article>
+            <article class="feature reveal reveal-d3">
+              <div class="feature-top">
+                <div class="icon-wrap"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                <span class="feature-num">06</span>
+              </div>
               <h4>Custos</h4>
               <p>Visão gerencial: onde estou gastando? Sem substituir um sistema contábil.</p>
-            </div>
+            </article>
           </div>
         </div>
       </section>
 
       <!-- 08 · Diferencial -->
       <section class="slide" data-title="Diferencial">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">08 / 12 · DIFERENCIAL</div>
+            <span class="section-tag">Diferencial</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
@@ -288,15 +376,17 @@
             <p class="quote-line">Da atividade realizada à visão completa da propriedade.</p>
           </div>
           <div class="diagram reveal reveal-d2">
-            <div class="diagram-node">Ação na propriedade</div>
-            <div class="diagram-arrow">↓</div>
-            <div class="diagram-node">Atividade registrada</div>
-            <div class="diagram-arrow">↓</div>
-            <div class="diagram-branches">
-              <span>Estoque</span>
-              <span>Custos</span>
-              <span>Histórico</span>
-              <span>Dashboard</span>
+            <div class="diagram-stack">
+              <div class="diagram-node">Ação na propriedade</div>
+              <div class="diagram-connector" aria-hidden="true"></div>
+              <div class="diagram-node primary">Atividade registrada</div>
+              <div class="diagram-connector" aria-hidden="true"></div>
+              <div class="diagram-branches">
+                <span>Estoque</span>
+                <span>Custos</span>
+                <span>Histórico</span>
+                <span>Dashboard</span>
+              </div>
             </div>
           </div>
         </div>
@@ -304,37 +394,38 @@
 
       <!-- 09 · Mercado -->
       <section class="slide" data-title="Mercado">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">09 / 12 · MERCADO</div>
+            <span class="section-tag">Mercado</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Oportunidade</p>
             <h2 class="title">Mercado com espaço para soluções acessíveis</h2>
           </div>
           <div class="market-grid">
-            <div class="market-card reveal reveal-d2">
+            <article class="market-card reveal reveal-d2">
               <div class="level">Problema</div>
               <h3>Milhões de produtores</h3>
               <p>No Brasil, pequenos e médios produtores ainda operam com ferramentas manuais e sem visão integrada.</p>
-            </div>
-            <div class="market-card primary reveal reveal-d2">
+            </article>
+            <article class="market-card primary reveal reveal-d2">
               <div class="level">Oportunidade</div>
               <h3>Gap para PMEs rurais</h3>
               <p>Software agrícola cresce, mas ERPs corporativos não atendem quem usa caderno e planilha no dia a dia.</p>
-            </div>
-            <div class="market-card reveal reveal-d3">
+            </article>
+            <article class="market-card reveal reveal-d3">
               <div class="level">Foco inicial</div>
               <h3>Recorte consciente</h3>
               <p>Pequenos e médios produtores rurais — fora do escopo inicial: grandes corporações, contabilidade fiscal e IoT.</p>
-            </div>
+            </article>
           </div>
           <p class="market-note reveal reveal-d4"><strong>Nota:</strong> números de mercado formais serão refinados na fase de validação com usuários reais, após o MVP.</p>
         </div>
@@ -342,18 +433,19 @@
 
       <!-- 10 · Escopo MVP -->
       <section class="slide" data-title="Escopo MVP">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">10 / 12 · ESCOPO MVP</div>
+            <span class="section-tag">Escopo MVP</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Escopo do MVP</p>
             <h2 class="title">Completo e coerente em ~2 meses</h2>
           </div>
@@ -389,18 +481,19 @@
 
       <!-- 11 · Roadmap -->
       <section class="slide" data-title="Roadmap">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">11 / 12 · ROADMAP</div>
+            <span class="section-tag">Roadmap</span>
           </div>
           <div class="author">PI IV · PUC-Campinas</div>
         </div>
         <div class="body">
-          <div class="reveal reveal-d1">
+          <div class="slide-head reveal reveal-d1">
             <p class="eyebrow">Plano de execução</p>
             <h2 class="title">Construir, entregar e então validar</h2>
           </div>
@@ -446,18 +539,19 @@
 
       <!-- 12 · Equipe + Encerramento -->
       <section class="slide" data-title="Encerramento">
+        <div class="slide-decor" aria-hidden="true"></div>
         <div class="meta-bar reveal">
           <div class="meta-left">
             <div class="brand-lockup">
-              <img class="brand-logo" src="brand/agro-logo.svg" width="42" height="42" alt="" />
+              <img class="brand-logo" src="brand/agro-logo.svg" width="40" height="40" alt="" />
               <span class="brand-word">Agro<span>Gestão</span></span>
             </div>
-            <div class="pageno">12 / 12 · EQUIPE</div>
+            <span class="section-tag">Equipe</span>
           </div>
           <div class="author">PI IV · 2026</div>
         </div>
         <div class="body team-closing">
-          <div class="reveal reveal-d1">
+          <div class="team-block reveal reveal-d1">
             <p class="eyebrow">Equipe</p>
             <div class="team-grid">
               <div class="team-card lead">
@@ -490,15 +584,12 @@
           <div class="thanks reveal reveal-d3">
             <h1 class="display">Agro<span class="hl">Gestão</span></h1>
             <p class="lead">Da atividade realizada à visão completa da propriedade.</p>
-            <p class="lead" style="margin-top:8px;font-size:clamp(14px,1.1vw,17px);">Obrigado — perguntas?</p>
+            <p class="cta">Obrigado · Perguntas?</p>
           </div>
         </div>
       </section>
 
     </template>
-
-    <div id="progressOverlay"><div id="progressFill"></div></div>
-    <div id="hint">← → navegar  |  F tela cheia  |  P imprimir PDF</div>
 
     <script src="scripts/deck.js" defer></script>
   </body>
