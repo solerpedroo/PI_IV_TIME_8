@@ -2,21 +2,35 @@
   const stage = document.getElementById("stage");
   const template = document.getElementById("slides");
   const progressFill = document.getElementById("progressFill");
+  const slideCounter = document.getElementById("slideCounter");
   if (!stage || !template) return;
 
   const fragment = template.content.cloneNode(true);
   const slideEls = Array.from(fragment.querySelectorAll(".slide"));
   stage.appendChild(fragment);
 
+  const baseTitle = document.title.replace(/\s*·\s*slide\s*\d+.*/i, "");
   let idx = 0;
+
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
 
   function update() {
     slideEls.forEach(function (el, i) {
       el.classList.toggle("active", i === idx);
     });
+
     if (progressFill) {
       progressFill.style.width = ((idx + 1) / slideEls.length) * 100 + "%";
     }
+
+    if (slideCounter) {
+      slideCounter.textContent = pad(idx + 1) + " / " + pad(slideEls.length);
+    }
+
+    var title = slideEls[idx].dataset.title || "Slide";
+    document.title = baseTitle + " · " + title;
     history.replaceState(null, "", "#" + (idx + 1));
   }
 
