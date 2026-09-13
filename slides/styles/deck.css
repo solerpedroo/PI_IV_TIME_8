@@ -994,94 +994,135 @@ p.lead {
   color: var(--green-2);
 }
 
-.evidence-chart-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(16px, 2vw, 24px);
-  padding: clamp(24px, 3vw, 36px);
+/* Evidence impact chart */
+.evidence-impact {
+  gap: 12px;
 }
 
-.donut-wrap {
-  width: min(100%, clamp(200px, 22vw, 280px));
-  aspect-ratio: 1;
-}
-
-.donut {
+.impact-card {
   width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: clamp(20px, 2.4vw, 28px);
+  box-shadow: var(--shadow-sm), var(--shadow-inset);
+  position: relative;
+  overflow: hidden;
 }
 
-.donut-track,
-.donut-seg {
-  fill: none;
-  stroke-width: 22;
-  stroke-linecap: butt;
+.impact-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green), #8fd4ad 70%, transparent);
 }
 
-.donut-track {
-  stroke: rgba(26, 51, 36, 0.06);
+.impact-head {
+  margin-bottom: clamp(16px, 2vw, 22px);
 }
 
-.donut-seg {
-  opacity: 0;
-  transform-origin: center;
-}
-
-.slide.active .donut-seg {
-  animation: donut-in 550ms var(--ease) forwards;
-}
-
-.slide.active .seg-none { animation-delay: 100ms; }
-.slide.active .seg-note { animation-delay: 200ms; }
-.slide.active .seg-sheet { animation-delay: 300ms; }
-
-@keyframes donut-in {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.seg-none { stroke: #9fb0a4; }
-.seg-note { stroke: #c4a035; }
-.seg-sheet { stroke: var(--green-light); }
-.seg-sys { stroke: var(--green); }
-
-.evidence-chart-panel .donut-legend {
-  list-style: none;
+.impact-stat-num {
   margin: 0;
-  padding: 0;
-  width: 100%;
-  max-width: 320px;
-  display: grid;
-  gap: 10px;
+  font-size: clamp(42px, 4.8vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--green);
 }
 
-.donut-legend li {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--muted);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.donut-legend li:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.donut-legend strong {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
+.impact-stat-label {
+  margin: 4px 0 0;
+  font-size: clamp(16px, 1.4vw, 18px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 
-.swatch {
+.impact-stat-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.impact-stack-bar {
+  display: flex;
+  height: clamp(28px, 3.6vh, 36px);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+  margin-bottom: clamp(14px, 1.8vw, 18px);
+}
+
+.impact-seg {
+  flex: var(--w) 1 0;
+  min-width: 0;
+  opacity: 0;
+}
+
+.slide.active .impact-seg {
+  animation: impact-seg-in 600ms var(--ease) forwards;
+}
+
+.slide.active .impact-seg-note { animation-delay: 80ms; }
+.slide.active .impact-seg-sheet { animation-delay: 160ms; }
+.slide.active .impact-seg-sys { animation-delay: 240ms; }
+.slide.active .impact-seg-none { animation-delay: 320ms; }
+
+@keyframes impact-seg-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.impact-seg-note {
+  background: rgba(196, 160, 53, 0.72);
+}
+
+.impact-seg-sheet {
+  background: rgba(64, 145, 108, 0.55);
+}
+
+.impact-seg-sys {
+  background: var(--green);
+}
+
+.impact-seg-none {
+  background: rgba(159, 176, 164, 0.65);
+}
+
+.impact-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+
+.impact-legend li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.impact-legend strong {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.impact-legend-accent strong {
+  color: var(--green);
+}
+
+.impact-swatch {
   width: 10px;
   height: 10px;
   border-radius: 3px;
@@ -1092,6 +1133,16 @@ p.lead {
 .sw-note { background: #c4a035; }
 .sw-sheet { background: var(--green-light); }
 .sw-sys { background: var(--green); }
+
+.impact-footnote {
+  margin: clamp(12px, 1.6vw, 16px) 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--muted);
+}
 
 .evidence-chart-source {
   margin: 4px 0 0;
@@ -1792,5 +1843,5 @@ body.is-fullscreen #slideCounter {
   .slide.active .reveal { animation: none; }
   .feature:hover, .problem-card:hover, .team-card:hover,
   .tile-card:hover, .member-card:hover { transform: none; }
-  .slide.active .donut-seg { animation: none; opacity: 1; }
+  .slide.active .impact-seg { animation: none; opacity: 1; }
 }
