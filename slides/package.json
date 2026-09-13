@@ -1,0 +1,17 @@
+{
+  "name": "slides",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "export:pdf": "node scripts/export-pdf.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.63.0"
+  }
+}
