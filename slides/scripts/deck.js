@@ -30,7 +30,7 @@
     }
 
     var title = slideEls[idx].dataset.title || "Slide";
-    document.title = baseTitle + " · " + title;
+    document.title = baseTitle + " | " + title;
     history.replaceState(null, "", "#" + (idx + 1));
   }
 
