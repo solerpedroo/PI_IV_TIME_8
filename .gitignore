@@ -11,3 +11,6 @@ Thumbs.db
 # Áudios/arquivos soltos de mensagens (ex.: WhatsApp) usados só como
 # referência durante a sessão — não fazem parte do projeto.
 *.ogg
+
+# Export PDF do deck (npm install em slides/)
+slides/node_modules/
