@@ -184,7 +184,15 @@ main { overflow: hidden; }
 
 .pageno { color: var(--faint); }
 
-.author { color: var(--green-2); }
+.author {
+  color: var(--green-2);
+  max-width: min(46vw, 480px);
+  white-space: normal;
+  text-align: right;
+  line-height: 1.45;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+}
 
 .body {
   min-height: 0;
@@ -699,19 +707,6 @@ p.lead {
   font-weight: 700;
 }
 
-.honesty-banner {
-  margin-top: 16px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: var(--gold-soft);
-  border: 1px solid rgba(139, 105, 20, 0.18);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.honesty-banner strong { color: var(--gold); }
-
 /* Evidence slide */
 .evidence-clean .statement-copy .lead {
   max-width: 38ch;
@@ -1032,19 +1027,6 @@ p.lead {
   line-height: 1.58;
   color: var(--muted);
 }
-
-.market-note {
-  margin-top: 14px;
-  padding: 14px 18px;
-  background: var(--gold-soft);
-  border: 1px solid rgba(139, 105, 20, 0.18);
-  border-radius: 14px;
-  font-size: 13px;
-  line-height: 1.52;
-  color: var(--muted);
-}
-
-.market-note strong { color: var(--gold); }
 
 /* MVP scope */
 .mvp-split {
