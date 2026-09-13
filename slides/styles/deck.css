@@ -152,10 +152,16 @@ main { overflow: hidden; }
 .brand-logo {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
   display: block;
-  object-fit: cover;
-  box-shadow: 0 8px 18px -10px rgba(26, 51, 36, 0.35);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.cover-logo {
+  display: block;
+  width: clamp(240px, 30vw, 380px);
+  height: auto;
+  margin: 0 0 4px;
 }
 
 .brand-word {
@@ -1129,6 +1135,13 @@ p.lead {
   bottom: clamp(22px, 3vw, 30px);
   left: 50%;
   transform: translateX(-50%);
+}
+
+.thanks-logo {
+  width: clamp(56px, 6vw, 72px);
+  height: auto;
+  margin-bottom: 12px;
+  object-fit: contain;
 }
 
 .thanks .display {
