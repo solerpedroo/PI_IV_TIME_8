@@ -712,6 +712,118 @@ p.lead {
 
 .honesty-banner strong { color: var(--gold); }
 
+/* Evidence slide */
+.evidence-clean .statement-copy .lead {
+  max-width: 38ch;
+}
+
+.evidence-cite {
+  margin: clamp(16px, 2vw, 24px) 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-2);
+}
+
+.evidence-chart-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 2vw, 24px);
+  padding: clamp(24px, 3vw, 36px);
+}
+
+.donut-wrap {
+  width: min(100%, clamp(200px, 22vw, 280px));
+  aspect-ratio: 1;
+}
+
+.donut {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-track,
+.donut-seg {
+  fill: none;
+  stroke-width: 22;
+  stroke-linecap: butt;
+}
+
+.donut-track {
+  stroke: rgba(26, 51, 36, 0.06);
+}
+
+.donut-seg {
+  opacity: 0;
+  transform-origin: center;
+}
+
+.slide.active .donut-seg {
+  animation: donut-in 550ms var(--ease) forwards;
+}
+
+.slide.active .seg-none { animation-delay: 100ms; }
+.slide.active .seg-note { animation-delay: 200ms; }
+.slide.active .seg-sheet { animation-delay: 300ms; }
+
+@keyframes donut-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.seg-none { stroke: #9fb0a4; }
+.seg-note { stroke: #c4a035; }
+.seg-sheet { stroke: var(--green-light); }
+
+.evidence-chart-panel .donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 320px;
+  display: grid;
+  gap: 10px;
+}
+
+.donut-legend li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.donut-legend li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.donut-legend strong {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sw-none { background: #9fb0a4; }
+.sw-note { background: #c4a035; }
+.sw-sheet { background: var(--green-light); }
+.sw-sys { background: rgba(45, 106, 79, 0.2); border: 1px dashed var(--green-edge); }
+
 /* Feature grid */
 .feature-grid {
   display: grid;
@@ -1254,4 +1366,5 @@ body.is-fullscreen #slideCounter {
   .slide, .slide.active { transition: none; }
   .slide.active .reveal { animation: none; }
   .feature:hover, .problem-card:hover, .team-card:hover { transform: none; }
+  .slide.active .donut-seg { animation: none; opacity: 1; }
 }
