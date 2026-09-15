@@ -14,3 +14,7 @@ Thumbs.db
 
 # Export PDF do deck (npm install em slides/)
 slides/node_modules/
+
+# Vercel CLI (deploy local)
+.vercel
+slides/.vercel
