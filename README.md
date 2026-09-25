@@ -1,5 +1,7 @@
 # Agro — frontend estático
 
+> Esta branch também contém a fundação separada do backend (Node.js/TypeScript, Java e MongoDB). Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
+
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
 ## Estrutura
