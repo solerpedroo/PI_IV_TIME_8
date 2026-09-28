@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.env.example
 
 # SO / editor
 .DS_Store
@@ -18,3 +19,8 @@ slides/node_modules/
 # Vercel CLI (deploy local)
 .vercel
 slides/.vercel
+
+# Backend local
+backend/gateway/node_modules/
+backend/gateway/dist/
+backend/core/target/
