@@ -1,0 +1,305 @@
+name: Column Tracker
+
+on:
+  issues:
+    types: [closed]
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      issues: write
+    steps:
+      - name: Executar tracker
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const PROJECT_NUMBER = 2
+            const TRACKER_TAG = '<!-- column-tracker -->'
+            const now = new Date()
+            const today = now.toISOString().split('T')[0]
+
+            const fmtDate = iso => iso
+              ? new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR')
+              : 'nao definido'
+
+            const fmtDuration = (ms) => {
+              const totalMinutes = Math.round(ms / 60000)
+              const days = Math.floor(totalMinutes / 1440)
+              const hours = Math.floor((totalMinutes % 1440) / 60)
+              const minutes = totalMinutes % 60
+              const parts = []
+              if (days > 0) parts.push(days + 'd')
+              if (hours > 0) parts.push(hours + 'h')
+              if (minutes > 0 || parts.length === 0) parts.push(minutes + 'min')
+              return parts.join(' ')
+            }
+
+            const msBetween = (a, b) => new Date(b) - new Date(a)
+
+            const daysBetween = (a, b) => {
+              const da = new Date(a.includes('T') ? a : a + 'T00:00:00')
+              const db = new Date(b.includes('T') ? b : b + 'T00:00:00')
+              return Math.round((db - da) / 86400000)
+            }
+
+            const projectQuery = `query($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  items(first: 100) {
+                    nodes {
+                      content { ... on Issue { number } }
+                      fieldValues(first: 30) {
+                        nodes {
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field { ... on ProjectV2SingleSelectField { name } }
+                          }
+                          ... on ProjectV2ItemFieldDateValue {
+                            date
+                            field { ... on ProjectV2Field { name } }
+                          }
+                          ... on ProjectV2ItemFieldNumberValue {
+                            number
+                            field { ... on ProjectV2Field { name } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }`
+
+            const getTrackerComments = async (issueNumber) => {
+              const { data } = await github.rest.issues.listComments({
+                owner, repo, issue_number: issueNumber, per_page: 100
+              })
+              return data
+                .filter(c => c.body.includes(TRACKER_TAG))
+                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+            }
+
+            const buildDoneComment = (fields, trackerComments, refDateIso) => {
+              const getDate = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.date : null }
+              const getNum = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.number : null }
+              const startDate = getDate('Start date')
+              const targetDate = getDate('Target date')
+              const estimate = getNum('Estimate')
+              const estStr = estimate != null ? estimate + ' horas' : 'nao definido'
+
+              const colTimes = {}
+              for (let i = 0; i < trackerComments.length; i++) {
+                const c = trackerComments[i]
+                const next = trackerComments[i + 1] ? trackerComments[i + 1].created_at : refDateIso
+                const ms = msBetween(c.created_at, next)
+                let col = ''
+                if (c.body.includes('pronta para iniciar')) col = 'Ready'
+                else if (c.body.includes('Desenvolvimento iniciado')) col = 'In Progress'
+                else if (c.body.includes('Review')) col = 'In Review'
+                else if (c.body.includes('Adjustment')) col = 'Adjustment'
+                if (col) colTimes[col] = (colTimes[col] || 0) + ms
+              }
+
+              const entries = Object.entries(colTimes).sort((a, b) => b[1] - a[1])
+              const maxCol = entries[0]
+              const totalMs = Object.values(colTimes).reduce((a, b) => a + b, 0)
+              const adjustCycles = trackerComments.filter(c => c.body.includes('Voltou para Adjustment')).length
+
+              let prazo = 'Target date nao definida'
+              if (targetDate) {
+                const diff = daysBetween(targetDate, refDateIso.split('T')[0])
+                if (diff > 0) prazo = 'Atrasada: prazo era ' + fmtDate(targetDate) + ', atraso de ' + diff + ' dia(s)'
+                else if (diff === 0) prazo = 'No prazo: entregue em ' + fmtDate(targetDate)
+                else prazo = 'Adiantada: ' + Math.abs(diff) + ' dia(s) antes do prazo (' + fmtDate(targetDate) + ')'
+              }
+
+              const colOrder = ['Ready', 'In Progress', 'In Review', 'Adjustment']
+              const timeLines = colOrder
+                .filter(col => colTimes[col] != null)
+                .map(col => '| ' + col + (maxCol && maxCol[0] === col ? ' (mais tempo)' : '') + ' | ' + fmtDuration(colTimes[col]) + ' |')
+
+              let bottleneck = 'Historico de colunas insuficiente para analise.'
+              if (maxCol) {
+                bottleneck = 'Etapa com mais tempo: ' + maxCol[0] + ' (' + fmtDuration(maxCol[1]) + ').'
+                if (maxCol[0] === 'In Review' || maxCol[0] === 'Adjustment') {
+                  bottleneck += adjustCycles > 0
+                    ? ' Passou por ' + adjustCycles + ' ciclo(s) de ajuste.'
+                    : ' Revisao demorada pode ter impactado o prazo.'
+                }
+              }
+
+              return [
+                TRACKER_TAG,
+                '## Task concluida - Relatorio Final',
+                '',
+                prazo,
+                '',
+                '---',
+                '',
+                '### Tempo por coluna',
+                '',
+                '| Coluna | Duracao |',
+                '|---|---|',
+                ...timeLines,
+                '| Total | ' + fmtDuration(totalMs) + ' |',
+                '',
+                '---',
+                '',
+                '### Analise',
+                '',
+                bottleneck,
+                adjustCycles > 0 ? 'Passou por ' + adjustCycles + 'x o ciclo Adjustment para Review.' : '',
+                '',
+                '---',
+                '',
+                '| Campo | Valor |',
+                '|---|---|',
+                '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                '| Target date | ' + fmtDate(targetDate) + ' |',
+                '| Estimativa original | ' + estStr + ' |',
+                '| Entregue em | ' + fmtDate(refDateIso.split('T')[0]) + ' |',
+                '',
+                '_Rastreio automatico de coluna._'
+              ].join('\n')
+            }
+
+            if (context.eventName === 'issues' && context.payload.action === 'closed') {
+              const issue = context.payload.issue
+              const issueNumber = issue.number
+              const result = await github.graphql(projectQuery, { owner, number: PROJECT_NUMBER })
+              const items = result.user.projectV2.items.nodes
+              const item = items.find(i => i.content && i.content.number === issueNumber)
+              if (!item) return
+              const fields = item.fieldValues.nodes
+              const trackerComments = await getTrackerComments(issueNumber)
+              const refDateIso = issue.closed_at || now.toISOString()
+              const body = buildDoneComment(fields, trackerComments, refDateIso)
+              await github.rest.issues.createComment({ owner, repo, issue_number: issueNumber, body })
+              console.log('Relatorio final adicionado: #' + issueNumber)
+              return
+            }
+
+            const result = await github.graphql(projectQuery, { owner, number: PROJECT_NUMBER })
+            const items = result.user.projectV2.items.nodes
+
+            for (const item of items) {
+              if (!item.content || !item.content.number) continue
+
+              const issueNumber = item.content.number
+              const fields = item.fieldValues.nodes
+              const getSel = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.name : null }
+              const getDate = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.date : null }
+              const getNum = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.number : null }
+
+              const status = getSel('Status')
+              if (!status || status === 'Backlog' || status === 'Done') continue
+
+              const startDate = getDate('Start date')
+              const targetDate = getDate('Target date')
+              const estimate = getNum('Estimate')
+              const estStr = estimate != null ? estimate + ' horas' : 'nao definido'
+
+              const trackerComments = await getTrackerComments(issueNumber)
+              const lastTracker = trackerComments[trackerComments.length - 1]
+
+              if (lastTracker) {
+                const already =
+                  (status === 'Ready' && lastTracker.body.includes('pronta para iniciar')) ||
+                  (status === 'In Progress' && lastTracker.body.includes('Desenvolvimento iniciado')) ||
+                  (status === 'In Review' && lastTracker.body.includes('Review')) ||
+                  (status === 'Adjustment' && lastTracker.body.includes('Adjustment'))
+                if (already) continue
+              }
+
+              const lastDate = lastTracker ? lastTracker.created_at : now.toISOString()
+              const daysInPrev = lastTracker ? fmtDuration(msBetween(lastDate, now.toISOString())) : '---'
+
+              let lines = []
+
+              if (status === 'Ready') {
+                lines = [
+                  TRACKER_TAG,
+                  '## Tarefa pronta para iniciar',
+                  '',
+                  '| Campo | Valor |',
+                  '|---|---|',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '',
+                  'Task movida para Ready, aguardando inicio.',
+                  '',
+                  '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'In Progress') {
+                const janela = (startDate && targetDate) ? daysBetween(startDate, targetDate) + ' dias' : 'nao definido'
+                lines = [
+                  TRACKER_TAG,
+                  '## Desenvolvimento iniciado',
+                  '',
+                  '| Campo | Valor |',
+                  '|---|---|',
+                  '| Iniciado em | ' + now.toLocaleString('pt-BR') + ' |',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '| Janela total de prazo | ' + janela + ' |',
+                  '| Tempo na coluna anterior | ' + daysInPrev + ' |',
+                  '',
+                  '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'In Review') {
+                const ate = targetDate ? daysBetween(today, targetDate) : null
+                const prazo = ate === null ? 'nao definido' : ate > 0 ? ate + ' dia(s) restantes' : ate === 0 ? 'Prazo e hoje' : Math.abs(ate) + ' dia(s) atrasado'
+                lines = [
+                  TRACKER_TAG,
+                  '## Enviado para Review',
+                  '',
+                  '| Campo | Valor |',
+                  '|---|---|',
+                  '| Data | ' + now.toLocaleString('pt-BR') + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Tempo em In Progress | ' + daysInPrev + ' |',
+                  '| Situacao do prazo | ' + prazo + ' |',
+                  '',
+                  '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'Adjustment') {
+                const ate = targetDate ? daysBetween(today, targetDate) : null
+                const prazo = ate === null ? 'nao definido' : ate > 0 ? 'Dentro do prazo, restam ' + ate + ' dia(s)' : ate === 0 ? 'Prazo e hoje' : Math.abs(ate) + ' dia(s) atrasado'
+                lines = [
+                  TRACKER_TAG,
+                  '## Voltou para Adjustment',
+                  '',
+                  '| Campo | Valor |',
+                  '|---|---|',
+                  '| Data | ' + now.toLocaleString('pt-BR') + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Tempo em In Review | ' + daysInPrev + ' |',
+                  '| Situacao do prazo | ' + prazo + ' |',
+                  '',
+                  '### Motivo do ajuste:',
+                  '-',
+                  '',
+                  '_Rastreio automatico de coluna._'
+                ]
+              }
+
+              if (lines.length === 0) continue
+
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNumber,
+                body: lines.join('\n')
+              })
+              console.log('Comentario [' + status + '] adicionado: #' + issueNumber)
+              await new Promise(r => setTimeout(r, 500))
+            }

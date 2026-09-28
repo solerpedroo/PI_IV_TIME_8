@@ -1,0 +1,68 @@
+name: Limpar Comentários Antigos de Prazo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      issues: write
+    steps:
+      - name: Remover comentários antigos de prazo
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            // Strings que identificam comentários gerados pelos workflows ANTIGOS
+            // Não toca em comentários de Review, Atualização de Desenvolvimento, etc.
+            const oldMarkers = [
+              'Gerado automaticamente pelo workflow de prazo',
+              '<!-- column-tracker -->'
+            ];
+
+            let page = 1;
+            let allIssues = [];
+            while (true) {
+              const { data } = await github.rest.issues.listForRepo({
+                owner, repo,
+                state: 'all',        // fechadas e abertas
+                per_page: 100,
+                page
+              });
+              if (data.length === 0) break;
+              allIssues = allIssues.concat(data);
+              page++;
+            }
+
+            console.log(`Total de issues encontradas: ${allIssues.length}`);
+            let removidos = 0;
+
+            for (const issue of allIssues) {
+              const { data: comments } = await github.rest.issues.listComments({
+                owner, repo,
+                issue_number: issue.number,
+                per_page: 100
+              });
+
+              for (const comment of comments) {
+                const isOld = oldMarkers.some(marker => comment.body.includes(marker));
+                if (!isOld) continue;
+
+                await github.rest.issues.deleteComment({
+                  owner, repo,
+                  comment_id: comment.id
+                });
+
+                console.log(`  → Removido da issue #${issue.number} (comment ${comment.id})`);
+                removidos++;
+                await new Promise(r => setTimeout(r, 300));
+              }
+            }
+
+            console.log(`\n✅ Total removido: ${removidos} comentário(s)`);

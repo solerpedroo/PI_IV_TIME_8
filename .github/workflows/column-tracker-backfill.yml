@@ -1,0 +1,210 @@
+name: Column Tracker - Backfill
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      issues: write
+    steps:
+      - name: Executar backfill
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const PROJECT_NUMBER = 2
+            const TRACKER_TAG = '<!-- column-tracker -->'
+            const today = new Date().toISOString().split('T')[0]
+
+            const fmtDate = iso => iso
+              ? new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR')
+              : 'nao definido'
+
+            const daysBetween = (a, b) => {
+              const da = new Date(a.includes('T') ? a : a + 'T00:00:00')
+              const db = new Date(b.includes('T') ? b : b + 'T00:00:00')
+              return Math.round((db - da) / 86400000)
+            }
+
+            const query = `query($owner: String!, $number: Int!, $cursor: String) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  items(first: 100, after: $cursor) {
+                    pageInfo { hasNextPage endCursor }
+                    nodes {
+                      content {
+                        ... on Issue {
+                          number
+                          closedAt
+                          repository { owner { login } name }
+                        }
+                      }
+                      fieldValues(first: 30) {
+                        nodes {
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field { ... on ProjectV2SingleSelectField { name } }
+                          }
+                          ... on ProjectV2ItemFieldDateValue {
+                            date
+                            field { ... on ProjectV2Field { name } }
+                          }
+                          ... on ProjectV2ItemFieldNumberValue {
+                            number
+                            field { ... on ProjectV2Field { name } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }`
+
+            let allItems = []
+            let cursor = null
+            while (true) {
+              const result = await github.graphql(query, { owner, number: PROJECT_NUMBER, cursor })
+              const page = result.user.projectV2.items
+              allItems = allItems.concat(page.nodes)
+              if (!page.pageInfo.hasNextPage) break
+              cursor = page.pageInfo.endCursor
+            }
+
+            console.log('Total de itens: ' + allItems.length)
+
+            for (const item of allItems) {
+              const content = item.content
+              if (!content || !content.number) continue
+
+              const issueNumber = content.number
+              const repoOwner = content.repository.owner.login
+              const repoName = content.repository.name
+              const fields = item.fieldValues.nodes
+
+              const getDate = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.date : null }
+              const getNum = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.number : null }
+              const getSel = n => { const f = fields.find(f => f && f.field && f.field.name === n); return f ? f.name : null }
+
+              const status = getSel('Status')
+              const startDate = getDate('Start date')
+              const targetDate = getDate('Target date')
+              const estimate = getNum('Estimate')
+              const estStr = estimate != null ? estimate + ' horas' : 'nao definido'
+
+              if (!status || status === 'Backlog') continue
+
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: repoOwner, repo: repoName,
+                issue_number: issueNumber, per_page: 100
+              })
+
+              if (comments.some(c => c.body.includes(TRACKER_TAG))) {
+                console.log('Pulando #' + issueNumber + ' - ja tem tracker')
+                continue
+              }
+
+              let lines = []
+
+              if (status === 'Done') {
+                const closedAt = content.closedAt ? content.closedAt.split('T')[0] : today
+                let prazo = 'Target date nao definida'
+                if (targetDate) {
+                  const diff = daysBetween(targetDate, closedAt)
+                  if (diff > 0) prazo = 'Atrasada: prazo era ' + fmtDate(targetDate) + ', atraso de ' + diff + ' dia(s)'
+                  else if (diff === 0) prazo = 'No prazo: entregue em ' + fmtDate(targetDate)
+                  else prazo = 'Adiantada: ' + Math.abs(diff) + ' dia(s) antes do prazo (' + fmtDate(targetDate) + ')'
+                }
+                const janela = (startDate && targetDate) ? daysBetween(startDate, targetDate) + ' dia(s)' : 'nao definido'
+                const real = startDate ? daysBetween(startDate, closedAt) + ' dia(s)' : 'nao definido'
+                lines = [
+                  TRACKER_TAG,
+                  '## Task concluida - Relatorio Final (backfill)',
+                  '', prazo, '',
+                  '| Campo | Valor |', '|---|---|',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '| Fechada em | ' + fmtDate(closedAt) + ' |',
+                  '| Janela de prazo | ' + janela + ' |',
+                  '| Tempo real (start ate close) | ' + real + ' |',
+                  '',
+                  'Relatorio gerado retroativamente. Tempo por coluna indisponivel (transicoes anteriores ao tracker).',
+                  '', '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'In Progress') {
+                const desde = startDate ? daysBetween(startDate, today) + ' dia(s)' : 'nao definido'
+                const ate = targetDate ? daysBetween(today, targetDate) : null
+                const prazo = ate === null ? 'nao definido' : ate > 0 ? ate + ' dia(s) restantes' : ate === 0 ? 'Prazo e hoje' : Math.abs(ate) + ' dia(s) atrasado'
+                lines = [
+                  TRACKER_TAG,
+                  '## Em Desenvolvimento - Snapshot (backfill)',
+                  '', '| Campo | Valor |', '|---|---|',
+                  '| Snapshot em | ' + fmtDate(today) + ' |',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '| Dias desde o start | ' + desde + ' |',
+                  '| Situacao do prazo | ' + prazo + ' |',
+                  '', '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'In Review') {
+                const ate = targetDate ? daysBetween(today, targetDate) : null
+                const prazo = ate === null ? 'nao definido' : ate > 0 ? ate + ' dia(s) restantes' : ate === 0 ? 'Prazo e hoje' : Math.abs(ate) + ' dia(s) atrasado'
+                lines = [
+                  TRACKER_TAG,
+                  '## Em Review - Snapshot (backfill)',
+                  '', '| Campo | Valor |', '|---|---|',
+                  '| Snapshot em | ' + fmtDate(today) + ' |',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '| Situacao do prazo | ' + prazo + ' |',
+                  '', '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'Adjustment') {
+                const ate = targetDate ? daysBetween(today, targetDate) : null
+                const prazo = ate === null ? 'nao definido' : ate > 0 ? 'Dentro do prazo, restam ' + ate + ' dia(s)' : ate === 0 ? 'Prazo e hoje' : Math.abs(ate) + ' dia(s) atrasado'
+                lines = [
+                  TRACKER_TAG,
+                  '## Em Adjustment - Snapshot (backfill)',
+                  '', '| Campo | Valor |', '|---|---|',
+                  '| Snapshot em | ' + fmtDate(today) + ' |',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '| Situacao do prazo | ' + prazo + ' |',
+                  '', '### Motivo do ajuste:', '-',
+                  '', '_Rastreio automatico de coluna._'
+                ]
+              } else if (status === 'Ready') {
+                lines = [
+                  TRACKER_TAG,
+                  '## Pronta para iniciar - Snapshot (backfill)',
+                  '', '| Campo | Valor |', '|---|---|',
+                  '| Snapshot em | ' + fmtDate(today) + ' |',
+                  '| Start date prevista | ' + fmtDate(startDate) + ' |',
+                  '| Target date | ' + fmtDate(targetDate) + ' |',
+                  '| Estimativa | ' + estStr + ' |',
+                  '', 'Aguardando inicio do desenvolvimento.',
+                  '', '_Rastreio automatico de coluna._'
+                ]
+              }
+
+              if (lines.length === 0) continue
+
+              await github.rest.issues.createComment({
+                owner: repoOwner, repo: repoName,
+                issue_number: issueNumber,
+                body: lines.join('\n')
+              })
+
+              console.log('Comentario adicionado: #' + issueNumber + ' [' + status + ']')
+              await new Promise(r => setTimeout(r, 500))
+            }

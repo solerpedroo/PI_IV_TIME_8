@@ -1,0 +1,51 @@
+name: Nova Issue
+description: Criar uma nova tarefa
+title: "[TASK] - "
+labels: []
+assignees: []
+
+body:
+
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria da Issue
+      description: Selecione obrigatoriamente uma categoria
+      options:
+        - task
+        - bug
+        - improvement
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 👤 Responsável"
+
+  - type: input
+    id: desenvolvido_por
+    attributes:
+      label: Desenvolvido por
+      placeholder: Nome do responsável
+    validations:
+      required: true
+
+  - type: input
+    id: ra
+    attributes:
+      label: RA
+      placeholder: Registro Acadêmico
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📝 Descrição"
+
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+      placeholder: Descreva claramente o que deve ser desenvolvido
+    validations:
+      required: true
