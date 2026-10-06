@@ -1,0 +1,72 @@
+name: Reportar Bug
+description: Registrar um erro encontrado no sistema
+title: "[BUG] - "
+labels: []
+assignees: []
+
+body:
+
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria da Issue
+      description: Selecione obrigatoriamente uma categoria
+      options:
+        - task
+        - bug
+        - improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: descricao_problema
+    attributes:
+      label: "📉 Descrição do Problema"
+      placeholder: "Explique claramente o erro encontrado"
+    validations:
+      required: true
+
+  - type: textarea
+    id: passos
+    attributes:
+      label: "🔁 Passos para Reproduzir"
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: comportamento_esperado
+    attributes:
+      label: "✅ Comportamento Esperado"
+      placeholder: "Descreva o que deveria acontecer"
+    validations:
+      required: true
+
+  - type: textarea
+    id: comportamento_atual
+    attributes:
+      label: "❌ Comportamento Atual"
+      placeholder: "Descreva o que está acontecendo"
+    validations:
+      required: true
+
+  - type: input
+    id: sistema_operacional
+    attributes:
+      label: "💻 Sistema Operacional"
+      placeholder: "Ex: Windows 11"
+
+  - type: input
+    id: navegador
+    attributes:
+      label: "Navegador"
+      placeholder: "Ex: Chrome"
+
+  - type: textarea
+    id: evidencias
+    attributes:
+      label: "📎 Evidências"
+      placeholder: "Cole links ou descreva anexos"

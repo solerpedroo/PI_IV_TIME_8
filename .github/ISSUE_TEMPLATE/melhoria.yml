@@ -1,0 +1,81 @@
+name: Sugestão de Melhoria
+description: Propor melhoria ou evolução no sistema
+title: "[IMPROVEMENT] - "
+labels: []
+assignees: []
+
+body:
+
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria da Issue
+      description: Selecione obrigatoriamente uma categoria
+      options:
+        - task
+        - bug
+        - improvement
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 💡 Descrição da Melhoria"
+
+  - type: textarea
+    id: descricao_melhoria
+    attributes:
+      label: Descrição
+      placeholder: Explique a melhoria proposta
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🎯 Objetivo"
+
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: Objetivo da Melhoria
+      placeholder: Qual problema essa melhoria resolve?
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 📈 Benefícios Esperados"
+
+  - type: textarea
+    id: beneficios
+    attributes:
+      label: Benefícios Esperados
+      placeholder: Liste os benefícios esperados
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## 🔎 Impacto"
+
+  - type: checkboxes
+    id: impacto
+    attributes:
+      label: Essa melhoria afeta
+      options:
+        - label: Frontend
+        - label: Backend
+        - label: Banco de Dados
+        - label: Infraestrutura
+
+  - type: markdown
+    attributes:
+      value: "Caso afete outro ponto, descrever abaixo."
+
+  - type: textarea
+    id: observacoes
+    attributes:
+      label: 🧩 Observações Extras
+      placeholder: Informações adicionais relevantes
+    validations:
+      required: false
