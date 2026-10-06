@@ -20,6 +20,22 @@ python -m http.server 5500        # serve the site
 node --check scripts/whatever.js  # syntax-check a script (no bundler/transpiler exists)
 ```
 
+### Backend foundation (`backend/`)
+
+The static frontend still uses local mocks and does **not** call the API yet. A separate backend stack lives under `backend/` — see **`backend/README.md`** for prerequisites, env vars (`.env.example` at repo root), Docker Compose MongoDB, and health checks.
+
+```text
+frontend (HTML/CSS/JS mocks)
+    ↓ future integration
+backend/gateway/   Node.js + TypeScript — GET /health, GET /ready (probes Java)
+    ↓
+backend/core/      Java 21 + Spring Boot — Actuator + MongoDB connection config
+    ↓
+compose.yaml       MongoDB 8 (local dev)
+```
+
+Gateway tests: `cd backend/gateway && npm ci && npm test`. Java tests: `cd backend/core && mvn test` (context test excludes Mongo auto-config; runtime still needs Mongo for a healthy core).
+
 There's no headless browser tool installed by default (no Playwright/Puppeteer/chromium-cli). To actually click through a screen: `npm install playwright` in a scratch dir, then `npx playwright install --with-deps chromium` (needs network access) before scripting interactions. See "Verifying a screen" below for why this matters — static checks (HTML tag balance, `node --check`, asset 200s) do **not** catch most real bugs here.
 
 ## Architecture
