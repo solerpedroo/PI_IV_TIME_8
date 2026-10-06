@@ -1,6 +1,6 @@
 # Relatório técnico completo do projeto AgroGestão
 
-**Data da análise:** 25 de setembro de 2026  
+**Data da análise:** 25 de setembro de 2026 (atualizado em 6 de outubro de 2026 — fundação do backend)  
 **Repositório analisado:** `frontend_pi_iv`  
 **Finalidade:** servir como documentação técnica e contexto-base para prompts enviados a agentes de IA que continuarão o desenvolvimento.
 
@@ -8,7 +8,7 @@
 
 O AgroGestão é uma proposta de plataforma integrada de gestão agrícola para pequenos e médios produtores rurais. O produto pretende centralizar propriedades, talhões, culturas, safras, atividades, insumos, ocorrências e custos, fazendo com que uma operação registrada em um módulo produza efeitos nos demais módulos relacionados.
 
-O conteúdo atualmente presente neste repositório é um **protótipo frontend estático, navegável e interativo**, construído com HTML, CSS e JavaScript puro. Não há framework de frontend, bundler, gerenciador de estado, API, backend executável ou banco de dados implementado neste repositório. Os dados exibidos são mocks definidos no HTML e em objetos JavaScript. As alterações feitas pelo usuário existem somente na memória e no DOM da página atual e são perdidas ao recarregar ou navegar.
+O conteúdo principal deste repositório continua sendo um **protótipo frontend estático, navegável e interativo**, construído com HTML, CSS e JavaScript puro, com dados mock no HTML/DOM (nada persistido entre reloads). **Desde a fundação do backend** (`backend/`, `compose.yaml`), o monorepo também inclui um **gateway Node.js + TypeScript**, um **core Java 21 + Spring Boot** com conexão MongoDB configurada e **MongoDB local via Docker Compose** — apenas health/readiness, sem rotas de negócio, modelos ou integração com as telas HTML.
 
 O frontend implementa:
 
@@ -36,7 +36,7 @@ Servidor Java com regras de negócio
 MongoDB
 ```
 
-Essa arquitetura é apenas planejada. Não existem arquivos TypeScript, Java, configuração MongoDB, rotas de API, modelos persistentes ou autenticação real no estado atual do repositório.
+A topologia acima **já está esboçada em código** (gateway TS → core Java → MongoDB), documentada em `backend/README.md`. Ainda **não** há rotas de produto, CRUD, esquema de coleções, autenticação real nem `fetch` do frontend para o gateway.
 
 ## 2. Escopo da análise e fontes consultadas
 
@@ -144,22 +144,20 @@ No frontend atual, essa cadeia é apenas comunicada por textos e toasts. Ela ain
 - API nativa de Drag and Drop no Kanban;
 - `Intl.NumberFormat` e `Intl.DateTimeFormat` para formatação brasileira;
 - Blob e Object URL para exportação CSV de custos;
-- Playwright e `pdf-lib` somente dentro do projeto de slides.
+- Playwright e `pdf-lib` somente dentro do projeto de slides;
+- **fundação backend:** gateway TypeScript (`backend/gateway/`), core Spring Boot + Actuator + Data MongoDB (`backend/core/`), Compose MongoDB 8 (`compose.yaml`), variáveis em `.env.example`.
 
-### 4.2 Tecnologias ausentes
+### 4.2 Tecnologias ausentes ou incompletas
 
-- React, Vue, Angular ou outro framework;
-- Node.js/TypeScript do aplicativo;
-- Java/Spring ou outro backend;
-- MongoDB ou qualquer banco local/remoto;
-- ORM/ODM;
-- API REST ou GraphQL;
-- `fetch`, Axios ou cliente HTTP no aplicativo;
+- React, Vue, Angular ou outro framework no frontend;
+- **API de domínio** (CRUD, auth, regras agrícolas) — o backend atual só expõe health/readiness;
+- ORM/ODM com entidades e repositórios de negócio;
+- `fetch`, Axios ou cliente HTTP **no frontend** do aplicativo;
 - autenticação, autorização e sessão reais;
 - testes automatizados versionados para o frontend principal;
-- lint, formatter ou pipeline de build;
-- package manager na raiz do projeto;
-- persistência em `localStorage`, IndexedDB ou banco.
+- lint, formatter ou pipeline de build unificado na raiz;
+- package manager na raiz do projeto (apenas em `slides/` e `backend/gateway/`);
+- persistência em `localStorage`, IndexedDB ou banco **consumida pelas telas HTML**.
 
 ### 4.3 Estrutura resumida
 
@@ -173,6 +171,9 @@ frontend_pi_iv/
 ├── docs/                          documentos acadêmicos e planejamento
 ├── slides/                        deck HTML, assets, PDF e exportador
 ├── changelogs/                    decisões e bugs históricos
+├── backend/                       gateway TS + core Java (ver backend/README.md)
+├── compose.yaml                   MongoDB local para desenvolvimento
+├── .env.example                   variáveis compartilhadas gateway/core
 ├── AgroGestao_Projeto.md          especificação ampla do produto
 ├── README.md                      inventário da implementação
 ├── AGENTS.md                      regras para agentes
@@ -602,17 +603,23 @@ As seguintes operações não atravessam módulos:
 
 ## 9. Backend e banco de dados
 
-### 9.1 Resultado da varredura
+### 9.1 Resultado da varredura (atualizado)
 
-Não foi encontrado backend ou banco implementado.
+Existe **fundação de backend e banco**, sem camada de produto nem integração com o frontend.
 
-Evidências:
+Implementado:
 
-- nenhum arquivo `.java`, `.ts`, `.tsx` ou `.sql` do aplicativo;
-- nenhum `pom.xml`, Gradle, Docker Compose ou configuração de banco;
-- nenhum uso de `fetch`, Axios, XMLHttpRequest ou IndexedDB;
-- apenas `package.json` dentro de `slides/`, dedicado à exportação do deck;
-- dados e regras executados exclusivamente no browser.
+- `backend/gateway/` — Node.js + TypeScript, `GET /health` e `GET /ready` (probe do Actuator Java);
+- `backend/core/` — Java 21, Spring Boot, Actuator, `spring-boot-starter-data-mongodb`, URI via `MONGODB_URI`;
+- `compose.yaml` — serviço `mongo:8.0.32` em loopback com volume persistente;
+- testes: gateway (`npm test`); core (`mvn test` — contexto sem exigir Mongo em execução).
+
+Ainda ausente:
+
+- rotas REST/GraphQL de negócio, DTOs, repositórios de domínio, migrações/esquema;
+- autenticação e autorização;
+- uso de `fetch`/Axios nas páginas HTML;
+- dados persistentes consumidos pelas telas (mocks continuam só no browser).
 
 ### 9.2 Arquitetura prevista nos documentos
 
@@ -783,7 +790,7 @@ Nunca manter `transform` com `animation-fill-mode: forwards` ou `both` em ancest
 
 ### Prioridade alta
 
-1. **Ausência total de persistência e backend.** O MVP documental exige dados reais e integração; o repositório atual é demonstração visual.
+1. **Persistência e API de negócio ainda ausentes.** A fundação (gateway, core Java, MongoDB local) existe, mas o MVP documental exige CRUD, auth e integração frontend↔backend; as telas HTML seguem como demonstração com mocks.
 2. **Identidade inconsistente de talhões.** Quebra a integração contextual entre Áreas, Atividades e Ocorrências.
 3. **Operações integradas são apenas mensagens.** Estoque, custos, histórico e Dashboard não são alterados em cadeia.
 4. **Autenticação simulada.** Qualquer credencial válida no formato acessa o Dashboard, e páginas internas são públicas.
