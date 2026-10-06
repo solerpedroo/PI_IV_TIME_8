@@ -69,6 +69,8 @@ curl -i http://127.0.0.1:8081/actuator/health
 
 Com todos os serviços ativos, as quatro consultas devem retornar HTTP 200. Se Java ou MongoDB estiver indisponível, o gateway continua vivo em `/health`, mas `/ready` retorna HTTP 503. Interrompa Java e Node com `Ctrl+C` em seus terminais. Para parar o MongoDB sem excluir o volume de dados, execute `docker compose stop mongo` na raiz. `docker compose down` também remove o contêiner e a rede, mas preserva o volume nomeado; **não use `down -v`** se quiser preservar dados.
 
+Os testes Maven (`mvn test`) carregam o contexto Spring **sem** exigir MongoDB em execução (auto-configuração Mongo desabilitada em `src/test/resources/application.properties`). Em runtime, o core ainda depende do MongoDB para health completo.
+
 ## Limites atuais
 
 - Nenhuma tela foi conectada ao gateway; o frontend segue com mocks locais.
