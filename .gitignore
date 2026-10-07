@@ -1,7 +1,18 @@
 # Segredos — nunca commitar
 .env
 .env.*
+*.env
+*.env.*
+# Exemplos seguros (inclusive em subdiretórios)
 !.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
+!*.env.example
+!*.env.sample
+!*.env.template
 
 # SO / editor
 .DS_Store
