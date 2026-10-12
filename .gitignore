@@ -31,6 +31,5 @@ slides/node_modules/
 slides/.vercel
 
 # Backend local
-backend/gateway/node_modules/
-backend/gateway/dist/
+backend/gateway/bin/
 backend/core/target/
