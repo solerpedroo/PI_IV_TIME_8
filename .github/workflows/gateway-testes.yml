@@ -1,0 +1,27 @@
+name: Testes do gateway
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'backend/gateway/**'
+      - '.github/workflows/gateway-testes.yml'
+  pull_request:
+    paths:
+      - 'backend/gateway/**'
+      - '.github/workflows/gateway-testes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compilar e testar o gateway
+        run: ./backend/gateway/testar.sh
