@@ -1,3 +1,7 @@
+/*
+    Autor: Tomas de Paula Michelon Toniato
+    RA: 25004211
+*/
 package util;
 
 import java.io.InputStream;

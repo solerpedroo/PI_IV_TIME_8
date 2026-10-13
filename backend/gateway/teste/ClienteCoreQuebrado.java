@@ -1,3 +1,7 @@
+/*
+    Autor: Tomas de Paula Michelon Toniato
+    RA: 25004211
+*/
 import util.ClienteCore;
 
 // Cliente do core que sempre falha, para exercitar o tratamento de erro do RotasHandler.

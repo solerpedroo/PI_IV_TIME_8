@@ -1,3 +1,7 @@
+/*
+    Autor: Tomas de Paula Michelon Toniato
+    RA: 25004211
+*/
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
