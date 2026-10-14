@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — interações da tela Ocorrências (dados mock híbridos)
  * --------------------------------------------------------------------------
@@ -28,11 +29,12 @@
     talhao: new URLSearchParams(window.location.search).get("talhao") || "",
   };
 
-  /** Timeline por linha (Map<tr, Array<{time, title, desc}>>) — estado só de UI. */
+  /** Durante o uso, as linhas apontam para seus históricos; o JSON salva tudo junto ao registro. */
   const timelines = new Map();
   let activeRow = null;
   let rowSeq = 100;
 
+  let persist = () => true;
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
   }
@@ -196,9 +198,9 @@
         <div class="timeline-entry ${index === entries.length - 1 ? "is-latest" : ""}">
           <div class="timeline-rail"><span class="timeline-dot"></span><span class="timeline-line"></span></div>
           <div class="timeline-body">
-            <span class="timeline-time">${entry.time}</span>
-            <p class="timeline-title">${entry.title}</p>
-            <p class="timeline-desc">${entry.desc}</p>
+            <span class="timeline-time">${window.AgroLocal.escape(entry.time)}</span>
+            <p class="timeline-title">${window.AgroLocal.escape(entry.title)}</p>
+            <p class="timeline-desc">${window.AgroLocal.escape(entry.desc)}</p>
           </div>
         </div>`
       )
@@ -226,14 +228,14 @@
     $("[data-detail-title]", modal).textContent = row.dataset.occ;
     $("[data-detail-subtitle]", modal).textContent = `${row.dataset.talhao} · ${row.dataset.date}`;
     $("[data-detail-badges]", modal).innerHTML = `
-      <span class="badge ${severityBadgeClass(row.dataset.severity)}">${row.dataset.severity}</span>
-      <span class="badge ${statusBadgeClass(row.dataset.status)}">${row.dataset.status}</span>
+      <span class="badge ${severityBadgeClass(row.dataset.severity)}">${window.AgroLocal.escape(row.dataset.severity)}</span>
+      <span class="badge ${statusBadgeClass(row.dataset.status)}">${window.AgroLocal.escape(row.dataset.status)}</span>
     `;
     $("[data-detail-meta]", modal).innerHTML = `
-      <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${row.dataset.tipo}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${row.dataset.talhao}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Registrada</span><span class="meta-cell-value">${row.dataset.date}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${row.dataset.status}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.tipo)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.talhao)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Registrada</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.date)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.status)}</span></div>
     `;
     renderTimeline(row);
 
@@ -261,7 +263,8 @@
         toast("error", "Falha ao publicar", "Escreva uma atualização antes de publicar.");
         return;
       }
-      timelineFor(activeRow).push({ time: "Agora", title: "Atualização publicada", desc: text });
+      timelineFor(activeRow).push({ time: new Date().toLocaleString("pt-BR"), title: "Atualização publicada", desc: text });
+      if (!persist()) { renderTimeline(activeRow); return; }
       renderTimeline(activeRow);
       textarea.value = "";
       toast("success", "Atualização publicada", "A linha do tempo da ocorrência foi atualizada.");
@@ -301,8 +304,9 @@
       $("[data-status-badge]", row).textContent = "Resolvida";
       refreshRowMenu(row);
 
-      timelineFor(row).push({ time: "Agora", title: "Ocorrência resolvida", desc: "Status atualizado para Resolvida." });
+      timelineFor(row).push({ time: new Date().toLocaleString("pt-BR"), title: "Ocorrência resolvida", desc: "Status atualizado para Resolvida." });
 
+      if (!persist()) return;
       closeModal($("[data-modal='occ-resolve']"));
       closeModal($("[data-modal='occ-detail']"));
       recomputeMetrics();
@@ -327,6 +331,7 @@
       const name = row.dataset.occ;
       timelines.delete(row);
       row.remove();
+      if (!persist()) return;
 
       closeModal($("[data-modal='occ-delete']"));
       closeModal($("[data-modal='occ-detail']"));
@@ -354,18 +359,21 @@
   function buildRow(values) {
     const menuId = `menu-o${++rowSeq}`;
     const row = document.createElement("tr");
+    row.dataset.id = values.id || window.AgroLocal.id();
     row.dataset.occ = values.titulo;
     row.dataset.tipo = values.tipo;
     row.dataset.talhao = values.talhao;
-    row.dataset.date = "hoje";
+    // Uma data fixa continua verdadeira depois do reload em outro dia.
+    row.dataset.date = new Date().toLocaleDateString("pt-BR");
     row.dataset.severity = values.prioridade;
     row.dataset.status = "Aberta";
 
+    values = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, window.AgroLocal.escape(value)]));
     row.innerHTML = `
       <td class="col-occ-name">${values.titulo}</td>
       <td class="col-muted">${values.tipo}</td>
       <td class="col-muted">${values.talhao}</td>
-      <td class="col-muted">hoje</td>
+      <td class="col-muted">${window.AgroLocal.escape(row.dataset.date)}</td>
       <td><span class="badge ${severityBadgeClass(values.prioridade)}" data-severity-badge>${values.prioridade}</span></td>
       <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
       <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${menuId}" aria-expanded="false" aria-label="Mais ações — ${values.titulo}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="${menuId}" data-popover role="menu">${actionMenuMarkup("Aberta")}</div></div></td>
@@ -408,6 +416,7 @@
 
       const row = buildRow({ titulo, tipo, talhao, prioridade });
       $("[data-occ-table] tbody").appendChild(row);
+      if (!persist()) return;
 
       closeModal(modal);
       form.reset();
@@ -420,7 +429,31 @@
     });
   }
 
+  // O histórico acompanha o identificador da ocorrência; não fica preso ao
+  // elemento da tabela, que deixa de existir quando a página é recarregada.
+  function restoreOccurrences(records) {
+    const activeId = activeRow?.dataset.id;
+    timelines.clear();
+    $("[data-occ-table] tbody").replaceChildren(...records.map((record) => {
+      const row = buildRow({id: record.id, titulo: record.occ, tipo: record.tipo,
+        talhao: record.talhao, prioridade: record.severity});
+      row.dataset.date = record.date;
+      row.dataset.status = record.status;
+      row.children[3].textContent = record.date;
+      const badge = $("[data-status-badge]", row);
+      badge.textContent = record.status;
+      badge.className = "badge " + statusBadgeClass(record.status);
+      timelines.set(row, record.timeline);
+      refreshRowMenu(row);
+      return row;
+    }));
+    // A ficha aberta precisa continuar ligada ao registro recuperado após rollback.
+    activeRow = $$("[data-occ-table] tbody tr").find((row) => row.dataset.id === activeId) || null;
+    recomputeMetrics(); applyFilters();
+  }
+
   function init() {
+    persist = window.AgroLocal.connect("occurrences", () => $$("[data-occ-table] tbody tr").map((row) => ({id: row.dataset.id, occ: row.dataset.occ, tipo: row.dataset.tipo, talhao: row.dataset.talhao, date: row.dataset.date, severity: row.dataset.severity, status: row.dataset.status, timeline: timelineFor(row)})), restoreOccurrences);
     populateActionMenus();
     initGenericModals();
     initTalhaoFilterChip();
