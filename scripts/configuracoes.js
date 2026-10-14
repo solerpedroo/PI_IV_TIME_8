@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Interações da tela de Configurações: abas, formulários e preferências. */
 (() => {
   "use strict";
@@ -39,6 +40,26 @@
     return valid;
   }
 
+  let settings;
+  let persist = () => true;
+
+  // A lista explícita de campos garante que senhas e tokens jamais entrem no JSON.
+  function captureForm(form) {
+    return Object.fromEntries([...form.elements].filter((control) => control.name && control.type !== "password")
+      .map((control) => [control.name, control.name === "area" ? Number(control.value) : control.value]));
+  }
+
+  function restoreSettings(data) {
+    settings = data;
+    $$('[data-settings-form]').forEach((form) => {
+      Object.entries(data[form.dataset.settingsForm]).forEach(([key, value]) => {
+        form.elements[key].value = value;
+        form.elements[key].dispatchEvent(new Event("change"));
+      });
+    });
+    $$('[data-preference]').forEach((control) => { control.checked = data.preferences[control.dataset.preference]; });
+  }
+
   function initForms() {
     $$('[data-settings-form]').forEach((form) => form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -46,7 +67,12 @@
         toast("error", "Não foi possível salvar", "Revise os campos obrigatórios.");
         return;
       }
-      toast("success", "Alterações salvas", "As informações foram atualizadas nesta sessão.");
+      if (form.dataset.settingsForm === "property" && (!Number.isFinite(Number(form.elements.area.value)) || Number(form.elements.area.value) <= 0)) {
+        toast("error", "Área inválida", "Informe uma área maior que zero."); return;
+      }
+      settings[form.dataset.settingsForm] = captureForm(form);
+      if (!persist()) return;
+      toast("success", "Alterações salvas", "As informações foram salvas neste navegador.");
     }));
 
     $("[data-security-form]")?.addEventListener("submit", (event) => {
@@ -62,12 +88,14 @@
       if (next.value !== confirm.value) { confirm.setAttribute("aria-invalid", "true"); confirm.parentElement.querySelector(".field-error").textContent = "As senhas não coincidem."; invalid = true; }
       if (invalid) { toast("error", "Senha não atualizada", "Revise os campos destacados."); return; }
       form.reset();
-      toast("success", "Senha atualizada", "Sua senha foi alterada com sucesso nesta sessão.");
+      toast("info", "Alteração indisponível", "A troca de senha depende do servidor e ainda não está conectada. Nenhuma senha foi alterada ou armazenada localmente.");
     });
   }
 
   function initPreferences() {
     $("[data-save-notifications]")?.addEventListener("click", () => {
+      settings.preferences = Object.fromEntries($$('[data-preference]').map((control) => [control.dataset.preference, control.checked]));
+      if (!persist()) return;
       const enabled = $$('[data-preference]:checked').length;
       toast("success", "Preferências salvas", `${enabled} tipo${enabled === 1 ? "" : "s"} de alerta${enabled === 1 ? "" : "s"} ativado${enabled === 1 ? "" : "s"}.`);
     });
@@ -127,6 +155,8 @@
     $$('[data-harvest-close]', modal).forEach((button) => button.addEventListener("click", close));
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
     $("[data-confirm-harvest]", modal).addEventListener("click", () => {
+      settings.property.harvest = pending;
+      if (!persist()) return;
       native.value = pending;
       native.dispatchEvent(new Event("change", { bubbles: true }));
       syncLabel();
@@ -138,6 +168,12 @@
   }
 
   function init() {
+    const initial = {
+      profile: captureForm($("[data-settings-form='profile']")),
+      property: captureForm($("[data-settings-form='property']")),
+      preferences: Object.fromEntries($$('[data-preference]').map((control) => [control.dataset.preference, control.checked]))
+    };
+    persist = window.AgroLocal.connect("settings", () => settings, restoreSettings, initial, initial);
     initTabs();
     initForms();
     initPreferences();
