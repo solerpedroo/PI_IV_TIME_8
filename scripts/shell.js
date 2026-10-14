@@ -353,6 +353,8 @@
   const blocked = new Set();
   const known = new Map();
   const prefix = "agro.operational.v1.";
+  const labels = {plots: "os talhões", activities: "as atividades", stock: "o estoque",
+    occurrences: "as ocorrências", costs: "os custos", settings: "as configurações", notifications: "as notificações"};
 
   // Um aviso visível permanece na página: não depende da duração do toast.
   function report(message) {
@@ -382,7 +384,7 @@
       return clone(envelope ? envelope.data : fallback);
     } catch (error) {
       blocked.add(key);
-      report("Não foi possível recuperar " + key + ". O armazenamento está inválido ou indisponível. Nenhuma recuperação foi confirmada; os dados existentes não serão sobrescritos. Corrija o armazenamento e recarregue a página.");
+      report("Não foi possível recuperar " + labels[key] + ". O armazenamento está inválido ou indisponível. Nenhuma recuperação foi confirmada; os dados existentes não serão sobrescritos. Corrija o armazenamento e recarregue a página.");
       return clone(empty);
     }
   }
@@ -398,7 +400,7 @@
       known.set(key, raw);
       return true;
     } catch (error) {
-      report("A alteração em " + key + " não foi salva e foi desfeita. Verifique o espaço ou a permissão do navegador e recarregue a página antes de tentar novamente.");
+      report("Não foi possível salvar " + labels[key] + ". A alteração foi desfeita. Verifique o espaço ou a permissão do navegador e recarregue a página antes de tentar novamente.");
       return false;
     }
   }
