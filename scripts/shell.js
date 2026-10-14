@@ -306,11 +306,24 @@
     }
   ]
 };
+  // Os mesmos valores iniciais das configurações também ficam disponíveis
+  // para outras telas calcularem indicadores antes do primeiro salvamento.
+  defaults.settings = {
+    profile: {name: "João Silva", email: "joao@fazendasantarita.com", phone: "(19) 99999-1234", role: "Produtor rural"},
+    property: {farm: "Fazenda Santa Rita", area: 1284, city: "Campinas, SP", harvest: "2025/26"},
+    preferences: {stock: true, weather: true, activities: true, occurrences: true, reports: false}
+  };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const text = (value) => typeof value === "string" && value.trim().length > 0;
   const string = (value) => typeof value === "string";
   const number = (value) => typeof value === "number" && Number.isFinite(value) && value >= 0;
   const positive = (value) => number(value) && value > 0;
+  // Não aceitamos datas impossíveis ou movimentações sem instante válido.
+  const isoDay = (value) => string(value) && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value + "T12:00:00Z"))
+    && new Date(value + "T12:00:00Z").toISOString().slice(0, 10) === value;
+  const isoInstant = (value) => string(value) && Number.isFinite(Date.parse(value))
+    && new Date(value).toISOString() === value;
   const oneOf = (...values) => (value) => values.includes(value);
   const shape = (fields) => (value) => value && !Array.isArray(value) && typeof value === "object"
     && Object.keys(value).length === Object.keys(fields).length
@@ -324,15 +337,15 @@
     activities: records({activity: text, tipo: text, talhao: text, date: text,
       status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída")}),
     stock: records({product: text, category: text, qty: number, unit: text, min: positive,
-      movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: text, note: string}))}),
+      movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: isoInstant, note: string}))}),
     occurrences: records({occ: text, tipo: text, talhao: text, date: text,
       severity: oneOf("Alta", "Média", "Baixa"), status: oneOf("Aberta", "Em análise", "Resolvida"), timeline}),
     costs: shape({budget: positive, period: oneOf("Jan — Ago 2026", "Safra 2025/26"),
       entries: (value) => list(shape({id: positive, description: text,
         category: oneOf("Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"),
-        plot: string, date: (date) => string(date) && /^\d{4}-\d{2}-\d{2}$/.test(date)
-          && !Number.isNaN(Date.parse(date + "T12:00:00")), value: positive}))(value)
+        plot: string, date: isoDay, value: positive}))(value)
         && new Set(value.map((entry) => entry.id)).size === value.length}),
+    notifications: list(text),
     settings: shape({profile: shape({name: text, email: text, phone: string, role: string}),
       property: shape({farm: text, area: positive, city: string, harvest: oneOf("2025/26", "2026/27", "2024/25")}),
       preferences: shape(Object.fromEntries(["stock", "weather", "activities", "occurrences", "reports"].map((key) => [key, (value) => typeof value === "boolean"])))})
@@ -623,6 +636,14 @@
     const dot = $("[data-notif-dot]");
     if (!list) return;
 
+    // A leitura de uma notificação também é uma alteração local. Usamos o
+    // texto como chave porque esses itens estáticos ainda não têm IDs da API.
+    let readItems = window.AgroLocal.read("notifications", []);
+    const notificationKey = (item) => item.textContent.replace(/\s+/g, " ").trim();
+    $$(".notif-item", list).forEach((item) => {
+      if (readItems.includes(notificationKey(item))) item.classList.remove("is-unread");
+    });
+
     function refreshUnread() {
       const unread = $$(".notif-item.is-unread", list);
       if (dot) dot.classList.toggle("is-hidden", unread.length === 0);
@@ -633,6 +654,9 @@
     list.addEventListener("click", (event) => {
       const item = event.target.closest(".notif-item");
       if (!item) return;
+      const next = [...new Set([...readItems, notificationKey(item)])];
+      if (!window.AgroLocal.save("notifications", next)) return;
+      readItems = next;
       item.classList.remove("is-unread");
       refreshUnread();
       if (window.AgroToast) {
@@ -646,6 +670,9 @@
 
     if (markAll) {
       markAll.addEventListener("click", () => {
+        const next = [...new Set([...readItems, ...$$(".notif-item", list).map(notificationKey)])];
+        if (!window.AgroLocal.save("notifications", next)) return;
+        readItems = next;
         $$(".notif-item.is-unread", list).forEach((item) => item.classList.remove("is-unread"));
         refreshUnread();
         if (window.AgroToast) {
