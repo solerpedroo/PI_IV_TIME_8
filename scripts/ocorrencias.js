@@ -264,7 +264,11 @@
         return;
       }
       timelineFor(activeRow).push({ time: new Date().toLocaleString("pt-BR"), title: "Atualização publicada", desc: text });
-      if (!persist()) { renderTimeline(activeRow); return; }
+      if (!persist()) {
+        // connect() restaurou o estado confirmado; remonta a ficha com a linha remapeada.
+        if (activeRow) openDetail(activeRow);
+        return;
+      }
       renderTimeline(activeRow);
       textarea.value = "";
       toast("success", "Atualização publicada", "A linha do tempo da ocorrência foi atualizada.");
