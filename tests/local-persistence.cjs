@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const { launchTestBrowser } = require("./browser-launch.cjs");
 
 const root = process.cwd();
 const origin = "http://agro.local";
@@ -75,10 +76,7 @@ async function test(name, run) {
 }
 
 (async () => {
-  const browser = await chromium.launch({
-    executablePath: process.env.BROWSER_PATH || "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-    headless: true,
-  });
+  const browser = await launchTestBrowser(chromium);
   try {
     await test("inicialização das sete telas", async () => {
       const ctx = await context(browser);
