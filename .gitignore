@@ -33,3 +33,6 @@ slides/.vercel
 # Backend local
 backend/gateway/bin/
 backend/core/target/
+
+# Dependências instaladas localmente (qualquer diretório)
+node_modules/

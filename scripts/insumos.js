@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — interações da tela Insumos (dados mock híbridos)
  * --------------------------------------------------------------------------
@@ -22,13 +23,16 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
   const state = {
-    totalProducts: 47,
-    entriesThisMonth: 12,
+    totalProducts: 0,
+    entriesThisMonth: 0,
     activeRow: null, // linha da tabela em contexto (saída/editar/detalhe/excluir)
   };
 
+  let persist = () => true;
+  const movements = new Map();
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
+    return true;
   }
 
   function formatQty(value) {
@@ -193,13 +197,6 @@
     const produtoSelect = $("[name='produto']", form);
     const produtoWrap = $("[data-entrada-produto-wrap]", modal);
 
-    // Popula o select de produto (usado apenas quando aberto pelo cabeçalho).
-    $$("[data-stock-table] tbody tr").forEach((row) => {
-      const opt = document.createElement("option");
-      opt.value = row.dataset.product;
-      opt.textContent = row.dataset.product;
-      produtoSelect.appendChild(opt);
-    });
     window.AgroSelect?.enhance(produtoSelect);
 
     function openFor(row) {
@@ -243,19 +240,20 @@
         row = $$("[data-stock-table] tbody tr").find((r) => r.dataset.product === produtoNome);
       }
 
-      if (!qty || qty <= 0) {
+      if (!Number.isFinite(qty) || qty <= 0) {
         setError(form, "quantidade", "Informe uma quantidade maior que zero.");
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
         return;
       }
 
+      if (!row) { toast("error", "Produto indisponível", "Selecione um produto existente."); return; }
+      recordMovement(row, "entrada", qty, form.fornecedor.value.trim());
       row.dataset.qty = String(Number(row.dataset.qty) + qty);
       applyRowStatus(row);
       recomputeCriticalAlert();
 
-      state.entriesThisMonth += 1;
-      const metric = $("[data-metric='entries']");
-      if (metric) metric.textContent = String(state.entriesThisMonth);
+      updateStockMetrics();
+      if (!persist()) return;
 
       closeModal(modal);
       toast("success", "Entrada registrada", `${formatQty(qty)} ${row.dataset.unit} de ${row.dataset.product} adicionados ao estoque.`);
@@ -289,7 +287,7 @@
       const qty = Number(form.quantidade.value);
       const currentQty = Number(row.dataset.qty);
 
-      if (!qty || qty <= 0) {
+      if (!Number.isFinite(qty) || qty <= 0) {
         setError(form, "quantidade", "Informe uma quantidade maior que zero.");
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
         return;
@@ -300,16 +298,18 @@
         return;
       }
 
+      recordMovement(row, "saida", qty, form.destino.value.trim());
       row.dataset.qty = String(currentQty - qty);
       const { becameCritical, label } = applyRowStatus(row);
       recomputeCriticalAlert();
 
+      if (!persist()) return;
       closeModal(modal);
       const destino = form.destino.value.trim();
       toast(
         "success",
         "Saída registrada",
-        `${formatQty(qty)} ${row.dataset.unit} de ${row.dataset.product} baixados${destino ? ` · ${destino}` : ""} · custo lançado.`
+        `${formatQty(qty)} ${row.dataset.unit} de ${row.dataset.product} baixados${destino ? ` · ${destino}` : ""}.`
       );
 
       if (becameCritical || label === "Baixo") {
@@ -350,7 +350,7 @@
       const minimo = Number(form.minimo.value);
       let hasError = false;
       if (!categoria) { setError(form, "categoria", "Selecione a categoria."); hasError = true; }
-      if (!minimo || minimo <= 0) { setError(form, "minimo", "Informe um estoque mínimo maior que zero."); hasError = true; }
+      if (!Number.isFinite(minimo) || minimo <= 0) { setError(form, "minimo", "Informe um estoque mínimo maior que zero."); hasError = true; }
 
       if (hasError) {
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
@@ -366,6 +366,7 @@
       applyRowStatus(row);
       recomputeCriticalAlert();
 
+      if (!persist()) return;
       closeModal(modal);
       toast("success", "Produto atualizado", `${row.dataset.product} foi salvo com sucesso.`);
     });
@@ -385,10 +386,40 @@
       $("[data-detalhe-title]", modal).textContent = row.dataset.product;
       $("[data-detalhe-subtitle]", modal).textContent = `${row.querySelector(".col-muted").textContent} · Unidade ${row.dataset.unit}`;
       $("[data-detalhe-meta]", modal).innerHTML = `
-        <div class="meta-cell"><span class="meta-cell-label">Saldo atual</span><span class="meta-cell-value">${formatQty(Number(row.dataset.qty))} ${row.dataset.unit}</span></div>
-        <div class="meta-cell"><span class="meta-cell-label">Estoque mínimo</span><span class="meta-cell-value">${row.dataset.min} ${row.dataset.unit}</span></div>
+        <div class="meta-cell"><span class="meta-cell-label">Saldo atual</span><span class="meta-cell-value">${formatQty(Number(row.dataset.qty))} ${window.AgroLocal.escape(row.dataset.unit)}</span></div>
+        <div class="meta-cell"><span class="meta-cell-label">Estoque mínimo</span><span class="meta-cell-value">${row.dataset.min} ${window.AgroLocal.escape(row.dataset.unit)}</span></div>
         <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${$("[data-status-badge]", row).textContent}</span></div>
       `;
+      const chain = $("[data-detalhe-chain]", modal);
+      if (chain) chain.hidden = true;
+      const traceNote = $(".trace-note", modal);
+      if (traceNote) traceNote.hidden = true;
+      let history = $("[data-movement-history]", modal);
+      if (!history) {
+        history = document.createElement("div");
+        history.dataset.movementHistory = "";
+        chain?.after(history);
+      }
+      history.replaceChildren();
+      const title = document.createElement("h3");
+      title.textContent = "Histórico de movimentações";
+      history.append(title);
+      const entries = movements.get(row.dataset.id) || [];
+      if (!entries.length) {
+        const empty = document.createElement("p");
+        empty.textContent = "Nenhuma movimentação registrada.";
+        history.append(empty);
+      } else {
+        const list = document.createElement("ul");
+        entries.slice().reverse().forEach((movement) => {
+          const item = document.createElement("li");
+          const date = new Date(movement.date);
+          const when = Number.isNaN(date.getTime()) ? movement.date : date.toLocaleString("pt-BR");
+          item.textContent = `${when} · ${movement.type === "entrada" ? "Entrada" : "Saída"} de ${formatQty(movement.qty)} ${row.dataset.unit}${movement.note ? " · " + movement.note : ""}`;
+          list.append(item);
+        });
+        history.append(list);
+      }
       openModal(modal);
     });
   }
@@ -423,12 +454,13 @@
       const row = state.activeRow;
       if (!row) return;
       const name = row.dataset.product;
+      movements.delete(row.dataset.id);
       row.remove();
+      if (!persist()) return;
       closeModal(modal);
 
-      state.totalProducts = Math.max(0, state.totalProducts - 1);
-      const metric = $("[data-metric='total-products']");
-      if (metric) metric.textContent = String(state.totalProducts);
+      refreshProductOptions();
+      updateStockMetrics();
 
       recomputeCriticalAlert();
       $("[data-stock-search]")?.dispatchEvent(new Event("input"));
@@ -436,7 +468,65 @@
     });
   }
 
+  // Quantidade, fornecedor/destino e data ficam juntos no histórico do produto.
+  function recordMovement(row, type, qty, note) {
+    const entries = movements.get(row.dataset.id) || [];
+    entries.push({id: window.AgroLocal.id(), type, qty, date: new Date().toISOString(), note});
+    movements.set(row.dataset.id, entries);
+  }
+
+  function refreshProductOptions() {
+    const select = $("[data-entrada-form] [name='produto']");
+    if (!select) return;
+    select.replaceChildren(new Option("Selecione o produto", ""));
+    $$("[data-stock-table] tbody tr").forEach((row) => select.add(new Option(row.dataset.product, row.dataset.product)));
+    select.dispatchEvent(new Event("change"));
+  }
+
+  // Os indicadores vêm do inventário e das entradas confirmadas no mês atual.
+  function updateStockMetrics() {
+    const rows = $$("[data-stock-table] tbody tr");
+    state.totalProducts = rows.length;
+    const total = $("[data-metric='total-products']");
+    if (total) total.textContent = String(rows.length);
+    const now = new Date();
+    state.entriesThisMonth = [...movements.values()].flat().filter((movement) => {
+      const date = new Date(movement.date);
+      return movement.type === "entrada" && !Number.isNaN(date.getTime())
+        && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+    }).length;
+    const entries = $("[data-metric='entries']");
+    if (entries) entries.textContent = String(state.entriesThisMonth);
+  }
+
+  function restoreStock(records) {
+    const activeId = state.activeRow?.dataset.id;
+    movements.clear();
+    $("[data-stock-table] tbody").replaceChildren(...records.map((record, index) => {
+      const row = document.createElement("tr");
+      const {movements: history, ...fields} = record;
+      Object.assign(row.dataset, fields);
+      movements.set(record.id, history);
+      const category = record.category.charAt(0).toUpperCase() + record.category.slice(1);
+      const esc = window.AgroLocal.escape;
+      const menuId = "stock-menu-" + index;
+      row.innerHTML = `<td class="col-product-name">${esc(record.product)}</td><td class="col-muted">${esc(category)}</td><td data-qty-cell></td><td class="col-muted">${esc(record.unit)}</td><td class="col-muted">${record.min}</td><td><span class="badge" data-status-badge></span></td><td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${menuId}" aria-expanded="false" aria-label="Mais ações">⋮</button><div class="action-menu" id="${menuId}" data-popover role="menu">${actionMenuMarkup()}</div></div></td>`;
+      applyRowStatus(row);
+      return row;
+    }));
+    // Após rollback, ações do modal apontam para a linha restaurada, nunca para uma linha removida.
+    state.activeRow = $$("[data-stock-table] tbody tr").find((row) => row.dataset.id === activeId) || null;
+    recomputeCriticalAlert();
+    updateStockMetrics();
+    refreshProductOptions();
+    $("[data-stock-search]")?.dispatchEvent(new Event("input"));
+  }
+
   function init() {
+    persist = window.AgroLocal.connect("stock", () => $$("[data-stock-table] tbody tr").map((row) => ({
+      id: row.dataset.id, product: row.dataset.product, category: row.dataset.category,
+      qty: Number(row.dataset.qty), unit: row.dataset.unit, min: Number(row.dataset.min), movements: movements.get(row.dataset.id) || []
+    })), restoreStock);
     populateActionMenus();
     initGenericModals();
     initFilters();

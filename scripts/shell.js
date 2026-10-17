@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — chrome do app shell
  * --------------------------------------------------------------------------
@@ -212,6 +213,14 @@
     const dot = $("[data-notif-dot]");
     if (!list) return;
 
+    // A leitura de uma notificação também é uma alteração local. Usamos o
+    // texto como chave porque esses itens estáticos ainda não têm IDs da API.
+    let readItems = window.AgroLocal.read("notifications", []);
+    const notificationKey = (item) => item.textContent.replace(/\s+/g, " ").trim();
+    $$(".notif-item", list).forEach((item) => {
+      if (readItems.includes(notificationKey(item))) item.classList.remove("is-unread");
+    });
+
     function refreshUnread() {
       const unread = $$(".notif-item.is-unread", list);
       if (dot) dot.classList.toggle("is-hidden", unread.length === 0);
@@ -222,6 +231,9 @@
     list.addEventListener("click", (event) => {
       const item = event.target.closest(".notif-item");
       if (!item) return;
+      const next = [...new Set([...readItems, notificationKey(item)])];
+      if (!window.AgroLocal.save("notifications", next)) return;
+      readItems = next;
       item.classList.remove("is-unread");
       refreshUnread();
       if (window.AgroToast) {
@@ -235,6 +247,9 @@
 
     if (markAll) {
       markAll.addEventListener("click", () => {
+        const next = [...new Set([...readItems, ...$$(".notif-item", list).map(notificationKey)])];
+        if (!window.AgroLocal.save("notifications", next)) return;
+        readItems = next;
         $$(".notif-item.is-unread", list).forEach((item) => item.classList.remove("is-unread"));
         refreshUnread();
         if (window.AgroToast) {

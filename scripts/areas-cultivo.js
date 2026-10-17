@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — interações da tela Áreas de Cultivo (dados mock híbridos)
  * --------------------------------------------------------------------------
@@ -25,6 +26,7 @@
     editingRow: null, // <tr> atualmente em edição, ou null em modo "criar"
   };
 
+  let persist = () => true;
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
   }
@@ -36,7 +38,7 @@
   /** Recalcula activePlots e totalHectares a partir das linhas da tabela. */
   function computeMetricsFromTable() {
     const rows = $$("[data-plots-table] tbody tr");
-    state.activePlots = rows.length;
+    state.activePlots = rows.filter((row) => row.dataset.status === "Ativo").length;
     state.totalHectares = rows.reduce((sum, row) => sum + Number(row.dataset.hectares || 0), 0);
   }
 
@@ -66,12 +68,10 @@
   /* ---------------------------------------------------------------------- */
   function initFilters() {
     const search = $("[data-plots-search]");
-    const rows = $$("[data-plots-table] tbody tr");
     const chips = $$("[data-filter-crop]");
     const count = $("[data-plots-count]");
     const empty = $("[data-plots-empty]");
     const table = $("[data-plots-table]");
-    if (!rows.length) return;
 
     let activeCrop = "todos";
 
@@ -79,7 +79,7 @@
       const q = (search?.value || "").trim().toLowerCase();
       let visible = 0;
 
-      rows.forEach((row) => {
+      $$("[data-plots-table] tbody tr").forEach((row) => {
         const matchesCrop = activeCrop === "todos" || row.dataset.crop === activeCrop;
         const matchesQuery = !q || row.dataset.plot.toLowerCase().includes(q);
         const show = matchesCrop && matchesQuery;
@@ -143,12 +143,13 @@
   /** Constrói (ou atualiza) a <tr> da tabela a partir dos valores do formulário. */
   function buildRowMarkup(id, values) {
     const encoded = encodeURIComponent(values.nome);
+    values = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, window.AgroLocal.escape(value)]));
     return `
       <td class="col-plot-name">${values.nome}</td>
       <td><span class="badge badge-neutral">${values.cultura}</span></td>
       <td>${values.hectares} ha</td>
       <td><span class="badge ${statusBadgeClass(values.status)}" data-status-badge>${values.status}</span></td>
-      <td class="col-muted">Cadastro manual · hoje</td>
+      <td class="col-muted">Cadastro manual</td>
       <td class="col-actions">
         <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar ${values.nome}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -248,19 +249,18 @@
 
       if (state.editingRow) {
         const row = state.editingRow;
-        const prevHectares = Number(row.dataset.hectares);
-        state.totalHectares += hectares - prevHectares;
         row.dataset.plot = nome;
         row.dataset.crop = cultura.toLowerCase();
         row.dataset.hectares = String(hectares);
         row.dataset.status = status;
-        const menuId = row.querySelector("[data-popover]")?.id || `menu-${nome.replace(/\s+/g, "-").toLowerCase()}`;
+        const menuId = row.querySelector("[data-popover]")?.id || `menu-${window.AgroLocal.id()}`;
         row.innerHTML = buildRowMarkup(menuId, values);
-        updateHectaresMetric();
+        if (!persist()) return;
         toast("success", "Talhão atualizado", `${nome} foi salvo com sucesso.`);
       } else {
-        const menuId = `menu-${nome.replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
+        const menuId = `menu-${window.AgroLocal.id()}`;
         const row = document.createElement("tr");
+        row.dataset.id = window.AgroLocal.id();
         row.dataset.plot = nome;
         row.dataset.crop = cultura.toLowerCase();
         row.dataset.hectares = String(hectares);
@@ -268,13 +268,13 @@
         row.innerHTML = buildRowMarkup(menuId, values);
         tbody.appendChild(row);
 
-        state.activePlots += 1;
-        state.totalHectares += hectares;
-        updateActivePlotsMetric();
-        updateHectaresMetric();
+        if (!persist()) return;
         toast("success", "Talhão salvo", `${nome} foi cadastrado com sucesso.`);
       }
 
+      computeMetricsFromTable();
+      updateActivePlotsMetric();
+      updateHectaresMetric();
       closeModal(modal);
       form.reset();
       // Reaplica busca/filtro para a nova linha respeitar o estado atual.
@@ -282,7 +282,25 @@
     });
   }
 
+  // Salvamos somente os campos do talhão, sem filtros, menus ou HTML.
+  function restorePlots(records) {
+    // O rollback recria as linhas; preservamos o contexto da edição pelo ID.
+    const editingId = state.editingRow?.dataset.id;
+    const tbody = $("[data-plots-table] tbody");
+    tbody.replaceChildren(...records.map((record, index) => {
+      const row = document.createElement("tr");
+      Object.assign(row.dataset, record);
+      row.innerHTML = buildRowMarkup("plot-menu-" + index, {nome: record.plot,
+        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
+      return row;
+    }));
+    state.editingRow = $$("[data-plots-table] tbody tr").find((row) => row.dataset.id === editingId) || null;
+    computeMetricsFromTable(); updateHectaresMetric(); updateActivePlotsMetric();
+    $("[data-plots-search]")?.dispatchEvent(new Event("input"));
+  }
+
   function init() {
+    persist = window.AgroLocal.connect("plots", () => $$("[data-plots-table] tbody tr").map((row) => ({id: row.dataset.id, plot: row.dataset.plot, crop: row.dataset.crop, hectares: Number(row.dataset.hectares), status: row.dataset.status})), restorePlots);
     computeMetricsFromTable();
     updateHectaresMetric();
     updateActivePlotsMetric();

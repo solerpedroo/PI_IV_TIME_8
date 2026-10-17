@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Interações da tela de Custos: filtros, lançamentos, orçamento e exportação. */
 (() => {
   "use strict";
@@ -7,7 +8,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
-  /* Os dados permanecem em memória, como nos demais módulos estáticos. */
+  /* Filtros ficam na sessão; lançamentos, orçamento e período são persistidos. */
   const state = {
     budget: 520000,
     filter: "Todos",
@@ -23,9 +24,7 @@
     ]
   };
 
-  /* Totais anteriores aos lançamentos recentes, vindos do mock da safra. */
-  const categoryBase = { Insumos: 187160, "Mão de Obra": 120600, Maquinário: 87550, Combustível: 39000, Outros: 27800 };
-
+  let persist = () => true;
   function toast(type, title, description) {
     window.AgroToast?.show({ type, title, description });
   }
@@ -129,7 +128,7 @@
   }
 
   function totalSpent() {
-    return Object.values(categoryBase).reduce((total, value) => total + value, 0) + state.entries.reduce((total, entry) => total + entry.value, 0);
+    return state.entries.reduce((total, entry) => total + entry.value, 0);
   }
 
   function visibleEntries() {
@@ -153,13 +152,14 @@
     const remainingEl = $("[data-budget-remaining]");
     const progressEl = $("[data-budget-progress]");
     if (totalEl) totalEl.textContent = formatCompact(total);
-    if (hectareEl) hectareEl.textContent = money.format(total / 1284);
+    const area = window.AgroLocal.read("settings").property?.area;
+    if (hectareEl) hectareEl.textContent = area > 0 ? money.format(total / area) : "—";
     if (spentEl) spentEl.textContent = money.format(total);
     if (percentEl) percentEl.textContent = `${Math.round(budgetPercent)}% utilizado`;
     if (remainingEl) remainingEl.textContent = `${money.format(remaining)} restantes`;
     if (progressEl) progressEl.style.width = `${budgetPercent}%`;
     ["Insumos", "Mão de Obra"].forEach((category) => {
-      const categoryTotal = categoryBase[category] + state.entries.filter((entry) => entry.category === category).reduce((sum, entry) => sum + entry.value, 0);
+      const categoryTotal = state.entries.filter((entry) => entry.category === category).reduce((sum, entry) => sum + entry.value, 0);
       const element = $(`[data-cost-category="${category}"]`);
       if (element) element.textContent = formatCompact(categoryTotal);
     });
@@ -170,17 +170,16 @@
     if (!chart) return;
     const categories = ["Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"];
     const totals = categories.map((category) => state.entries.filter((entry) => entry.category === category).reduce((sum, entry) => sum + entry.value, 0));
-    const baseTotals = categories.map((category) => categoryBase[category] || 0);
-    const max = Math.max(...baseTotals.map((value, index) => value + totals[index]), 1);
+    const max = Math.max(...totals, 1);
     chart.innerHTML = categories.map((category, index) => {
-      const value = baseTotals[index] + totals[index];
+      const value = totals[index];
       const cssClass = { "Mão de Obra": "is-labor", Maquinário: "is-machinery", Combustível: "is-fuel", Outros: "is-other" }[category] || "";
-      return `<div class="cost-bar-row"><div class="cost-bar-heading"><span>${category}</span><strong>${formatCompact(value)}</strong></div><div class="cost-bar-track"><span class="cost-bar-fill ${cssClass}" style="width:${Math.max(4, (value / max) * 100)}%"></span></div></div>`;
+      return `<div class="cost-bar-row"><div class="cost-bar-heading"><span>${category}</span><strong>${formatCompact(value)}</strong></div><div class="cost-bar-track"><span class="cost-bar-fill ${cssClass}" style="width:${value ? Math.max(4, (value / max) * 100) : 0}%"></span></div></div>`;
     }).join("");
   }
 
   function actionMarkup(entry) {
-    return `<div class="action-menu-wrap"><button class="icon-btn icon-btn--sm" type="button" data-popover-trigger aria-controls="cost-menu-${entry.id}" aria-expanded="false" aria-label="Ações de ${entry.description}"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="action-menu" id="cost-menu-${entry.id}" data-popover role="menu"><button class="action-menu-item" type="button" role="menuitem" data-edit-cost="${entry.id}"><span class="action-menu-icon tone-primary"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button><button class="action-menu-item is-danger" type="button" role="menuitem" data-delete-cost="${entry.id}"><span class="action-menu-icon tone-error"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg></span><span class="action-menu-label">Excluir</span></button></div></div>`;
+    return `<div class="action-menu-wrap"><button class="icon-btn icon-btn--sm" type="button" data-popover-trigger aria-controls="cost-menu-${entry.id}" aria-expanded="false" aria-label="Ações de ${window.AgroLocal.escape(entry.description)}"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="action-menu" id="cost-menu-${entry.id}" data-popover role="menu"><button class="action-menu-item" type="button" role="menuitem" data-edit-cost="${entry.id}"><span class="action-menu-icon tone-primary"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button><button class="action-menu-item is-danger" type="button" role="menuitem" data-delete-cost="${entry.id}"><span class="action-menu-icon tone-error"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg></span><span class="action-menu-label">Excluir</span></button></div></div>`;
   }
 
   function renderTable() {
@@ -191,7 +190,7 @@
     const context = $("[data-cost-context]");
     if (!tbody) return;
     const entries = visibleEntries();
-    tbody.innerHTML = entries.map((entry) => `<tr><td><span class="cost-row-description">${entry.description}</span></td><td><span class="badge badge-neutral">${entry.category}</span></td><td><span class="cost-row-muted">${entry.plot}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${actionMarkup(entry)}</td></tr>`).join("");
+    tbody.innerHTML = entries.map((entry) => `<tr><td><span class="cost-row-description">${window.AgroLocal.escape(entry.description)}</span></td><td><span class="badge badge-neutral">${window.AgroLocal.escape(entry.category)}</span></td><td><span class="cost-row-muted">${window.AgroLocal.escape(entry.plot)}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${actionMarkup(entry)}</td></tr>`).join("");
     table.hidden = entries.length === 0;
     empty.hidden = entries.length > 0;
     if (count) count.textContent = `${entries.length} lançamento${entries.length === 1 ? "" : "s"}`;
@@ -266,7 +265,7 @@
       event.preventDefault();
       const budget = Number(form.elements.budget.value);
       const error = $("[data-error-for='budget']", form);
-      if (!budget || budget <= 0) {
+      if (!Number.isFinite(budget) || budget <= 0) {
         form.elements.budget.setAttribute("aria-invalid", "true");
         error.textContent = "Informe um valor maior que zero.";
         toast("error", "Orçamento inválido", "Revise o valor informado.");
@@ -274,6 +273,7 @@
       }
       form.elements.budget.removeAttribute("aria-invalid");
       state.budget = budget;
+      if (!persist()) return;
       $("[data-budget-total]").textContent = money.format(budget);
       updateMetrics();
       setModalState("budget-form", false);
@@ -303,6 +303,7 @@
       const selected = $("[data-period-option].is-selected", modal);
       if (!selected) return;
       state.period = selected.dataset.periodOption;
+      if (!persist()) return;
       $("[data-period-label]").textContent = state.period;
       $("[data-cost-period]").textContent = state.period;
       setModalState("period-form", false);
@@ -327,19 +328,19 @@
       let invalid = false;
       if (!description) { setError(form, "description", "Informe uma descrição."); invalid = true; }
       if (!category) { setError(form, "category", "Selecione uma categoria."); invalid = true; }
-      if (!value || value <= 0) { setError(form, "value", "Informe um valor maior que zero."); invalid = true; }
+      if (!Number.isFinite(value) || value <= 0) { setError(form, "value", "Informe um valor maior que zero."); invalid = true; }
       if (!date) { setError(form, "date", "Informe a data do lançamento."); invalid = true; }
       if (invalid) { toast("error", "Falha ao salvar", "Revise os campos destacados."); return; }
       const editingId = Number(form.dataset.editingId);
-      const entry = { id: editingId || Date.now(), description, category, value, date, plot };
+      const entry = { id: editingId || Math.max(0, ...state.entries.map((item) => item.id)) + 1, description, category, value, date, plot };
       if (editingId) {
         const index = state.entries.findIndex((item) => item.id === editingId);
         if (index >= 0) state.entries[index] = entry;
-        toast("success", "Custo atualizado", `${description} foi atualizado.`);
       } else {
         state.entries.unshift(entry);
-        toast("success", "Custo registrado", `${description} foi adicionado aos lançamentos.`);
       }
+      if (!persist()) return;
+      toast("success", editingId ? "Custo atualizado" : "Custo registrado", `${description} foi ${editingId ? "atualizado" : "adicionado aos lançamentos"}.`);
       closeCostModal();
       updateMetrics();
       renderChart();
@@ -370,7 +371,8 @@
         const index = state.entries.findIndex((item) => item.id === Number(remove.dataset.deleteCost));
         if (index < 0) return;
         const [entry] = state.entries.splice(index, 1);
-        toast("info", "Lançamento excluído", `${entry.description} foi removido nesta sessão.`);
+        if (!persist()) return;
+        toast("info", "Lançamento excluído", `${entry.description} foi removido dos dados locais.`);
         updateMetrics();
         renderChart();
         renderTable();
@@ -399,7 +401,19 @@
     });
   }
 
+  // O resumo e o gráfico reaproveitam os cálculos atuais após a recuperação.
+  function restoreCosts(records) {
+    Object.assign(state, records);
+    $("[data-budget-total]").textContent = money.format(state.budget);
+    $("[data-period-label]").textContent = state.period;
+    $("[data-cost-period]").textContent = state.period;
+    updateMetrics(); renderChart(); renderTable();
+  }
+
   function init() {
+    const initial = {budget: state.budget, period: state.period, entries: state.entries};
+    persist = window.AgroLocal.connect("costs", () => ({budget: state.budget, period: state.period, entries: state.entries}),
+      restoreCosts, initial, {budget: initial.budget, period: initial.period, entries: []});
     initDatePicker();
     initForm();
     initBudgetModal();
