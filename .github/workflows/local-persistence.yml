@@ -1,0 +1,35 @@
+name: Persistência local (Playwright)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "tests/local-*.cjs"
+      - "tests/browser-launch.cjs"
+      - "*.html"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "tests/local-*.cjs"
+      - "tests/browser-launch.cjs"
+      - "*.html"
+
+jobs:
+  e2e-local-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar Playwright
+        run: npm install --no-save playwright@1.49.1
+      - name: Instalar Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Testes de persistência
+        env:
+          PLAYWRIGHT_MODULE: playwright
+        run: |
+          node tests/local-persistence.cjs
+          node tests/local-screens.cjs
