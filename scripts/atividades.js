@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — interações da tela Atividades (dados mock híbridos)
  * --------------------------------------------------------------------------
@@ -40,6 +41,7 @@
   let activeCard = null;
   let formMode = "create"; // "create" | "edit"
 
+  let persist = () => true;
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
   }
@@ -153,6 +155,7 @@
       const novoStatus = select.value;
       const nomeAtividade = card.dataset.activity;
       moveCardToStatus(card, novoStatus);
+      if (!persist()) return;
       recomputeMetrics();
       toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
       applyFilters();
@@ -320,15 +323,18 @@
 
   function buildCard(values, seq) {
     const menuId = `card-menu-${seq}`;
+    const raw = values;
+    values = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, window.AgroLocal.escape(value)]));
     const card = document.createElement("article");
     card.className = "kanban-card";
+    card.dataset.id = raw.id || window.AgroLocal.id();
     card.tabIndex = 0;
     card.draggable = true;
-    card.dataset.activity = values.nome;
-    card.dataset.tipo = values.tipo;
-    card.dataset.talhao = values.talhao;
-    card.dataset.date = values.data;
-    card.dataset.status = values.status;
+    card.dataset.activity = raw.nome;
+    card.dataset.tipo = raw.tipo;
+    card.dataset.talhao = raw.talhao;
+    card.dataset.date = raw.data;
+    card.dataset.status = raw.status;
 
     const badgeTone = { Pendente: "badge-warning", Agendada: "badge-info", "Em andamento": "badge-warning", Concluída: "badge-success" }[values.status] || "badge-neutral";
 
@@ -403,6 +409,7 @@
         if (statusAnterior === newStatus) return;
 
         moveCardToStatus(draggedCard, newStatus);
+        if (!persist()) return;
         recomputeMetrics();
         applyFilters();
         toast("success", "Status atualizado", `${nomeAtividade} movida para "${newStatus}".`);
@@ -435,10 +442,10 @@
     $("[data-detail-title]", modal).textContent = card.dataset.activity;
     $("[data-detail-subtitle]", modal).textContent = `${card.dataset.talhao} · ${card.dataset.date}`;
     $("[data-detail-meta]", modal).innerHTML = `
-      <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${card.dataset.tipo}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${card.dataset.talhao}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Data</span><span class="meta-cell-value">${card.dataset.date}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${card.dataset.status}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.tipo)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.talhao)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Data</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.date)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.status)}</span></div>
     `;
     openModal(modal);
   }
@@ -560,11 +567,13 @@
         $(".kanban-card-top .badge", activeCard).textContent = tipo;
         $(".kanban-card-meta", activeCard).lastChild.textContent = talhao;
         $(".kanban-card-date", activeCard).lastChild.textContent = data;
+        if (!persist()) return;
         toast("success", "Atividade atualizada", `${nome} foi salva com sucesso.`);
       } else {
         cardSeq += 1;
         const card = buildCard({ nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
         $("[data-column='Pendente'] [data-column-cards]").appendChild(card);
+        if (!persist()) return;
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
       }
 
@@ -583,12 +592,13 @@
 
       $(".kanban-card-top .badge", activeCard).className = "badge badge-success";
       moveCardToStatus(activeCard, "Concluída");
+      if (!persist()) return;
 
       closeModal(modal);
       toast(
         "success",
         "Atividade concluída",
-        `${name} marcada como concluída · baixa de insumo lançada no estoque de ${talhao}.`
+        `${name} marcada como concluída em ${talhao}.`
       );
       applyFilters();
       activeCard = null;
@@ -601,6 +611,7 @@
       if (!activeCard) return;
       const name = activeCard.dataset.activity;
       activeCard.remove();
+      if (!persist()) return;
       closeModal(modal);
       toast("info", "Atividade excluída", `${name} foi removida da lista.`);
       applyFilters();
@@ -617,7 +628,23 @@
     });
   }
 
+  // Kanban e Lista continuam usando os mesmos cards. Ao recuperar os dados,
+  // recriamos os cards e recalculamos contagens e filtros a partir deles.
+  function restoreActivities(records) {
+    // Mantemos a referência lógica ao card para permitir tentar novamente após falha.
+    const activeId = activeCard?.dataset.id;
+    $$("[data-column-cards]").forEach((column) => column.replaceChildren());
+    records.forEach((record) => {
+      const card = buildCard({id: record.id, nome: record.activity, tipo: record.tipo,
+        talhao: record.talhao, data: record.date, status: record.status}, ++cardSeq);
+      $(`[data-column="${record.status}"] [data-column-cards]`).appendChild(card);
+    });
+    activeCard = $$(".kanban-card").find((card) => card.dataset.id === activeId) || null;
+    applyFilters();
+  }
+
   function init() {
+    persist = window.AgroLocal.connect("activities", () => $$(".kanban-card").map((row) => ({id: row.dataset.id, activity: row.dataset.activity, tipo: row.dataset.tipo, talhao: row.dataset.talhao, date: row.dataset.date, status: row.dataset.status})), restoreActivities);
     initGenericModals();
     initPrepToasts();
     initTalhaoFilterChip();
