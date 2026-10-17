@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { launchTestBrowser } = require('./browser-launch.cjs');
 
 const root = path.resolve(__dirname, '..');
 const origin = 'http://agro.local/';
@@ -61,7 +62,7 @@ async function clickCardAction(page, name, action) {
 let browser;
 let failures = 0;
 (async () => {
-  browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' });
+  browser = await launchTestBrowser(chromium);
 
   await run('áreas: criação, edição, filtro e recarga offline', async (page, context) => {
     await go(page, 'areas-cultivo.html');
