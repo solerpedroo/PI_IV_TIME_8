@@ -36,3 +36,6 @@ backend/core/target/
 
 # Dependências instaladas localmente (qualquer diretório)
 node_modules/
+
+#
+control/
