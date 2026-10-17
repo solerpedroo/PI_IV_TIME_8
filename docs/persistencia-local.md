@@ -2,7 +2,13 @@
 
 Miguel — RA: 25003110
 
-O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes, com funções compartilhadas em `scripts/shell.js`. O servidor Java continua responsável pela camada de servidor e não participa da recuperação local. Não foram criados novos módulos funcionais ou endpoints.
+O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
+
+- `scripts/data/operational-defaults.js` — dados de demonstração (carregados só nas telas operacionais).
+- `scripts/agro-local.js` — API `AgroLocal` (leitura, gravação, validação, `connect`).
+- `scripts/shell.js` — chrome do app (notificações, popovers, logout).
+
+O servidor Java continua responsável pela camada de servidor e não participa da recuperação local. Não foram criados novos módulos funcionais ou endpoints.
 
 ## O que é salvo
 
@@ -45,11 +51,18 @@ Os dados são locais a este navegador e à mesma origem do site (protocolo, dom�
 
 Os testes abrem o Edge real com Playwright e interceptam a entrega dos arquivos estáticos diretamente do repositório. Não iniciam backend Java, gateway ou API. As dependências de teste podem ficar fora do repositório:
 
-```powershell
-npm install --prefix "$env:TEMP/agro-local-validation" playwright --no-audit --no-fund
-$env:NODE_PATH = "$env:TEMP/agro-local-validation/node_modules"
+```bash
+npm install --no-save playwright
+npx playwright install chromium
 node tests/local-persistence.cjs
 node tests/local-screens.cjs
 ```
 
-Execute na raiz do projeto. Os testes usam o Microsoft Edge instalado no caminho padrão do Windows e verificam fluxos operacionais, reload, recuperação sem backend, coleções vazias, JSON/esquemas inválidos e falhas de armazenamento. Os arquivos de código alterados trazem a identificação de autoria no início e comentários em português.
+No Windows, para usar o Edge em vez do Chromium empacotado:
+
+```powershell
+$env:BROWSER_PATH = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+node tests/local-persistence.cjs
+```
+
+Execute na raiz do projeto. O CI (workflow `local-persistence.yml`) roda os mesmos testes com Chromium no Ubuntu. Os testes verificam fluxos operacionais, reload, recuperação sem backend, coleções vazias, JSON/esquemas inválidos e falhas de armazenamento. Os arquivos de código alterados trazem a identificação de autoria no início e comentários em português.
