@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — composição do Painel Geral (frame Dashboard ajDH7)
  */
@@ -10,6 +11,10 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   flex: 0 0 auto;
+}
+
+.metric-card-value[data-metric="cost"] {
+  font-size: 24px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -194,6 +199,20 @@
   padding: 12px;
   background: var(--bg);
   border-radius: var(--radius-sm);
+}
+
+/* Alertas vindos dos dados locais usam um link único, sem a coluna de ícone. */
+.alert-item > a:only-child {
+  grid-column: 1 / -1;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.alert-item > a:hover {
+  text-decoration: underline;
 }
 
 .alert-icon {

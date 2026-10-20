@@ -313,6 +313,18 @@
     property: {farm: "Fazenda Santa Rita", area: 1284, city: "Campinas, SP", harvest: "2025/26"},
     preferences: {stock: true, weather: true, activities: true, occurrences: true, reports: false}
   };
+  // Painel e Custos partem dos mesmos exemplos, antes do primeiro salvamento.
+  defaults.costs = {
+    budget: 520000,
+    period: "Jan — Ago 2026",
+    entries: [
+      { id: 1, description: "Glifosato 20L", category: "Insumos", plot: "T-03 Leste", date: "2026-08-05", value: 2840 },
+      { id: 2, description: "Salário operador — Jul", category: "Mão de Obra", plot: "Propriedade", date: "2026-08-01", value: 4200 },
+      { id: 3, description: "Manutenção pulverizador", category: "Maquinário", plot: "T-01 Norte", date: "2026-07-28", value: 1650 },
+      { id: 4, description: "Diesel — 500 L", category: "Combustível", plot: "Propriedade", date: "2026-07-25", value: 3100 },
+      { id: 5, description: "Sementes de soja — 2 t", category: "Insumos", plot: "T-01 Norte", date: "2026-07-20", value: 8400 }
+    ]
+  };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const text = (value) => typeof value === "string" && value.trim().length > 0;
   const string = (value) => typeof value === "string";
@@ -420,7 +432,7 @@
 
   const id = () => window.crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
   const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[char]));
-  window.AgroLocal = {read, save, connect, id, escape};
+  window.AgroLocal = {read, save, connect, id, escape, initial: (key) => clone(defaults[key])};
 })();
 
 /* Miguel — RA: 25003110 */

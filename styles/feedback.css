@@ -269,20 +269,26 @@
   font-weight: 600;
 }
 
-.modal p {
+/* Só a introdução recebe este estilo; erros e detalhes mantêm seus componentes. */
+.modal > p {
   margin: 0 0 20px;
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* A descrição do diálogo não deve sobrescrever a cor e o espaço dos erros. */
-.modal .field-error {
-  margin: 0;
-  color: var(--error);
-  font-size: 12px;
-  line-height: 1.3;
+/* Calendário e seletor de safra compartilham título e fechamento lado a lado. */
+.calendar-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
 }
+
+.calendar-modal-header h2 { margin-bottom: 4px; }
+.calendar-modal-header p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.calendar-modal-header > button { flex-shrink: 0; }
 
 .modal-actions {
   display: flex;

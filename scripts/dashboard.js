@@ -48,6 +48,10 @@
     const plots = local.read('plots');
     const stock = local.read('stock');
     const occurrences = local.read('occurrences');
+    // O resumo financeiro mostra os mesmos lançamentos da tela de Custos.
+    const costs = local.read('costs');
+    const totalCost = Array.isArray(costs.entries) ? costs.entries.reduce((sum, entry) => sum + entry.value, 0) : null;
+    $('[data-metric="cost"]').textContent = totalCost === null ? '—' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(totalCost);
     $('[data-metric="areas"]').textContent = String(plots.filter((record) => record.status === 'Ativo').length);
     $('[data-metric="stock"]').textContent = String(stock.filter((record) => record.qty < record.min).length);
     const open = occurrences.filter((record) => record.status !== 'Resolvida');
