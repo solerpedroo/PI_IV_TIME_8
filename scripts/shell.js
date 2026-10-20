@@ -491,6 +491,8 @@
       // .sidebar-popover, mas calculada em runtime para qualquer contexto).
       top = rect.top - menuHeight - 6;
     }
+    // Menus altos continuam dentro da janela, mesmo quando falta espaço acima.
+    top = Math.max(8, top);
 
     popover.style.position = "fixed";
     popover.style.top = `${top}px`;
@@ -543,6 +545,26 @@
    * funciona sem precisar chamar uma função de "re-inicialização".
    */
   function initPopoverTriggers() {
+    // Acompanha o acionador durante a rolagem e fecha quando ele sai da área útil.
+    document.addEventListener("scroll", (event) => {
+      const inside = event.target instanceof Element && event.target.closest("[data-popover]");
+      if (inside) return;
+      $$("[data-popover].is-open").forEach((popover) => {
+        const trigger = triggerOf(popover);
+        if (!trigger) return closeAllPopovers();
+        const rect = trigger.getBoundingClientRect();
+        const clip = findScrollClipAncestor(trigger)?.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const visible = x >= Math.max(0, clip?.left || 0)
+          && x <= Math.min(window.innerWidth, clip?.right ?? window.innerWidth)
+          && y >= Math.max(0, clip?.top || 0)
+          && y <= Math.min(window.innerHeight, clip?.bottom ?? window.innerHeight);
+        if (visible) positionPopoverFixed(popover, trigger);
+        else closeAllPopovers();
+      });
+    }, true);
+    window.addEventListener("resize", () => closeAllPopovers());
     document.addEventListener("click", (event) => {
       const trigger = event.target.closest("[data-popover-trigger]");
       if (!trigger) return;
@@ -620,11 +642,55 @@
 
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
+      if ($(".select.is-open")) return;
       const open = $("[data-popover].is-open");
       const trigger = open ? triggerOf(open) : null;
       closeAllPopovers();
-      closeModal($("[data-modal].is-open"));
+      // O calendário fica sobre o formulário de custo; fecha só a última camada.
+      const modals = $$("[data-modal].is-open");
+      closeModal(modals[modals.length - 1]);
       trigger?.focus();
+    });
+  }
+
+  /* As telas já controlam a abertura. Este cuidado compartilhado mantém o foco
+   * no diálogo ativo e o devolve ao acionador, inclusive em modais empilhados. */
+  function initModalFocus() {
+    const opened = new Map();
+    let source = null;
+    const controls = (modal) => $$("button, [href], input, select, textarea, [tabindex]", modal)
+      .filter((item) => !item.disabled && item.tabIndex >= 0 && item.getClientRects().length && !item.closest("[inert]"));
+    document.addEventListener("click", (event) => {
+      source = event.target.closest("button, a, input, select, textarea");
+    }, true);
+
+    new MutationObserver((records) => {
+      if (!records.some((record) => record.target.matches?.("[data-modal]"))) return;
+      const current = $$("[data-modal].is-open");
+      for (const [modal, trigger] of opened) {
+        if (current.includes(modal)) continue;
+        opened.delete(modal);
+        if (trigger?.isConnected && (modal.contains(document.activeElement) || document.activeElement === document.body)) trigger.focus();
+      }
+      for (const modal of current) {
+        if (opened.has(modal)) continue;
+        opened.set(modal, source);
+        if (!modal.contains(document.activeElement)) controls(modal)[0]?.focus();
+      }
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const modal = $$("[data-modal].is-open").at(-1);
+      if (!modal) return;
+      const items = controls(modal);
+      const first = items[0];
+      const last = items.at(-1);
+      if (!items.length) return;
+      if (!modal.contains(document.activeElement) || (event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      }
     });
   }
 
@@ -760,7 +826,14 @@
   }
 
   function init() {
+    // O texto da navegação fica oculto na sidebar compacta, mas preserva seu nome.
+    $$(".sidebar-link").forEach((link) => {
+      const label = link.textContent.trim();
+      link.setAttribute("aria-label", label);
+      link.title = label;
+    });
     initPopoverTriggers();
+    initModalFocus();
     initNotifications();
     initLogout();
     initPrepLinks();
