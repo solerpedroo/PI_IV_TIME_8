@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — padrões compartilhados dos módulos operacionais
  * --------------------------------------------------------------------------
@@ -186,6 +187,14 @@
    assume a largura mínima definida aqui via .select-trigger (herdada do base.css). */
 .filter-select {
   min-width: 168px;
+}
+
+/* O select aprimorado respeita a barra sem ocupar uma linha inteira. */
+.filter-bar > .select {
+  width: auto;
+  min-width: 168px;
+  max-width: 100%;
+  flex: 0 1 220px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -521,10 +530,12 @@
 /* -------------------------------------------------------------------------- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Preserva a leitura dos cards; a rolagem fica dentro do quadro. */
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: auto;
 }
 
 .kanban-column {

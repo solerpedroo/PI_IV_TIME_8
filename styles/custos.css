@@ -1,15 +1,19 @@
+/* Miguel — RA: 25003110 */
 /* Layout exclusivo da tela de Custos. */
 .costs-main { gap: 20px; }
 
 /* A linha de métricas acompanha a anatomia dos demais módulos. */
 .costs-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Valores monetários precisam caber sem separar o número da unidade. */
+.costs-metrics .metric-card-value { font-size: 24px; }
 
 /* O conteúdo principal reserva mais espaço para lançamentos e gráficos. */
 .costs-content-row { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .9fr); gap: 16px; flex: 1 1 auto; min-height: 0; }
 .costs-left-column, .costs-right-column { display: flex; flex-direction: column; gap: 16px; min-width: 0; min-height: 0; }
 .cost-chart-card, .transactions-card, .budget-card, .crop-cost-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .cost-chart-card { flex: 0 0 auto; }
-.transactions-card { flex: 1 1 auto; }
+/* Reserva espaço real para os lançamentos, inclusive quando os cards empilham. */
+.transactions-card { flex: 1 0 auto; }
 .cost-subtitle { margin: 2px 0 0; color: var(--text-muted); font-size: 12px; }
 .cost-context { display: inline-flex; margin-top: 6px; border-radius: var(--radius-pill); padding: 4px 9px; background: var(--primary-subtle); color: var(--primary); font-size: 11px; font-weight: 600; }
 .compact-select { width: 154px; min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; background: var(--surface); color: var(--text-secondary); font-size: 12px; }
@@ -29,7 +33,7 @@
 .cost-bar-fill.is-other { background: #a4b2a3; }
 .transactions-card .card-header { align-items: flex-start; flex-wrap: wrap; }
 .transactions-card .filter-bar { justify-content: flex-end; }
-.costs-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; position: relative; }
+.costs-table-wrap { flex: 1 1 auto; min-height: 280px; max-height: 440px; overflow: auto; position: relative; }
 .costs-table-wrap .data-table { min-width: 680px; }
 .costs-table-wrap .data-table td:last-child, .costs-table-wrap .data-table th:last-child { width: 42px; padding-right: 12px; }
 .cost-row-description { color: var(--text-primary); font-weight: 500; }
@@ -49,12 +53,12 @@
 .crop-cost-item { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--border); }
 .crop-cost-item:last-child { border-bottom: 0; }
 .crop-cost-item > strong { margin-left: auto; color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
-.crop-cost-dot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; }
+.crop-cost-dot { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; background: var(--text-muted); }
 .crop-cost-dot.crop-soja { background: #63a77e; }
 .crop-cost-dot.crop-milho { background: #d5ad47; }
 .crop-cost-dot.crop-trigo { background: #bd8d5c; }
 .crop-cost-dot.crop-pastagem { background: #91a9a0; }
-.crop-cost-info { display: grid; gap: 1px; }
+.crop-cost-info { display: grid; gap: 1px; min-width: 0; overflow-wrap: anywhere; }
 .crop-cost-info strong { color: var(--text-primary); font-size: 13px; font-weight: 500; }
 .crop-cost-info small { color: var(--text-muted); font-size: 11px; }
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -86,6 +90,6 @@
 .period-option svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 .period-option.is-selected svg { opacity: 1; }
 
-@media (max-width: 1200px) { .costs-content-row { grid-template-columns: 1fr; } .costs-right-column { display: grid; grid-template-columns: 1fr 1fr; } }
+@media (max-width: 1200px) { .costs-content-row { grid-template-columns: 1fr; } .costs-right-column { display: grid; grid-template-columns: 1fr 1fr; } .costs-metrics { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .costs-metrics { grid-template-columns: 1fr 1fr; } .costs-right-column { display: flex; } }
 @media (max-width: 600px) { .costs-metrics, .form-grid-2 { grid-template-columns: 1fr; } .transactions-card .filter-bar { justify-content: flex-start; } .page-header-actions { width: 100%; } .page-header-actions .search-box { flex: 1 1 100%; } .page-header-actions .btn { flex: 1; } }

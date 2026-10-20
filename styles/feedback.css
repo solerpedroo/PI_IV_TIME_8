@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — feedback (toasts, empty, skeleton, modal overlay)
  * --------------------------------------------------------------------------
@@ -249,6 +250,10 @@
 
 .modal {
   width: min(420px, 100%);
+  /* O formulário rola por dentro quando a janela é baixa ou exibe erros. */
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -275,6 +280,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 @keyframes toast-enter {
