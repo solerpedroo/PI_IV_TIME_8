@@ -1,5 +1,7 @@
 package dados;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -33,6 +35,11 @@ public class ConexaoMongo
     public MongoDatabase getBanco ()
     {
         return this.banco;
+    }
+
+    public MongoClient getCliente ()
+    {
+        return this.cliente;
     }
 
     // ping no banco; usado pelo /ready
