@@ -1,5 +1,7 @@
 package http;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -134,7 +136,8 @@ public class ParceiroHttp
         }
 
         return new Requisicao (metodo, ParceiroHttp.decodificarCaminho (caminho),
-                               ParceiroHttp.lerConsulta (consulta), cabecalhos, corpo);
+                               ParceiroHttp.lerConsulta (consulta), cabecalhos, corpo,
+                               this.conexao.getInetAddress ().getHostAddress ());
     }
 
     // le ate a linha em branco que separa cabecalhos e corpo
