@@ -29,8 +29,12 @@ Todos rodam a partir de qualquer pasta. Os scripts entram em `backend/servidor/`
 | Rodar sem banco | `rodar.bat --memoria` | `./rodar.sh --memoria` |
 | Rodar em outra porta | `rodar.bat 9000` | `./rodar.sh 9000` |
 | Testes automáticos | `testar.bat` | `./testar.sh` |
+| Integração MongoDB | — | `./testar-mongo.sh` |
 
-Rode `compilar` antes de `rodar`. O `testar` compila sozinho.
+Rode `compilar` antes de `rodar`. O `testar` compila sozinho. Os scripts Unix
+são executáveis e fixam a compilação em Java 21. Para validar a persistência
+real, suba `docker compose up -d mongo` e execute `./testar-mongo.sh`; ele usa
+exclusivamente o banco `agrogestao_teste` e o limpa ao terminar.
 
 Com o servidor no ar:
 
@@ -46,7 +50,7 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 |---|---|---|
 | `SERVIDOR_PORT` | `8080` | Porta. O argumento da linha de comando tem prioridade. |
 | `SERVIDOR_HOST` | `127.0.0.1` | Interface onde o servidor escuta. |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O nome do banco vem da URI (padrão `agrogestao`). |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
 | `SERVIDOR_RAIZ` | `../..` | Pasta do front, relativa a `backend/servidor/`. |
 
 Se o MongoDB estiver fora do ar na partida, o servidor não sobe e mostra
@@ -216,6 +220,8 @@ propriedade responde 404. Não há DELETE nesta entrega.
 
 - Cabeçalhos até 16 KB (431), corpo até 1 MB (413), timeout de leitura de 10 s (408).
 - Máximo de 100 conexões simultâneas. Acima disso, responde 503 na hora.
+- Rotas públicas sensíveis têm limite de 60 tentativas por IP/minuto; cada conta mantém no máximo 5 sessões simultâneas.
+- Arquivos estáticos têm limite de 2 MB para não esgotar a heap do processo.
 - `Transfer-Encoding` não é suportado (501). O corpo é sempre lido pelo `Content-Length`.
 - Senhas com PBKDF2WithHmacSHA256 (JDK) e salt aleatório. O hash e os tokens nunca saem na resposta.
 - Estáticos:
