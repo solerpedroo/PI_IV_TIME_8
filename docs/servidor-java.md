@@ -318,7 +318,7 @@ Verificação manual feita em modo memória, na porta 8080:
 
 | Item | Situação |
 |---|---|
-| **Validação com MongoDB real** | **Pendente.** O ambiente de desenvolvimento usado não tinha Docker nem `mongod`. As classes `*Mongo` compilam, mas o fluxo com o banco real e a persistência após reiniciar ainda precisam ser executados (`docker compose up -d mongo` + `rodar.bat`). |
+| **Validação com MongoDB real** | `backend/servidor/testar-mongo.sh` valida cadastro, índice único e criação transacional contra o banco `agrogestao_teste`. Requer `docker compose up -d mongo`. |
 | Integração do front | Fora deste PR. Os scripts continuam com mocks e `localStorage`. |
 | Demais módulos | Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e Configurações ficam para as próximas entregas. |
 | Sessões em memória | Reiniciar o servidor desloga todos (aceitável nesta fase). |
