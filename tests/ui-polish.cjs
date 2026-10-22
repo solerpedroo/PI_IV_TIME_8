@@ -1,5 +1,6 @@
 /* Miguel — RA: 25003110 */
-/* Regressões de layout e interações reais no Edge, sem depender do backend. */
+/* Regressões de layout e interações reais, sem depender do backend.
+ * Usa o Chromium do Playwright. BROWSER_PATH aponta outro executável, como o Edge. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -19,10 +20,15 @@ async function screenshot(page, name) {
   await page.screenshot({ path: path.join(shots, name + '.png') });
 }
 
+async function waitForMotion(page) {
+  await page.evaluate(() => Promise.all([...document.getAnimations()]
+    .filter((animation) => animation.playState === 'running' && animation.effect?.getTiming?.().iterations !== Infinity)
+    .map((animation) => animation.finished.catch(() => {}))));
+}
+
 async function go(page, screen) {
-  await page.goto(`${origin}/${screen}.html`);
-  // Espera a animação de entrada para medir o layout final, sem desativá-la.
-  await page.waitForTimeout(850);
+  await page.goto(`${origin}/${screen}.html`, { waitUntil: 'load' });
+  await waitForMotion(page);
 }
 
 async function reachable(locator, scroll = true) {
@@ -38,12 +44,14 @@ async function menu(page, trigger) {
   // As notificações são dispensáveis; fecha pelo botão real antes de usar o menu.
   const notices = page.locator('.toast:not(.is-leaving) .toast-close');
   while (await notices.count()) await notices.first().click();
-  await page.waitForTimeout(260);
+  await waitForMotion(page);
   await trigger.click();
   const id = await trigger.getAttribute('aria-controls');
   const panel = page.locator(`[id="${id}"]`);
   await panel.waitFor({ state: 'visible' });
-  await page.waitForTimeout(220);
+  await panel.evaluate((element) => Promise.all([...element.getAnimations()]
+    .filter((animation) => animation.playState === 'running' && animation.effect?.getTiming?.().iterations !== Infinity)
+    .map((animation) => animation.finished.catch(() => {}))));
   const items = panel.locator('[role="menuitem"]');
   await reachable(await items.count() ? items.last() : panel.locator('button').last(), false);
   assert.equal(await panel.evaluate((element) => {
@@ -54,7 +62,9 @@ async function menu(page, trigger) {
 }
 
 (async () => {
-  browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' });
+  const launchOptions = { headless: true };
+  if (process.env.BROWSER_PATH) launchOptions.executablePath = process.env.BROWSER_PATH;
+  browser = await chromium.launch(launchOptions);
   const context = await browser.newContext();
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
@@ -87,7 +97,7 @@ async function menu(page, trigger) {
           element.scrollLeft = 0;
         });
       });
-      await page.waitForTimeout(100);
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const issues = await page.evaluate(() => {
         const problems = [];
         if (document.documentElement.scrollWidth > innerWidth + 1) problems.push('overflow horizontal da página');
@@ -166,8 +176,8 @@ async function menu(page, trigger) {
   await panel.locator('[data-edit-cost]').click();
   await form.locator('[name="value"]').fill('234.56');
   await save.click();
-  await page.reload();
-  await page.waitForTimeout(850);
+  await page.reload({ waitUntil: 'load' });
+  await waitForMotion(page);
   assert.match(await row.textContent(), /234,56/);
   await page.locator('[data-cost-search]').fill('sem-resultado-visual');
   await reachable(page.locator('[data-cost-empty] h3'));
@@ -188,13 +198,11 @@ async function menu(page, trigger) {
   // O menu não pode continuar flutuando depois de rolar a página ou redimensionar.
   const trigger = page.locator('[data-cost-table] [data-popover-trigger]').first();
   await menu(page, trigger);
-  await page.locator('.app-main').evaluate((element) => { element.scrollTop = 0; });
-  await page.waitForTimeout(100);
-  assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+  await page.locator('.app-main').evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await page.waitForFunction(() => document.querySelector('[data-cost-table] [data-popover-trigger]')?.getAttribute('aria-expanded') === 'false');
   await menu(page, trigger);
   await page.setViewportSize({ width: 1100, height: 700 });
-  await page.waitForTimeout(100);
-  assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+  await page.waitForFunction(() => document.querySelector('[data-cost-table] [data-popover-trigger]')?.getAttribute('aria-expanded') === 'false');
   await go(page, 'dashboard');
   assert.match(await page.locator('[data-metric="cost"]').textContent(), /20,2/);
   await reachable(page.locator('.alert-item a').first());
