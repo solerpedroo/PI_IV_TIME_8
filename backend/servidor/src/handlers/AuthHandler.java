@@ -1,5 +1,7 @@
 package handlers;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import dados.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
@@ -11,6 +13,7 @@ import org.bson.types.ObjectId;
 import seguranca.Senhas;
 import seguranca.Sessao;
 import seguranca.Sessoes;
+import seguranca.LimitadorDeTaxa;
 import util.Validacao;
 
 /*
@@ -21,9 +24,12 @@ public class AuthHandler
 {
     private static final long INTERVALO_REENVIO   = 30L * 1000;      // 30 s
     private static final long VALIDADE_REDEFINICAO = 30L * 60 * 1000; // 30 min
+    private static final long JANELA_TAXA = 60L * 1000;
+    private static final int  MAXIMO_TENTATIVAS = 60;
 
     private final RepositorioUsuarios usuarios;
     private final Sessoes             sessoes;
+    private final LimitadorDeTaxa     limitador = new LimitadorDeTaxa ();
 
     // protege as operacoes que leem e depois gravam tokens (reenvio, confirmacao, redefinicao)
     private final Object trava = new Object ();
@@ -73,9 +79,24 @@ public class AuthHandler
         return Resposta.json (200, new Document ("message", texto));
     }
 
+    private Resposta limitar (Requisicao requisicao, String rota) throws Exception
+    {
+        if (this.limitador.permitir (rota + ":" + requisicao.getEnderecoRemoto (),
+                                    AuthHandler.MAXIMO_TENTATIVAS, AuthHandler.JANELA_TAXA))
+            return null;
+
+        Resposta ret = Resposta.erro (429, "Too many requests");
+        ret.setCabecalho ("Retry-After", "60");
+        return ret;
+    }
+
     // POST /api/auth/register
     private Resposta cadastrar (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "register");
+        if (limitada != null)
+            return limitada;
+
         Document  corpo     = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
 
@@ -121,6 +142,10 @@ public class AuthHandler
     // POST /api/auth/login
     private Resposta entrar (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "login");
+        if (limitada != null)
+            return limitada;
+
         Document corpo    = requisicao.getCorpoJson ();
         Object   email    = corpo.get ("email");
         Object   password = corpo.get ("password");
@@ -175,6 +200,10 @@ public class AuthHandler
     // POST /api/auth/confirm-email  {token}
     private Resposta confirmarEmail (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "confirm-email");
+        if (limitada != null)
+            return limitada;
+
         Validacao validacao = new Validacao (requisicao.getCorpoJson ());
         String    token     = validacao.texto ("token", "Informe o código de confirmação.", 64);
         if (validacao.temErros ())
@@ -196,6 +225,10 @@ public class AuthHandler
     // POST /api/auth/resend-confirmation  {email}
     private Resposta reenviarConfirmacao (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "resend-confirmation");
+        if (limitada != null)
+            return limitada;
+
         Validacao validacao = new Validacao (requisicao.getCorpoJson ());
         String    email     = validacao.email ("email");
         if (validacao.temErros ())
@@ -235,6 +268,10 @@ public class AuthHandler
     // POST /api/auth/forgot-password  {email} -> sempre 200
     private Resposta esqueciSenha (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "forgot-password");
+        if (limitada != null)
+            return limitada;
+
         Validacao validacao = new Validacao (requisicao.getCorpoJson ());
         String    email     = validacao.email ("email");
         if (validacao.temErros ())
@@ -261,6 +298,10 @@ public class AuthHandler
     // POST /api/auth/reset-password  {token, password, password-confirm}
     private Resposta redefinirSenha (Requisicao requisicao) throws Exception
     {
+        Resposta limitada = this.limitar (requisicao, "reset-password");
+        if (limitada != null)
+            return limitada;
+
         Validacao validacao = new Validacao (requisicao.getCorpoJson ());
         String    token     = validacao.texto ("token", "Informe o código de redefinição.", 64);
         String    password  = validacao.senha ("password", "Crie uma nova senha.");
