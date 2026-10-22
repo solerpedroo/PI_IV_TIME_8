@@ -1,3 +1,5 @@
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioUsuariosMemoria;
 import http.Roteador;
@@ -7,6 +9,8 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -16,6 +20,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import seguranca.LimitadorDeTaxa;
+import seguranca.Sessoes;
+import handlers.EstaticosHandler;
+import http.Requisicao;
 
 /*
     Testes sem JUnit. Sobe o servidor de verdade (porta livre, repositorios em memoria)
@@ -589,6 +597,40 @@ public class TesteServidor
         conferir ("desativar fecha a porta", recusou);
     }
 
+    private static void testarProtecoesDeAbuso () throws Exception
+    {
+        System.out.println ("\n# protecoes de abuso");
+
+        LimitadorDeTaxa limitador = new LimitadorDeTaxa ();
+        conferir ("limitador aceita tentativas dentro da janela",
+                  limitador.permitir ("login:127.0.0.1", 2, 60000) &&
+                  limitador.permitir ("login:127.0.0.1", 2, 60000));
+        conferir ("limitador recusa tentativa acima da janela",
+                  !limitador.permitir ("login:127.0.0.1", 2, 60000));
+
+        Sessoes sessoes = new Sessoes ();
+        String primeira = sessoes.criar ("usuario", "propriedade");
+        for (int i = 0; i < 5; i++)
+            sessoes.criar ("usuario", "propriedade");
+        conferir ("sexta sessao derruba a mais antiga", sessoes.buscar (primeira) == null);
+
+        Path raiz = Files.createTempDirectory ("agrogestao-estaticos-");
+        Path grande = raiz.resolve ("grande.js");
+        try
+        {
+            Files.write (grande, new byte[2 * 1024 * 1024 + 1]);
+            Requisicao requisicao = new Requisicao ("GET", "/grande.js", new HashMap<String, String> (),
+                                                    new HashMap<String, String> (), new byte[0], "127.0.0.1");
+            conferir ("estatico acima do limite -> 413",
+                      new EstaticosHandler (raiz).tratar (requisicao).getStatus () == 413);
+        }
+        finally
+        {
+            Files.deleteIfExists (grande);
+            Files.deleteIfExists (raiz);
+        }
+    }
+
     public static void main (String[] args) throws Exception
     {
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
@@ -612,6 +654,7 @@ public class TesteServidor
             TesteServidor.testarTalhoes ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
+            TesteServidor.testarProtecoesDeAbuso ();
         }
         catch (Exception erro)
         {
