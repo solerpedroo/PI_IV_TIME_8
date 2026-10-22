@@ -1,5 +1,7 @@
 package http;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,13 +19,14 @@ public class Requisicao
     private final Map<String, String> consulta;
     private final Map<String, String> cabecalhos;
     private final byte[]              corpo;
+    private final String              enderecoRemoto;
 
     // preenchidos pelo roteador
     private Map<String, String> parametros = new HashMap<String, String> ();
     private Sessao              sessao     = null;
 
     public Requisicao (String metodo, String caminho, Map<String, String> consulta,
-                       Map<String, String> cabecalhos, byte[] corpo) throws Exception
+                       Map<String, String> cabecalhos, byte[] corpo, String enderecoRemoto) throws Exception
     {
         if (metodo == null)
             throw new Exception ("Metodo ausente");
@@ -40,11 +43,15 @@ public class Requisicao
         if (corpo == null)
             throw new Exception ("Corpo ausente");
 
+        if (enderecoRemoto == null || enderecoRemoto.isBlank ())
+            throw new Exception ("Endereco remoto ausente");
+
         this.metodo     = metodo;
         this.caminho    = caminho;
         this.consulta   = consulta;
         this.cabecalhos = cabecalhos;
         this.corpo      = corpo;
+        this.enderecoRemoto = enderecoRemoto;
     }
 
     public String getMetodo ()
@@ -71,6 +78,11 @@ public class Requisicao
     public byte[] getCorpo ()
     {
         return this.corpo;
+    }
+
+    public String getEnderecoRemoto ()
+    {
+        return this.enderecoRemoto;
     }
 
     // corpo interpretado como um objeto JSON; 400 se nao for
