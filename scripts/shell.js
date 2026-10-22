@@ -477,6 +477,9 @@
    * já vivem fora de containers com scroll (notificações, perfil) não são
    * afetados: a checagem só age quando encontra um ancestral com overflow.
    */
+  // O ancestral que corta overflow não muda enquanto o menu está aberto.
+  const clipByPopover = new WeakMap();
+
   function findScrollClipAncestor(el) {
     let node = el.parentElement;
     while (node && node !== document.body) {
@@ -526,6 +529,7 @@
       if (except && popover === except) return;
       popover.classList.remove("is-open");
       resetPopoverPosition(popover);
+      clipByPopover.delete(popover);
       const trigger = triggerOf(popover);
       if (trigger) trigger.setAttribute("aria-expanded", "false");
     });
@@ -541,9 +545,12 @@
     trigger.setAttribute("aria-expanded", String(willOpen));
     if (willOpen) {
       const clipAncestor = findScrollClipAncestor(trigger);
+      clipByPopover.set(popover, clipAncestor);
       if (clipAncestor) positionPopoverFixed(popover, trigger);
       else resetPopoverPosition(popover);
       if (focusFirstItem) menuItems(popover)[0]?.focus();
+    } else {
+      clipByPopover.delete(popover);
     }
   }
 
@@ -565,7 +572,8 @@
         const trigger = triggerOf(popover);
         if (!trigger) return closeAllPopovers();
         const rect = trigger.getBoundingClientRect();
-        const clip = findScrollClipAncestor(trigger)?.getBoundingClientRect();
+        if (!clipByPopover.has(popover)) clipByPopover.set(popover, findScrollClipAncestor(trigger));
+        const clip = clipByPopover.get(popover)?.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
         const y = rect.top + rect.height / 2;
         const visible = x >= Math.max(0, clip?.left || 0)
