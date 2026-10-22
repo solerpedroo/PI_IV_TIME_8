@@ -1,9 +1,13 @@
 package dados;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoWriteException;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.ClientSession;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
@@ -18,14 +22,18 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
 {
     private final MongoCollection<Document> usuarios;
     private final MongoCollection<Document> propriedades;
+    private final MongoClient cliente;
 
-    public RepositorioUsuariosMongo (MongoDatabase banco) throws Exception
+    public RepositorioUsuariosMongo (ConexaoMongo conexao) throws Exception
     {
-        if (banco == null)
-            throw new Exception ("Banco ausente");
+        if (conexao == null)
+            throw new Exception ("Conexao ausente");
+
+        MongoDatabase banco = conexao.getBanco ();
 
         this.usuarios     = banco.getCollection ("usuarios");
         this.propriedades = banco.getCollection ("propriedades");
+        this.cliente      = conexao.getCliente ();
 
         this.usuarios.createIndex (Indexes.ascending ("email"), new IndexOptions ().unique (true));
         this.usuarios.createIndex (Indexes.ascending ("tokenConfirmacao"));
@@ -53,9 +61,16 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         Document novoUsuario   = new Document (usuario).append ("_id", new ObjectId ())
                                                        .append ("propriedadeId", idPropriedade.toHexString ());
 
-        try
+        // Usuario e propriedade formam uma unidade: com replica set, a transacao
+        // impede referencias para propriedade ausente em falhas parciais.
+        try (ClientSession sessao = this.cliente.startSession ())
         {
-            this.usuarios.insertOne (novoUsuario);
+            sessao.withTransaction (() ->
+            {
+                this.usuarios.insertOne (sessao, novoUsuario);
+                this.propriedades.insertOne (sessao, new Document (propriedade).append ("_id", idPropriedade));
+                return null;
+            });
         }
         catch (MongoWriteException erro)
         {
@@ -63,8 +78,6 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
                 return null;
             throw erro;
         }
-
-        this.propriedades.insertOne (new Document (propriedade).append ("_id", idPropriedade));
 
         return novoUsuario;
     }
