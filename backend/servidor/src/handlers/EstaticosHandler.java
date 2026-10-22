@@ -1,5 +1,7 @@
 package handlers;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import http.Requisicao;
 import http.Resposta;
 import java.nio.file.Files;
@@ -13,6 +15,7 @@ import java.util.Map;
 */
 public class EstaticosHandler
 {
+    private static final long MAXIMO_ARQUIVO = 2L * 1024 * 1024;
     private static final Map<String, String> TIPOS = Map.of (
         "html",  "text/html; charset=utf-8",
         "css",   "text/css; charset=utf-8",
@@ -65,6 +68,9 @@ public class EstaticosHandler
         // confere de novo depois de seguir links simbolicos
         if (!arquivo.toRealPath ().startsWith (this.raiz))
             return Resposta.erro (404, "Not found");
+
+        if (Files.size (arquivo) > EstaticosHandler.MAXIMO_ARQUIVO)
+            return Resposta.erro (413, "Static file too large");
 
         return new Resposta (200, EstaticosHandler.TIPOS.get (extensao), Files.readAllBytes (arquivo));
     }
