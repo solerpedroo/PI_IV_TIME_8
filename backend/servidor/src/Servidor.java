@@ -1,3 +1,5 @@
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import dados.ConexaoMongo;
 import dados.RepositorioTalhoes;
 import dados.RepositorioTalhoesMemoria;
@@ -144,7 +146,7 @@ public class Servidor
                 // criar os indices ja exige o banco no ar; se nao estiver, para aqui
                 try
                 {
-                    usuarios = new RepositorioUsuariosMongo (conexao.getBanco ());
+                    usuarios = new RepositorioUsuariosMongo (conexao);
                     talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
                 }
                 catch (Exception erro)
