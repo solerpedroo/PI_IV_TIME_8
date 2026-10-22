@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — feedback (toasts, empty, skeleton, modal overlay)
  * --------------------------------------------------------------------------
@@ -249,6 +250,10 @@
 
 .modal {
   width: min(420px, 100%);
+  /* O formulário rola por dentro quando a janela é baixa ou exibe erros. */
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -264,17 +269,32 @@
   font-weight: 600;
 }
 
-.modal p {
+/* Só a introdução recebe este estilo; erros e detalhes mantêm seus componentes. */
+.modal > p {
   margin: 0 0 20px;
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
+/* Calendário e seletor de safra compartilham título e fechamento lado a lado. */
+.calendar-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.calendar-modal-header h2 { margin-bottom: 4px; }
+.calendar-modal-header p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.calendar-modal-header > button { flex-shrink: 0; }
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 @keyframes toast-enter {
