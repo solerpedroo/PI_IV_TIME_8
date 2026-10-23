@@ -30,6 +30,10 @@
   async function iniciar() {
     try {
       talhoes = await request("/api/talhoes");
+      // A carga persistente só substitui os mocks quando há talhões reais.
+      // Assim, os dados iniciais dos três módulos continuam compatíveis em
+      // uma propriedade recém-criada, conforme o contrato desta tela.
+      if (!talhoes.length) return;
       document.querySelectorAll("select[name=talhao], select[name=plot]").forEach(preencherSelect);
     } catch {
       // Sem sessao, os modulos mantem o estado visual atual ate o login ocorrer.
