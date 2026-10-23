@@ -8,7 +8,7 @@ const { launchTestBrowser } = require("./browser-launch.cjs");
 
 const root = process.cwd();
 const origin = "http://agro.local";
-const prefix = "agro.operational.v1.";
+const prefix = "agro.operational.v1.e2e-local.e2e-property.";
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -30,12 +30,15 @@ async function context(browser, storageFailure) {
     }
     return route.fulfill({status: 200, contentType: mime[path.extname(file)] || "application/octet-stream", body: fs.readFileSync(file)});
   });
-  await browserContext.addInitScript(() => sessionStorage.setItem('agro.sessionToken', 'e2e-local'));
+  await browserContext.addInitScript(() => {
+    sessionStorage.setItem('agro.sessionToken', 'e2e-local');
+    sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
+  });
   await browserContext.route('http://127.0.0.1:8080/api/me', async (route) => {
     const headers = {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization',
       'Access-Control-Allow-Methods': 'GET, OPTIONS'};
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
-    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local"}}'});
+    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
   if (storageFailure) {
     await browserContext.addInitScript((mode) => {
@@ -65,7 +68,7 @@ async function open(browserContext, name) {
 }
 
 async function stored(page, key) {
-  return page.evaluate((name) => JSON.parse(localStorage.getItem("agro.operational.v1." + name)), key);
+  return page.evaluate(({name, prefix}) => JSON.parse(localStorage.getItem(prefix + name)), {name: key, prefix});
 }
 
 async function submit(page, selector) {
