@@ -60,7 +60,7 @@ final class CenarioDadosAtlas implements AutoCloseable {
 
     @Override public void close() {
         try {
-            for (String colecao : List.of("ocorrencias_timeline", "ocorrencias", "movimentacoes_insumos", "insumos", "atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
+            for (String colecao : List.of("custos", "ocorrencias_timeline", "ocorrencias", "movimentacoes_insumos", "insumos", "atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
                 for (EscopoPropriedade escopo : List.of(a, b, extra)) {
                     conexao.banco().getCollection(colecao).deleteMany(escopo.documento());
                 }

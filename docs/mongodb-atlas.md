@@ -14,7 +14,7 @@ A base da issue #100 contém:
 - consulta de propriedade sempre filtrada por `_id` e `proprietarioId`;
 - servidor HTTP do próprio Java, com `GET /health` e `GET /ready`.
 
-O projeto Atlas `time 08` e o cluster gratuito `Cluster0` foram configurados para a faculdade. A conexão Java e os casos persistentes da issue #100 foram validados em `agrogestao_dev` em 23/10/2026. Autenticação e as demais coleções continuam em outras issues.
+O projeto Atlas `time 08` e o cluster gratuito `Cluster0` foram configurados para a faculdade. A conexão Java e os casos persistentes da issue #100 foram validados em `agrogestao_dev` em 23/10/2026. As coleções operacionais das #101–#105 foram adicionadas a essa base e estão detalhadas em [modelo-dados.md](modelo-dados.md). A autenticação e os endpoints de domínio continuam nas respectivas issues.
 
 ## Por que as credenciais não ficam no código
 
@@ -169,3 +169,7 @@ git check-ignore -v .env
 ```
 
 O último comando deve indicar uma regra do `.gitignore`. Se `.env` aparecer em `git status`, não faça o commit até corrigir.
+
+## Modelo operacional (#101–#105)
+
+As coleções, referências, índices, históricos e cenários dos dois ciclos estão em [modelo-dados.md](modelo-dados.md). Execute `./backend/core/testar.sh` na raiz para validar o core sem credenciais; após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os ciclos persistentes.

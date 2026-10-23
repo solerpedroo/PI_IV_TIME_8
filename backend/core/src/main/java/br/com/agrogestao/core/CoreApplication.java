@@ -13,6 +13,7 @@ import br.com.agrogestao.core.infra.mongo.CultivoRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.AtividadeRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.InsumoRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.OcorrenciaRepositorioMongo;
+import br.com.agrogestao.core.infra.mongo.CustoRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.PropriedadeRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.UsuarioRepositorioMongo;
 
@@ -37,6 +38,7 @@ public final class CoreApplication {
             new AtividadeRepositorioMongo(conexao.banco()).criarIndices();
             new InsumoRepositorioMongo(conexao.banco()).criarIndices();
             new OcorrenciaRepositorioMongo(conexao.banco()).criarIndices();
+            new CustoRepositorioMongo(conexao.banco()).criarIndices();
 
             String host = ambiente("JAVA_HOST", "127.0.0.1");
             int porta = porta(ambiente("JAVA_PORT", "8081"));

@@ -2,6 +2,8 @@ package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
 import java.time.*;
+import br.com.agrogestao.core.domain.custos.Custo;
+import com.mongodb.MongoWriteException;
 import java.util.concurrent.*;
 import br.com.agrogestao.core.domain.ocorrencias.Ocorrencia;
 import br.com.agrogestao.core.domain.insumos.*;
@@ -21,8 +23,56 @@ public final class CicloDadosAtlasTest {
             validarAtividade(c);
             validarInsumos(c);
             validarOcorrencias(c);
+            validarCustos(c);
         }
-        System.out.println("CicloDadosAtlasTest: OK (#101–#104)");
+        System.out.println("CicloDadosAtlasTest: OK (#101–#105; dois ciclos persistentes)");
+    }
+
+    private static void validarCustos(CenarioDadosAtlas c) {
+        CustoRepositorioMongo r = new CustoRepositorioMongo(c.conexao.banco());
+        r.criarIndices();
+        ContextoOperacao contexto = new ContextoOperacao(c.a, c.talhaoA, c.safraA);
+        Custo consumo = custo(contexto, c.culturaA, c.atividadeA, c.consumoA, "250.00");
+        ObjectId custoId = r.inserir(consumo);
+        r.inserir(custo(new ContextoOperacao(c.a, null, null), null, null, null, "37.50"));
+        r.inserir(custo(new ContextoOperacao(c.a, null, null), null, null, null, "12.50"));
+        try {
+            r.inserir(consumo);
+            throw new AssertionError("mesmo consumo não deve gerar dois custos diretos");
+        } catch (MongoWriteException esperado) { verificar(esperado.getCode() == 11000, "índice deve rejeitar duplicidade"); }
+        invalido(() -> r.inserir(custo(contexto, c.culturaB, c.atividadeA, null, "1")));
+        ObjectId outraCultura = new CultivoRepositorioMongo(c.conexao.banco()).inserir(new Cultura(null, c.a, "Milho"));
+        invalido(() -> r.inserir(custo(contexto, outraCultura, c.atividadeA, null, "1")));
+        invalido(() -> r.inserir(custo(contexto, new ObjectId(), c.atividadeA, null, "1")));
+        invalido(() -> r.inserir(custo(contexto, c.culturaA, new ObjectId(), null, "1")));
+        invalido(() -> r.inserir(custo(contexto, c.culturaA, c.atividadeA, new ObjectId(), "1")));
+        ObjectId entradaId = new InsumoRepositorioMongo(c.conexao.banco()).listarMovimentacoes(c.a, c.insumoA).stream()
+                .filter(m -> m.tipo() == MovimentacaoInsumo.Tipo.ENTRADA).findFirst().orElseThrow().id();
+        invalido(() -> r.inserir(custo(contexto, c.culturaA, c.atividadeA, entradaId, "1")));
+        ObjectId outraAtividade = new AtividadeRepositorioMongo(c.conexao.banco()).inserir(atividade(contexto));
+        invalido(() -> r.inserir(custo(contexto, c.culturaA, outraAtividade, c.consumoA, "1")));
+        invalido(() -> r.inserir(custo(new ContextoOperacao(c.a, c.talhaoA, null), null, c.atividadeA, null, "1")));
+        c.reabrir();
+        CustoRepositorioMongo persistido = new CustoRepositorioMongo(c.conexao.banco());
+        Custo lido = persistido.buscar(c.a, custoId).orElseThrow();
+        verificar(lido.consumoId().equals(c.consumoA) && lido.atividadeId().equals(c.atividadeA), "origem do custo rastreável");
+        verificar(lido.valor().equals(new BigDecimal("250.00")), "valor em BRL preservado exatamente");
+        verificar(persistido.listarDoContexto(contexto).size() == 1, "custo da safra separado de gastos gerais");
+        verificar(persistido.listarDaCultura(c.a, c.culturaA).size() == 1, "consulta por cultura");
+        verificar(persistido.listarDaPropriedade(c.a).stream().map(Custo::valor).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .compareTo(new BigDecimal("300.00")) == 0, "total conhecido da propriedade após reconexão");
+        verificar(persistido.buscar(c.b, custoId).isEmpty(), "custo isolado entre produtores");
+        verificar(persistido.buscar(c.extra, custoId).isEmpty(), "custo isolado entre propriedades");
+        verificar(persistido.listarDaPropriedade(c.b).isEmpty(), "consulta vazia do outro produtor");
+        verificar(new AtividadeRepositorioMongo(c.conexao.banco()).statusAtual(c.a, c.atividadeA).orElseThrow()
+                == Atividade.Status.CONCLUIDA, "ciclo de consumo/custo mantém atividade concluída");
+        verificar(new OcorrenciaRepositorioMongo(c.conexao.banco()).statusAtual(c.a, c.ocorrenciaA).orElseThrow()
+                == Ocorrencia.Status.RESOLVIDA, "segundo ciclo mantém ocorrência resolvida");
+    }
+
+    private static Custo custo(ContextoOperacao contexto, ObjectId cultura, ObjectId atividade, ObjectId consumo, String valor) {
+        return new Custo(null, contexto, cultura, atividade, consumo, Custo.Categoria.INSUMOS,
+                "Gasto fictício da operação", LocalDate.of(2026, 10, 23), new BigDecimal(valor));
     }
 
     static Ocorrencia ocorrencia(ContextoOperacao contexto) {
@@ -35,6 +85,7 @@ public final class CicloDadosAtlasTest {
         r.criarIndices();
         ContextoOperacao contexto = new ContextoOperacao(c.a, c.talhaoA, c.safraA);
         c.ocorrenciaA = r.inserir(ocorrencia(contexto));
+        ObjectId ocorrenciaGeral = r.inserir(ocorrencia(new ContextoOperacao(c.a, null, null)));
         invalido(() -> r.inserir(ocorrencia(new ContextoOperacao(c.a, c.talhaoB, c.safraA))));
         invalido(() -> r.inserir(ocorrencia(new ContextoOperacao(c.a, c.talhaoA, new ObjectId()))));
         invalido(() -> r.registrarAtualizacao(c.b, c.ocorrenciaA,
@@ -66,6 +117,8 @@ public final class CicloDadosAtlasTest {
                 new EventoHistorico(4, Instant.parse("2026-10-23T16:00:00Z"), "EM_ACOMPANHAMENTO", "Reabertura inválida")));
         c.reabrir();
         OcorrenciaRepositorioMongo persistido = new OcorrenciaRepositorioMongo(c.conexao.banco());
+        verificar(persistido.buscar(c.a, ocorrenciaGeral).orElseThrow().contexto().talhaoId() == null,
+                "ocorrência geral da propriedade preservada sem talhão");
         verificar(persistido.statusAtual(c.a, c.ocorrenciaA).orElseThrow() == Ocorrencia.Status.RESOLVIDA, "resolução persistida");
         verificar(persistido.listarTimeline(c.a, c.ocorrenciaA).size() == 4, "timeline completa após resolução e reconexão");
         verificar(persistido.listarTimeline(c.a, c.ocorrenciaA).get(2).descricao().equals("Medida de controle"), "acompanhamento preservado");

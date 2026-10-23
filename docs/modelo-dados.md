@@ -67,7 +67,7 @@ O exemplo oficial preserva entrada de 500 kg e consumo de 50 kg; a soma das vari
 
 ## #104 — Ocorrências e timeline
 
-`ocorrencias`: `_id`, titularidade, `talhaoId`, `safraId` opcional, título, tipo, data, prioridade, descrição, foto opcional, `criadaEm`, `statusInicial=ABERTA`. Os vínculos devem estar no mesmo escopo e, quando informada, a safra deve conter o talhão.
+`ocorrencias`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, título, tipo, data, prioridade, descrição, foto opcional, `criadaEm`, `statusInicial=ABERTA`. Ocorrências gerais podem pertencer somente à propriedade, conforme §11 do projeto. Os vínculos informados devem estar no mesmo escopo; quando houver safra, ela deve conter o talhão.
 
 `ocorrencias_timeline`: titularidade, `ocorrenciaId`, ordem, data do registro, status e descrição. Usa a mesma estratégia de eventos separados da atividade. ABERTA admite acompanhamento ou resolução; EM_ACOMPANHAMENTO admite novas anotações e resolução; RESOLVIDA preserva o desfecho. A consulta mantém todos os eventos em ordem depois da resolução. A leitura do estado atual usa apenas o último evento pelo índice, sem carregar toda a timeline. Não há exclusão/cascata nesta frente.
 
@@ -76,3 +76,35 @@ Vocabulário e foto opcional seguem o projeto §8.7; as divergências da #5 perm
 ### Evidência da #104 — 23/10/2026
 
 `DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.
+
+
+## #105 — Custos e origem do gasto
+
+`custos`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, `culturaId`, `atividadeId`, `consumoId` opcionais, categoria, descrição, data, valor (Decimal128 com centavos exatos), `moeda=BRL`. Categorias do projeto §8.8: INSUMOS, COMBUSTIVEL, MANUTENCAO, MAO_DE_OBRA, OUTROS.
+
+Custos gerais da propriedade podem omitir os vínculos produtivos. Se houver safra, a cultura informada deve ser a dela. Se houver atividade, seu contexto deve ser o mesmo do custo. Se houver consumo, ele deve ser uma saída daquela atividade na mesma propriedade. Um índice único parcial por `consumoId` evita duplicar o custo direto do mesmo consumo; custos manuais sem consumo continuam permitidos. O histórico do consumo permanece na coleção de movimentações, ligado pelo ID.
+
+As consultas disponíveis recortam propriedade, contexto completo (talhão/safra) ou cultura, sempre com titularidade. A validação fecha o exemplo oficial: entrada de 500 kg → consumo de 50 kg ligado à atividade → custo de R$ 250,00 ligado ao consumo; dois gastos gerais de R$ 37,50 e R$ 12,50 deixam o total da propriedade em R$ 300,00. O outro ciclo mantém a ocorrência resolvida com sua timeline. A integração HTTP/UI e a execução transacional completa continuam nas issues específicas de cada módulo (#142/#160 e seguintes).
+
+## Rodar a suíte completa
+
+Na raiz, com JDK 21 e Maven disponíveis:
+
+```bash
+./backend/core/testar.sh
+```
+
+O CI executa essa mesma suíte local em PRs que alterem o core. O teste `DadosCustoTest` cobre centavos exatos, valores inválidos e campos condicionais. Para repetir também os cenários reais da #100 e #101–#105 no Atlas, carregue o `.env` sem exibir seu conteúdo:
+
+```bash
+set -a
+. ./.env
+set +a
+./backend/core/testar.sh --atlas
+```
+
+Cada cenário fecha a conexão e cria outra antes de verificar os registros persistidos. A suíte remove seus usuários, propriedades e documentos operacionais fictícios ao final, inclusive em falhas de validação. Os índices necessários são preservados. O script aceita `MAVEN_BIN` para indicar um Maven instalado fora do PATH.
+
+### Evidência final da #105 — 23/10/2026
+
+Suíte Maven/Java 21: sete testes locais OK, `MongoAtlasValidacaoTest: OK` e `CicloDadosAtlasTest: OK (#101–#105; dois ciclos persistentes)`. No Atlas `agrogestao_dev`, custo de R$ 250,00 rastreável ao consumo e total de R$ 300,00 consultados após reconexão; referência inválida, cultura divergente, origem de entrada e consumo de outra atividade rejeitados. O índice rejeitou o segundo custo para o mesmo consumo e permitiu dois custos gerais sem consumo. Os dois ciclos preservaram conclusão/resolução e históricos. Os dados fictícios foram removidos ao final. A revisão final também comprovou ocorrência geral da propriedade sem talhão/safra, como permitido pelo projeto §11. A suíte existente do gateway passou nos 16 casos.

@@ -15,7 +15,6 @@ public record Ocorrencia(ObjectId id, ContextoOperacao contexto, String titulo, 
 
     public Ocorrencia {
         obrigatorio(contexto, "contexto");
-        obrigatorio(contexto.talhaoId(), "talhaoId");
         titulo = texto(titulo, "titulo");
         tipo = texto(tipo, "tipo");
         obrigatorio(data, "data");

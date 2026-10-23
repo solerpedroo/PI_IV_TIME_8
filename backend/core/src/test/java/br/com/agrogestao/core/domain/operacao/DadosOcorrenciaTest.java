@@ -16,7 +16,10 @@ public final class DadosOcorrenciaTest {
         verificar(Ocorrencia.permiteTransicao("EM_ACOMPANHAMENTO", "EM_ACOMPANHAMENTO"), "novas anotações permitidas");
         verificar(Ocorrencia.permiteTransicao("EM_ACOMPANHAMENTO", "RESOLVIDA"), "resolução permitida");
         verificar(!Ocorrencia.permiteTransicao("RESOLVIDA", "ABERTA"), "resolvida preserva desfecho");
-        invalido(() -> new Ocorrencia(null, new ContextoOperacao(escopo, null, null), "Praga", "Praga", LocalDate.now(),
+        Ocorrencia geral = new Ocorrencia(null, new ContextoOperacao(escopo, null, null), "Equipamento", "Problema operacional",
+                LocalDate.now(), Prioridade.MEDIA, "Problema geral da propriedade", null, Instant.now());
+        verificar(Ocorrencia.doDocumento(geral.paraDocumento()).equals(geral), "ocorrência geral pode omitir talhão e safra");
+        invalido(() -> new Ocorrencia(null, null, "Praga", "Praga", LocalDate.now(),
                 Prioridade.ALTA, "Descrição", null, Instant.now()));
         System.out.println("DadosOcorrenciaTest: OK");
     }
