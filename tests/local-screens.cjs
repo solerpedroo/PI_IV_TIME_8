@@ -157,10 +157,12 @@ let failures = 0;
     assert.equal((await data(page, 'costs')).entries.some((entry) => entry.id === created.id), false);
   });
 
-  await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page) => {
+  await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page, context, api) => {
     await go(page, 'configuracoes.html');
+    await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
     await submit(page, '[data-settings-form="profile"]', { name: 'Maria Teste', email: 'maria@example.test', phone: '1234' });
-    await submit(page, '[data-settings-form="property"]', { farm: 'Fazenda Teste', area: '1500', city: 'Campinas', harvest: '2025/26' });
+    await submit(page, '[data-settings-form="property"]', { farm: 'Fazenda Teste', area: '1500', location: 'Rodovia teste', city: 'Campinas', harvest: '2025/26' });
+    await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.locator('[data-settings-tab="notifications"]').filter({ hasText: 'Notificações' }).click();
     await page.locator('[data-preference="weather"]').uncheck({ force: true });
     await page.locator('[data-save-notifications]').click();
@@ -168,11 +170,15 @@ let failures = 0;
     await page.locator('[data-open-harvest-modal]').click();
     await page.locator('[data-harvest-option="2026/27"]').click();
     await page.locator('[data-confirm-harvest]').click();
+    await submit(page, '[data-settings-form="property"]', {});
+    await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.reload();
+    await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
     assert.equal(await page.locator('[name="name"]').inputValue(), 'Maria Teste');
     assert.equal(await page.locator('[name="area"]').inputValue(), '1500');
     assert.equal(await page.locator('[data-preference="weather"]').isChecked(), false);
-    assert.equal((await data(page, 'settings')).property.harvest, '2026/27');
+    assert.equal(api.properties[0].safraAtual, '2026/27');
+    assert.equal(await page.locator('[name=harvest]').inputValue(), '2026/27');
     assert.doesNotMatch(JSON.stringify(await data(page, 'settings')), /password|current|token/i);
   });
 
