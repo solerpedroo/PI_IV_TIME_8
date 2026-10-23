@@ -35,3 +35,18 @@ O teste Atlas usa dois produtores fictícios e uma terceira propriedade do mesmo
 ### Evidência da #101 — 23/10/2026
 
 `DadosCultivoTest: OK` e `CicloDadosAtlasTest: OK (#101)` com Java 21 (compilação direta por `javac --release 21` e execução por `java`) e o driver 5.8.1 da base. Atlas `agrogestao_dev`: dados consultados após reconectar, referências inexistentes/cruzadas rejeitadas e registros fictícios removidos ao final.
+
+
+## #102 — Atividades e histórico
+
+`atividades`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, título, tipo, responsável, data, horário, prioridade, `criadaEm` e `statusInicial=AGENDADA`. A safra exige um talhão que pertença a ela. A cultura é obtida pelo vínculo da safra, evitando duas referências divergentes.
+
+`atividades_historico`: titularidade, `atividadeId`, `ordem`, `registradoEm`, `status`, `descricao`. Eventos ficam separados para o histórico crescer sem aumentar o documento principal. A criação é o evento 0, derivado do documento principal; os eventos posteriores são inseridos sem substituir os anteriores. O estado atual é o último evento, sem uma segunda cópia mutável de status que poderia ficar inconsistente.
+
+Transições: AGENDADA → EM_ANDAMENTO → CONCLUIDA; cancelamento permitido antes da conclusão. A sequência esperada e o índice único por registro/ordem rejeitam gravações repetidas ou concorrentes; o chamador deve consultar novamente após conflito. Datas não podem regredir. Datas de eventos usam BSON Date com precisão de milissegundos. `buscar`, `listarHistorico`, `statusAtual` e `listarDoContexto` permitem consultar o ciclo concluído.
+
+O vocabulário segue o documento do projeto §8.5; divergências gerais de terminologia da #5 continuam naquela frente. Execute também `br.com.agrogestao.core.domain.operacao.DadosAtividadeTest` pelo mesmo comando Maven dos testes locais.
+
+### Evidência da #102 — 23/10/2026
+
+`DadosAtividadeTest: OK` e `CicloDadosAtlasTest: OK (#101–#102)`. Confirmados no Atlas: conclusão com três eventos (incluindo criação), consulta pelo ciclo e histórico após reconexão, isolamento, rejeição de talhão fora da safra, datas regressivas, ordem repetida e reabertura de atividade concluída. Dados fictícios removidos.

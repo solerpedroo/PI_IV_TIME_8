@@ -1,6 +1,9 @@
 package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
+import java.time.*;
+import br.com.agrogestao.core.domain.atividades.Atividade;
+import br.com.agrogestao.core.domain.operacao.*;
 import java.util.List;
 import org.bson.types.ObjectId;
 import br.com.agrogestao.core.domain.cultivo.*;
@@ -12,8 +15,46 @@ public final class CicloDadosAtlasTest {
         try (CenarioDadosAtlas c = new CenarioDadosAtlas()) {
             c.preparar();
             validarCultivo(c);
+            validarAtividade(c);
         }
-        System.out.println("CicloDadosAtlasTest: OK (#101)");
+        System.out.println("CicloDadosAtlasTest: OK (#101–#102)");
+    }
+
+    static Atividade atividade(ContextoOperacao contexto) {
+        return new Atividade(null, contexto, "Aplicação de fertilizante", "Adubação", "Produtor fictício",
+                LocalDate.of(2026, 10, 23), LocalTime.of(8, 0), Prioridade.MEDIA, Instant.parse("2026-10-23T10:00:00Z"));
+    }
+
+    private static void validarAtividade(CenarioDadosAtlas c) {
+        AtividadeRepositorioMongo r = new AtividadeRepositorioMongo(c.conexao.banco());
+        r.criarIndices();
+        ContextoOperacao contexto = new ContextoOperacao(c.a, c.talhaoA, c.safraA);
+        c.atividadeA = r.inserir(atividade(contexto));
+        invalido(() -> r.inserir(atividade(new ContextoOperacao(c.a, c.talhaoB, c.safraA))));
+        ObjectId outroTalhao = new CultivoRepositorioMongo(c.conexao.banco()).inserir(
+                new Talhao(null, c.a, "Talhão fora da safra", BigDecimal.ONE, Talhao.Status.ATIVO));
+        invalido(() -> r.inserir(atividade(new ContextoOperacao(c.a, outroTalhao, c.safraA))));
+        invalido(() -> r.inserir(atividade(new ContextoOperacao(c.a, c.talhaoA, new ObjectId()))));
+        invalido(() -> r.registrarEvento(c.b, c.atividadeA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T11:00:00Z"), "EM_ANDAMENTO", "Alheio")));
+        invalido(() -> r.registrarEvento(c.a, c.atividadeA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T09:00:00Z"), "EM_ANDAMENTO", "Anterior à criação")));
+        r.registrarEvento(c.a, c.atividadeA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T11:00:00Z"), "EM_ANDAMENTO", "Aplicação iniciada"));
+        invalido(() -> r.registrarEvento(c.a, c.atividadeA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T12:00:00Z"), "CONCLUIDA", "Ordem repetida")));
+        r.registrarEvento(c.a, c.atividadeA,
+                new EventoHistorico(2, Instant.parse("2026-10-23T12:00:00Z"), "CONCLUIDA", "Aplicação finalizada"));
+        invalido(() -> r.registrarEvento(c.a, c.atividadeA,
+                new EventoHistorico(3, Instant.parse("2026-10-23T13:00:00Z"), "EM_ANDAMENTO", "Reabertura inválida")));
+        c.reabrir();
+        AtividadeRepositorioMongo persistido = new AtividadeRepositorioMongo(c.conexao.banco());
+        verificar(persistido.statusAtual(c.a, c.atividadeA).orElseThrow() == Atividade.Status.CONCLUIDA, "conclusão persistida");
+        verificar(persistido.listarHistorico(c.a, c.atividadeA).size() == 3, "histórico permanece após conclusão");
+        verificar(persistido.listarDoContexto(contexto).size() == 1, "consulta pelo ciclo da safra");
+        verificar(persistido.buscar(c.b, c.atividadeA).isEmpty(), "atividade isolada");
+        verificar(persistido.listarHistorico(c.b, c.atividadeA).isEmpty(), "histórico isolado");
+        verificar(persistido.statusAtual(c.extra, c.atividadeA).isEmpty(), "status isolado entre propriedades");
     }
 
     private static void validarCultivo(CenarioDadosAtlas c) {
