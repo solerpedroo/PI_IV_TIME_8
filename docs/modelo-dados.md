@@ -108,3 +108,7 @@ Cada cenário fecha a conexão e cria outra antes de verificar os registros pers
 ### Evidência final da #105 — 23/10/2026
 
 Suíte Maven/Java 21: sete testes locais OK, `MongoAtlasValidacaoTest: OK` e `CicloDadosAtlasTest: OK (#101–#105; dois ciclos persistentes)`. No Atlas `agrogestao_dev`, custo de R$ 250,00 rastreável ao consumo e total de R$ 300,00 consultados após reconexão; referência inválida, cultura divergente, origem de entrada e consumo de outra atividade rejeitados. O índice rejeitou o segundo custo para o mesmo consumo e permitiu dois custos gerais sem consumo. Os dois ciclos preservaram conclusão/resolução e históricos. Os dados fictícios foram removidos ao final. A revisão final também comprovou ocorrência geral da propriedade sem talhão/safra, como permitido pelo projeto §11. A suíte existente do gateway passou nos 16 casos.
+
+## Demonstração prática e revisão do PR #198
+
+Veja o [roteiro de teste prático](teste-pratico-banco.md) para executar `--demonstrar`, conferir os dados em outro processo Java e inspecionar no Atlas com `--pausar`. O comando aceita `AGRO_BUILD_DIR` para escolher uma pasta de compilação gravável.

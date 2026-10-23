@@ -16,7 +16,12 @@ import br.com.agrogestao.core.domain.operacao.EscopoPropriedade;
 import static br.com.agrogestao.core.domain.operacao.DadosCultivoTest.*;
 
 public final class CicloDadosAtlasTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        List<String> opcoes = List.of(args);
+        if (opcoes.stream().anyMatch(a -> !a.equals("--demonstrar") && !a.equals("--pausar"))
+                || (opcoes.contains("--pausar") && !opcoes.contains("--demonstrar"))) {
+            throw new IllegalArgumentException("Uso: CicloDadosAtlasTest [--demonstrar [--pausar]]");
+        }
         try (CenarioDadosAtlas c = new CenarioDadosAtlas()) {
             c.preparar();
             validarCultivo(c);
@@ -24,8 +29,41 @@ public final class CicloDadosAtlasTest {
             validarInsumos(c);
             validarOcorrencias(c);
             validarCustos(c);
+            if (opcoes.contains("--demonstrar")) demonstrarEmOutroProcesso(c);
+            if (opcoes.contains("--pausar")) {
+                System.out.println("Dados fictícios disponíveis para inspeção no Atlas. Filtro:");
+                System.out.println("{ propriedadeId: ObjectId(\"" + c.propriedadeA + "\") }");
+                System.out.println("Pressione ENTER para remover os dados fictícios e encerrar.");
+                new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+            }
         }
         System.out.println("CicloDadosAtlasTest: OK (#101–#105; dois ciclos persistentes)");
+        if (opcoes.contains("--demonstrar")) System.out.println("Limpeza conferida no Atlas: nenhum registro fictício desta execução permaneceu.");
+    }
+
+    private static void demonstrarEmOutroProcesso(CenarioDadosAtlas c) throws Exception {
+        System.out.println("Casos válidos e inválidos das #101–#105 conferidos no processo Java " + ProcessHandle.current().pid());
+        List<String> comando = new java.util.ArrayList<>();
+        comando.add(java.nio.file.Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        comando.add("-cp");
+        comando.add(System.getProperty("java.class.path"));
+        comando.add(ConferirCenarioAtlas.class.getName());
+        for (ObjectId id : List.of(c.produtorA, c.propriedadeA, c.produtorB, c.propriedadeB,
+                c.talhaoA, c.safraA, c.atividadeA, c.insumoA, c.consumoA, c.ocorrenciaA)) {
+            comando.add(id.toHexString());
+        }
+        Process leitor = new ProcessBuilder(comando).inheritIO().start();
+        try {
+            if (!leitor.waitFor(60, TimeUnit.SECONDS)) {
+                leitor.destroyForcibly();
+                throw new AssertionError("o processo leitor não concluiu a conferência no prazo");
+            }
+            verificar(leitor.exitValue() == 0, "a leitura independente do Atlas deve passar");
+        } catch (InterruptedException e) {
+            leitor.destroyForcibly();
+            Thread.currentThread().interrupt();
+            throw e;
+        }
     }
 
     private static void validarCustos(CenarioDadosAtlas c) {

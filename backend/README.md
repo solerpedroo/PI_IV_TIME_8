@@ -31,3 +31,7 @@ Verifique `http://127.0.0.1:8081/health`, `http://127.0.0.1:8081/ready`, `http:/
 ## Validar o modelo de dados
 
 Na raiz do repositório, execute `./backend/core/testar.sh` para os sete testes locais, sem credenciais. Após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os dois ciclos persistentes das #101–#105, com dados fictícios removidos ao final. Requer JDK 21, Maven e Bash (no Windows, Git Bash ou WSL).
+
+## Demonstração prática e revisão do PR #198
+
+Veja o [roteiro de teste prático](../docs/teste-pratico-banco.md) para executar `--demonstrar`, conferir os dados em outro processo Java e inspecionar no Atlas com `--pausar`. O comando aceita `AGRO_BUILD_DIR` para escolher uma pasta de compilação gravável.

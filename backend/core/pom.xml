@@ -10,6 +10,7 @@
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <agro.build.directory>${project.basedir}/target</agro.build.directory>
     <mongodb.driver.version>5.8.1</mongodb.driver.version>
   </properties>
   <dependencies>
@@ -20,6 +21,7 @@
     </dependency>
   </dependencies>
   <build>
+    <directory>${agro.build.directory}</directory>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -59,18 +59,32 @@ final class CenarioDadosAtlas implements AutoCloseable {
     }
 
     @Override public void close() {
-        try {
+        // Conexão própria: a limpeza funciona mesmo se uma tentativa de reconexão do teste falhar.
+        try (MongoConexao limpeza = MongoConexao.peloAmbiente()) {
             for (String colecao : List.of("custos", "ocorrencias_timeline", "ocorrencias", "movimentacoes_insumos", "insumos", "atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
                 for (EscopoPropriedade escopo : List.of(a, b, extra)) {
-                    conexao.banco().getCollection(colecao).deleteMany(escopo.documento());
+                    limpeza.banco().getCollection(colecao).deleteMany(escopo.documento());
+                    if (limpeza.banco().getCollection(colecao).countDocuments(escopo.documento()) != 0) {
+                        throw new AssertionError("registro fictício não removido: " + colecao);
+                    }
                 }
             }
             for (EscopoPropriedade escopo : List.of(a, b, extra)) {
-                conexao.banco().getCollection("propriedades").deleteOne(new Document("_id", escopo.propriedadeId())
+                limpeza.banco().getCollection("propriedades").deleteOne(new Document("_id", escopo.propriedadeId())
                         .append("proprietarioId", escopo.proprietarioId()));
             }
             for (ObjectId id : List.of(produtorA, produtorB)) {
-                conexao.banco().getCollection("usuarios").deleteOne(new Document("_id", id));
+                limpeza.banco().getCollection("usuarios").deleteOne(new Document("_id", id));
+            }
+            for (EscopoPropriedade escopo : List.of(a, b, extra)) {
+                if (limpeza.banco().getCollection("propriedades").countDocuments(new Document("_id", escopo.propriedadeId())) != 0) {
+                    throw new AssertionError("propriedade fictícia não removida");
+                }
+            }
+            for (ObjectId id : List.of(produtorA, produtorB)) {
+                if (limpeza.banco().getCollection("usuarios").countDocuments(new Document("_id", id)) != 0) {
+                    throw new AssertionError("usuário fictício não removido");
+                }
             }
         } finally { conexao.close(); }
     }
