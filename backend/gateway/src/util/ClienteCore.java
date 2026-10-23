@@ -1,4 +1,5 @@
 /*
+    Alterado por: Vinícius Panutti Salgado — R.A. 25007329
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
@@ -12,7 +13,7 @@ public class ClienteCore
 {
     public static final int TIMEOUT_MS = 2000;
 
-    private static final String CAMINHO_SAUDE = "/actuator/health";
+    private static final String CAMINHO_SAUDE = "/ready";
 
     private String javaBaseUrl;
 
@@ -31,7 +32,7 @@ public class ClienteCore
         return this.javaBaseUrl;
     }
 
-    // true se GET /actuator/health do core responder 2xx em ate 2 s
+    // true se GET /ready do core responder 2xx em ate 2 s
     public boolean coreSaudavel ()
     {
         boolean           ret     = false;
@@ -39,7 +40,7 @@ public class ClienteCore
 
         try
         {
-            // resolve igual ao "new URL('/actuator/health', javaBaseUrl)" do server.ts:
+            // resolve um caminho absoluto para o health do core Java puro:
             // mantem esquema, host e porta e TROCA o caminho inteiro. Assim barra no
             // final nao gera "//actuator" e um caminho na base e descartado, como no TS.
             URI destino = URI.create (this.javaBaseUrl).resolve (ClienteCore.CAMINHO_SAUDE);

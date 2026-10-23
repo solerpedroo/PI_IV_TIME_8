@@ -1,4 +1,5 @@
 /*
+    Alterado por: Vinícius Panutti Salgado — R.A. 25007329
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
@@ -156,7 +157,7 @@ public class TesteGateway
                                    Integer.parseInt (r[0]), r[1]);
             gw.stop (0);
 
-            // JAVA_BASE_URL com barra no final nao pode gerar "//actuator"
+            // JAVA_BASE_URL com barra no final nao pode gerar "//ready"
             gw = TesteGateway.gateway (TesteGateway.endereco (core) + "/");
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/ready");
             TesteGateway.conferir ("ready com barra no final da base", 200, TesteGateway.UP,
