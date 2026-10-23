@@ -488,6 +488,48 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    private static void testarPropriedades () throws Exception
+    {
+        System.out.println ("\n# propriedades, contexto e autorizacao");
+        String a = login ("maria@agro.com", "Nova@1234");
+        String b = login ("joao@agro.com", "Senha@123");
+        String corpo = new Document ("nome", "Fazenda Horizonte").append ("localizacao", "Rodovia SP-101, km 12")
+            .append ("municipio", "Campinas, SP").append ("safraAtual", "2026/27").append ("areaHectares", 350).toJson ();
+        conferir ("propriedade invalida aponta campos", camposComErro (post ("/api/propriedades", "{}", a))
+            .keySet ().containsAll (List.of ("nome", "localizacao", "municipio", "safraAtual", "areaHectares")));
+        conferir ("safra invalida -> 400", 400, post ("/api/propriedades", corpo.replace ("2026/27", "invalida"), a));
+        Resp criada = post ("/api/propriedades", corpo, a);
+        conferir ("criar segunda propriedade -> 201", 201, criada);
+        String id = criada.json ().getString ("id");
+        conferir ("listar inclui propriedade propria", get ("/api/propriedades", a).corpo.contains (id));
+        conferir ("outro usuario nao consulta -> 404", 404, get ("/api/propriedades/" + id, b));
+        conferir ("outro usuario nao altera -> 404", 404, put ("/api/propriedades/" + id, corpo, b));
+        conferir ("outro usuario nao seleciona -> 404", 404, post ("/api/propriedades/" + id + "/selecionar", "{}", b));
+        conferir ("outro usuario nao exclui -> 404", 404, requisitar ("DELETE", "/api/propriedades/" + id, null, b));
+        conferir ("atualiza propriedade propria", 200, put ("/api/propriedades/" + id, corpo.replace ("Horizonte", "Atualizada"), a));
+        conferir ("selecionar propriedade propria -> 200", 200, post ("/api/propriedades/" + id + "/selecionar", "{}", a));
+        conferir ("me informa propriedade ativa", id.equals (get ("/api/me", a).json ().get ("usuario", Document.class).getString ("propriedadeId")));
+        conferir ("talhoes usam contexto selecionado", get ("/api/talhoes", a).corpo.equals ("[]"));
+        conferir ("nao exclui propriedade ativa", 409, requisitar ("DELETE", "/api/propriedades/" + id, null, a));
+        String principal = usuarios.buscarPor ("email", "maria@agro.com").getString ("propriedadeId");
+        String outraSessao = login ("maria@agro.com", "Nova@1234");
+        post ("/api/propriedades/" + id + "/selecionar", "{}", outraSessao);
+        post ("/api/propriedades/" + principal + "/selecionar", "{}", a);
+        conferir ("nao exclui contexto usado em outra sessao", 409, requisitar ("DELETE", "/api/propriedades/" + id, null, a));
+        post ("/api/auth/logout", null, outraSessao);
+        conferir ("exclui propriedade sem vinculos -> 204", 204, requisitar ("DELETE", "/api/propriedades/" + id, null, a));
+        conferir ("propriedade excluida -> 404", 404, get ("/api/propriedades/" + id, a));
+        conferir ("nao exclui ultima propriedade", 409, requisitar ("DELETE", "/api/propriedades/" + principal, null, a));
+
+        RepositorioUsuariosMemoria repo = new RepositorioUsuariosMemoria ();
+        Document u = repo.criar (new Document ("email", "referencia@teste.com"), new Document ("farm", "Inicial"));
+        String uid = u.getObjectId ("_id").toHexString ();
+        Document p = repo.criarPropriedade (uid, new Document ("nome", "Alternativa"));
+        conferir ("exclusao da padrao atualiza referencia", repo.excluirPropriedade (uid, u.getString ("propriedadeId"))
+            && repo.buscarPorId (uid).getString ("propriedadeId").equals (p.getObjectId ("_id").toHexString ()));
+        conferir ("repositorio tambem preserva ultima propriedade", !repo.excluirPropriedade (uid, p.getObjectId ("_id").toHexString ()));
+    }
+
     private static void testarConcorrencia () throws Exception
     {
         System.out.println ("\n# concorrencia e erros");
@@ -662,6 +704,7 @@ public class TesteServidor
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
+            TesteServidor.testarPropriedades ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();
