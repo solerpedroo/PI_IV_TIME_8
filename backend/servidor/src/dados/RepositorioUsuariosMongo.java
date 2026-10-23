@@ -127,6 +127,13 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
 
     public List<Document> listarPropriedades (String usuarioId) throws Exception
     {
+        // A #194 gravava somente o vínculo no usuário. Migra apenas esse vínculo
+        // comprovado e nunca toma uma propriedade já atribuída a outro dono.
+        Document usuario = this.buscarPorId (usuarioId);
+        ObjectId principal = usuario == null ? null : RepositorioUsuariosMongo.paraId (usuario.getString ("propriedadeId"));
+        if (principal != null)
+            this.propriedades.updateOne (Filters.and (Filters.eq ("_id", principal), Filters.exists ("usuarioId", false)),
+                                          new Document ("$set", new Document ("usuarioId", usuarioId)));
         ArrayList<Document> ret = new ArrayList<Document> ();
         for (Document propriedade : this.propriedades.find (Filters.eq ("usuarioId", usuarioId)))
             ret.add (propriedade);
@@ -160,7 +167,25 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
 
     public boolean excluirPropriedade (String usuarioId, String propriedadeId) throws Exception
     {
-        return this.propriedades.deleteOne (RepositorioUsuariosMongo.filtroDaPropriedade (usuarioId, propriedadeId))
-                                 .getDeletedCount () == 1;
+        ObjectId idUsuario = RepositorioUsuariosMongo.paraId (usuarioId);
+        if (idUsuario == null) return false;
+        try (ClientSession sessao = this.cliente.startSession ())
+        {
+            return sessao.withTransaction (() -> {
+                Document usuario = this.usuarios.find (sessao, Filters.eq ("_id", idUsuario)).first ();
+                ArrayList<Document> restantes = this.propriedades.find (sessao, Filters.eq ("usuarioId", usuarioId))
+                                                                 .into (new ArrayList<Document> ());
+                boolean encontrada = restantes.removeIf (item -> item.getObjectId ("_id").toHexString ().equals (propriedadeId));
+                if (usuario == null || !encontrada || restantes.isEmpty ()) return false;
+                // Escrever no mesmo usuário serializa exclusões concorrentes e
+                // mantém ao menos uma propriedade ao repetir a transação.
+                Document alteracoes = new Document ("$inc", new Document ("versaoPropriedades", 1));
+                if (propriedadeId.equals (usuario.getString ("propriedadeId")))
+                    alteracoes.append ("$set", new Document ("propriedadeId", restantes.get (0).getObjectId ("_id").toHexString ()));
+                this.usuarios.updateOne (sessao, Filters.eq ("_id", idUsuario), alteracoes);
+                return this.propriedades.deleteOne (sessao, RepositorioUsuariosMongo.filtroDaPropriedade (usuarioId, propriedadeId))
+                                       .getDeletedCount () == 1;
+            });
+        }
     }
 }
