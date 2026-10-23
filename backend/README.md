@@ -1,6 +1,6 @@
 # Backend do AgroGestão
 
-O gateway e o core são aplicações Java 21 sem framework. O gateway escuta na porta 8080 e consulta `GET /ready` do core na porta 8081. O core usa o driver oficial do MongoDB para acessar um cluster Atlas Free, sem banco local ou Docker.
+O gateway e o core são aplicações Java 21 sem framework. O gateway escuta na porta 8080 e consulta `GET /ready` do core na porta 8081. O core usa o driver oficial do MongoDB para acessar o cluster Atlas Free do grupo.
 
 O core atual contém somente a base de `usuarios` e `propriedades` da issue #100. Não há endpoints de produto nem autenticação; o gateway ainda expõe apenas `/health` e `/ready`. A integração do frontend permanece futura.
 

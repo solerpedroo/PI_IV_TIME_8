@@ -1,6 +1,6 @@
 # Agro — frontend estático
 
-> Esta branch também contém a fundação separada do backend (gateway em Java puro, core em Java com Spring Boot e MongoDB). Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
+> Esta branch também contém a fundação separada do backend: gateway e core em Java 21 puro, com o driver oficial para MongoDB Atlas Free. Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
 
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
