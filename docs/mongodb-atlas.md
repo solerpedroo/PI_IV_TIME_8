@@ -14,7 +14,7 @@ A base da issue #100 contém:
 - consulta de propriedade sempre filtrada por `_id` e `proprietarioId`;
 - servidor HTTP do próprio Java, com `GET /health` e `GET /ready`.
 
-Ainda faltam criar ou selecionar um cluster Atlas Free do grupo, configurar credenciais reais, validar a conexão e implementar autenticação e as demais coleções das issues #101 a #105. Portanto, a comprovação persistente exigida pela #100 ainda está pendente.
+O projeto Atlas `time 08` e o cluster gratuito `Cluster0` foram configurados para a faculdade. A conexão Java e os casos persistentes da issue #100 foram validados em `agrogestao_dev` em 23/10/2026. Autenticação e as demais coleções continuam em outras issues.
 
 ## Por que as credenciais não ficam no código
 
@@ -29,9 +29,9 @@ Existem duas contas diferentes:
 
 1. Acesse <https://cloud.mongodb.com/> e entre ou crie sua conta pessoal.
 2. Crie uma organização para o grupo, se o Atlas solicitar.
-3. Crie o projeto `PI-IV-TIME-08`.
+3. Crie ou selecione o projeto do grupo `time 08`.
 4. Escolha **Create/Build a Database** e selecione a opção **Free**.
-5. Nomeie o cluster `agrogestao-dev` e escolha uma região próxima do grupo. Se sua conta já tiver um cluster Free, confirme no painel se a organização permite outro cluster gratuito antes de criar um; nunca aceite cobrança sem decisão do grupo.
+5. Use o cluster `Cluster0` criado para o grupo e escolha uma região próxima dos integrantes. Se a conta já tiver um cluster Free em outro projeto, confirme no painel se a organização permite outro cluster gratuito antes de criar um; nunca aceite cobrança sem decisão do grupo.
 6. Confirme a criação somente depois de verificar que o custo exibido é `FREE` ou `$0`.
 
 O Atlas pode mudar os nomes e a posição dos botões, mas não deve ser escolhido nenhum plano pago.
@@ -113,17 +113,25 @@ curl -i http://127.0.0.1:8081/ready
 
 As duas respostas devem retornar HTTP 200 e `{"status":"UP"}`. `health` confirma que o processo Java está ativo; `ready` faz um novo `ping` no MongoDB Atlas.
 
-## Evidência necessária para concluir a issue #100
+## Validação da issue #100
 
-Sem publicar credenciais, em um banco de testes separado do banco de desenvolvimento comum:
+Sem publicar credenciais, o teste usa identificadores únicos e limpa seus registros fictícios no banco `agrogestao_dev`:
 
 1. Criar dois usuários fictícios (produtores A e B) e uma propriedade para cada um.
 2. Verificar que a consulta por `_id` e `proprietarioId` devolve somente a propriedade do próprio produtor; para um ID alheio, deve ter o mesmo resultado de propriedade inexistente.
 3. Verificar referências inválidas (usuário ou propriedade inexistente) e que os índices únicos rejeitam duplicatas.
-4. Encerrar o processo Java, iniciá-lo novamente e repetir as consultas para comprovar persistência.
+4. Fechar a conexão Java, abrir uma nova e repetir as consultas para comprovar persistência.
 5. Registrar no commit/issue apenas comandos, resultados sanitizados e identificação do banco de teste, nunca URI, senha, endereço IP ou dados pessoais reais.
 
-Os testes locais sem Atlas exercitam somente validações e regras em memória; eles **não** substituem essa evidência persistente.
+O teste executável é `br.com.agrogestao.core.infra.mongo.MongoAtlasValidacaoTest`. Após carregar o `.env` no terminal, execute em `backend/core`:
+
+```bash
+mvn -q test-compile exec:java -Dexec.mainClass=br.com.agrogestao.core.infra.mongo.MongoAtlasValidacaoTest -Dexec.classpathScope=test
+```
+
+Em 23/10/2026, no projeto `time 08`, cluster `Cluster0` e banco `agrogestao_dev`, a execução retornou `MongoAtlasValidacaoTest: OK`. Foram confirmados: conexão real por `ping`, dois produtores fictícios, propriedades de mesmo nome para titulares diferentes, índices únicos para e-mail e nome por titular, bloqueio da leitura cruzada, rejeição de proprietário inexistente e consulta persistente após fechar e reabrir a conexão Java. O teste remove seus registros fictícios ao final.
+
+Os testes locais sem Atlas exercitam somente validações e regras em memória; a evidência acima usa o MongoDB real. A autorização de usuários autenticados por API pertence à frente de autenticação, não a este modelo de dados.
 
 ## Configuração dos colegas
 
