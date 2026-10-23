@@ -170,8 +170,16 @@ public class AuthHandler
         if (!Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")))
             return Resposta.erro (403, "Email confirmation required");
 
-        String token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
-                                           usuario.getString ("propriedadeId"));
+        String token;
+        synchronized (this.sessoes)
+        {
+            // Uma exclusão pode ter alterado a propriedade padrão durante o hash.
+            usuario = this.usuarios.buscarPorId (((ObjectId) usuario.get ("_id")).toHexString ());
+            if (usuario == null || this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
+                return Resposta.erro (401, "Invalid email or password");
+            token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                        usuario.getString ("propriedadeId"));
+        }
 
         return Resposta.json (200, new Document ("token", token).append ("usuario", AuthHandler.usuarioPublico (usuario)));
     }
@@ -193,7 +201,8 @@ public class AuthHandler
             return Resposta.erro (401, "Unauthorized");
 
         Document propriedade = this.usuarios.buscarPropriedade (sessao.getPropriedadeId ());
-        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario));
+        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario)
+                                         .append ("propriedadeId", sessao.getPropriedadeId ()));
 
         if (propriedade != null)
             ret.append ("propriedade", new Document ("id",   sessao.getPropriedadeId ())
