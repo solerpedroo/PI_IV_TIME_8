@@ -1,6 +1,6 @@
 package dados;
 
-/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoWriteException;

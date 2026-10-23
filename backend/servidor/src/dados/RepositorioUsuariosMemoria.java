@@ -1,3 +1,5 @@
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 package dados;
 
 import java.util.HashMap;

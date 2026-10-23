@@ -19,12 +19,15 @@ async function run(name, callback) {
     if (!target.startsWith(root + path.sep) || !fs.existsSync(target) || !fs.statSync(target).isFile()) return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ status: 200, contentType: mime[path.extname(target)] || 'application/octet-stream', body: fs.readFileSync(target) });
   });
-  await context.addInitScript(() => sessionStorage.setItem('agro.sessionToken', 'e2e-local'));
+  await context.addInitScript(() => {
+    sessionStorage.setItem('agro.sessionToken', 'e2e-local');
+    sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
+  });
   await context.route('http://127.0.0.1:8080/api/me', async (route) => {
     const headers = {'Access-Control-Allow-Origin': origin.slice(0, -1), 'Access-Control-Allow-Headers': 'Authorization',
       'Access-Control-Allow-Methods': 'GET, OPTIONS'};
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
-    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local"}}'});
+    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
   const page = await context.newPage();
   const errors = [];
@@ -55,7 +58,7 @@ async function submit(page, selector, values) {
   }, { selector, values });
 }
 async function data(page, key) {
-  return page.evaluate((key) => JSON.parse(localStorage.getItem('agro.operational.v1.' + key))?.data, key);
+  return page.evaluate((key) => JSON.parse(localStorage.getItem('agro.operational.v1.e2e-local.e2e-property.' + key))?.data, key);
 }
 async function clickCardAction(page, name, action) {
   await page.evaluate(({ name, action }) => {
@@ -170,13 +173,20 @@ let failures = 0;
   await run('dashboard: criar, concluir e compartilhar atividade', async (page) => {
     await go(page, 'dashboard.html');
     await page.locator('[data-open-new-activity]').click();
-    await submit(page, '[data-new-activity-form]', { 'activity-name': 'Atividade painel', 'activity-plot': 'A3' });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').talhao, 'Talhão A3');
+    await submit(page, '[data-new-activity-form]', { 'activity-name': 'Atividade painel', 'activity-plot': 'T-01 Norte' });
+    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').talhao, 'T-01 Norte');
     await page.reload();
     await page.evaluate(() => [...document.querySelectorAll('[data-activities-table] tr')].find((row) => row.textContent.includes('Atividade painel')).querySelector('[data-complete-activity]').click());
     await go(page, 'atividades.html');
     assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').status, 'Concluída');
     assert.equal(await page.locator('.kanban-card[data-activity="Atividade painel"]').count(), 1);
+  });
+
+  await run('dashboard continua utilizável com custos locais inválidos', async (page) => {
+    await page.addInitScript(() => localStorage.setItem('agro.operational.v1.e2e-local.e2e-property.costs', '{invalido'));
+    await go(page, 'dashboard.html');
+    assert.equal(await page.locator('[data-metric="cost"]').textContent(), '—');
+    assert.ok(Number(await page.locator('[data-metric="pending"]').textContent()) >= 0);
   });
 
   await run('notificações: lidas após recarga', async (page) => {
