@@ -21,12 +21,12 @@ test('dados locais separados por conta e propriedade, inclusive após logout', (
   }
   local.set('agro.operational.v1.notifications', JSON.stringify({version: 1, data: ['Legado sem dono']}));
   const a = page('conta-a', 'fazenda-a');
-  assert.ok(!a.api.read('notifications').includes('Legado sem dono'));
+  assert.ok(!a.api.read('notifications', []).includes('Legado sem dono'));
   assert.equal(a.api.save('notifications', ['Privado A']), true);
   const b = page('conta-b', 'fazenda-a');
-  assert.ok(!b.api.read('notifications').includes('Privado A'));
+  assert.ok(!b.api.read('notifications', []).includes('Privado A'));
   assert.equal(b.api.save('notifications', ['Privado B']), true);
-  assert.ok(!page('conta-a', 'fazenda-b').api.read('notifications').includes('Privado A'));
+  assert.ok(!page('conta-a', 'fazenda-b').api.read('notifications', []).includes('Privado A'));
   assert.equal(page('conta-a', 'fazenda-a').api.read('notifications')[0], 'Privado A');
   a.session.set('agro.sessionUser', JSON.stringify({id: 'conta-a', propriedadeId: 'fazenda-b'}));
   assert.equal(a.api.save('notifications', ['Gravação da aba antiga']), false);
