@@ -15,7 +15,10 @@ import java.time.Duration;
 public class ClienteCore
 {
     public static final int TIMEOUT_MS = 2000;
+    public static final int MAXIMO_CORPO = 1024 * 1024;
     private static final String CAMINHO_SAUDE = "/actuator/health";
+
+    public static final class CorpoGrande extends java.io.IOException {}
 
     private final String javaBaseUrl;
     private final HttpClient cliente;
@@ -50,11 +53,12 @@ public class ClienteCore
 
     public String getJavaBaseUrl () { return this.javaBaseUrl; }
 
-    // Descarta qualquer caminho da base e aceita apenas caminho/query da requisicao recebida.
+    // Descarta o caminho da base e preserva os escapes do caminho/query recebidos.
     private URI destino (String caminho, String query) throws Exception
     {
         URI base = URI.create (this.javaBaseUrl);
-        return new URI (base.getScheme (), null, base.getHost (), base.getPort (), caminho, query, null);
+        URI origem = new URI (base.getScheme (), null, base.getHost (), base.getPort (), "/", null, null);
+        return URI.create (origem.toASCIIString () + caminho.substring (1) + (query == null ? "" : "?" + query));
     }
 
     // readiness consulta somente a saude do core e nao uma rota de produto.
@@ -85,8 +89,9 @@ public class ClienteCore
     // Preserva metodo, corpo e os tres cabecalhos que fazem parte do contrato da API.
     public RespostaDoCore encaminhar (HttpExchange troca) throws Exception
     {
-        URI destino = this.destino (troca.getRequestURI ().getPath (), troca.getRequestURI ().getRawQuery ());
-        byte[] corpo = troca.getRequestBody ().readAllBytes ();
+        URI destino = this.destino (troca.getRequestURI ().getRawPath (), troca.getRequestURI ().getRawQuery ());
+        byte[] corpo = troca.getRequestBody ().readNBytes (ClienteCore.MAXIMO_CORPO + 1);
+        if (corpo.length > ClienteCore.MAXIMO_CORPO) throw new CorpoGrande ();
         HttpRequest.Builder pedido = HttpRequest.newBuilder (destino)
             .timeout (Duration.ofMillis (ClienteCore.TIMEOUT_MS))
             .method (troca.getRequestMethod (), HttpRequest.BodyPublishers.ofByteArray (corpo));

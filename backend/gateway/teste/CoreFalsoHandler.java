@@ -34,6 +34,11 @@ public class CoreFalsoHandler implements HttpHandler
                 retorno = 422;
                 resposta = "{\"error\":\"Business rule\"}";
             }
+            else if (caminho.equals ("/api/query"))
+            {
+                retorno = 200;
+                resposta = "{\"query\":\"" + troca.getRequestURI ().getRawQuery () + "\"}";
+            }
             else if (!caminho.equals ("/actuator/health"))
                 retorno = 404;
 

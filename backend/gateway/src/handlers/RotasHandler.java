@@ -69,6 +69,10 @@ public class RotasHandler implements HttpHandler
             ClienteCore.RespostaDoCore resposta = this.core.encaminhar (troca);
             Resposta.enviar (troca, resposta.getStatus (), resposta.getCorpo (), resposta.getTipo ());
         }
+        catch (ClienteCore.CorpoGrande erro)
+        {
+            Resposta.enviar (troca, 413, "{\"error\":\"Request body too large\"}");
+        }
         catch (HttpTimeoutException erro)
         {
             Resposta.enviar (troca, 504, RotasHandler.CORE_DOWN);

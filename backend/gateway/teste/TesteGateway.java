@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.URI;
 import com.sun.net.httpserver.HttpServer;
 import handlers.RotasHandler;
+import util.ClienteCore;
 
 /*
     Substitui o antigo server.test.ts (node:test), sem JUnit.
@@ -177,6 +178,15 @@ public class TesteGateway
                                    "{\"method\":\"POST\",\"body\":{\"nome\":\"Sul\"}}",
                                    Integer.parseInt (r[0]), r[1]);
             TesteGateway.conferir ("resposta de dominio continua JSON", r[2].startsWith ("application/json"));
+
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/query?termo=a%20b%26c");
+            TesteGateway.conferir ("query preserva escapes", 200,
+                                   "{\"query\":\"termo=a%20b%26c\"}", Integer.parseInt (r[0]), r[1]);
+
+            r = TesteGateway.requisitar ("POST", TesteGateway.endereco (gw) + "/api/parcelas",
+                                         "{\"payload\":\"" + "x".repeat (ClienteCore.MAXIMO_CORPO) + "\"}");
+            TesteGateway.conferir ("corpo acima do limite e rejeitado", 413,
+                                   "{\"error\":\"Request body too large\"}", Integer.parseInt (r[0]), r[1]);
 
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/erro");
             TesteGateway.conferir ("erro de negocio preservado", 422, "{\"error\":\"Business rule\"}",
