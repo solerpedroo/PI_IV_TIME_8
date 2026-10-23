@@ -12,7 +12,7 @@ core/ — Java 21 + Spring Boot 4.1.1
 MongoDB 8.0.32 (compose.yaml na raiz)
 ```
 
-O gateway ainda não expõe rotas de produto nem encaminha chamadas de domínio. Seu `GET /health` indica que o processo está ativo; `GET /ready` consulta o `GET /actuator/health` do Java e retorna 503 se o Java ou o MongoDB não estiver saudável. No Java, `GET /actuator/health/liveness` verifica o processo, enquanto `GET /actuator/health` inclui a disponibilidade do MongoDB. A conexão ao banco é configurada, mas nenhuma coleção, documento, modelo ou dado de exemplo é criado.
+O gateway encaminha exclusivamente chamadas sob `/api/**` ao core Java. Ele preserva método, corpo, query, `Authorization`, `Content-Type`, `Accept`, status, corpo e `Content-Type` da resposta do core. Seu `GET /health` indica apenas que o processo está ativo; `GET /ready` consulta o `GET /actuator/health` do Java e retorna 503 se o Java ou o MongoDB não estiver saudável. No Java, `GET /actuator/health/liveness` verifica o processo, enquanto `GET /actuator/health` inclui a disponibilidade do MongoDB. A conexão ao banco é configurada, mas nenhuma coleção, documento, modelo ou dado de exemplo é criado.
 
 ## Pré-requisitos
 
@@ -77,6 +77,21 @@ curl -i http://127.0.0.1:8080/ready
 curl -i http://127.0.0.1:8081/actuator/health/liveness
 curl -i http://127.0.0.1:8081/actuator/health
 ```
+
+## Contrato de encaminhamento
+
+```text
+frontend  -- /api/** -->  gateway:8080  -- mesmo método/corpo -->  core:8081
+```
+
+- `/health` e `/ready` são rotas próprias do gateway e não são encaminhadas;
+- apenas `/api/**` pode chegar ao core; os demais caminhos retornam `404`;
+- uma resposta de negócio do core, inclusive `4xx` ou `5xx`, é devolvida sem
+  trocar seu status ou corpo;
+- falha de conexão com o core retorna `502` e timeout retorna `504`, ambos com
+  `{"error":"Core unavailable"}`;
+- `/ready` permanece independente: core ou MongoDB indisponível resulta em
+  `503 {"status":"DOWN"}`, enquanto `/health` segue `200`.
 
 Com todos os serviços ativos, as quatro consultas devem retornar HTTP 200. Se Java ou MongoDB estiver indisponível, o gateway continua vivo em `/health`, mas `/ready` retorna HTTP 503. Interrompa o core e o gateway com `Ctrl+C` em seus terminais. Para parar o MongoDB sem excluir o volume de dados, execute `docker compose stop mongo` na raiz. `docker compose down` também remove o contêiner e a rede, mas preserva o volume nomeado; **não use `down -v`** se quiser preservar dados.
 
