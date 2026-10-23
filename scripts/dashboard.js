@@ -103,11 +103,13 @@
     const stock = local.read('stock');
     const occurrences = local.read('occurrences');
     const costs = local.read('costs');
-    const totalCosts = costs.entries.reduce((total, entry) => total + entry.value, 0);
+    const totalCosts = Array.isArray(costs.entries)
+      ? costs.entries.reduce((total, entry) => total + entry.value, 0)
+      : null;
 
     setMetric('areas', String(plots.filter((record) => record.status === 'Ativo').length));
     setMetric('stock', String(stock.filter((record) => record.qty < record.min).length));
-    setMetric('cost', money.format(totalCosts));
+    setMetric('cost', totalCosts === null ? '—' : money.format(totalCosts));
     renderAlerts(occurrences);
     renderCultures(plots);
     render();
