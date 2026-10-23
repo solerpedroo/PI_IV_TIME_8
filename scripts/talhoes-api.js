@@ -6,7 +6,6 @@
   const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
   const token = () => sessionStorage.getItem("agro.sessionToken");
   let talhoes = [];
-  const pendentes = new WeakMap();
 
   async function request(path, options = {}) {
     if (!token()) throw new Error("Sessão ausente.");
@@ -30,38 +29,30 @@
   async function iniciar() {
     try {
       talhoes = await request("/api/talhoes");
-      // A carga persistente só substitui os mocks quando há talhões reais.
-      // Assim, os dados iniciais dos três módulos continuam compatíveis em
-      // uma propriedade recém-criada, conforme o contrato desta tela.
-      if (!talhoes.length) return;
-      document.querySelectorAll("select[name=talhao], select[name=plot]").forEach(preencherSelect);
-    } catch {
-      // Sem sessao, os modulos mantem o estado visual atual ate o login ocorrer.
+      window.AgroLocal.save("plots", talhoes.map((item) => ({id: item.id, plot: item.nome,
+        crop: item.cultura.toLowerCase(), hectares: item.hectares, status: item.status})));
+    } catch (error) {
+      talhoes = window.AgroLocal.read("plots", []).map((item) => ({id: item.id, nome: item.plot}));
+      window.AgroToast?.show({type: "error", title: "Talhões sem conexão", description: error.message + " Exibindo somente o cache desta propriedade."});
     }
+    document.querySelectorAll("select[name=talhao], select[name=plot], select[name=activity-plot]").forEach(preencherSelect);
+    document.dispatchEvent(new Event("agro:plots-loaded"));
   }
 
-  // Registra operacoes novas no historico do talhao depois da validacao do modulo.
-  document.addEventListener("submit", (event) => {
-    const form = event.target;
-    const select = form.elements.talhao || form.elements.plot;
-    if (!select || !select.value) return;
-    const tipo = form.matches("[data-activity-form]") ? "atividade" : form.matches("[data-occ-form]") ? "ocorrencia" : form.matches("[data-cost-form]") ? "custo" : null;
-    const descricao = String(form.elements.nome?.value || form.elements.titulo?.value || form.elements.description?.value || "").trim();
-    const talhao = talhoes.find((item) => item.nome === select.value);
-    if (!tipo || !descricao || !talhao) return;
-    pendentes.set(form, { tipo, descricao, talhaoId: talhao.id });
-  }, true);
-
-  document.addEventListener("submit", (event) => {
-    const form = event.target;
-    const evento = pendentes.get(form);
-    if (!evento) return;
-    setTimeout(async () => {
-      if (form.querySelector("[aria-invalid=true]")) return;
-      if (!token()) return;
-      try { await request("/api/talhoes/" + evento.talhaoId + "/historico", { method: "POST", body: JSON.stringify({ tipo: evento.tipo, descricao: evento.descricao }) }); }
-      catch { /* A operacao local continua; o proximo envio pode ser repetido pelo usuario. */ }
-    }, 0);
+  // O módulo emite este evento apenas depois de confirmar a persistência.
+  // Um submit inválido ou uma falha de armazenamento nunca gera histórico.
+  document.addEventListener("agro:operation-saved", async ({detail}) => {
+    const talhao = talhoes.find((item) => item.nome === detail.talhao);
+    if (!talhao) return;
+    try {
+      await request("/api/talhoes/" + encodeURIComponent(talhao.id) + "/historico", {
+        method: "POST", body: JSON.stringify({tipo: detail.tipo, descricao: detail.descricao}),
+      });
+    } catch {
+      // Não repetimos automaticamente: uma resposta perdida pode já ter sido gravada.
+      window.AgroToast?.show({type: "error", title: "Histórico não confirmado",
+        description: "O registro foi salvo neste navegador, mas o envio do histórico não foi confirmado pelo servidor."});
+    }
   });
 
   document.addEventListener("DOMContentLoaded", iniciar);
