@@ -1,4 +1,4 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
 import dados.RepositorioTalhoes;
@@ -9,6 +9,7 @@ import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.EstaticosHandler;
+import handlers.PropriedadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import http.Roteador;
@@ -80,7 +81,8 @@ public class Servidor
 
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
-        new TalhoesHandler (talhoes).registrar           (roteador);
+        new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
+        new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 

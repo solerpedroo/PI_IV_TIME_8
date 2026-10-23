@@ -1,6 +1,6 @@
 package seguranca;
 
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import java.util.Map;
 import java.util.UUID;
@@ -78,6 +78,29 @@ public class Sessoes
     {
         if (token != null)
             this.sessoes.remove (token);
+    }
+
+    // Troca somente o contexto da propriedade do token autenticado. O replace condicional
+    // impede que uma sessao encerrada concorrentemente volte a existir.
+    public boolean selecionarPropriedade (String token, String propriedadeId) throws Exception
+    {
+        Sessao anterior = this.buscar (token);
+        if (anterior == null || propriedadeId == null)
+            return false;
+
+        Sessao atualizada = new Sessao (anterior.getUsuarioId (), propriedadeId,
+                                        anterior.getExpiraEm (), anterior.getOrdem ());
+        return this.sessoes.replace (token, anterior, atualizada);
+    }
+
+    // usado quando a senha muda: derruba todos os logins do usuario
+    public boolean propriedadeEmUso (String propriedadeId)
+    {
+        this.removerExpiradas ();
+        for (Sessao sessao : this.sessoes.values ())
+            if (sessao.getPropriedadeId ().equals (propriedadeId))
+                return true;
+        return false;
     }
 
     // usado quando a senha muda: derruba todos os logins do usuario

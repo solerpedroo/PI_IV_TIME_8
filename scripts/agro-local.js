@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 /* Persistência operacional compartilhada. Java continua no servidor; somente
  * JavaScript no navegador consegue acessar o localStorage deste dispositivo.
@@ -42,7 +43,10 @@
         && new Set(value.map((entry) => entry.id)).size === value.length}),
     notifications: list(text),
     settings: shape({profile: shape({name: text, email: text, phone: string, role: string}),
-      property: shape({farm: text, area: positive, city: string, harvest: oneOf("2025/26", "2026/27", "2024/25")}),
+      // Aceita o registro anterior sem localização apenas para leitura; no próximo
+      // salvamento a tela exige o novo campo e grava o formato completo.
+      property: (value) => shape({farm: text, area: positive, location: text, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value)
+        || shape({farm: text, area: positive, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value),
       preferences: shape(Object.fromEntries(["stock", "weather", "activities", "occurrences", "reports"].map((key) => [key, (value) => typeof value === "boolean"])))})
   };
   const blocked = new Set();

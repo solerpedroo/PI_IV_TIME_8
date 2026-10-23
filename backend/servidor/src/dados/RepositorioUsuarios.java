@@ -1,7 +1,8 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-
 package dados;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
+import java.util.List;
 import org.bson.Document;
 
 /*
@@ -23,4 +24,14 @@ public interface RepositorioUsuarios
     public void atualizar (String id, Document campos) throws Exception;
 
     public Document buscarPropriedade (String id) throws Exception;
+
+    // Todas as propriedades pertencentes ao usuario. O vinculo e verificado no banco,
+    // nunca a partir de um id enviado pelo navegador.
+    public List<Document> listarPropriedades (String usuarioId) throws Exception;
+
+    public Document criarPropriedade (String usuarioId, Document propriedade) throws Exception;
+
+    public boolean atualizarPropriedade (String usuarioId, String propriedadeId, Document campos) throws Exception;
+
+    public boolean excluirPropriedade (String usuarioId, String propriedadeId) throws Exception;
 }

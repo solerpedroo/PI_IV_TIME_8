@@ -1,7 +1,8 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-
 package dados;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 import org.bson.Document;
@@ -30,7 +31,8 @@ public class RepositorioUsuariosMemoria implements RepositorioUsuarios
         ObjectId idPropriedade = new ObjectId ();
         ObjectId idUsuario     = new ObjectId ();
 
-        Document novaPropriedade = new Document (propriedade).append ("_id", idPropriedade);
+        Document novaPropriedade = new Document (propriedade).append ("_id", idPropriedade)
+                                                        .append ("usuarioId", idUsuario.toHexString ());
         Document novoUsuario     = new Document (usuario).append ("_id", idUsuario)
                                                          .append ("propriedadeId", idPropriedade.toHexString ());
 
@@ -72,5 +74,50 @@ public class RepositorioUsuariosMemoria implements RepositorioUsuarios
     {
         Document ret = this.propriedades.get (id);
         return ret == null ? null : new Document (ret);
+    }
+
+    public synchronized ArrayList<Document> listarPropriedades (String usuarioId) throws Exception
+    {
+        ArrayList<Document> ret = new ArrayList<Document> ();
+        for (Document propriedade : this.propriedades.values ())
+            if (usuarioId.equals (propriedade.getString ("usuarioId")))
+                ret.add (new Document (propriedade));
+        return ret;
+    }
+
+    public synchronized Document criarPropriedade (String usuarioId, Document propriedade) throws Exception
+    {
+        if (this.usuarios.get (usuarioId) == null || propriedade == null)
+            return null;
+
+        Document criada = new Document (propriedade).append ("_id", new ObjectId ())
+                                                   .append ("usuarioId", usuarioId);
+        this.propriedades.put (((ObjectId) criada.get ("_id")).toHexString (), criada);
+        return new Document (criada);
+    }
+
+    public synchronized boolean atualizarPropriedade (String usuarioId, String propriedadeId, Document campos) throws Exception
+    {
+        Document propriedade = this.propriedades.get (propriedadeId);
+        if (propriedade == null || !usuarioId.equals (propriedade.getString ("usuarioId")))
+            return false;
+        propriedade.putAll (campos);
+        return true;
+    }
+
+    public synchronized boolean excluirPropriedade (String usuarioId, String propriedadeId) throws Exception
+    {
+        Document propriedade = this.propriedades.get (propriedadeId);
+        if (propriedade == null || !usuarioId.equals (propriedade.getString ("usuarioId")))
+            return false;
+        ArrayList<Document> restantes = this.listarPropriedades (usuarioId);
+        restantes.removeIf (item -> ((ObjectId) item.get ("_id")).toHexString ().equals (propriedadeId));
+        if (restantes.isEmpty ())
+            return false;
+        Document usuario = this.usuarios.get (usuarioId);
+        if (propriedadeId.equals (usuario.getString ("propriedadeId")))
+            usuario.put ("propriedadeId", ((ObjectId) restantes.get (0).get ("_id")).toHexString ());
+        this.propriedades.remove (propriedadeId);
+        return true;
     }
 }

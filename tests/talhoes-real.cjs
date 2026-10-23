@@ -39,8 +39,10 @@ const base = 'http://127.0.0.1:8080';
     browser = await launchTestBrowser(chromium);
     const context = await browser.newContext();
     await context.addInitScript(session => {
-      sessionStorage.setItem('agro.sessionToken', session.token);
-      sessionStorage.setItem('agro.sessionUser', JSON.stringify(session.usuario));
+      if (!sessionStorage.getItem('agro.sessionToken')) {
+        sessionStorage.setItem('agro.sessionToken', session.token);
+        sessionStorage.setItem('agro.sessionUser', JSON.stringify(session.usuario));
+      }
     }, session);
     const page = await context.newPage();
     const errors = [];
@@ -82,6 +84,46 @@ const base = 'http://127.0.0.1:8080';
     await page.locator('[data-activity-form]').evaluate(form => form.requestSubmit());
     assert.equal((await historyResponse).status(), 201);
     assert.equal((await api('/api/talhoes/' + plot.id + '/historico', null, session.token)).length, 1);
+    const properties = await fetch(base + '/api/propriedades', {headers: {Authorization: 'Bearer ' + session.token}});
+    // O mesmo teste continua útil nas branches anteriores ao CRUD de propriedades.
+    if (properties.ok) {
+      const originalId = session.usuario.propriedadeId;
+      await page.evaluate(() => window.AgroLocal.save('notifications', ['Somente propriedade original']));
+      await page.goto(base + '/configuracoes.html#settings-property');
+      await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
+      await page.locator('[data-new-property]').click();
+      await page.locator('[name=farm]').fill('Fazenda Segunda');
+      await page.locator('[name=area]').fill('25');
+      await page.locator('[name=location]').fill('Rodovia 1');
+      await page.locator('[name=city]').fill('Campinas');
+      await page.locator('[data-open-harvest-modal]').click();
+      await page.locator('[data-harvest-option="2026/27"]').click();
+      await page.locator('[data-confirm-harvest]').click();
+      const createdResponse = page.waitForResponse(response => response.url().endsWith('/api/propriedades') && response.request().method() === 'POST');
+      await page.locator('#property-form').evaluate(form => form.requestSubmit());
+      const newProperty = await (await createdResponse).json();
+      await page.locator('.property-context-select option[value="' + newProperty.id + '"]').waitFor({state: 'attached'});
+      await page.locator('.property-context-select').selectOption(newProperty.id);
+      await page.waitForFunction(id => JSON.parse(sessionStorage.getItem('agro.sessionUser')).propriedadeId === id
+        && document.querySelector('[name=farm]')?.value === 'Fazenda Segunda', newProperty.id);
+      const me = await api('/api/me', null, session.token);
+      assert.equal(me.usuario.propriedadeId, newProperty.id);
+      assert.equal(me.propriedade.farm, 'Fazenda Segunda');
+      assert.equal(await page.evaluate(() => window.AgroLocal.read('notifications', []).includes('Somente propriedade original')), false);
+      await Promise.all([
+        page.waitForResponse(response => response.url().endsWith('/api/talhoes')),
+        page.goto(base + '/areas-cultivo.html'),
+      ]);
+      assert.equal((await api('/api/talhoes', null, session.token)).length, 0);
+      await page.goto(base + '/configuracoes.html#settings-property');
+      await page.locator('.property-context-select option[value="' + originalId + '"]').waitFor({state: 'attached'});
+      await page.locator('.property-context-select').selectOption(originalId);
+      await page.waitForFunction(id => JSON.parse(sessionStorage.getItem('agro.sessionUser')).propriedadeId === id
+        && document.querySelector('[name=farm]')?.value === 'Fazenda Real', originalId);
+      assert.equal(await page.evaluate(() => window.AgroLocal.read('notifications', [])[0]), 'Somente propriedade original');
+      assert.equal((await api('/api/talhoes', null, session.token))[0].nome, 'Talhão Real');
+      console.log('OK propriedades reais: cadastro pela UI, seleção, me e isolamento de cache entre contextos');
+    }
     assert.deepEqual(errors, []);
     console.log('OK API Java real: cadastro, confirmação, login, criação, painel, dropdown e histórico somente após salvar');
   } finally {
