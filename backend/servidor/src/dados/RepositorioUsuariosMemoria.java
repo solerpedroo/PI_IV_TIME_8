@@ -110,6 +110,13 @@ public class RepositorioUsuariosMemoria implements RepositorioUsuarios
         Document propriedade = this.propriedades.get (propriedadeId);
         if (propriedade == null || !usuarioId.equals (propriedade.getString ("usuarioId")))
             return false;
+        ArrayList<Document> restantes = this.listarPropriedades (usuarioId);
+        restantes.removeIf (item -> ((ObjectId) item.get ("_id")).toHexString ().equals (propriedadeId));
+        if (restantes.isEmpty ())
+            return false;
+        Document usuario = this.usuarios.get (usuarioId);
+        if (propriedadeId.equals (usuario.getString ("propriedadeId")))
+            usuario.put ("propriedadeId", ((ObjectId) restantes.get (0).get ("_id")).toHexString ());
         this.propriedades.remove (propriedadeId);
         return true;
     }
