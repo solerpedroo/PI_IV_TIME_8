@@ -19,6 +19,13 @@ async function run(name, callback) {
     if (!target.startsWith(root + path.sep) || !fs.existsSync(target) || !fs.statSync(target).isFile()) return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ status: 200, contentType: mime[path.extname(target)] || 'application/octet-stream', body: fs.readFileSync(target) });
   });
+  await context.addInitScript(() => sessionStorage.setItem('agro.sessionToken', 'e2e-local'));
+  await context.route('http://127.0.0.1:8080/api/me', async (route) => {
+    const headers = {'Access-Control-Allow-Origin': origin.slice(0, -1), 'Access-Control-Allow-Headers': 'Authorization',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS'};
+    if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
+    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local"}}'});
+  });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
