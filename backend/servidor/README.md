@@ -2,6 +2,33 @@
 
 # Servidor AgroGestão (Java, HTTP feito à mão)
 
+## Propriedades e contexto autenticado
+
+`GET/POST /api/propriedades`, `GET/PUT/DELETE /api/propriedades/{id}` e
+`POST /api/propriedades/{id}/selecionar` usam o usuário autenticado como dono.
+Nome, área numérica em hectares, localização, município e safra são validados
+no servidor. Configurações permite cadastrar, editar e selecionar a propriedade;
+a safra escolhida no modal só é confirmada pelo botão **Salvar propriedade**.
+
+A seleção vale para o token atual; `/api/me` devolve esse contexto ativo.
+O navegador recarrega após selecionar e passa a usar o cache local separado
+por usuário/propriedade. Talhões sempre são filtrados pelo contexto do servidor.
+Não se exclui a última propriedade, uma propriedade com talhões ou em uso em
+qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
+do usuário muda para uma das restantes na mesma operação de persistência.
+
+No MongoDB, propriedades antigas sem `usuarioId` são vinculadas somente quando
+o próprio documento do usuário comprova o vínculo por `propriedadeId`; um dono
+já definido nunca é sobrescrito. As exclusões e a atualização da referência
+padrão usam transação, exigindo replica set (como o cadastro).
+Sessões e coordenação de contexto são locais ao processo Java; esta execução
+não oferece implantação com múltiplas instâncias compartilhando sessões.
+
+`bash testar.sh` valida o servidor em memória. `teste/TesteMongo.java` inclui
+testes de migração e exclusão transacional, exige banco com nome terminado em
+`_teste` e limpa somente esse banco de testes. A execução com MongoDB/SMTP
+externos precisa de ambiente configurado e não é substituída pela suíte em memória.
+
 Servidor do projeto em Java 21 puro. O HTTP é implementado manualmente sobre
 `java.net.ServerSocket`/`Socket` (sem `HttpServer`, Spring, Netty etc.). A única
 biblioteca externa é o driver oficial do MongoDB (`lib/`).
