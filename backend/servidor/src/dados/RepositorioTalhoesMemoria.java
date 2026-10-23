@@ -1,5 +1,3 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-
 package dados;
 
 import java.util.ArrayList;
@@ -15,6 +13,7 @@ import org.bson.types.ObjectId;
 public class RepositorioTalhoesMemoria implements RepositorioTalhoes
 {
     private final LinkedHashMap<String, Document> talhoes = new LinkedHashMap<String, Document> ();
+    private final LinkedHashMap<String, ArrayList<Document>> historicos = new LinkedHashMap<String, ArrayList<Document>> ();
 
     public synchronized List<Document> listar (String propriedadeId) throws Exception
     {
@@ -83,5 +82,19 @@ public class RepositorioTalhoesMemoria implements RepositorioTalhoes
 
         talhao.putAll (campos);
         return true;
+    }
+
+    public synchronized void criarHistorico (String propriedadeId, String talhaoId, Document evento) throws Exception
+    {
+        if (this.buscarPorId (propriedadeId, talhaoId) == null) throw new Exception ("Talhao inexistente");
+        this.historicos.computeIfAbsent (talhaoId, chave -> new ArrayList<Document> ()).add (new Document (evento));
+    }
+
+    public synchronized List<Document> listarHistorico (String propriedadeId, String talhaoId) throws Exception
+    {
+        if (this.buscarPorId (propriedadeId, talhaoId) == null) return new ArrayList<Document> ();
+        ArrayList<Document> ret = new ArrayList<Document> ();
+        for (Document evento : this.historicos.getOrDefault (talhaoId, new ArrayList<Document> ())) ret.add (new Document (evento));
+        return ret;
     }
 }

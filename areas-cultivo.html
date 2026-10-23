@@ -1,3 +1,4 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -468,6 +469,15 @@
           <label for="talhao-hectares">Hectares *</label>
           <input id="talhao-hectares" name="hectares" type="number" min="1" step="0.1" placeholder="Ex.: 45" required>
           <p class="field-error" data-error-for="hectares"></p>
+        </div>
+        <div class="input-group">
+          <label for="talhao-safra">Safra *</label>
+          <select id="talhao-safra" name="safra" required>
+            <option value="2025/26">2025/26</option>
+            <option value="2024/25">2024/25</option>
+            <option value="2026/27">2026/27</option>
+          </select>
+          <p class="field-error" data-error-for="safra"></p>
         </div>
         <div class="input-group">
           <label for="talhao-status-trigger">Status</label>

@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { mockApi } = require("./mock-api.cjs");
 
 const root = process.cwd();
 const origin = "http://agro.local";
@@ -40,6 +41,7 @@ async function context(browser, storageFailure) {
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
+  await mockApi(browserContext, origin);
   if (storageFailure) {
     await browserContext.addInitScript((mode) => {
       const get = Storage.prototype.getItem;
@@ -147,7 +149,7 @@ async function test(name, run) {
         await page.locator("[data-open-modal='occ-form']").click();
         await page.locator("[data-occ-form] [name='titulo']").fill("Ocorrência teste <segura>");
         await page.locator("[data-occ-form] [name='tipo']").selectOption("Praga");
-        await page.locator("[data-occ-form] [name='talhao']").selectOption("Talhão A1");
+        await page.locator("[data-occ-form] [name='talhao']").selectOption("T-01 Norte");
         await submit(page, "[data-occ-form]");
         const row = () => page.locator("[data-occ-table] tbody tr").last();
         assert.equal(await row().getAttribute("data-occ"), "Ocorrência teste <segura>");

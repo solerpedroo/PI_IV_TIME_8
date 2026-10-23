@@ -154,6 +154,7 @@
       activities.push({id: local.id(), activity: name, tipo: 'Manutenção', talhao: plot,
         date: new Date().toLocaleDateString('pt-BR'), status: 'Pendente'});
       if (!persist()) { activities = previous; render(); return; }
+      document.dispatchEvent(new CustomEvent('agro:operation-saved', {detail: {tipo: 'atividade', descricao: name, talhao: plot}}));
       render(); close(); form.reset();
       window.AgroToast?.show({type: 'success', title: 'Atividade registrada', description: name + ' salva neste navegador.'});
     });
@@ -172,6 +173,7 @@
     // Outra aba pode alterar os dados enquanto o painel estiver aberto.
     window.addEventListener('storage', refresh);
     window.addEventListener('pageshow', refresh);
+    document.addEventListener('agro:plots-loaded', refresh);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

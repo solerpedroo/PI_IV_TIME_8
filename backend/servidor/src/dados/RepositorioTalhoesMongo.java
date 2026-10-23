@@ -1,5 +1,3 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-
 package dados;
 
 import com.mongodb.ErrorCategory;
@@ -23,6 +21,7 @@ import org.bson.types.ObjectId;
 public class RepositorioTalhoesMongo implements RepositorioTalhoes
 {
     private final MongoCollection<Document> talhoes;
+    private final MongoCollection<Document> historicos;
 
     public RepositorioTalhoesMongo (MongoDatabase banco) throws Exception
     {
@@ -30,6 +29,7 @@ public class RepositorioTalhoesMongo implements RepositorioTalhoes
             throw new Exception ("Banco ausente");
 
         this.talhoes = banco.getCollection ("talhoes");
+        this.historicos = banco.getCollection ("historicos_talhoes");
 
         this.talhoes.createIndex (Indexes.ascending ("propriedadeId", "nomeNormalizado"),
                                   new IndexOptions ().unique (true));
@@ -111,5 +111,18 @@ public class RepositorioTalhoesMongo implements RepositorioTalhoes
                 return false;
             throw erro;
         }
+    }
+
+    public void criarHistorico (String propriedadeId, String talhaoId, Document evento) throws Exception
+    {
+        if (this.buscarPorId (propriedadeId, talhaoId) == null) throw new Exception ("Talhao inexistente");
+        evento.append ("propriedadeId", propriedadeId).append ("talhaoId", talhaoId);
+        this.historicos.insertOne (evento);
+    }
+
+    public List<Document> listarHistorico (String propriedadeId, String talhaoId) throws Exception
+    {
+        return this.historicos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("talhaoId", talhaoId)))
+                             .sort (Sorts.descending ("criadoEm")).into (new ArrayList<Document> ());
     }
 }

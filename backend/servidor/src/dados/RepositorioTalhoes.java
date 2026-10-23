@@ -1,5 +1,3 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-
 package dados;
 
 import java.util.List;
@@ -22,4 +20,8 @@ public interface RepositorioTalhoes
 
     // $set dos campos; false se o novo nome ja existir em outro talhao da propriedade
     public boolean atualizar (String propriedadeId, String id, Document campos) throws Exception;
+
+    // Eventos de atividade, ocorrencia e custo permanecem vinculados ao talhao.
+    public void criarHistorico (String propriedadeId, String talhaoId, Document evento) throws Exception;
+    public List<Document> listarHistorico (String propriedadeId, String talhaoId) throws Exception;
 }
