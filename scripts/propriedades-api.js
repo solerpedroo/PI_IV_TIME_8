@@ -13,9 +13,10 @@
   if (!form) return;
 
   const token = () => sessionStorage.getItem("agro.sessionToken");
+  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
   const request = async (path, options = {}) => {
-    const response = await fetch(path, {
+    const response = await fetch(base + path, {
       ...options,
       headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json", ...(options.headers || {}) }
     });
@@ -56,12 +57,19 @@
   }
 
   selector.addEventListener("change", async () => {
+    selector.disabled = true;
     try {
-      await request(`/api/propriedades/${encodeURIComponent(selector.value)}/selecionar`, { method: "POST", body: "{}" });
-      currentId = selector.value;
-      fill(properties.find((property) => property.id === currentId));
-      toast("success", "Propriedade selecionada", "O contexto foi atualizado para todos os módulos.");
-    } catch (error) { toast("error", "Não foi possível trocar", error.message); }
+      const selected = await request(`/api/propriedades/${encodeURIComponent(selector.value)}/selecionar`, { method: "POST", body: "{}" });
+      const user = JSON.parse(sessionStorage.getItem("agro.sessionUser"));
+      user.propriedadeId = selected.propriedadeId;
+      sessionStorage.setItem("agro.sessionUser", JSON.stringify(user));
+      // Reinicializa também os módulos locais no namespace da nova propriedade.
+      window.location.reload();
+    } catch (error) {
+      selector.value = currentId;
+      selector.disabled = false;
+      toast("error", "Não foi possível trocar", error.message);
+    }
   });
 
   // Limpa o formulário para que o próximo salvamento crie uma nova propriedade.
@@ -77,6 +85,9 @@
     if (!token()) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    if (form.getAttribute("aria-busy") === "true") return;
+    form.setAttribute("aria-busy", "true");
+    form.querySelectorAll("[aria-invalid]").forEach(control => control.removeAttribute("aria-invalid"));
     const payload = {
       nome: form.elements.farm.value.trim(), areaHectares: Number(form.elements.area.value), localizacao: form.elements.location.value.trim(),
       municipio: form.elements.city.value.trim(), safraAtual: form.elements.harvest.value
@@ -96,6 +107,8 @@
         toast("error", "Dados inválidos", message);
       });
       if (!Object.keys(fields).length) toast("error", "Não foi possível salvar", error.message);
+    } finally {
+      form.removeAttribute("aria-busy");
     }
   }, true);
 
