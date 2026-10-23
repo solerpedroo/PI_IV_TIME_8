@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 window.AgroOperationalDefaults = {
   "plots": [
