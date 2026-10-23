@@ -26,13 +26,16 @@ public class TalhoesHandler
     public static final List<String> SAFRAS    = List.of ("2024/25", "2025/26", "2026/27");
 
     private final RepositorioTalhoes talhoes;
+    private final seguranca.Sessoes sessoes;
 
-    public TalhoesHandler (RepositorioTalhoes talhoes) throws Exception
+    public TalhoesHandler (RepositorioTalhoes talhoes, seguranca.Sessoes sessoes) throws Exception
     {
         if (talhoes == null)
             throw new Exception ("Repositorio de talhoes ausente");
 
         this.talhoes = talhoes;
+        if (sessoes == null) throw new Exception ("Sessoes ausentes");
+        this.sessoes = sessoes;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -150,6 +153,20 @@ public class TalhoesHandler
 
     // POST /api/talhoes
     private Resposta criar (Requisicao requisicao) throws Exception
+    {
+        // Serializa com seleção/exclusão: uma requisição que capturou o contexto
+        // anterior não pode criar o primeiro talhão depois de excluir a fazenda.
+        synchronized (this.sessoes)
+        {
+            seguranca.Sessao atual = this.sessoes.buscar (requisicao.getToken ());
+            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
+                return Resposta.erro (409, "Property context changed; reload before saving");
+            return this.criarProtegido (requisicao);
+        }
+    }
+
+    private Resposta criarProtegido (Requisicao requisicao) throws Exception
     {
         Document  corpo     = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
