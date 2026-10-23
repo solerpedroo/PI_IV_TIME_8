@@ -254,6 +254,7 @@ public class TesteServidor
         Resp saude = get ("/health", null);
         conferir ("GET /health -> 200 UP", saude.status == 200 && saude.corpo.equals ("{\"status\":\"UP\"}"));
         conferir ("GET /ready (memoria) -> 200", 200, get ("/ready", null));
+        conferir ("saude compativel com gateway Java -> 200", 200, get ("/actuator/health", null));
 
         Resp raiz = get ("/", null);
         conferir ("/ redireciona para login.html", raiz.status == 302 && "/login.html".equals (raiz.cabecalho ("Location")));
