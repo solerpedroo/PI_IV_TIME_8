@@ -206,8 +206,8 @@ public class AuthHandler
 
         if (propriedade != null)
             ret.append ("propriedade", new Document ("id",   sessao.getPropriedadeId ())
-                                           .append ("farm", propriedade.getString ("farm"))
-                                           .append ("area", propriedade.getString ("area")));
+                                           .append ("farm", propriedade.getString ("nome") == null ? propriedade.getString ("farm") : propriedade.getString ("nome"))
+                                           .append ("area", propriedade.containsKey ("areaHectares") ? propriedade.get ("areaHectares") : propriedade.get ("area")));
 
         return Resposta.json (200, ret);
     }
