@@ -82,7 +82,7 @@ public class Servidor
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
-        new TalhoesHandler (talhoes).registrar           (roteador);
+        new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
