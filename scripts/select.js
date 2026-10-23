@@ -71,7 +71,9 @@
     if (native.id) menu.id = `${native.id}-listbox`;
     trigger.setAttribute("aria-controls", menu.id);
 
-    [...native.options].forEach((opt, index) => {
+    function renderOptions() {
+      menu.replaceChildren();
+      [...native.options].forEach((opt, index) => {
       // Pula o option vazio do placeholder na lista visual? Mantém como no nativo.
       const li = document.createElement("li");
       li.setAttribute("role", "none");
@@ -99,7 +101,9 @@
 
       li.appendChild(btn);
       menu.appendChild(li);
-    });
+      });
+    }
+    renderOptions();
 
     function syncFromNative() {
       const selected = native.options[native.selectedIndex];
@@ -163,6 +167,9 @@
     root.appendChild(native);
 
     native.addEventListener("change", syncFromNative);
+    // A API substitui as opções após o carregamento inicial da página.
+    new MutationObserver(() => { renderOptions(); syncFromNative(); })
+      .observe(native, {childList: true, subtree: true, characterData: true});
     syncFromNative();
   }
 
