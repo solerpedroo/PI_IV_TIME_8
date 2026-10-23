@@ -1,104 +1,53 @@
-# Fundação do backend
+# Backend Java do AgroGestão
 
-Esta pasta inicia a arquitetura do backend:
+O ponto de entrada principal é `servidor/`: Java puro com `ServerSocket`, sem
+Spring e sem Maven. Ele serve as páginas do frontend e a API na mesma origem.
+O diretório `core/` é uma fundação anterior e não participa deste fluxo.
 
-```text
-frontend estático (ainda independente)
-    ↓ integração futura
-gateway/ — Java 21 puro (sem framework, sem Maven)
-    ↓ verificação de disponibilidade
-core/ — Java 21 + Spring Boot 4.1.1
-    ↓ conexão e health indicator
-MongoDB 8.0.32 (compose.yaml na raiz)
-```
+## Executar
 
-O gateway encaminha exclusivamente chamadas sob `/api/**` ao core Java. Ele preserva método, corpo, query, `Authorization`, `Content-Type`, `Accept`, status, corpo e `Content-Type` da resposta do core. Seu `GET /health` indica apenas que o processo está ativo; `GET /ready` consulta o `GET /actuator/health` do Java e retorna 503 se o Java ou o MongoDB não estiver saudável. No Java, `GET /actuator/health/liveness` verifica o processo, enquanto `GET /actuator/health` inclui a disponibilidade do MongoDB. A conexão ao banco é configurada, mas nenhuma coleção, documento, modelo ou dado de exemplo é criado.
-
-## Pré-requisitos
-
-- JDK 21 (usado pelo gateway e pelo core; `javac` e `java` da mesma versão no `PATH`);
-- Maven 3.6.3 ou superior (somente para o core);
-- Docker com Compose para MongoDB local, ou MongoDB 8.0.x já disponível;
-- portas 8080, 8081 e 27017 livres (ou ajuste no ambiente).
-
-## Configuração e execução local
-
-Na raiz do repositório, copie `.env.example` para `.env` e ajuste os valores. O arquivo `.env` é ignorado pelo Git. A configuração de exemplo usa um MongoDB **sem autenticação e acessível somente em loopback**; não a utilize em redes compartilhadas ou produção. Para outra instância, altere `MONGODB_URI` e configure autenticação e rede adequadas fora desta fundação.
-
-Inicie o banco:
+Com JDK 21 no PATH, a partir da raiz do projeto:
 
 ```bash
-docker compose up -d mongo
-docker compose ps
+bash backend/servidor/testar.sh
+cd backend/servidor
+bash compilar.sh
+bash rodar.sh --memoria
 ```
 
-Carregue o ambiente no terminal que iniciará cada processo (na raiz do projeto):
+Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os registros
+do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para
+persistência, configure `MONGODB_URI` (MongoDB local ou Atlas) e execute
+`bash rodar.sh` sem `--memoria`. Não é necessário Docker para usar Atlas.
+No Windows, use os scripts `.bat` equivalentes. Consulte
+[servidor/README.md](servidor/README.md) para configuração de SMTP e MongoDB.
 
-```bash
-set -a
-. ./.env
-set +a
-```
+`GET /health` verifica o processo; `GET /ready` verifica também o banco quando
+configurado. Cadastro, confirmação de e-mail, login e talhões usam `/api/**`.
 
-Em um terminal, inicie o Java:
+## Gateway opcional
 
-```bash
-cd backend/core
-mvn test
-mvn spring-boot:run
-```
-
-Em outro terminal, após carregar o mesmo `.env`, inicie o gateway:
+`gateway/` também é Java puro. Para usá-lo, mantenha o servidor principal na
+porta 8080 e inicie o gateway em outra porta, por exemplo:
 
 ```bash
 cd backend/gateway
-./testar.sh     # compila e roda os testes
-./compilar.sh   # compila para bin/
-./rodar.sh      # inicia o gateway
+bash testar.sh
+bash compilar.sh
+GATEWAY_PORT=8082 JAVA_BASE_URL=http://127.0.0.1:8080 bash rodar.sh
 ```
 
-No Windows, use `testar.bat`, `compilar.bat` e `rodar.bat`. O gateway não tem dependências externas: os scripts chamam `javac --release 21` e `java` diretamente, e a saída compilada fica em `backend/gateway/bin/` (ignorada pelo Git).
+O gateway encaminha `/api/**`, preservando método, query, corpo e autenticação.
+As páginas continuam sendo servidas pelo servidor principal na porta 8080.
+O endpoint de compatibilidade `/actuator/health` do servidor Java permite que
+o `/ready` do gateway consulte a prontidão sem depender de Spring.
 
-O gateway lê três variáveis de ambiente, todas com padrão:
+## Dados operacionais no navegador
 
-| Variável | Padrão | Uso |
-|---|---|---|
-| `GATEWAY_HOST` | `127.0.0.1` | endereço em que o gateway escuta |
-| `GATEWAY_PORT` | `8080` | porta TCP (1 a 65535); valor inválido impede a inicialização |
-| `JAVA_BASE_URL` | `http://127.0.0.1:8081` | endereço do core consultado pelo `/ready` |
-
-Mantenha `GATEWAY_HOST` em `127.0.0.1` fora de um ambiente controlado: o gateway atende com um pool fixo de 10 threads e cada `/ready` pode esperar até 2 segundos pelo core, sem limite de requisições.
-
-Verificações manuais:
-
-```bash
-curl -i http://127.0.0.1:8080/health
-curl -i http://127.0.0.1:8080/ready
-curl -i http://127.0.0.1:8081/actuator/health/liveness
-curl -i http://127.0.0.1:8081/actuator/health
-```
-
-## Contrato de encaminhamento
-
-```text
-frontend  -- /api/** -->  gateway:8080  -- mesmo método/corpo -->  core:8081
-```
-
-- `/health` e `/ready` são rotas próprias do gateway e não são encaminhadas;
-- apenas `/api/**` pode chegar ao core; os demais caminhos retornam `404`;
-- uma resposta de negócio do core, inclusive `4xx` ou `5xx`, é devolvida sem
-  trocar seu status ou corpo;
-- falha de conexão com o core retorna `502` e timeout retorna `504`, ambos com
-  `{"error":"Core unavailable"}`;
-- `/ready` permanece independente: core ou MongoDB indisponível resulta em
-  `503 {"status":"DOWN"}`, enquanto `/health` segue `200`.
-
-Com todos os serviços ativos, as quatro consultas devem retornar HTTP 200. Se Java ou MongoDB estiver indisponível, o gateway continua vivo em `/health`, mas `/ready` retorna HTTP 503. Interrompa o core e o gateway com `Ctrl+C` em seus terminais. Para parar o MongoDB sem excluir o volume de dados, execute `docker compose stop mongo` na raiz. `docker compose down` também remove o contêiner e a rede, mas preserva o volume nomeado; **não use `down -v`** se quiser preservar dados.
-
-Os testes Maven (`mvn test`) carregam o contexto Spring **sem** exigir MongoDB em execução (auto-configuração Mongo desabilitada em `src/test/resources/application.properties`). Em runtime, o core ainda depende do MongoDB para health completo.
-
-## Limites atuais
-
-- Nenhuma tela foi conectada ao gateway; o frontend segue com mocks locais.
-- Não há autenticação, autorização, rotas de negócio, CRUD, esquema de coleções, migrações ou regras agrícolas.
-- Não há configuração de produção (TLS, credenciais, observabilidade ou deploy).
+Atividades, insumos, ocorrências, custos e preferências ainda usam armazenamento
+local, separado pelo ID do usuário e da propriedade da sessão. Não são um
+substituto para persistência/autorização no servidor nem sincronizam dispositivos.
+Registros legados em `agro.operational.v1.*` sem identificação de dono permanecem
+intactos, mas não são importados automaticamente: não é possível determinar a
+qual conta pertencem. Uma eventual recuperação deve confirmar o dono antes de
+copiar os registros para o contexto correspondente.
