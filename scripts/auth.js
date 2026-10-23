@@ -1,13 +1,13 @@
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 /**
  * Agro — interações das telas de autenticação
  * --------------------------------------------------------------------------
  * Responsabilidades:
  * - Validação client-side (obrigatórios, e-mail, senha, termos)
  * - Toggle de senha, medidor de força e máscara de telefone
- * - Navegação mock entre páginas (sem API real)
- * - Persistência leve via sessionStorage (e-mail / flash de sucesso)
- *
- * Quando a API existir, substitua a função `simulateRequest` por fetch real.
+ * - Login e cadastro conectados à API quando o servidor estiver disponível
+ * - Persistência de token de sessão, e-mail e mensagens transitórias
  */
 (() => {
   "use strict";
@@ -21,7 +21,28 @@
   const STORAGE = {
     pendingEmail: "agro.pendingEmail",
     flashSuccess: "agro.flashSuccess",
+    sessionToken: "agro.sessionToken",
   };
+
+  // Converte somente os campos presentes no formulário para o contrato da API.
+  async function authenticate(form) {
+    const isLogin = location.pathname.endsWith("login.html");
+    const data = Object.fromEntries(new FormData(form));
+    const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+    if (!isLogin) data.terms = form.querySelector("[name='terms']")?.checked === true;
+
+    const response = await fetch(endpoint, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const firstField = Object.entries(body.fields || {})[0];
+      if (firstField) setError(form.elements[firstField[0]], firstField[1]);
+      throw new Error(body.error || firstField?.[1] || "Não foi possível concluir a solicitação.");
+    }
+    if (body.token) sessionStorage.setItem(STORAGE.sessionToken, body.token);
+    return body;
+  }
 
   const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
 
@@ -312,7 +333,14 @@
         }
 
         setLoading(form, true);
-        await simulateRequest();
+        try {
+          await authenticate(form);
+        } catch (error) {
+          setLoading(form, false);
+          form.classList.add("is-invalid");
+          showMessage(form, error.message);
+          return;
+        }
         setLoading(form, false);
 
         // Persistência leve para a tela de confirmação de e-mail.
