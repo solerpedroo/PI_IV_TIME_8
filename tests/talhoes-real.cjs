@@ -45,8 +45,10 @@ const base = 'http://127.0.0.1:8080';
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(base + '/areas-cultivo.html');
-    await page.waitForResponse(response => response.url().endsWith('/api/talhoes'));
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/talhoes')),
+      page.goto(base + '/areas-cultivo.html'),
+    ]);
     await page.locator('[data-open-modal="talhao-form"]').click();
     await page.locator('[name=nome]').fill('Talhão Real');
     await page.locator('[name=cultura]').selectOption('Soja');
