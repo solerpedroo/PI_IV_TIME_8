@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — chrome do app shell
  * --------------------------------------------------------------------------
@@ -304,6 +305,7 @@
     const confirm = $("[data-confirm-logout]", modal);
     if (confirm) {
       confirm.addEventListener("click", () => {
+        sessionStorage.removeItem("agro.sessionToken");
         sessionStorage.setItem(
           STORAGE.flashSuccess,
           "Você saiu com segurança."
