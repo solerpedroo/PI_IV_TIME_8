@@ -1,3 +1,4 @@
+# Autor: Vinícius Panutti Salgado — R.A. 25007329
 # Segredos — nunca commitar
 .env
 .env.*
@@ -13,6 +14,23 @@
 !*.env.example
 !*.env.sample
 !*.env.template
+
+# Chaves, certificados e credenciais locais
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+secrets/
+
+# Exportações e históricos locais do MongoDB
+dump/
+*.bson
+*.bson.gz
+*.mongoarchive
+.mongosh*
 
 # SO / editor
 .DS_Store

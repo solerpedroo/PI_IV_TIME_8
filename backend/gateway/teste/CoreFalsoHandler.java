@@ -1,4 +1,5 @@
 /*
+    Alterado por: Vinícius Panutti Salgado — R.A. 25007329
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
@@ -6,7 +7,7 @@ import java.io.OutputStream;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-// Finge ser o core Spring: responde GET /actuator/health com o status escolhido
+// Finge ser o core Java puro: responde GET /ready com o status escolhido
 public class CoreFalsoHandler implements HttpHandler
 {
     private int status;
@@ -24,7 +25,7 @@ public class CoreFalsoHandler implements HttpHandler
             byte[] bytes   = "{\"status\":\"UP\"}".getBytes ("UTF-8");
             int    retorno = this.status;
 
-            if (!troca.getRequestURI().getPath().equals("/actuator/health"))
+            if (!troca.getRequestURI().getPath().equals("/ready"))
                 retorno = 404;
 
             troca.getResponseHeaders().set ("Content-Type", "application/json");
