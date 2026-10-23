@@ -30,6 +30,13 @@ async function context(browser, storageFailure) {
     }
     return route.fulfill({status: 200, contentType: mime[path.extname(file)] || "application/octet-stream", body: fs.readFileSync(file)});
   });
+  await browserContext.addInitScript(() => sessionStorage.setItem('agro.sessionToken', 'e2e-local'));
+  await browserContext.route('http://127.0.0.1:8080/api/me', async (route) => {
+    const headers = {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS'};
+    if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
+    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local"}}'});
+  });
   if (storageFailure) {
     await browserContext.addInitScript((mode) => {
       const get = Storage.prototype.getItem;
