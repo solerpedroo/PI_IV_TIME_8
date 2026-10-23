@@ -35,9 +35,16 @@ final class HistoricoMongo {
         return List.copyOf(resultado);
     }
 
+    EventoHistorico ultimo(EscopoPropriedade escopo, ObjectId id, Document original) {
+        Document evento = eventos.find(escopo.documento().append(campoRegistro, id))
+                .sort(com.mongodb.client.model.Sorts.descending("ordem")).limit(1).first();
+        return evento == null ? new EventoHistorico(0, original.getDate("criadaEm").toInstant(),
+                original.getString("statusInicial"), "Registro criado") : EventoHistorico.doDocumento(evento);
+    }
+
     void adicionar(EscopoPropriedade escopo, ObjectId id, Document original, EventoHistorico evento,
             BiPredicate<String, String> permiteTransicao) {
-        EventoHistorico ultimo = listar(escopo, id, original).getLast();
+        EventoHistorico ultimo = ultimo(escopo, id, original);
         if (evento.ordem() != ultimo.ordem() + 1) {
             throw new IllegalArgumentException("ordem desatualizada; consulte o histórico antes de gravar");
         }

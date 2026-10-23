@@ -63,3 +63,16 @@ O exemplo oficial preserva entrada de 500 kg e consumo de 50 kg; a soma das vari
 ### Evidência da #103 — 23/10/2026
 
 `DadosInsumoTest: OK` e `CicloDadosAtlasTest: OK (#101–#103)`. No Atlas, a entrada de 500 kg e o consumo de 50 kg permanecem no histórico após reconexão; soma conhecida de 450 kg e mínimo do catálogo conferidos. Unidade divergente, referências inexistentes e insumo/atividade de outro produtor foram rejeitados; consultas cruzadas retornaram vazio. Dados fictícios removidos.
+
+
+## #104 — Ocorrências e timeline
+
+`ocorrencias`: `_id`, titularidade, `talhaoId`, `safraId` opcional, título, tipo, data, prioridade, descrição, foto opcional, `criadaEm`, `statusInicial=ABERTA`. Os vínculos devem estar no mesmo escopo e, quando informada, a safra deve conter o talhão.
+
+`ocorrencias_timeline`: titularidade, `ocorrenciaId`, ordem, data do registro, status e descrição. Usa a mesma estratégia de eventos separados da atividade. ABERTA admite acompanhamento ou resolução; EM_ACOMPANHAMENTO admite novas anotações e resolução; RESOLVIDA preserva o desfecho. A consulta mantém todos os eventos em ordem depois da resolução. A leitura do estado atual usa apenas o último evento pelo índice, sem carregar toda a timeline. Não há exclusão/cascata nesta frente.
+
+Vocabulário e foto opcional seguem o projeto §8.7; as divergências da #5 permanecem naquela frente. Execute também `br.com.agrogestao.core.domain.operacao.DadosOcorrenciaTest` para a validação local. O cenário Atlas inclui dois clientes concorrendo pela mesma ordem e exige exatamente uma atualização aceita.
+
+### Evidência da #104 — 23/10/2026
+
+`DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.

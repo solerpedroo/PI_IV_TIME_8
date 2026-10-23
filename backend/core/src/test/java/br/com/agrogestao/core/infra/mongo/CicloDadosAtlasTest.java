@@ -2,6 +2,8 @@ package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
 import java.time.*;
+import java.util.concurrent.*;
+import br.com.agrogestao.core.domain.ocorrencias.Ocorrencia;
 import br.com.agrogestao.core.domain.insumos.*;
 import br.com.agrogestao.core.domain.atividades.Atividade;
 import br.com.agrogestao.core.domain.operacao.*;
@@ -18,8 +20,59 @@ public final class CicloDadosAtlasTest {
             validarCultivo(c);
             validarAtividade(c);
             validarInsumos(c);
+            validarOcorrencias(c);
         }
-        System.out.println("CicloDadosAtlasTest: OK (#101–#103)");
+        System.out.println("CicloDadosAtlasTest: OK (#101–#104)");
+    }
+
+    static Ocorrencia ocorrencia(ContextoOperacao contexto) {
+        return new Ocorrencia(null, contexto, "Praga no Talhão A", "Praga", LocalDate.of(2026, 10, 23),
+                Prioridade.ALTA, "Inspeção necessária", null, Instant.parse("2026-10-23T12:00:00Z"));
+    }
+
+    private static void validarOcorrencias(CenarioDadosAtlas c) {
+        OcorrenciaRepositorioMongo r = new OcorrenciaRepositorioMongo(c.conexao.banco());
+        r.criarIndices();
+        ContextoOperacao contexto = new ContextoOperacao(c.a, c.talhaoA, c.safraA);
+        c.ocorrenciaA = r.inserir(ocorrencia(contexto));
+        invalido(() -> r.inserir(ocorrencia(new ContextoOperacao(c.a, c.talhaoB, c.safraA))));
+        invalido(() -> r.inserir(ocorrencia(new ContextoOperacao(c.a, c.talhaoA, new ObjectId()))));
+        invalido(() -> r.registrarAtualizacao(c.b, c.ocorrenciaA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T13:00:00Z"), "EM_ACOMPANHAMENTO", "Alheio")));
+        r.registrarAtualizacao(c.a, c.ocorrenciaA,
+                new EventoHistorico(1, Instant.parse("2026-10-23T13:00:00Z"), "EM_ACOMPANHAMENTO", "Inspeção realizada"));
+        // Dois clientes usam a mesma versão. Exatamente um evento deve ser aceito.
+        CountDownLatch largada = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Callable<Boolean> gravar = () -> {
+                largada.await();
+                try {
+                    r.registrarAtualizacao(c.a, c.ocorrenciaA,
+                            new EventoHistorico(2, Instant.parse("2026-10-23T14:00:00Z"), "EM_ACOMPANHAMENTO", "Medida de controle"));
+                    return true;
+                } catch (IllegalArgumentException conflitoEsperado) { return false; }
+            };
+            Future<Boolean> primeira = executor.submit(gravar);
+            Future<Boolean> segunda = executor.submit(gravar);
+            largada.countDown();
+            verificar(primeira.get(15, TimeUnit.SECONDS) ^ segunda.get(15, TimeUnit.SECONDS),
+                    "uma única atualização concorrente deve ser persistida");
+        } catch (Exception e) { throw new AssertionError("falha na validação concorrente do histórico", e); }
+        invalido(() -> r.registrarAtualizacao(c.a, c.ocorrenciaA,
+                new EventoHistorico(3, Instant.parse("2026-10-23T12:00:00Z"), "RESOLVIDA", "Data regressiva")));
+        r.registrarAtualizacao(c.a, c.ocorrenciaA,
+                new EventoHistorico(3, Instant.parse("2026-10-23T15:00:00Z"), "RESOLVIDA", "Problema resolvido"));
+        invalido(() -> r.registrarAtualizacao(c.a, c.ocorrenciaA,
+                new EventoHistorico(4, Instant.parse("2026-10-23T16:00:00Z"), "EM_ACOMPANHAMENTO", "Reabertura inválida")));
+        c.reabrir();
+        OcorrenciaRepositorioMongo persistido = new OcorrenciaRepositorioMongo(c.conexao.banco());
+        verificar(persistido.statusAtual(c.a, c.ocorrenciaA).orElseThrow() == Ocorrencia.Status.RESOLVIDA, "resolução persistida");
+        verificar(persistido.listarTimeline(c.a, c.ocorrenciaA).size() == 4, "timeline completa após resolução e reconexão");
+        verificar(persistido.listarTimeline(c.a, c.ocorrenciaA).get(2).descricao().equals("Medida de controle"), "acompanhamento preservado");
+        verificar(persistido.listarDoContexto(contexto).size() == 1, "ocorrência ligada ao ciclo da safra");
+        verificar(persistido.buscar(c.b, c.ocorrenciaA).isEmpty(), "ocorrência isolada");
+        verificar(persistido.listarTimeline(c.b, c.ocorrenciaA).isEmpty(), "timeline isolada");
+        verificar(persistido.statusAtual(c.extra, c.ocorrenciaA).isEmpty(), "resolução isolada entre propriedades");
     }
 
     private static void validarInsumos(CenarioDadosAtlas c) {

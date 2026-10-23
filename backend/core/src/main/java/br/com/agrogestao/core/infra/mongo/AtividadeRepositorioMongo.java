@@ -48,8 +48,7 @@ public final class AtividadeRepositorioMongo {
     }
 
     public Optional<Atividade.Status> statusAtual(EscopoPropriedade escopo, ObjectId id) {
-        List<EventoHistorico> eventos = listarHistorico(escopo, id);
-        return eventos.isEmpty() ? Optional.empty() : Optional.of(Atividade.Status.valueOf(eventos.getLast().status()));
+        return buscar(escopo, id).map(a -> Atividade.Status.valueOf(historico.ultimo(escopo, id, a.paraDocumento()).status()));
     }
 
     public void registrarEvento(EscopoPropriedade escopo, ObjectId id, EventoHistorico evento) {
