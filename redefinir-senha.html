@@ -1,3 +1,4 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -51,6 +52,20 @@
           data-flash-message="Senha redefinida com sucesso. Faça login com a nova senha."
           novalidate
         >
+          <!-- O token vem do e-mail de recuperação ou pode ser colado manualmente. -->
+          <div class="input-group">
+            <label for="token">Código de redefinição</label>
+            <input
+              id="token"
+              name="token"
+              autocomplete="one-time-code"
+              placeholder="Cole o código recebido"
+              required
+              data-required-message="Informe o código recebido."
+            >
+            <span class="field-error" aria-live="polite"></span>
+          </div>
+
           <div class="input-group">
             <label for="password">Nova senha</label>
             <div class="input-wrap">
