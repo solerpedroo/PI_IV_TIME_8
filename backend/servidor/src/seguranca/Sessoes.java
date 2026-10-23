@@ -94,6 +94,16 @@ public class Sessoes
     }
 
     // usado quando a senha muda: derruba todos os logins do usuario
+    public boolean propriedadeEmUso (String propriedadeId)
+    {
+        this.removerExpiradas ();
+        for (Sessao sessao : this.sessoes.values ())
+            if (sessao.getPropriedadeId ().equals (propriedadeId))
+                return true;
+        return false;
+    }
+
+    // usado quando a senha muda: derruba todos os logins do usuario
     public void encerrarDoUsuario (String usuarioId)
     {
         for (Map.Entry<String, Sessao> sessao : this.sessoes.entrySet ())
