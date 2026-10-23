@@ -22,7 +22,7 @@ final class CenarioDadosAtlas implements AutoCloseable {
     final EscopoPropriedade a = new EscopoPropriedade(produtorA, propriedadeA);
     final EscopoPropriedade b = new EscopoPropriedade(produtorB, propriedadeB);
     final EscopoPropriedade extra = new EscopoPropriedade(produtorA, propriedadeExtra);
-    ObjectId talhaoA, talhaoB, talhaoExtra, culturaA, culturaB, safraA, atividadeA;
+    ObjectId talhaoA, talhaoB, talhaoExtra, culturaA, culturaB, safraA, atividadeA, insumoA, consumoA;
 
     void preparar() {
         conexao.verificar();
@@ -60,7 +60,7 @@ final class CenarioDadosAtlas implements AutoCloseable {
 
     @Override public void close() {
         try {
-            for (String colecao : List.of("atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
+            for (String colecao : List.of("movimentacoes_insumos", "insumos", "atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
                 for (EscopoPropriedade escopo : List.of(a, b, extra)) {
                     conexao.banco().getCollection(colecao).deleteMany(escopo.documento());
                 }

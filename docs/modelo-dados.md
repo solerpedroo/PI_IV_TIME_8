@@ -50,3 +50,16 @@ O vocabulário segue o documento do projeto §8.5; divergências gerais de termi
 ### Evidência da #102 — 23/10/2026
 
 `DadosAtividadeTest: OK` e `CicloDadosAtlasTest: OK (#101–#102)`. Confirmados no Atlas: conclusão com três eventos (incluindo criação), consulta pelo ciclo e histórico após reconexão, isolamento, rejeição de talhão fora da safra, datas regressivas, ordem repetida e reabertura de atividade concluída. Dados fictícios removidos.
+
+
+## #103 — Insumos e movimentações
+
+`insumos`: `_id`, titularidade, nome, categoria, unidade normalizada e `estoqueMinimo` não negativo (Decimal128). `movimentacoes_insumos`: `_id`, titularidade, `insumoId`, tipo, quantidade (Decimal128), unidade, `atividadeId` opcional, `ocorridaEm`, motivo.
+
+Entradas e saídas possuem quantidade positiva. AJUSTE representa uma diferença assinada, não zero, com motivo. Uma saída com `atividadeId` é consumo daquela atividade; uma saída manual pode omitir esse vínculo. Entradas e ajustes não apontam para uma atividade consumidora. A unidade da movimentação deve corresponder ao catálogo; não há conversão implícita de unidades. O repositório confere insumo e atividade na mesma propriedade e oferece consultas por insumo e por atividade. Movimentações são documentos separados e não substituem o histórico anterior.
+
+O exemplo oficial preserva entrada de 500 kg e consumo de 50 kg; a soma das variações é 450 kg. A modelagem da #103 não executa a conclusão com baixa transacional nem garante saldo sob concorrência: essas entregas estão delimitadas nas #142 e #160. Não há cópia mutável de saldo neste catálogo. Execute também `br.com.agrogestao.core.domain.operacao.DadosInsumoTest` para as validações locais.
+
+### Evidência da #103 — 23/10/2026
+
+`DadosInsumoTest: OK` e `CicloDadosAtlasTest: OK (#101–#103)`. No Atlas, a entrada de 500 kg e o consumo de 50 kg permanecem no histórico após reconexão; soma conhecida de 450 kg e mínimo do catálogo conferidos. Unidade divergente, referências inexistentes e insumo/atividade de outro produtor foram rejeitados; consultas cruzadas retornaram vazio. Dados fictícios removidos.

@@ -2,6 +2,7 @@ package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
 import java.time.*;
+import br.com.agrogestao.core.domain.insumos.*;
 import br.com.agrogestao.core.domain.atividades.Atividade;
 import br.com.agrogestao.core.domain.operacao.*;
 import java.util.List;
@@ -16,8 +17,43 @@ public final class CicloDadosAtlasTest {
             c.preparar();
             validarCultivo(c);
             validarAtividade(c);
+            validarInsumos(c);
         }
-        System.out.println("CicloDadosAtlasTest: OK (#101–#102)");
+        System.out.println("CicloDadosAtlasTest: OK (#101–#103)");
+    }
+
+    private static void validarInsumos(CenarioDadosAtlas c) {
+        InsumoRepositorioMongo r = new InsumoRepositorioMongo(c.conexao.banco());
+        r.criarIndices();
+        c.insumoA = r.inserir(new Insumo(null, c.a, "NPK", "Fertilizante", "kg", new BigDecimal("100")));
+        ObjectId insumoB = r.inserir(new Insumo(null, c.b, "NPK", "Fertilizante", "kg", BigDecimal.TEN));
+        ObjectId atividadeB = new AtividadeRepositorioMongo(c.conexao.banco()).inserir(
+                atividade(new ContextoOperacao(c.b, c.talhaoB, null)));
+        r.inserir(movimento(c.a, c.insumoA, MovimentacaoInsumo.Tipo.ENTRADA, "500", "kg", null));
+        c.consumoA = r.inserir(movimento(c.a, c.insumoA, MovimentacaoInsumo.Tipo.SAIDA, "50", "kg", c.atividadeA));
+        invalido(() -> r.inserir(movimento(c.a, insumoB, MovimentacaoInsumo.Tipo.ENTRADA, "1", "kg", null)));
+        invalido(() -> r.inserir(movimento(c.a, new ObjectId(), MovimentacaoInsumo.Tipo.ENTRADA, "1", "kg", null)));
+        invalido(() -> r.inserir(movimento(c.a, c.insumoA, MovimentacaoInsumo.Tipo.SAIDA, "1", "kg", atividadeB)));
+        invalido(() -> r.inserir(movimento(c.a, c.insumoA, MovimentacaoInsumo.Tipo.SAIDA, "1", "kg", new ObjectId())));
+        invalido(() -> r.inserir(movimento(c.a, c.insumoA, MovimentacaoInsumo.Tipo.ENTRADA, "1", "litro", null)));
+        c.reabrir();
+        InsumoRepositorioMongo persistido = new InsumoRepositorioMongo(c.conexao.banco());
+        var historico = persistido.listarMovimentacoes(c.a, c.insumoA);
+        verificar(historico.size() == 2, "entrada e saída preservadas");
+        verificar(historico.stream().map(MovimentacaoInsumo::variacao).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .compareTo(new BigDecimal("450")) == 0, "histórico representa 500 kg menos 50 kg após reconectar");
+        verificar(persistido.buscar(c.a, c.insumoA).orElseThrow().estoqueMinimo().compareTo(new BigDecimal("100")) == 0,
+                "mínimo pertence ao catálogo da propriedade");
+        verificar(persistido.listarConsumosDaAtividade(c.a, c.atividadeA).getFirst().id().equals(c.consumoA), "consumo rastreável");
+        verificar(persistido.buscar(c.b, c.insumoA).isEmpty(), "catálogo isolado");
+        verificar(persistido.listarMovimentacoes(c.b, c.insumoA).isEmpty(), "histórico de estoque isolado");
+        verificar(persistido.buscarMovimentacao(c.extra, c.consumoA).isEmpty(), "consumo isolado entre propriedades");
+    }
+
+    static MovimentacaoInsumo movimento(EscopoPropriedade escopo, ObjectId insumoId,
+            MovimentacaoInsumo.Tipo tipo, String quantidade, String unidade, ObjectId atividadeId) {
+        return new MovimentacaoInsumo(null, escopo, insumoId, tipo, new BigDecimal(quantidade), unidade,
+                atividadeId, Instant.parse("2026-10-23T11:30:00Z"), "Movimentação fictícia");
     }
 
     static Atividade atividade(ContextoOperacao contexto) {
