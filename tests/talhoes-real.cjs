@@ -108,8 +108,10 @@ const base = 'http://127.0.0.1:8080';
       assert.equal(me.usuario.propriedadeId, newProperty.id);
       assert.equal(me.propriedade.farm, 'Fazenda Segunda');
       assert.equal(await page.evaluate(() => window.AgroLocal.read('notifications', []).includes('Somente propriedade original')), false);
-      await page.goto(base + '/areas-cultivo.html');
-      await page.waitForResponse(response => response.url().endsWith('/api/talhoes')).catch(() => {});
+      await Promise.all([
+        page.waitForResponse(response => response.url().endsWith('/api/talhoes')),
+        page.goto(base + '/areas-cultivo.html'),
+      ]);
       assert.equal((await api('/api/talhoes', null, session.token)).length, 0);
       await page.goto(base + '/configuracoes.html#settings-property');
       await page.locator('.property-context-select option[value="' + originalId + '"]').waitFor({state: 'attached'});
