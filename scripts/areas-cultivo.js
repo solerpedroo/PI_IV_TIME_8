@@ -27,7 +27,16 @@
     editingRow: null, // <tr> atualmente em edição, ou null em modo "criar"
   };
 
-  let persist = () => true;
+  function persist() {
+    const records = $$("[data-plots-table] tbody tr").map((row) => ({
+      id: row.dataset.id, plot: row.dataset.plot, crop: row.dataset.crop,
+      hectares: Number(row.dataset.hectares), status: row.dataset.status,
+    }));
+    // A API já confirmou a gravação. O cache permite leitura entre telas/offline;
+    // sua falha não desfaz uma operação que já foi persistida no servidor.
+    window.AgroLocal.save("plots", records);
+    return true;
+  }
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
   }
@@ -240,6 +249,7 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (form.getAttribute("aria-busy") === "true") return;
       clearErrors(form);
 
       const nome = form.nome.value.trim();
@@ -269,6 +279,7 @@
 
       let values = { nome, cultura, hectares, safra, status };
 
+      form.setAttribute("aria-busy", "true");
       try {
         values = state.editingRow
           ? await api("/api/talhoes/" + state.editingRow.dataset.id, "PUT", values)
@@ -277,6 +288,8 @@
         Object.entries(error.fields || {}).forEach(([field, message]) => setError(form, field, message));
         toast("error", "Falha ao salvar", error.message);
         return;
+      } finally {
+        form.removeAttribute("aria-busy");
       }
 
       if (state.editingRow) {
@@ -340,11 +353,15 @@
     initPrepToasts();
     initFilters();
     initPlotForm();
-    // A recarga sempre parte do resultado confirmado pela API.
-    api("/api/talhoes").then((records) => restorePlots(records.map((record) => ({
+    // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
+    restorePlots(window.AgroLocal.read("plots", []));
+    api("/api/talhoes").then((records) => {
+      restorePlots(records.map((record) => ({
       id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
-      hectares: record.hectares, status: record.status,
-    })))).catch((error) => toast("error", "Não foi possível carregar", error.message));
+      hectares: record.hectares, status: record.status, safra: record.safra,
+      })));
+      persist();
+    }).catch((error) => toast("error", "Visualização do cache local", error.message + " Alterações exigem conexão com o servidor."));
   }
 
   if (document.readyState === "loading") {
