@@ -341,6 +341,7 @@
       }
       if (!persist()) return;
       toast("success", editingId ? "Custo atualizado" : "Custo registrado", `${description} foi ${editingId ? "atualizado" : "adicionado aos lançamentos"}.`);
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "custo", descricao: description, talhao: plot}}));
       closeCostModal();
       updateMetrics();
       renderChart();
