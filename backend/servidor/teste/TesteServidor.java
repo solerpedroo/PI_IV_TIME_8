@@ -440,6 +440,13 @@ public class TesteServidor
         conferir ("devolve id e esconde campos internos",
                   doc1.getString ("id") != null && !t1.corpo.contains ("propriedadeId") && !t1.corpo.contains ("nomeNormalizado"));
 
+        String id1 = doc1.getString ("id");
+        conferir ("historico vazio do talhao -> 200", 200, get ("/api/talhoes/" + id1 + "/historico", a));
+        conferir ("registrar atividade no historico -> 201", 201,
+                  post ("/api/talhoes/" + id1 + "/historico", "{\"tipo\":\"atividade\",\"descricao\":\"Plantio confirmado\"}", a));
+        conferir ("historico contem operacao", get ("/api/talhoes/" + id1 + "/historico", a).corpo.contains ("Plantio confirmado"));
+        conferir ("outro usuario nao acessa historico", 404, get ("/api/talhoes/" + id1 + "/historico", b));
+
         Resp t2 = post ("/api/talhoes", talhao ("T-02 Sul", "Milho", 98, "Irrigação pendente"), a);
         Resp t3 = post ("/api/talhoes", talhao ("T-03 Várzea", "Café", 72.5, "Em preparo"), a);
         conferir ("criar com acentos (UTF-8) -> 201", t2.status == 201 && t3.status == 201 && "T-03 Várzea".equals (t3.json ().getString ("nome")));
