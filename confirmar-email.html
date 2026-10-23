@@ -1,3 +1,4 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -59,6 +60,23 @@
               Reenviar link
             </button>
           </div>
+
+          <!-- O código também permite confirmar links copiados de outro dispositivo. -->
+          <form class="auth-form" data-confirm-email-form novalidate>
+            <div class="input-group">
+              <label for="token">Código de confirmação</label>
+              <input
+                id="token"
+                name="token"
+                autocomplete="one-time-code"
+                placeholder="Cole o código recebido"
+                required
+              >
+              <span class="field-error" aria-live="polite"></span>
+            </div>
+            <div data-form-message class="form-message"></div>
+            <button class="btn btn-primary btn-block" type="submit">Confirmar e-mail</button>
+          </form>
 
           <a class="auth-link" href="login.html">Voltar ao login</a>
         </div>
