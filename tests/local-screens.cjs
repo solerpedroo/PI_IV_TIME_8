@@ -170,13 +170,20 @@ let failures = 0;
   await run('dashboard: criar, concluir e compartilhar atividade', async (page) => {
     await go(page, 'dashboard.html');
     await page.locator('[data-open-new-activity]').click();
-    await submit(page, '[data-new-activity-form]', { 'activity-name': 'Atividade painel', 'activity-plot': 'A3' });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').talhao, 'Talhão A3');
+    await submit(page, '[data-new-activity-form]', { 'activity-name': 'Atividade painel', 'activity-plot': 'T-01 Norte' });
+    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').talhao, 'T-01 Norte');
     await page.reload();
     await page.evaluate(() => [...document.querySelectorAll('[data-activities-table] tr')].find((row) => row.textContent.includes('Atividade painel')).querySelector('[data-complete-activity]').click());
     await go(page, 'atividades.html');
     assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').status, 'Concluída');
     assert.equal(await page.locator('.kanban-card[data-activity="Atividade painel"]').count(), 1);
+  });
+
+  await run('dashboard continua utilizável com custos locais inválidos', async (page) => {
+    await page.addInitScript(() => localStorage.setItem('agro.operational.v1.costs', '{invalido'));
+    await go(page, 'dashboard.html');
+    assert.equal(await page.locator('[data-metric="cost"]').textContent(), '—');
+    assert.ok(Number(await page.locator('[data-metric="pending"]').textContent()) >= 0);
   });
 
   await run('notificações: lidas após recarga', async (page) => {

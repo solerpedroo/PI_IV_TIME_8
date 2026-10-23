@@ -1,7 +1,4 @@
-/*
-    Autor: Tomas de Paula Michelon Toniato
-    RA: 25004211
-*/
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.HttpServer;
