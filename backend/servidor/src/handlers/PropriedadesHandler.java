@@ -70,6 +70,8 @@ public class PropriedadesHandler
         String localizacao = validacao.texto ("localizacao", "Informe a localização.", 160);
         String municipio = validacao.texto ("municipio", "Informe o município.", 120);
         String safra     = validacao.texto ("safraAtual", "Informe a safra atual.", 20);
+        if (safra != null && !TalhoesHandler.SAFRAS.contains (safra))
+            validacao.erro ("safraAtual", "Selecione uma safra válida.");
         Object area      = corpo.get ("areaHectares");
 
         if (!(area instanceof Number) || !Double.isFinite (((Number) area).doubleValue ()) ||
@@ -133,6 +135,11 @@ public class PropriedadesHandler
 
     private Resposta atualizar (Requisicao requisicao) throws Exception
     {
+        synchronized (this.sessoes) { return this.atualizarProtegido (requisicao); }
+    }
+
+    private Resposta atualizarProtegido (Requisicao requisicao) throws Exception
+    {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
             return Resposta.erro (404, "Not found");
@@ -147,6 +154,11 @@ public class PropriedadesHandler
 
     private Resposta excluir (Requisicao requisicao) throws Exception
     {
+        synchronized (this.sessoes) { return this.excluirProtegido (requisicao); }
+    }
+
+    private Resposta excluirProtegido (Requisicao requisicao) throws Exception
+    {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
             return Resposta.erro (404, "Not found");
@@ -154,6 +166,8 @@ public class PropriedadesHandler
             return Resposta.json (409, new Document ("error", "A última propriedade não pode ser excluída."));
         if (id.equals (requisicao.getSessao ().getPropriedadeId ()))
             return Resposta.json (409, new Document ("error", "Selecione outra propriedade antes de excluir a atual."));
+        if (this.sessoes.propriedadeEmUso (id))
+            return Resposta.json (409, new Document ("error", "A propriedade está em uso em outra sessão. Encerre ou troque esse contexto antes de excluir."));
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
@@ -162,6 +176,11 @@ public class PropriedadesHandler
     }
 
     private Resposta selecionar (Requisicao requisicao) throws Exception
+    {
+        synchronized (this.sessoes) { return this.selecionarProtegido (requisicao); }
+    }
+
+    private Resposta selecionarProtegido (Requisicao requisicao) throws Exception
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
