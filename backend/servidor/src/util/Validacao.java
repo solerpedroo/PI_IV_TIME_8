@@ -1,3 +1,5 @@
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 package util;
 
 import http.Resposta;

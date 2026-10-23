@@ -1,3 +1,5 @@
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 /**
  * Agro — composição do Painel Geral (frame Dashboard ajDH7)
  */
@@ -10,6 +12,17 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   flex: 0 0 auto;
+}
+
+/* Indicadores funcionam como atalhos para o módulo que originou cada dado. */
+.metric-card[data-dashboard-link] {
+  cursor: pointer;
+}
+
+.metric-card[data-dashboard-link]:focus-visible,
+.metric-card[data-dashboard-link]:hover {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -235,6 +248,19 @@
   margin: 0;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.alert-link {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.alert-link:hover,
+.alert-link:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 /* -------------------------------------------------------------------------- */

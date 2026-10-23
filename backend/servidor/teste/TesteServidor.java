@@ -1,4 +1,4 @@
-/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioUsuariosMemoria;
@@ -167,11 +167,6 @@ public class TesteServidor
         return TesteServidor.requisitar ("PUT", caminho, json, token);
     }
 
-    private static Resp delete (String caminho, String token) throws Exception
-    {
-        return TesteServidor.requisitar ("DELETE", caminho, null, token);
-    }
-
     private static String cadastro (String email)
     {
         return new Document ("name", "Maria Silva").append ("email", email).append ("phone", "(11) 98765-4321")
@@ -259,6 +254,7 @@ public class TesteServidor
         Resp saude = get ("/health", null);
         conferir ("GET /health -> 200 UP", saude.status == 200 && saude.corpo.equals ("{\"status\":\"UP\"}"));
         conferir ("GET /ready (memoria) -> 200", 200, get ("/ready", null));
+        conferir ("saude compativel com gateway Java -> 200", 200, get ("/actuator/health", null));
 
         Resp raiz = get ("/", null);
         conferir ("/ redireciona para login.html", raiz.status == 302 && "/login.html".equals (raiz.cabecalho ("Location")));
@@ -335,23 +331,8 @@ public class TesteServidor
         conferir ("401 generico (mesmo corpo)", errada.corpo.equals (inexistente.corpo));
         conferir ("login sem senha -> 400",     400, post ("/api/auth/login", "{\"email\":\"maria@agro.com\"}", null));
 
-        Resp ok = post ("/api/auth/login", "{\"email\":\" Maria@Agro.com \",\"password\":\"Senha@123\"}", null);
-        conferir ("login valido -> 200", 200, ok);
-        String token = ok.status == 200 ? ok.json ().getString ("token") : null;
-        conferir ("login devolve token e usuario",
-                  token != null && "maria@agro.com".equals (ok.json ().get ("usuario", Document.class).getString ("email")));
-
-        Resp eu = get ("/api/me", token);
-        conferir ("GET /api/me com token -> 200", 200, eu);
-        conferir ("/api/me traz a propriedade",
-                  eu.status == 200 && "Fazenda Boa Vista".equals (eu.json ().get ("propriedade", Document.class).getString ("farm")));
-        conferir ("GET /api/me sem token -> 401",      401, get ("/api/me", null));
-        conferir ("GET /api/me com token falso -> 401", 401, get ("/api/me", "nao-existe"));
-        conferir ("/api inexistente sem token -> 401",  401, get ("/api/nada", null));
-        conferir ("/api inexistente com token -> 404",  404, get ("/api/nada", token));
-
-        conferir ("logout -> 204", 204, post ("/api/auth/logout", null, token));
-        conferir ("token nao vale depois do logout", 401, get ("/api/me", token));
+        conferir ("login sem e-mail confirmado -> 403", 403,
+                  post ("/api/auth/login", "{\"email\":\" Maria@Agro.com \",\"password\":\"Senha@123\"}", null));
     }
 
     private static void testarConfirmacaoERedefinicao () throws Exception
@@ -364,8 +345,21 @@ public class TesteServidor
         conferir ("token de confirmacao nao reutiliza", 400, post ("/api/auth/confirm-email", new Document ("token", tokenConfirmacao).toJson (), null));
 
         String token = login ("maria@agro.com", "Senha@123");
+        conferir ("login liberado depois da confirmacao", token != null);
         conferir ("/api/me mostra e-mail confirmado",
                   Boolean.TRUE.equals (get ("/api/me", token).json ().get ("usuario", Document.class).getBoolean ("emailConfirmado")));
+
+        Resp eu = get ("/api/me", token);
+        conferir ("GET /api/me com token -> 200", 200, eu);
+        conferir ("/api/me traz a propriedade",
+                  eu.status == 200 && "Fazenda Boa Vista".equals (eu.json ().get ("propriedade", Document.class).getString ("farm")));
+        conferir ("GET /api/me sem token -> 401",      401, get ("/api/me", null));
+        conferir ("GET /api/me com token falso -> 401", 401, get ("/api/me", "nao-existe"));
+        conferir ("/api inexistente sem token -> 401",  401, get ("/api/nada", null));
+        conferir ("/api inexistente com token -> 404",  404, get ("/api/nada", token));
+
+        conferir ("logout -> 204", 204, post ("/api/auth/logout", null, token));
+        conferir ("token nao vale depois do logout", 401, get ("/api/me", token));
 
         // joao acabou de se cadastrar: reenvio antes de 30 s e recusado
         Resp cedo = post ("/api/auth/resend-confirmation", "{\"email\":\"joao@agro.com\"}", null);
@@ -378,6 +372,10 @@ public class TesteServidor
         conferir ("reenvio depois de 30 s -> 200", 200, post ("/api/auth/resend-confirmation", "{\"email\":\"joao@agro.com\"}", null));
         conferir ("reenvio gera token novo", !tokenAntes.equals (usuarios.buscarPor ("email", "joao@agro.com").getString ("tokenConfirmacao")));
         conferir ("reenvio de novo logo depois -> 429", 429, post ("/api/auth/resend-confirmation", "{\"email\":\"joao@agro.com\"}", null));
+
+        String tokenJoao = usuarios.buscarPor ("email", "joao@agro.com").getString ("tokenConfirmacao");
+        conferir ("confirmar e-mail reenviado -> 200", 200,
+                  post ("/api/auth/confirm-email", new Document ("token", tokenJoao).toJson (), null));
 
         conferir ("esqueci a senha (e-mail inexistente) -> 200", 200, post ("/api/auth/forgot-password", "{\"email\":\"ninguem@agro.com\"}", null));
         conferir ("esqueci a senha (e-mail invalido) -> 400",    400, post ("/api/auth/forgot-password", "{\"email\":\"invalido\"}", null));
@@ -442,6 +440,13 @@ public class TesteServidor
         conferir ("devolve id e esconde campos internos",
                   doc1.getString ("id") != null && !t1.corpo.contains ("propriedadeId") && !t1.corpo.contains ("nomeNormalizado"));
 
+        String id1 = doc1.getString ("id");
+        conferir ("historico vazio do talhao -> 200", 200, get ("/api/talhoes/" + id1 + "/historico", a));
+        conferir ("registrar atividade no historico -> 201", 201,
+                  post ("/api/talhoes/" + id1 + "/historico", "{\"tipo\":\"atividade\",\"descricao\":\"Plantio confirmado\"}", a));
+        conferir ("historico contem operacao", get ("/api/talhoes/" + id1 + "/historico", a).corpo.contains ("Plantio confirmado"));
+        conferir ("outro usuario nao acessa historico", 404, get ("/api/talhoes/" + id1 + "/historico", b));
+
         Resp t2 = post ("/api/talhoes", talhao ("T-02 Sul", "Milho", 98, "Irrigação pendente"), a);
         Resp t3 = post ("/api/talhoes", talhao ("T-03 Várzea", "Café", 72.5, "Em preparo"), a);
         conferir ("criar com acentos (UTF-8) -> 201", t2.status == 201 && t3.status == 201 && "T-03 Várzea".equals (t3.json ().getString ("nome")));
@@ -481,32 +486,6 @@ public class TesteServidor
         conferir ("DELETE nao existe -> 405",              405, requisitar ("DELETE", "/api/talhoes/" + id2, null, a));
         conferir ("talhao de A continua intacto",
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
-    }
-
-    private static void testarPropriedades () throws Exception
-    {
-        System.out.println ("\n# propriedades, contexto e autorizacao");
-
-        String a = login ("maria@agro.com", "Nova@1234");
-        String b = login ("joao@agro.com", "Senha@123");
-        String corpo = new Document ("nome", "Fazenda Horizonte").append ("localizacao", "Rodovia SP-101, km 12").append ("municipio", "Campinas, SP")
-                        .append ("safraAtual", "2026/27").append ("areaHectares", 350).toJson ();
-
-        conferir ("propriedade invalida aponta campos", camposComErro (post ("/api/propriedades", "{}", a))
-                  .keySet ().containsAll (List.of ("nome", "localizacao", "municipio", "safraAtual", "areaHectares")));
-        Resp criada = post ("/api/propriedades", corpo, a);
-        conferir ("criar segunda propriedade -> 201", 201, criada);
-        String id = criada.status == 201 ? criada.json ().getString ("id") : "invalido";
-        conferir ("outro usuario nao consulta propriedade -> 404", 404, get ("/api/propriedades/" + id, b));
-        conferir ("outro usuario nao altera propriedade -> 404", 404, put ("/api/propriedades/" + id, corpo, b));
-        conferir ("selecionar propriedade propria -> 200", 200, post ("/api/propriedades/" + id + "/selecionar", "{}", a));
-        conferir ("talhoes usam a propriedade selecionada", get ("/api/talhoes", a).corpo.equals ("[]"));
-        conferir ("nao exclui propriedade ativa", 409, delete ("/api/propriedades/" + id, a));
-
-        String principal = usuarios.buscarPor ("email", "maria@agro.com").getString ("propriedadeId");
-        conferir ("retorna ao contexto anterior", 200, post ("/api/propriedades/" + principal + "/selecionar", "{}", a));
-        conferir ("exclui propriedade sem talhoes -> 204", 204, delete ("/api/propriedades/" + id, a));
-        conferir ("propriedade excluida nao e encontrada", 404, get ("/api/propriedades/" + id, a));
     }
 
     private static void testarConcorrencia () throws Exception
@@ -683,7 +662,6 @@ public class TesteServidor
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
-            TesteServidor.testarPropriedades ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();

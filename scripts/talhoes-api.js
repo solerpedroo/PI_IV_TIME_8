@@ -1,33 +1,59 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-/* Carrega os talhões da propriedade ativa no servidor. A lista não é misturada
-   ao armazenamento demonstrativo: com sessão, a origem é exclusivamente a API. */
+/* Mantem os modulos operacionais ligados aos talhoes confirmados pela API. */
 (() => {
   "use strict";
-  const token = sessionStorage.getItem("agro.sessionToken");
-  if (!token) return;
+  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const token = () => sessionStorage.getItem("agro.sessionToken");
+  let talhoes = [];
 
-  const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-  const badge = (status) => status === "Ativo" ? "badge-success" : status === "Irrigação pendente" ? "badge-warning" : "badge-neutral";
-
-  async function load() {
-    const response = await fetch("/api/talhoes", { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) throw new Error("Não foi possível carregar os talhões da propriedade selecionada.");
-    const talhoes = await response.json();
-    const tbody = document.querySelector("[data-plots-table] tbody");
-    if (!tbody) return;
-    tbody.replaceChildren(...talhoes.map((talhao) => {
-      const row = document.createElement("tr");
-      row.dataset.id = talhao.id;
-      row.dataset.plot = talhao.nome;
-      row.dataset.crop = talhao.cultura.toLowerCase();
-      row.dataset.hectares = talhao.hectares;
-      row.dataset.status = talhao.status;
-      row.innerHTML = `<td class="col-plot-name">${escape(talhao.nome)}</td><td><span class="badge badge-neutral">${escape(talhao.cultura)}</span></td><td>${Number(talhao.hectares).toLocaleString("pt-BR")} ha</td><td><span class="badge ${badge(talhao.status)}">${escape(talhao.status)}</span></td><td class="col-muted">Servidor</td><td class="col-actions"></td>`;
-      return row;
-    }));
-    document.querySelector("[data-plots-search]")?.dispatchEvent(new Event("input"));
+  async function request(path, options = {}) {
+    if (!token()) throw new Error("Sessão ausente.");
+    const response = await fetch(base + path, {
+      ...options,
+      headers: { Authorization: "Bearer " + token(), "Content-Type": "application/json", ...(options.headers || {}) },
+    });
+    if (!response.ok) throw new Error("API indisponível.");
+    return response.json();
   }
 
-  document.addEventListener("DOMContentLoaded", () => load().catch((error) => window.AgroToast?.show({ type: "error", title: "Talhões indisponíveis", description: error.message })));
+  function preencherSelect(select) {
+    const atual = select.value;
+    select.replaceChildren(new Option(select.dataset.placeholder || "Selecione o talhão", ""),
+      ...talhoes.map((talhao) => new Option(talhao.nome, talhao.nome)));
+    const escolhido = talhoes.find((talhao) => talhao.nome === atual);
+    if (escolhido) select.value = escolhido.nome;
+    select.dispatchEvent(new Event("change"));
+  }
+
+  async function iniciar() {
+    try {
+      talhoes = await request("/api/talhoes");
+      window.AgroLocal.save("plots", talhoes.map((item) => ({id: item.id, plot: item.nome,
+        crop: item.cultura.toLowerCase(), hectares: item.hectares, status: item.status})));
+    } catch (error) {
+      talhoes = window.AgroLocal.read("plots", []).map((item) => ({id: item.id, nome: item.plot}));
+      window.AgroToast?.show({type: "error", title: "Talhões sem conexão", description: error.message + " Exibindo somente o cache desta propriedade."});
+    }
+    document.querySelectorAll("select[name=talhao], select[name=plot], select[name=activity-plot]").forEach(preencherSelect);
+    document.dispatchEvent(new Event("agro:plots-loaded"));
+  }
+
+  // O módulo emite este evento apenas depois de confirmar a persistência.
+  // Um submit inválido ou uma falha de armazenamento nunca gera histórico.
+  document.addEventListener("agro:operation-saved", async ({detail}) => {
+    const talhao = talhoes.find((item) => item.nome === detail.talhao);
+    if (!talhao) return;
+    try {
+      await request("/api/talhoes/" + encodeURIComponent(talhao.id) + "/historico", {
+        method: "POST", body: JSON.stringify({tipo: detail.tipo, descricao: detail.descricao}),
+      });
+    } catch {
+      // Não repetimos automaticamente: uma resposta perdida pode já ter sido gravada.
+      window.AgroToast?.show({type: "error", title: "Histórico não confirmado",
+        description: "O registro foi salvo neste navegador, mas o envio do histórico não foi confirmado pelo servidor."});
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", iniciar);
 })();

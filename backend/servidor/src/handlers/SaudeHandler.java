@@ -1,3 +1,5 @@
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 package handlers;
 
 import dados.ConexaoMongo;
@@ -25,6 +27,8 @@ public class SaudeHandler
     {
         roteador.adicionarPublica ("GET", "/health", this::saude);
         roteador.adicionarPublica ("GET", "/ready",  this::pronto);
+        // Compatibilidade com o gateway Java existente, sem dependência de Spring.
+        roteador.adicionarPublica ("GET", "/actuator/health", this::pronto);
     }
 
     private Resposta saude (Requisicao requisicao)

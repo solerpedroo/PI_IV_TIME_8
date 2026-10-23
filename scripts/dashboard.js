@@ -1,13 +1,24 @@
 /* Miguel — RA: 25003110 */
-/* Painel Geral: consulta os mesmos registros das telas operacionais.
- * Tudo é recuperado no navegador; nenhuma chamada ao backend é necessária.
- * Métricas e tabela são derivadas dos registros, sem contadores paralelos. */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/*
+ * Painel Geral: cada indicador e cada lista é derivado dos mesmos registros
+ * compartilhados pelos módulos operacionais. Não existem contadores paralelos:
+ * ao salvar uma atividade, custo, ocorrência ou movimentação, o painel a lê
+ * novamente e recalcula a interface.
+ */
 (() => {
   "use strict";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const local = window.AgroLocal;
+  const money = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
   let activities = [];
+
+  // Centraliza a escrita para que a ausência de um card não interrompa o painel.
+  function setMetric(name, value) {
+    const target = $(`[data-metric="${name}"]`);
+    if (target) target.textContent = value;
+  }
 
   function render() {
     const search = ($('[data-dashboard-search]')?.value || '').trim().toLowerCase();
@@ -40,7 +51,50 @@
       });
       return row;
     }));
-    $('[data-metric="pending"]').textContent = String(activities.filter((record) => ['Pendente', 'Agendada'].includes(record.status)).length);
+    setMetric('pending', String(activities.filter((record) => ['Pendente', 'Agendada'].includes(record.status)).length));
+  }
+
+  // Alertas são links para a ocorrência e o talhão que lhes deram origem.
+  function renderAlerts(occurrences) {
+    const open = occurrences.filter((record) => record.status !== 'Resolvida');
+    const alertHost = $('.alerts-list');
+    const counter = $('[data-alerts-count]');
+    if (counter) counter.textContent = String(open.length);
+    if (!alertHost) return;
+
+    alertHost.replaceChildren(...open.map((record) => {
+      const article = document.createElement('article');
+      article.className = 'alert-item';
+      const link = document.createElement('a');
+      link.href = 'ocorrencias.html?talhao=' + encodeURIComponent(record.talhao);
+      link.className = 'alert-link';
+      link.textContent = `${record.occ} · ${record.talhao}`;
+      article.appendChild(link);
+      return article;
+    }));
+  }
+
+  // Produção é representada pela área cadastrada para cada cultura nos talhões.
+  function renderCultures(plots) {
+    const host = $('[data-cultures-list]');
+    if (!host) return;
+    const areas = new Map();
+    plots.forEach((plot) => areas.set(plot.crop, (areas.get(plot.crop) || 0) + plot.hectares));
+    const total = [...areas.values()].reduce((sum, hectares) => sum + hectares, 0);
+    const tones = ['is-primary', 'is-secondary', 'is-accent', 'is-muted'];
+
+    host.replaceChildren(...[...areas.entries()].map(([crop, hectares], index) => {
+      const item = document.createElement('article');
+      item.className = 'culture-item';
+      const percent = total ? Math.round((hectares / total) * 100) : 0;
+      const name = crop.charAt(0).toUpperCase() + crop.slice(1);
+      item.innerHTML = `<div class="culture-meta"><span class="culture-name"></span><span class="culture-area"></span></div><div class="culture-track" aria-hidden="true"><div class="culture-fill ${tones[index % tones.length]}"></div></div><span class="culture-progress"></span>`;
+      $('.culture-name', item).textContent = name;
+      $('.culture-area', item).textContent = `${hectares} ha`;
+      $('.culture-fill', item).style.width = `${percent}%`;
+      $('.culture-progress', item).textContent = `${percent}% da área cadastrada`;
+      return item;
+    }));
   }
 
   function refresh() {
@@ -48,28 +102,36 @@
     const plots = local.read('plots');
     const stock = local.read('stock');
     const occurrences = local.read('occurrences');
-    $('[data-metric="areas"]').textContent = String(plots.filter((record) => record.status === 'Ativo').length);
-    $('[data-metric="stock"]').textContent = String(stock.filter((record) => record.qty < record.min).length);
-    const open = occurrences.filter((record) => record.status !== 'Resolvida');
-    $('[data-alerts-count]').textContent = String(open.length);
-    // Os alertas também mostram ocorrências reais, inclusive as criadas offline.
-    const alertHost = $('.alerts-list');
-    if (alertHost) {
-      alertHost.replaceChildren(...open.map((record) => {
-        const article = document.createElement('article');
-        article.className = 'alert-item';
-        const link = document.createElement('a');
-        link.href = 'ocorrencias.html?talhao=' + encodeURIComponent(record.talhao);
-        link.textContent = record.occ + ' · ' + record.talhao;
-        article.appendChild(link);
-        return article;
-      }));
-    }
+    const costs = local.read('costs');
+    const totalCosts = Array.isArray(costs.entries)
+      ? costs.entries.reduce((total, entry) => total + entry.value, 0)
+      : null;
+
+    setMetric('areas', String(plots.filter((record) => record.status === 'Ativo').length));
+    setMetric('stock', String(stock.filter((record) => record.qty < record.min).length));
+    setMetric('cost', totalCosts === null ? '—' : money.format(totalCosts));
+    renderAlerts(occurrences);
+    renderCultures(plots);
     render();
+  }
+
+  // Os quatro cards são atalhos de contexto e funcionam por mouse e teclado.
+  function initMetricNavigation() {
+    $$('[data-dashboard-link]').forEach((card) => {
+      const navigate = () => { window.location.href = card.dataset.dashboardLink; };
+      card.addEventListener('click', navigate);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate();
+        }
+      });
+    });
   }
 
   function init() {
     refresh();
+    initMetricNavigation();
     const persist = () => local.save('activities', activities);
     const modal = $('[data-modal="new-activity"]');
     const close = () => { modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); };
@@ -92,6 +154,7 @@
       activities.push({id: local.id(), activity: name, tipo: 'Manutenção', talhao: plot,
         date: new Date().toLocaleDateString('pt-BR'), status: 'Pendente'});
       if (!persist()) { activities = previous; render(); return; }
+      document.dispatchEvent(new CustomEvent('agro:operation-saved', {detail: {tipo: 'atividade', descricao: name, talhao: plot}}));
       render(); close(); form.reset();
       window.AgroToast?.show({type: 'success', title: 'Atividade registrada', description: name + ' salva neste navegador.'});
     });
@@ -110,6 +173,7 @@
     // Outra aba pode alterar os dados enquanto o painel estiver aberto.
     window.addEventListener('storage', refresh);
     window.addEventListener('pageshow', refresh);
+    document.addEventListener('agro:plots-loaded', refresh);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

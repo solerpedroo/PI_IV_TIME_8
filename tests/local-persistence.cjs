@@ -5,10 +5,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { mockApi } = require("./mock-api.cjs");
 
 const root = process.cwd();
 const origin = "http://agro.local";
-const prefix = "agro.operational.v1.";
+const prefix = "agro.operational.v1.e2e-local.e2e-property.";
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -30,6 +31,17 @@ async function context(browser, storageFailure) {
     }
     return route.fulfill({status: 200, contentType: mime[path.extname(file)] || "application/octet-stream", body: fs.readFileSync(file)});
   });
+  await browserContext.addInitScript(() => {
+    sessionStorage.setItem('agro.sessionToken', 'e2e-local');
+    sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
+  });
+  await browserContext.route('http://127.0.0.1:8080/api/me', async (route) => {
+    const headers = {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS'};
+    if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
+    return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
+  });
+  await mockApi(browserContext, origin);
   if (storageFailure) {
     await browserContext.addInitScript((mode) => {
       const get = Storage.prototype.getItem;
@@ -58,7 +70,7 @@ async function open(browserContext, name) {
 }
 
 async function stored(page, key) {
-  return page.evaluate((name) => JSON.parse(localStorage.getItem("agro.operational.v1." + name)), key);
+  return page.evaluate(({name, prefix}) => JSON.parse(localStorage.getItem(prefix + name)), {name: key, prefix});
 }
 
 async function submit(page, selector) {
@@ -137,7 +149,7 @@ async function test(name, run) {
         await page.locator("[data-open-modal='occ-form']").click();
         await page.locator("[data-occ-form] [name='titulo']").fill("Ocorrência teste <segura>");
         await page.locator("[data-occ-form] [name='tipo']").selectOption("Praga");
-        await page.locator("[data-occ-form] [name='talhao']").selectOption("Talhão A1");
+        await page.locator("[data-occ-form] [name='talhao']").selectOption("T-01 Norte");
         await submit(page, "[data-occ-form]");
         const row = () => page.locator("[data-occ-table] tbody tr").last();
         assert.equal(await row().getAttribute("data-occ"), "Ocorrência teste <segura>");
