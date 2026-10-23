@@ -1,4 +1,4 @@
-/* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — interações da tela Áreas de Cultivo (dados mock híbridos)
  * --------------------------------------------------------------------------
@@ -11,13 +11,14 @@
  *   navegam para os outros módulos já filtrados por este talhão (contrato
  *   de navegação G7); "Ver custos" mostra toast — módulo fora desta entrega.
  *
- * Estrutura pronta para trocar os mocks por fetch quando a API existir.
+ * Os registros são carregados e gravados na API autenticada de Talhões.
  */
 (() => {
   "use strict";
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const API_BASE = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
 
   /** Estado local — calculado dinamicamente a partir da tabela no load. */
   const state = {
@@ -29,6 +30,25 @@
   let persist = () => true;
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
+  }
+
+  // O token identifica a propriedade no servidor; o cliente nao envia esse ID.
+  async function api(path, method = "GET", body) {
+    const token = sessionStorage.getItem("agro.sessionToken");
+    if (!token) throw new Error("Entre novamente para acessar os talhões.");
+
+    const response = await fetch(API_BASE + path, {
+      method,
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.error || "Não foi possível salvar o talhão.");
+      error.fields = data.fields || {};
+      throw error;
+    }
+    return data;
   }
 
   function formatHectares(value) {
@@ -207,6 +227,7 @@
       form.cultura.value = row.dataset.crop.charAt(0).toUpperCase() + row.dataset.crop.slice(1);
       form.cultura.dispatchEvent(new Event("change"));
       form.hectares.value = row.dataset.hectares;
+      form.safra.value = row.dataset.safra || "2025/26";
       form.status.value = row.dataset.status;
       form.status.dispatchEvent(new Event("change"));
       openModal(modal);
@@ -217,13 +238,14 @@
       if (event.target === modal) closeModal(modal);
     });
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearErrors(form);
 
       const nome = form.nome.value.trim();
       const cultura = form.cultura.value;
       const hectares = Number(form.hectares.value);
+      const safra = form.safra.value;
       const status = form.status.value || "Ativo";
 
       let hasError = false;
@@ -245,14 +267,25 @@
         return;
       }
 
-      const values = { nome, cultura, hectares, status };
+      let values = { nome, cultura, hectares, safra, status };
+
+      try {
+        values = state.editingRow
+          ? await api("/api/talhoes/" + state.editingRow.dataset.id, "PUT", values)
+          : await api("/api/talhoes", "POST", values);
+      } catch (error) {
+        Object.entries(error.fields || {}).forEach(([field, message]) => setError(form, field, message));
+        toast("error", "Falha ao salvar", error.message);
+        return;
+      }
 
       if (state.editingRow) {
         const row = state.editingRow;
-        row.dataset.plot = nome;
-        row.dataset.crop = cultura.toLowerCase();
-        row.dataset.hectares = String(hectares);
-        row.dataset.status = status;
+        row.dataset.plot = values.nome;
+        row.dataset.crop = values.cultura.toLowerCase();
+        row.dataset.hectares = String(values.hectares);
+        row.dataset.safra = values.safra;
+        row.dataset.status = values.status;
         const menuId = row.querySelector("[data-popover]")?.id || `menu-${window.AgroLocal.id()}`;
         row.innerHTML = buildRowMarkup(menuId, values);
         if (!persist()) return;
@@ -260,11 +293,12 @@
       } else {
         const menuId = `menu-${window.AgroLocal.id()}`;
         const row = document.createElement("tr");
-        row.dataset.id = window.AgroLocal.id();
-        row.dataset.plot = nome;
-        row.dataset.crop = cultura.toLowerCase();
-        row.dataset.hectares = String(hectares);
-        row.dataset.status = status;
+        row.dataset.id = values.id;
+        row.dataset.plot = values.nome;
+        row.dataset.crop = values.cultura.toLowerCase();
+        row.dataset.hectares = String(values.hectares);
+        row.dataset.safra = values.safra;
+        row.dataset.status = values.status;
         row.innerHTML = buildRowMarkup(menuId, values);
         tbody.appendChild(row);
 
@@ -300,13 +334,17 @@
   }
 
   function init() {
-    persist = window.AgroLocal.connect("plots", () => $$("[data-plots-table] tbody tr").map((row) => ({id: row.dataset.id, plot: row.dataset.plot, crop: row.dataset.crop, hectares: Number(row.dataset.hectares), status: row.dataset.status})), restorePlots);
     computeMetricsFromTable();
     updateHectaresMetric();
     updateActivePlotsMetric();
     initPrepToasts();
     initFilters();
     initPlotForm();
+    // A recarga sempre parte do resultado confirmado pela API.
+    api("/api/talhoes").then((records) => restorePlots(records.map((record) => ({
+      id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
+      hectares: record.hectares, status: record.status,
+    })))).catch((error) => toast("error", "Não foi possível carregar", error.message));
   }
 
   if (document.readyState === "loading") {
