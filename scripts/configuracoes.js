@@ -120,6 +120,8 @@
     if (label) label.htmlFor = trigger.id = "property-harvest-custom-trigger";
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
+    // Mantém o vínculo aria-controls do botão de safra com o diálogo criado.
+    modal.id = "harvest-form";
     modal.dataset.modal = "harvest-form";
     modal.setAttribute("aria-hidden", "true");
     modal.setAttribute("role", "presentation");

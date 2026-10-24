@@ -1,0 +1,38 @@
+name: Polish de interface
+
+on:
+  pull_request:
+    paths:
+      - "styles/**"
+      - "scripts/**"
+      - "tests/ui-polish.cjs"
+      - "*.html"
+      - "docs/polish-ui.md"
+      - ".github/workflows/ui-polish.yml"
+  push:
+    branches: [main, dev]
+    paths:
+      - "styles/**"
+      - "scripts/**"
+      - "tests/ui-polish.cjs"
+      - "*.html"
+      - "docs/polish-ui.md"
+      - ".github/workflows/ui-polish.yml"
+
+jobs:
+  ui-polish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar Playwright
+        run: npm install --no-save playwright@1.49.1
+      - name: Instalar Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Testes de layout
+        env:
+          PLAYWRIGHT_MODULE: playwright
+        run: node tests/ui-polish.cjs

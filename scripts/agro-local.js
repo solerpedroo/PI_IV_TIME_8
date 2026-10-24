@@ -137,5 +137,5 @@
     return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
   };
   const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[char]));
-  window.AgroLocal = {read, save, connect, id, escape};
+  window.AgroLocal = {read, save, connect, id, escape, initial: (key) => clone(defaults[key])};
 })();

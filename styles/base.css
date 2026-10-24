@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — Design System Forest Sage (pen.dev)
  * --------------------------------------------------------------------------
@@ -281,7 +282,8 @@ svg {
   cursor: not-allowed;
 }
 
-.btn:focus-visible,
+/* Inclui botões de ícone e controles que não usam a classe .btn. */
+button:focus-visible,
 .input-group input:focus-visible,
 .auth-link:focus-visible,
 a:focus-visible {
@@ -455,6 +457,8 @@ a:focus-visible {
 }
 
 .field-error {
+  /* Evita margens nativas de parágrafo desalinhando os campos da mesma linha. */
+  margin: 0;
   min-height: 16px;
   color: var(--error);
   font-size: 12px;
