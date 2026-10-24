@@ -46,7 +46,7 @@ o `/ready` do gateway consulte a prontidão sem depender de Spring.
 
 ## Dados operacionais no navegador
 
-Atividades, ocorrências, custos e preferências ainda usam armazenamento
+Atividades, ocorrências e custos ainda usam armazenamento
 local, separado pelo ID do usuário e da propriedade da sessão. Não são um
 substituto para persistência/autorização no servidor nem sincronizam dispositivos.
 Registros legados em `agro.operational.v1.*` sem identificação de dono permanecem
@@ -57,3 +57,6 @@ copiar os registros para o contexto correspondente.
 Insumos agora usa o estoque persistido do servidor Java: catálogo, movimentações,
 histórico e indicadores, com isolamento da propriedade ativa. Veja
 [estoque](../docs/estoque.md) para regras e testes com MongoDB real e reinício.
+
+Perfil, preferências de conta, propriedade padrão e troca de senha usam a API
+Java com persistência no servidor. Veja [docs/perfil.md](../docs/perfil.md).

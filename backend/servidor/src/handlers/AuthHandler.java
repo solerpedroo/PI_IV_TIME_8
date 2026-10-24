@@ -1,6 +1,7 @@
 package handlers;
 
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 import dados.RepositorioUsuarios;
 import http.Requisicao;
@@ -67,12 +68,7 @@ public class AuthHandler
     // so o que pode sair do servidor (nada de hash ou token)
     private static Document usuarioPublico (Document usuario)
     {
-        return new Document ("id",              ((ObjectId) usuario.get ("_id")).toHexString ())
-                   .append  ("name",            usuario.getString  ("name"))
-                   .append  ("email",           usuario.getString  ("email"))
-                   .append  ("phone",           usuario.getString  ("phone"))
-                   .append  ("emailConfirmado", usuario.getBoolean ("emailConfirmado"))
-                   .append  ("propriedadeId",   usuario.getString  ("propriedadeId"));
+        return util.PerfilUsuario.publico (usuario);
     }
 
     private static Resposta mensagem (String texto)
@@ -173,9 +169,13 @@ public class AuthHandler
         String token;
         synchronized (this.sessoes)
         {
+            String hashConferido = usuario.getString ("senhaHash");
+            String emailConferido = usuario.getString ("email");
             // Uma exclusão pode ter alterado a propriedade padrão durante o hash.
             usuario = this.usuarios.buscarPorId (((ObjectId) usuario.get ("_id")).toHexString ());
-            if (usuario == null || this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
+            if (usuario == null || !hashConferido.equals (usuario.getString ("senhaHash")) ||
+                !emailConferido.equals (usuario.getString ("email")) || !Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")) ||
+                this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
                 return Resposta.erro (401, "Invalid email or password");
             token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
                                         usuario.getString ("propriedadeId"));
@@ -329,19 +329,21 @@ public class AuthHandler
 
         synchronized (this.trava)
         {
-            Document usuario = this.usuarios.buscarPor ("tokenRedefinicao", token);
-
-            if (usuario == null || usuario.get ("redefinicaoExpiraEm", 0L) < System.currentTimeMillis ())
-                return Resposta.erro (400, "Invalid or expired token");
-
-            id = ((ObjectId) usuario.get ("_id")).toHexString ();
-            this.usuarios.atualizar (id, new Document ("senhaHash", hash)
-                                             .append ("tokenRedefinicao",    null)
-                                             .append ("redefinicaoExpiraEm", null));
+            synchronized (this.sessoes)
+            {
+                Document usuario = this.usuarios.buscarPor ("tokenRedefinicao", token);
+                if (usuario == null || usuario.get ("redefinicaoExpiraEm", 0L) < System.currentTimeMillis ())
+                    return Resposta.erro (400, "Invalid or expired token");
+                id = ((ObjectId) usuario.get ("_id")).toHexString ();
+                // O token não pode ressuscitar depois de uma troca de senha/perfil.
+                if (!this.usuarios.atualizarCondicional (id, new Document ("tokenRedefinicao", token)
+                    .append ("senhaHash", usuario.getString ("senhaHash")), new Document ("senhaHash", hash)
+                    .append ("tokenRedefinicao", null).append ("redefinicaoExpiraEm", null)
+                    .append ("emailPendente", null).append ("tokenTrocaEmail", null).append ("trocaEmailExpiraEm", null)))
+                    return Resposta.erro (400, "Invalid or expired token");
+                this.sessoes.encerrarDoUsuario (id);
+            }
         }
-
-        // senha nova: quem estava logado precisa entrar de novo
-        this.sessoes.encerrarDoUsuario (id);
 
         return AuthHandler.mensagem ("Password reset");
     }

@@ -8,6 +8,12 @@ Java e o MongoDB, conforme [estoque.md](estoque.md). Esta documentação de
 armazenamento local descreve os demais módulos. A chave `stock` legada fica
 intacta, mas não alimenta o catálogo persistido e não é importada automaticamente.
 
+Atualização da branch `feat/perfil`: dados pessoais, preferências da conta e
+propriedade padrão usam a API Java, conforme [perfil.md](perfil.md). O antigo
+`settings` local é preservado como legado, mas a tela não o usa para recuperar
+perfil nem simular gravação. A documentação abaixo descreve o mecanismo local
+dos módulos que ainda o utilizam.
+
 O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
 
 - `scripts/data/operational-defaults.js` — dados de demonstração (carregados só nas telas operacionais).

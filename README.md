@@ -6,6 +6,10 @@
 > e MongoDB. O frontend consome suas APIs de autenticação, propriedades, talhões
 > e estoque. Consulte [backend/README.md](backend/README.md) para execução.
 
+Perfil em Configurações está integrado ao servidor Java puro: dados pessoais,
+preferências, propriedade padrão, confirmação de novo e-mail, senha e logout.
+Contrato, limites de foto/equipe/plano e validação: [docs/perfil.md](docs/perfil.md).
+
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
 ## Estrutura

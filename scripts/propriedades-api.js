@@ -1,4 +1,5 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 /*
   Conecta a aba Propriedade à API Java quando há uma sessão autenticada.
@@ -54,6 +55,7 @@
     properties = await request("/api/propriedades");
     const selected = properties.find((property) => property.selecionada) || properties[0];
     if (selected) { fill(selected); renderSelector(); }
+    document.dispatchEvent(new Event("agro:properties-loaded"));
   }
 
   selector.addEventListener("change", async () => {

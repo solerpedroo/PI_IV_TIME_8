@@ -23,6 +23,13 @@ public interface RepositorioUsuarios
     // $set dos campos informados
     public void atualizar (String id, Document campos) throws Exception;
 
+    // Compara o estado lido antes de gravar: evita sobrescrever senha/token alterado
+    // por outra requisição. false indica conflito ou e-mail já utilizado.
+    public boolean atualizarCondicional (String id, Document esperado, Document campos) throws Exception;
+
+    // Valida a titularidade e grava a propriedade usada no próximo login.
+    public boolean definirPropriedadePadrao (String usuarioId, String propriedadeId) throws Exception;
+
     public Document buscarPropriedade (String id) throws Exception;
 
     // Todas as propriedades pertencentes ao usuario. O vinculo e verificado no banco,

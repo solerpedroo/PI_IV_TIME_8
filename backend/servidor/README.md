@@ -3,6 +3,16 @@
 
 # Servidor AgroGestão (Java, HTTP feito à mão)
 
+## Perfil e segurança
+
+Configurações consome `GET/PUT /api/perfil`, `PUT /api/perfil/preferencias`,
+`PUT /api/perfil/propriedade-padrao` e `PUT /api/perfil/senha`. A troca de e-mail
+é confirmada por código em `POST /api/perfil/email/confirmar`; reenvio em
+`POST /api/perfil/email/reenviar`. As rotas usam exclusivamente o dono da sessão.
+Senha/e-mail confirmados novamente encerram os logins ativos. A propriedade
+padrão vale no próximo login; a seleção da sessão atual permanece independente.
+Contrato, limites de foto/equipe/plano e testes: [docs/perfil.md](../../docs/perfil.md).
+
 ## Propriedades e contexto autenticado
 
 `GET/POST /api/propriedades`, `GET/PUT/DELETE /api/propriedades/{id}` e

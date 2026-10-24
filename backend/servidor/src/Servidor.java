@@ -14,6 +14,7 @@ import handlers.AuthHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
+import handlers.PerfilHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import http.Roteador;
@@ -85,6 +86,7 @@ public class Servidor
 
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
+        new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, sessoes);
         propriedades.setEstoque (estoque);
         propriedades.registrar (roteador);
