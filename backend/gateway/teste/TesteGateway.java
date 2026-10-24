@@ -1,3 +1,7 @@
+/*
+    Autor: Tomas de Paula Michelon Toniato
+    RA: 25004211
+*/
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -5,6 +9,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import com.sun.net.httpserver.HttpServer;
+import handlers.RotasHandler;
 
 /*
     Substitui o antigo server.test.ts (node:test), sem JUnit.
@@ -15,6 +20,7 @@ public class TesteGateway
     private static final String UP        = "{\"status\":\"UP\"}";
     private static final String DOWN      = "{\"status\":\"DOWN\"}";
     private static final String NOT_FOUND = "{\"error\":\"Not found\"}";
+    private static final String ERRO      = "{\"error\":\"Internal server error\"}";
 
     private static int falhas = 0;
     private static int total  = 0;
@@ -178,6 +184,19 @@ public class TesteGateway
             gw = TesteGateway.gateway ("");
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/ready");
             TesteGateway.conferir ("ready com base vazia", 503, TesteGateway.DOWN,
+                                   Integer.parseInt (r[0]), r[1]);
+            gw.stop (0);
+
+            // erro inesperado no handler: responde 500 em vez de derrubar o gateway
+            // (o stack trace que aparece na saida deste teste e esperado)
+            gw = HttpServer.create (new InetSocketAddress ("127.0.0.1", 0), 0);
+            gw.createContext ("/", new RotasHandler (new ClienteCoreQuebrado ()));
+            gw.start ();
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/ready");
+            TesteGateway.conferir ("erro inesperado no handler", 500, TesteGateway.ERRO,
+                                   Integer.parseInt (r[0]), r[1]);
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/health");
+            TesteGateway.conferir ("gateway continua vivo apos o erro", 200, TesteGateway.UP,
                                    Integer.parseInt (r[0]), r[1]);
             gw.stop (0);
 
