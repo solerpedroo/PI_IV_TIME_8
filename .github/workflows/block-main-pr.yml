@@ -1,4 +1,5 @@
-name: Block PRs to Main
+
+name: Protect Main Pull Requests
 
 on:
   pull_request_target:
@@ -10,14 +11,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  close-pr:
+  close-unauthorized-pr:
+    if: github.event.pull_request.user.login != 'solerpedroo'
     runs-on: ubuntu-latest
+
     steps:
-      - name: Close unauthorized PR
+      - name: Close unauthorized Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           gh pr close "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
-            --comment "Pull Requests targeting main are not allowed. Please target the development branch."
+            --comment "Only @solerpedroo is authorized to open Pull Requests targeting the main branch. Please target the develop branch instead."
