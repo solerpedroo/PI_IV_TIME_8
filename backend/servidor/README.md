@@ -13,8 +13,8 @@ a safra escolhida no modal só é confirmada pelo botão **Salvar propriedade**.
 A seleção vale para o token atual; `/api/me` devolve esse contexto ativo.
 O navegador recarrega após selecionar e passa a usar o cache local separado
 por usuário/propriedade. Talhões sempre são filtrados pelo contexto do servidor.
-Não se exclui a última propriedade, uma propriedade com talhões ou em uso em
-qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
+Não se exclui a última propriedade, uma propriedade com talhões ou custos, ou
+em uso em qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
 do usuário muda para uma das restantes na mesma operação de persistência.
 
 No MongoDB, propriedades antigas sem `usuarioId` são vinculadas somente quando
@@ -35,7 +35,7 @@ biblioteca externa é o driver oficial do MongoDB (`lib/`).
 
 O mesmo servidor entrega:
 
-- a **API** em `/api/**` (autenticação, propriedades, talhões e safras);
+- a **API** em `/api/**` (autenticação, propriedades, talhões, safras e custos);
 - os **arquivos do front** (raiz do repositório), na mesma origem da API;
 - `/health` e `/ready`.
 
@@ -133,6 +133,12 @@ curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
 curl -i -H "Authorization: Bearer $T" "$B/api/safras?etapa=Planejamento"
 curl -i -X POST -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/avancar
 curl -i -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/historico
+
+# custos (talhaoId e safraId são opcionais)
+curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  -d '{"description":"Diesel 500 L","category":"Combustível","value":3100,"date":"2026-07-25","talhaoId":null,"safraId":null}' $B/api/custos
+curl -i -H "Authorization: Bearer $T" "$B/api/custos?category=Combustível&de=2026-07-01&ate=2026-07-31"
+curl -i -H "Authorization: Bearer $T" "$B/api/custos/resumo?safraId=COLE-O-ID"
 curl -i -X PUT -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
   -d '{"nome":"T-01 Norte","cultura":"Soja","hectares":130,"status":"Em preparo"}' $B/api/talhoes/COLE-O-ID
 
@@ -193,6 +199,8 @@ reais por socket. Cobre:
 - talhões: validações, CRUD, filtros, resumo e isolamento entre dois usuários;
 - safras: validações, conflito de talhão no mesmo período, ciclo completo até a
   finalização, histórico do período e isolamento entre dois usuários;
+- custos: validações, vínculos com talhão e safra, filtros, indicadores sobre um
+  conjunto conhecido, safra finalizada fechada e isolamento entre dois usuários;
 - concorrência: 50 requisições paralelas, cadastros simultâneos com o mesmo e-mail,
   talhões simultâneos com o mesmo nome, exceção em handler (500), clientes que
   desconectam no meio e limite de conexões (503).
@@ -288,12 +296,56 @@ Regras do ciclo:
 - toda safra nasce em Planejamento; a etapa só muda por `/avancar`, uma por vez e sem voltar;
 - safra finalizada fica só para consulta: não é editada, avançada nem excluída;
 - só se exclui safra em Planejamento (depois disso ela já tem histórico);
-- um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`).
+- um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`);
+- safra com custos lançados não é excluída, e a edição não pode tirar dela um
+  talhão que tenha custo nela (409 com o campo `talhoes`).
 
 O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
 `/api/talhoes/{id}/historico` dos seus talhões cuja data, no fuso de São Paulo,
 cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
 `talhaoNome`.
+
+### Custos
+
+Lançamentos de custo da propriedade ativa, para controle gerencial (não contábil).
+Os nomes dos campos são os `name` do formulário de `custos.html`.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/custos?category=&talhaoId=&safraId=&de=&ate=&q=` | 200 com a lista, da data mais recente para a mais antiga · 400 período inválido |
+| `GET /api/custos/resumo?` (mesmos filtros) | 200 com os indicadores dos lançamentos filtrados · 400 |
+| `POST /api/custos` | 201 com o lançamento · 400 · 409 safra finalizada |
+| `GET /api/custos/{id}` | 200 · 404 |
+| `PUT /api/custos/{id}` | 200 · 400 · 404 · 409 safra finalizada |
+| `DELETE /api/custos/{id}` | 204 · 404 · 409 safra finalizada |
+
+Campos do lançamento:
+
+- `description`: obrigatório, até 120 caracteres;
+- `category`: Insumos, Mão de Obra, Maquinário, Combustível ou Outros (as opções do formulário);
+- `value`: número de 0,01 até 1 bilhão, guardado arredondado em centavos. Texto é recusado;
+- `date`: `AAAA-MM-DD`;
+- `talhaoId`: opcional. Vazio ou `null` = custo da propriedade toda;
+- `safraId`: opcional. Com talhão e safra juntos, o talhão precisa fazer parte da safra.
+
+A resposta traz também `talhaoNome`, `safraNome` e `cultura` (a da safra; sem
+safra, a do talhão; sem os dois, `null`). Custo de safra finalizada não é criado,
+alterado nem excluído: o histórico da safra fica fechado.
+
+Filtros (todos opcionais e combináveis):
+
+- `category`: sem diferenciar maiúsculas; `todos` = sem filtro;
+- `talhaoId`: id do talhão, ou `propriedade` para os custos sem talhão;
+- `safraId`: id da safra, ou `nenhuma` para os custos sem safra;
+- `de` e `ate`: período inclusivo em `AAAA-MM-DD`;
+- `q`: busca na descrição.
+
+O resumo devolve `total`, `quantidade`, `areaHectares`, `custoPorHectare`,
+`porCategoria` (as cinco, inclusive zeradas), `porTalhao` (`Propriedade` para
+os sem talhão), `porSafra`, `porCultura` e `evolucao` (total por mês `AAAA-MM`,
+em ordem). Os totais são somados em centavos. A área usada no custo por hectare é
+a da safra filtrada, a do talhão filtrado ou, sem esses filtros, a soma dos
+talhões da propriedade. Sem área, `custoPorHectare` é `null`.
 
 ### Saúde
 
@@ -335,10 +387,12 @@ backend/servidor/
       AuthHandler.java          rotas /api/auth/* e /api/me
       TalhoesHandler.java       rotas /api/talhoes
       SafrasHandler.java        rotas /api/safras (ciclo produtivo)
+      CustosHandler.java        rotas /api/custos (lançamentos e indicadores)
       EstaticosHandler.java     arquivos do front
       SaudeHandler.java         /health e /ready
     dados/
-      RepositorioUsuarios.java / RepositorioTalhoes.java / RepositorioSafras.java    interfaces
+      RepositorioUsuarios.java / RepositorioTalhoes.java    interfaces
+      RepositorioSafras.java / RepositorioCustos.java       interfaces
       *Mongo.java               implementações com MongoDB
       *Memoria.java             implementações em memória (testes e --memoria)
       ConexaoMongo.java         MongoClient único (thread-safe)
@@ -358,11 +412,14 @@ backend/servidor/
 - `propriedades`.
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `custos`: índice em `(propriedadeId, date)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
 ## Fora desta entrega
 
-Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e
-Configurações. Os formulários de autenticação do front usam as rotas desta API.
-O front ainda não tem uma tela de Safras consumindo `/api/safras`.
+Atividades, Insumos, Ocorrências, Dashboard, Notificações e Configurações.
+Os formulários de autenticação do front usam as rotas desta API.
+O front ainda não tem uma tela de Safras consumindo `/api/safras`, e a tela de
+Custos ainda grava no navegador em vez de usar `/api/custos`. O custo gerado
+automaticamente pelo consumo de estoque depende da API de estoque, que ainda não existe.
