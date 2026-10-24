@@ -1,6 +1,7 @@
+<!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Agro — frontend estático
 
-> Esta branch também contém a fundação separada do backend (gateway em Java puro, core em Java com Spring Boot e MongoDB). Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
+> O front consome o [servidor Java 21 manual](backend/servidor/README.md), sem frameworks, para autenticação, propriedades, talhões e ocorrências. O módulo de ocorrências e sua validação estão descritos em [docs/ocorrencias.md](docs/ocorrencias.md). Outros módulos ainda possuem operações locais; os diretórios históricos de gateway/core não são necessários para executar esta entrega.
 
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 
