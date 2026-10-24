@@ -1,6 +1,13 @@
 # Persistência local dos dados operacionais
 
 Miguel — RA: 25003110
+Autor secundário: Pedro Henrique Contardi Soler - 25005592
+
+Atualização da branch `feat/perfil`: dados pessoais, preferências da conta e
+propriedade padrão usam a API Java, conforme [perfil.md](perfil.md). O antigo
+`settings` local é preservado como legado, mas a tela não o usa para recuperar
+perfil nem simular gravação. A documentação abaixo descreve o mecanismo local
+dos módulos que ainda o utilizam.
 
 O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
 
