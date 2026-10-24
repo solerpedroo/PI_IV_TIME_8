@@ -1,14 +1,16 @@
+<!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Agro — frontend estático
-
-<!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
 
 > O servidor principal está em `backend/servidor`: Java 21 puro com HTTP manual
 > e MongoDB. O frontend consome suas APIs de autenticação, propriedades, talhões
-> e estoque. Consulte [backend/README.md](backend/README.md) para execução.
+> estoque e ocorrências. Consulte [backend/README.md](backend/README.md) para execução.
 
 Perfil em Configurações está integrado ao servidor Java puro: dados pessoais,
 preferências, propriedade padrão, confirmação de novo e-mail, senha e logout.
 Contrato, limites de foto/equipe/plano e validação: [docs/perfil.md](docs/perfil.md).
+
+O módulo de ocorrências e sua validação estão descritos em
+[docs/ocorrencias.md](docs/ocorrencias.md).
 
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
 

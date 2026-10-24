@@ -1,10 +1,12 @@
 /* Miguel — RA: 25003110 */
+/* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
 /* Regressões de layout e interações reais, sem depender do backend.
  * Usa o Chromium do Playwright. BROWSER_PATH aponta outro executável, como o Edge. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { mockApi } = require('./mock-api.cjs');
 
 const root = path.resolve(__dirname, '..');
 const origin = 'http://agro.local';
@@ -78,6 +80,13 @@ async function menu(page, trigger) {
     if (!target.startsWith(root + path.sep) || !fs.existsSync(target) || !fs.statSync(target).isFile()) return route.fulfill({ status: 404, body: '' });
     return route.fulfill({ status: 200, contentType: mime[path.extname(target)] || 'application/octet-stream', body: fs.readFileSync(target) });
   });
+  // Layout usa um contrato de leitura; persistência é coberta pela suíte Java real.
+  await context.addInitScript(() => {
+    sessionStorage.setItem('agro.sessionToken', 'e2e-local');
+    sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
+  });
+  await mockApi(context, origin, {occurrences: [{id: 'ocorrencia-layout', titulo: 'Alerta para revisão visual',
+    tipo: 'Praga', status: 'ABERTA', prioridade: 'Alta', data: '2026-10-24', talhaoNome: 'T-01 Norte'}]});
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -154,7 +163,7 @@ async function menu(page, trigger) {
   await page.locator('#cost-category-trigger').click();
   await page.locator('#cost-category-listbox [data-value="Insumos"]').click();
   await page.locator('#cost-plot-trigger').click();
-  await reachable(page.locator('#cost-plot-listbox [data-value="Propriedade"]'));
+  await reachable(page.locator('#cost-plot-listbox [data-value="T-01 Norte"]'));
   await screenshot(page, 'custos-select-no-formulario');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-modal="cost-form"]').getAttribute('aria-hidden'), 'false');
@@ -204,7 +213,7 @@ async function menu(page, trigger) {
   await page.setViewportSize({ width: 1100, height: 700 });
   await page.waitForFunction(() => document.querySelector('[data-cost-table] [data-popover-trigger]')?.getAttribute('aria-expanded') === 'false');
   await go(page, 'dashboard');
-  assert.match(await page.locator('[data-metric="cost"]').textContent(), /20,2/);
+  assert.match(await page.locator('[data-metric="cost"]').textContent(), /20\.190,00/);
   await reachable(page.locator('.alert-item a').first());
   assert.ok(await page.locator('.alert-item a').first().evaluate((element) => element.clientWidth > 100), 'alerta comprimido na coluna do ícone');
   await screenshot(page, 'dashboard-alertas-ajustados');
@@ -225,7 +234,7 @@ async function menu(page, trigger) {
     await screenshot(page, screen + '-validacao');
   }
   // Um custo ilegível não pode virar um total zero aparentemente confirmado.
-  await page.evaluate(() => localStorage.setItem('agro.operational.v1.costs', '{invalido'));
+  await page.evaluate(() => localStorage.setItem('agro.operational.v1.e2e-local.e2e-property.costs', '{invalido'));
   await go(page, 'dashboard');
   assert.equal(await page.locator('[data-metric="cost"]').textContent(), '—');
   assert.match(await page.locator('[data-storage-error]').textContent(), /recuperar os custos/);

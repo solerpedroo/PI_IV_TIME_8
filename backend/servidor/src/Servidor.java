@@ -1,6 +1,9 @@
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
+import dados.RepositorioOcorrencias;
+import dados.RepositorioOcorrenciasMemoria;
+import dados.RepositorioOcorrenciasMongo;
 import dados.RepositorioTalhoes;
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioTalhoesMongo;
@@ -17,6 +20,7 @@ import handlers.PropriedadesHandler;
 import handlers.PerfilHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
+import handlers.OcorrenciasHandler;
 import http.Roteador;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -81,17 +85,19 @@ public class Servidor
     public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioEstoque estoque,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
+        RepositorioOcorrencias ocorrencias = conexao == null ? new RepositorioOcorrenciasMemoria () : new RepositorioOcorrenciasMongo (conexao);
         Sessoes  sessoes  = new Sessoes ();
         Roteador roteador = new Roteador (sessoes);
 
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
-        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, sessoes);
+        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
         propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
         new EstoqueHandler (estoque, sessoes).registrar (roteador);
+        new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 

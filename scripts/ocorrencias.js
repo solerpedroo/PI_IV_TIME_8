@@ -1,479 +1,222 @@
 /* Miguel — RA: 25003110 */
-/**
- * Agro — interações da tela Ocorrências (dados mock híbridos)
- * --------------------------------------------------------------------------
- * Cobre o Flow "Registrar ocorrência" e o Flow "Ações da ocorrência" do
- * board Fluxos de Interação (D — Ocorrências, Custos e Relatórios):
- * - Registrar ocorrência: formulário com tipo, talhão e prioridade
- *   (segmented control) → validação (G3) → nova linha "Aberta" → toast.
- * - Ficha de detalhe: meta grid + linha do tempo + campo de nova
- *   atualização (publica um evento na timeline sem fechar o modal).
- * - Resolver (confirmação → status "Resolvida" + evento na timeline) e
- *   Excluir (confirmação destrutiva), acessíveis tanto pelo menu "⋮" da
- *   linha quanto pelos botões da própria ficha de detalhe.
- * - `?talhao=` na URL filtra a tabela e mostra um chip removível (mesmo
- *   padrão usado em atividades.js).
- *
- * Simplificação assumida: "Resolvidas (Mês)" reflete a contagem atual de
- * linhas com status "Resolvida" na tabela (não há um recorte histórico por
- * mês nesta camada mock — a API deve fornecer esse agregado futuramente).
- */
+/* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
+/* Ocorrências: a API é a fonte dos dados. Nenhum registro mock é importado. */
 (() => {
   "use strict";
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const labels = { ABERTA: "Aberta", EM_ACOMPANHAMENTO: "Em acompanhamento", RESOLVIDA: "Resolvida" };
+  const titles = { registro: "Ocorrência registrada", editar: "Cadastro editado", acompanhamento: "Acompanhamento iniciado", atualizacao: "Atualização publicada", resolucao: "Ocorrência resolvida", excluir: "Ocorrência excluída" };
+  let propertyId = "", active = null, editing = null, busy = false, ready = false, loadNumber = 0;
+  const form = $("[data-occ-form]");
+  const field = (name) => form.elements.namedItem(name);
+  const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
 
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-
-  const filters = {
-    query: "",
-    talhao: new URLSearchParams(window.location.search).get("talhao") || "",
-  };
-
-  /** Durante o uso, as linhas apontam para seus históricos; o JSON salva tudo junto ao registro. */
-  const timelines = new Map();
-  let activeRow = null;
-  let rowSeq = 100;
-
-  let persist = () => true;
-  function toast(type, title, description) {
-    if (window.AgroToast) window.AgroToast.show({ type, title, description });
+  // Textos do usuário entram como conteúdo, inclusive descrição, títulos e timeline.
+  function node(tag, text, className) {
+    const el = document.createElement(tag);
+    if (text != null) el.textContent = text;
+    if (className) el.className = className;
+    return el;
+  }
+  const date = (value) => value ? value.split("-").reverse().join("/") : "—";
+  const timestamp = (value) => value ? new Date(value).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—";
+  function today() {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    return ["year", "month", "day"].map((key) => parts.find((p) => p.type === key).value).join("-");
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Modal helpers                                                          */
-  /* ---------------------------------------------------------------------- */
-  function openModal(modal) {
-    if (!modal) return;
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-    modal.querySelector("input, select, textarea, button")?.focus();
-  }
-
-  function closeModal(modal) {
-    if (!modal) return;
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-  }
-
-  function initGenericModals() {
-    $$(".modal-backdrop").forEach((modal) => {
-      $$("[data-close-modal]", modal).forEach((btn) => btn.addEventListener("click", () => closeModal(modal)));
-      modal.addEventListener("click", (event) => {
-        if (event.target === modal) closeModal(modal);
-      });
-    });
-  }
-
-  function clearErrors(form) {
-    $$(".field-error", form).forEach((el) => (el.textContent = ""));
-    $$("input, select", form).forEach((el) => el.removeAttribute("aria-invalid"));
-  }
-
-  function setError(form, field, message) {
-    const errorEl = form.querySelector(`[data-error-for="${field}"]`);
-    if (errorEl) errorEl.textContent = message;
-    form.querySelector(`[name="${field}"]`)?.setAttribute("aria-invalid", "true");
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Filtro por talhão vindo da URL                                         */
-  /* ---------------------------------------------------------------------- */
-  function initTalhaoFilterChip() {
-    const bar = $("[data-talhao-filter-bar]");
-    const label = $("[data-talhao-filter-label]");
-    const clearBtn = $("[data-clear-talhao-filter]");
-    if (!bar) return;
-
-    function refresh() {
-      bar.hidden = !filters.talhao;
-      if (filters.talhao && label) label.textContent = `Talhão: ${filters.talhao}`;
+  async function request(path, options = {}) {
+    const token = sessionStorage.getItem("agro.sessionToken");
+    if (!token) { location.replace("login.html"); throw new Error("Entre novamente."); }
+    const response = await fetch(base + path, { ...options, headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, signal: AbortSignal.timeout(15000) });
+    const data = await response.json();
+    if (response.status === 401) { sessionStorage.removeItem("agro.sessionToken"); location.replace("login.html"); }
+    if (!response.ok) {
+      const error = new Error(data.error === "Validation failed" ? Object.values(data.fields || {}).join(" ") || "Revise os campos informados." : data.error || "Falha na API.");
+      error.fields = data.fields; throw error;
     }
-
-    clearBtn?.addEventListener("click", () => {
-      filters.talhao = "";
-      const url = new URL(window.location.href);
-      url.searchParams.delete("talhao");
-      window.history.replaceState({}, "", url);
-      refresh();
-      applyFilters();
-    });
-
-    refresh();
+    return data;
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Busca + filtro por talhão                                              */
-  /* ---------------------------------------------------------------------- */
-  function applyFilters() {
-    const rows = $$("[data-occ-table] tbody tr");
-    const q = filters.query;
-    let visible = 0;
-
-    rows.forEach((row) => {
-      const matchesQuery = !q || row.dataset.occ.toLowerCase().includes(q);
-      const matchesTalhao = !filters.talhao || row.dataset.talhao === filters.talhao;
-      const show = matchesQuery && matchesTalhao;
-      row.hidden = !show;
-      if (show) visible += 1;
-    });
-
-    const empty = $("[data-occ-empty]");
-    const table = $("[data-occ-table]");
-    if (empty) empty.hidden = visible > 0;
-    if (table) table.hidden = visible === 0;
-  }
-
-  function initSearch() {
-    $("[data-occ-search]")?.addEventListener("input", (event) => {
-      filters.query = event.target.value.trim().toLowerCase();
-      applyFilters();
+  function openModal(name) {
+    $$("[data-modal^='occ-']").forEach((modal) => {
+      const open = modal.dataset.modal === name;
+      modal.classList.toggle("is-open", open); modal.setAttribute("aria-hidden", String(!open));
+      if (open) modal.querySelector("input, select, textarea, button")?.focus();
     });
   }
-
-  /* ---------------------------------------------------------------------- */
-  /* Métricas (recalculadas a partir do estado real da tabela)              */
-  /* ---------------------------------------------------------------------- */
-  function recomputeMetrics() {
-    const rows = $$("[data-occ-table] tbody tr");
-    const counts = { Aberta: 0, "Em análise": 0, Resolvida: 0 };
-    let severidadeAlta = 0;
-
-    rows.forEach((row) => {
-      counts[row.dataset.status] = (counts[row.dataset.status] || 0) + 1;
-      if (row.dataset.severity === "Alta" && row.dataset.status !== "Resolvida") severidadeAlta += 1;
-    });
-
-    const setText = (selector, value) => {
-      const el = $(selector);
-      if (el) el.textContent = String(value);
-    };
-    setText("[data-metric='abertas']", counts.Aberta);
-    setText("[data-metric='em-analise']", counts["Em análise"]);
-    setText("[data-metric='resolvidas']", counts.Resolvida);
-    setText("[data-metric='severidade-alta']", severidadeAlta);
+  const closeModals = () => openModal("");
+  function setBusy(value) {
+    busy = value;
+    $$("[data-modal^='occ-'] button, [data-open-modal='occ-form']").forEach((b) => { b.disabled = value || !ready; });
+  }
+  function message(text, retry = false) { $("[data-occ-message]").textContent = text; $("[data-occ-retry]").hidden = !retry; }
+  function clearList() {
+    $("[data-occ-table] tbody").replaceChildren(); $("[data-occ-empty]").hidden = true;
+    $$("[data-metric]").forEach((e) => { e.textContent = "—"; });
+  }
+  function parameters() {
+    return "?" + new URLSearchParams({ mes: $("[data-occ-month]").value, q: $("[data-occ-search]").value.trim(), talhaoId: $("[data-occ-plot-filter]").value, incluirExcluidas: $("[data-occ-archives]").checked });
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Menu de ações por linha                                                */
-  /* ---------------------------------------------------------------------- */
-  function actionMenuMarkup(status) {
-    const isResolved = status === "Resolvida";
-    return `
-      <button type="button" class="action-menu-item" role="menuitem" data-row-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-      ${!isResolved ? `<button type="button" class="action-menu-item" role="menuitem" data-row-action="resolve"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Marcar resolvida</span></button>` : ""}
-      <button type="button" class="action-menu-item is-danger" role="menuitem" data-row-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-    `;
-  }
-
-  function populateActionMenus() {
-    $$("[data-occ-table] tbody tr").forEach((row) => {
-      const menu = $("[data-popover]", row);
-      if (menu) menu.innerHTML = actionMenuMarkup(row.dataset.status);
-    });
-  }
-
-  function refreshRowMenu(row) {
-    const menu = $("[data-popover]", row);
-    if (menu) menu.innerHTML = actionMenuMarkup(row.dataset.status);
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Timeline por ocorrência                                                */
-  /* ---------------------------------------------------------------------- */
-  function timelineFor(row) {
-    if (!timelines.has(row)) {
-      timelines.set(row, [
-        { time: `${row.dataset.date} · registro`, title: "Ocorrência aberta", desc: `${row.dataset.tipo} identificado(a) em ${row.dataset.talhao}.` },
-      ]);
+  // O resultado de um filtro antigo não pode substituir uma consulta mais recente.
+  async function load() {
+    const number = ++loadNumber; clearList(); message("Carregando ocorrências…");
+    try {
+      const params = parameters();
+      const [records, summary] = await Promise.all([request("/api/ocorrencias" + params), request("/api/ocorrencias/resumo" + params)]);
+      if (number !== loadNumber) return;
+      $("[data-occ-table] tbody").replaceChildren(...records.map(row)); $("[data-occ-empty]").hidden = records.length > 0;
+      const values = { abertas: summary.abertas, "em-analise": summary.emAcompanhamento, resolvidas: summary.resolvidasMes, "severidade-alta": summary.prioridadeAlta };
+      Object.entries(values).forEach(([key, value]) => { $(`[data-metric='${key}']`).textContent = value; });
+      $("[data-occ-month-label]").textContent = `Resoluções em ${summary.mes.split("-").reverse().join("/")} · Brasília`;
+      message(`${records.length} ocorrência(s) no contexto consultado.`);
+    } catch (error) {
+      if (number !== loadNumber) return;
+      clearList(); message("Não foi possível consultar as ocorrências. " + error.message, true); throw error;
     }
-    return timelines.get(row);
+  }
+  function badge(text, kind) {
+    const tone = kind === "status" ? ({ ABERTA: "warning", EM_ACOMPANHAMENTO: "info", RESOLVIDA: "success" }[text]) : ({ Alta: "error", Média: "warning", Baixa: "neutral" }[text]);
+    return node("span", labels[text] || text, "badge badge-" + tone);
+  }
+  const reportDetail = (error) => toast("error", "Consulta não concluída", error.message);
+  function row(record) {
+    const tr = node("tr"); tr.dataset.id = record.id; tr.dataset.occ = record.titulo; tr.dataset.status = labels[record.status]; tr.dataset.talhao = record.talhaoNome || "Propriedade";
+    const name = node("td", null, "col-occ-name"), details = node("button", record.titulo, "occ-detail-link");
+    details.type = "button"; details.dataset.rowAction = "detail";
+    details.addEventListener("click", () => showDetail(record.id).catch(reportDetail)); name.append(details);
+    tr.append(name, node("td", record.tipo, "col-muted"), node("td", record.talhaoNome || "Geral da propriedade", "col-muted"), node("td", date(record.data), "col-muted"));
+    const priority = node("td"), status = node("td"); priority.append(badge(record.prioridade)); status.append(badge(record.status, "status"));
+    if (record.excluida) status.append(node("span", "Excluída", "badge badge-neutral"));
+    tr.append(priority, status, node("td", "Abrir pelo título", "col-muted")); return tr;
   }
 
-  function renderTimeline(row) {
-    const host = $("[data-detail-timeline]");
-    const entries = timelineFor(row);
-    host.innerHTML = entries
-      .map(
-        (entry, index) => `
-        <div class="timeline-entry ${index === entries.length - 1 ? "is-latest" : ""}">
-          <div class="timeline-rail"><span class="timeline-dot"></span><span class="timeline-line"></span></div>
-          <div class="timeline-body">
-            <span class="timeline-time">${window.AgroLocal.escape(entry.time)}</span>
-            <p class="timeline-title">${window.AgroLocal.escape(entry.title)}</p>
-            <p class="timeline-desc">${window.AgroLocal.escape(entry.desc)}</p>
-          </div>
-        </div>`
-      )
-      .join("");
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Modal de detalhe                                                       */
-  /* ---------------------------------------------------------------------- */
-  function severityBadgeClass(sev) {
-    if (sev === "Alta") return "badge-error";
-    if (sev === "Média") return "badge-warning";
-    return "badge-neutral";
-  }
-
-  function statusBadgeClass(status) {
-    if (status === "Aberta") return "badge-warning";
-    if (status === "Em análise") return "badge-info";
-    return "badge-success";
-  }
-
-  function openDetail(row) {
-    activeRow = row;
-    const modal = $("[data-modal='occ-detail']");
-    $("[data-detail-title]", modal).textContent = row.dataset.occ;
-    $("[data-detail-subtitle]", modal).textContent = `${row.dataset.talhao} · ${row.dataset.date}`;
-    $("[data-detail-badges]", modal).innerHTML = `
-      <span class="badge ${severityBadgeClass(row.dataset.severity)}">${window.AgroLocal.escape(row.dataset.severity)}</span>
-      <span class="badge ${statusBadgeClass(row.dataset.status)}">${window.AgroLocal.escape(row.dataset.status)}</span>
-    `;
-    $("[data-detail-meta]", modal).innerHTML = `
-      <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.tipo)}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.talhao)}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Registrada</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.date)}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(row.dataset.status)}</span></div>
-    `;
-    renderTimeline(row);
-
-    const resolveBtn = $("[data-detail-resolve]", modal);
-    if (resolveBtn) resolveBtn.hidden = row.dataset.status === "Resolvida";
-
-    $("[data-update-text]", modal).value = "";
-    openModal(modal);
-  }
-
-  function initDetailModal() {
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='detail'], .col-occ-name");
-      if (!btn) return;
-      const row = btn.closest("tr");
-      if (row) openDetail(row);
-    });
-
-    const modal = $("[data-modal='occ-detail']");
-
-    $("[data-detail-publish]", modal)?.addEventListener("click", () => {
-      const textarea = $("[data-update-text]", modal);
-      const text = textarea.value.trim();
-      if (!text) {
-        toast("error", "Falha ao publicar", "Escreva uma atualização antes de publicar.");
-        return;
-      }
-      timelineFor(activeRow).push({ time: new Date().toLocaleString("pt-BR"), title: "Atualização publicada", desc: text });
-      if (!persist()) {
-        // connect() restaurou o estado confirmado; remonta a ficha com a linha remapeada.
-        if (activeRow) openDetail(activeRow);
-        return;
-      }
-      renderTimeline(activeRow);
-      textarea.value = "";
-      toast("success", "Atualização publicada", "A linha do tempo da ocorrência foi atualizada.");
-    });
-
-    $("[data-detail-resolve]", modal)?.addEventListener("click", () => {
-      const confirmModal = $("[data-modal='occ-resolve']");
-      $("[data-resolve-desc]", confirmModal).textContent = `${activeRow.dataset.occ} será marcada como resolvida.`;
-      openModal(confirmModal);
-    });
-
-    $("[data-detail-delete]", modal)?.addEventListener("click", () => {
-      const confirmModal = $("[data-modal='occ-delete']");
-      openModal(confirmModal);
-    });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Resolver (linha ou ficha de detalhe)                                   */
-  /* ---------------------------------------------------------------------- */
-  function initResolve() {
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='resolve']");
-      if (!btn) return;
-      activeRow = btn.closest("tr");
-      const confirmModal = $("[data-modal='occ-resolve']");
-      $("[data-resolve-desc]", confirmModal).textContent = `${activeRow.dataset.occ} será marcada como resolvida.`;
-      openModal(confirmModal);
-    });
-
-    $("[data-confirm-resolve]")?.addEventListener("click", () => {
-      const row = activeRow;
-      if (!row) return;
-
-      row.dataset.status = "Resolvida";
-      $("[data-status-badge]", row).className = "badge badge-success";
-      $("[data-status-badge]", row).textContent = "Resolvida";
-      refreshRowMenu(row);
-
-      timelineFor(row).push({ time: new Date().toLocaleString("pt-BR"), title: "Ocorrência resolvida", desc: "Status atualizado para Resolvida." });
-
-      if (!persist()) return;
-      closeModal($("[data-modal='occ-resolve']"));
-      closeModal($("[data-modal='occ-detail']"));
-      recomputeMetrics();
-      toast("success", "Ocorrência resolvida", `${row.dataset.occ} foi marcada como resolvida.`);
-    });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Excluir (linha ou ficha de detalhe)                                    */
-  /* ---------------------------------------------------------------------- */
-  function initDelete() {
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='delete']");
-      if (!btn) return;
-      activeRow = btn.closest("tr");
-      openModal($("[data-modal='occ-delete']"));
-    });
-
-    $("[data-confirm-delete]")?.addEventListener("click", () => {
-      const row = activeRow;
-      if (!row) return;
-      const name = row.dataset.occ;
-      timelines.delete(row);
-      row.remove();
-      if (!persist()) return;
-
-      closeModal($("[data-modal='occ-delete']"));
-      closeModal($("[data-modal='occ-detail']"));
-      recomputeMetrics();
-      applyFilters();
-      toast("info", "Ocorrência excluída", `${name} foi removida do registro.`);
-    });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Formulário: registrar ocorrência                                       */
-  /* ---------------------------------------------------------------------- */
-  function initPrioritySegmented(form) {
-    const options = $$(".segmented-option", form);
-    const hidden = form.querySelector("[name='prioridade']");
-    options.forEach((opt) => {
-      opt.addEventListener("click", () => {
-        options.forEach((o) => o.setAttribute("aria-pressed", "false"));
-        opt.setAttribute("aria-pressed", "true");
-        hidden.value = opt.dataset.priority;
-      });
-    });
-  }
-
-  function buildRow(values) {
-    const menuId = `menu-o${++rowSeq}`;
-    const row = document.createElement("tr");
-    row.dataset.id = values.id || window.AgroLocal.id();
-    row.dataset.occ = values.titulo;
-    row.dataset.tipo = values.tipo;
-    row.dataset.talhao = values.talhao;
-    // Uma data fixa continua verdadeira depois do reload em outro dia.
-    row.dataset.date = new Date().toLocaleDateString("pt-BR");
-    row.dataset.severity = values.prioridade;
-    row.dataset.status = "Aberta";
-
-    values = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, window.AgroLocal.escape(value)]));
-    row.innerHTML = `
-      <td class="col-occ-name">${values.titulo}</td>
-      <td class="col-muted">${values.tipo}</td>
-      <td class="col-muted">${values.talhao}</td>
-      <td class="col-muted">${window.AgroLocal.escape(row.dataset.date)}</td>
-      <td><span class="badge ${severityBadgeClass(values.prioridade)}" data-severity-badge>${values.prioridade}</span></td>
-      <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
-      <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${menuId}" aria-expanded="false" aria-label="Mais ações — ${values.titulo}"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="${menuId}" data-popover role="menu">${actionMenuMarkup("Aberta")}</div></div></td>
-    `;
-    return row;
-  }
-
-  function initOccForm() {
-    const modal = $("[data-modal='occ-form']");
-    const form = $("[data-occ-form]", modal);
-    if (!modal || !form) return;
-
-    initPrioritySegmented(form);
-
-    $$("[data-open-modal='occ-form']").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        clearErrors(form);
-        openModal(modal);
-      });
-    });
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      clearErrors(form);
-
-      const titulo = form.titulo.value.trim();
-      const tipo = form.tipo.value;
-      const talhao = form.talhao.value;
-      const prioridade = form.prioridade.value || "Baixa";
-
-      let hasError = false;
-      if (!titulo) { setError(form, "titulo", "Informe um título."); hasError = true; }
-      if (!tipo) { setError(form, "tipo", "Selecione o tipo."); hasError = true; }
-      if (!talhao) { setError(form, "talhao", "Selecione o talhão."); hasError = true; }
-
-      if (hasError) {
-        toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
-        return;
-      }
-
-      const row = buildRow({ titulo, tipo, talhao, prioridade });
-      $("[data-occ-table] tbody").appendChild(row);
-      if (!persist()) return;
-
-      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "ocorrencia", descricao: titulo, talhao}}));
-      closeModal(modal);
-      form.reset();
-      $$(".segmented-option", form).forEach((o, i) => o.setAttribute("aria-pressed", i === 0 ? "true" : "false"));
-      form.prioridade.value = "Baixa";
-
-      recomputeMetrics();
-      applyFilters();
-      toast("success", "Ocorrência registrada", `${titulo} · ${talhao} · prioridade ${prioridade.toLowerCase()}.`);
-    });
-  }
-
-  // O histórico acompanha o identificador da ocorrência; não fica preso ao
-  // elemento da tabela, que deixa de existir quando a página é recarregada.
-  function restoreOccurrences(records) {
-    const activeId = activeRow?.dataset.id;
-    timelines.clear();
-    $("[data-occ-table] tbody").replaceChildren(...records.map((record) => {
-      const row = buildRow({id: record.id, titulo: record.occ, tipo: record.tipo,
-        talhao: record.talhao, prioridade: record.severity});
-      row.dataset.date = record.date;
-      row.dataset.status = record.status;
-      row.children[3].textContent = record.date;
-      const badge = $("[data-status-badge]", row);
-      badge.textContent = record.status;
-      badge.className = "badge " + statusBadgeClass(record.status);
-      timelines.set(row, record.timeline);
-      refreshRowMenu(row);
-      return row;
+  async function showDetail(id) {
+    const [record, events] = await Promise.all([request("/api/ocorrencias/" + id), request("/api/ocorrencias/" + id + "/timeline")]);
+    active = record;
+    $("[data-detail-title]").textContent = record.titulo; $("[data-detail-subtitle]").textContent = `${record.talhaoNome || "Geral da propriedade"} · ${date(record.data)}`;
+    $("[data-detail-description]").textContent = record.descricao || "Sem descrição informada.";
+    $("[data-detail-badges]").replaceChildren(badge(record.prioridade), badge(record.status, "status"));
+    const metadata = { Tipo: record.tipo, Propriedade: $(".sidebar-user-property").textContent, Talhão: record.talhaoNome || "Geral da propriedade", Safra: record.safra || "Sem vínculo", "Data da ocorrência": date(record.data), "Registrada em": timestamp(record.criadaEm), "Resolvida em": timestamp(record.resolvidaEm), Status: record.excluida ? "Excluída (consulta)" : labels[record.status] };
+    $("[data-detail-meta]").replaceChildren(...Object.entries(metadata).map(([key, value]) => {
+      const cell = node("div", null, "meta-cell"); cell.append(node("span", key, "meta-cell-label"), node("span", value, "meta-cell-value")); return cell;
     }));
-    // A ficha aberta precisa continuar ligada ao registro recuperado após rollback.
-    activeRow = $$("[data-occ-table] tbody tr").find((row) => row.dataset.id === activeId) || null;
-    recomputeMetrics(); applyFilters();
+    $("[data-detail-timeline]").replaceChildren(...events.map((event) => {
+      const entry = node("div", null, "timeline-entry"), rail = node("div", null, "timeline-rail"), body = node("div", null, "timeline-body");
+      rail.append(node("span", null, "timeline-dot"), node("span", null, "timeline-line"));
+      body.append(node("span", `${event.ordem} · ${timestamp(event.data)}`, "timeline-time"), node("p", titles[event.acao], "timeline-title"), node("p", event.descricao || "Sem descrição informada.", "timeline-desc occ-text"));
+      if (event.acao === "editar") {
+        const d = event.dados;
+        body.append(node("p", `${d.titulo} · ${d.tipo} · ${date(d.data)} · ${d.prioridade} · ${d.talhaoNome || "Geral da propriedade"} · ${d.safra || "Sem safra"}`, "timeline-desc"), node("p", d.descricao, "occ-text"));
+      }
+      entry.append(rail, body); return entry;
+    }));
+    const readonly = record.excluida || record.status === "RESOLVIDA";
+    $("[data-detail-follow]").hidden = readonly || record.status !== "ABERTA";
+    $("[data-detail-publish]").hidden = readonly || record.status !== "EM_ACOMPANHAMENTO";
+    for (const key of ["resolve", "edit"]) $(`[data-detail-${key}]`).hidden = readonly;
+    $("[data-detail-delete]").hidden = record.excluida;
+    $("[data-update-text]").closest(".textarea-group").hidden = readonly;
+    $("[data-occ-detail-error]").textContent = ""; openModal("occ-detail");
+  }
+  function priority(value) {
+    field("prioridade").value = value;
+    $$("[data-priority]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.priority === value)));
+  }
+  function edit(record) {
+    editing = record; form.reset(); $$(".field-error", form).forEach((el) => { el.textContent = ""; });
+    $$("[aria-invalid]", form).forEach((el) => el.removeAttribute("aria-invalid"));
+    for (const key of ["titulo", "tipo", "talhaoId", "data", "descricao"]) field(key).value = record?.[key] || "";
+    if (!record) { field("data").value = today(); field("talhaoId").value = $("[data-occ-plot-filter]").value; }
+    priority(record?.prioridade || "Baixa"); $("#occ-form-title").textContent = record ? "Editar ocorrência" : "Registrar ocorrência";
+    $("button[type=submit]", form).textContent = record ? "Salvar alterações" : "Registrar ocorrência"; openModal("occ-form");
   }
 
+  // Sucesso depende da confirmação da escrita. Uma falha posterior de consulta é
+  // informada separadamente para não incentivar a duplicação de um registro já salvo.
+  async function write(path, method, payload, errorElement, onSaved) {
+    if (busy) return;
+    errorElement.textContent = ""; setBusy(true);
+    let result;
+    try { result = await request(path, { method, body: JSON.stringify({ ...payload, contextoPropriedadeId: propertyId }) }); }
+    catch (error) {
+      errorElement.textContent = error.message + " Consulte o registro antes de repetir uma operação sem confirmação.";
+      if (error.fields) Object.entries(error.fields).forEach(([key, text]) => {
+        const host = $(`[data-error-for='${key}']`, form); if (host) host.textContent = text; field(key)?.setAttribute("aria-invalid", "true");
+      });
+      setBusy(false); return;
+    }
+    toast("success", "Alteração salva", "Registro e histórico confirmados pelo servidor.");
+    try { await onSaved(result); await load(); }
+    catch (error) { toast("error", "Alteração salva; consulta pendente", "A gravação foi confirmada. Atualize a consulta. " + error.message); }
+    finally { setBusy(false); }
+  }
+  function publish(action) {
+    if (!active) return;
+    return write("/api/ocorrencias/" + active.id + "/timeline", "POST", { versao: active.versao, acao: action, descricao: $("[data-update-text]").value }, $("[data-occ-detail-error]"), async (saved) => {
+      active = saved; $("[data-update-text]").value = ""; await showDetail(saved.id);
+    });
+  }
+
+  async function initialize() {
+    clearList();
+    try {
+      const [me, plots] = await Promise.all([request("/api/me"), request("/api/talhoes")]); propertyId = me.usuario.propriedadeId;
+      const property = me.propriedade?.nome || me.propriedade?.farm || "Propriedade ativa";
+      $("[data-occ-property]").textContent = "Registro de eventos e problemas · " + property;
+      $(".sidebar-user-name").textContent = me.usuario.name || me.usuario.nome || "Usuário"; $(".sidebar-user-property").textContent = property;
+      $(".sidebar-avatar").textContent = (me.usuario.name || me.usuario.nome || "U").split(/\s+/).slice(0, 2).map((s) => s[0]).join("");
+      field("talhaoId").replaceChildren(new Option("Geral da propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
+      $("[data-occ-plot-filter]").replaceChildren(new Option("Toda a propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
+      const params = new URLSearchParams(location.search), requested = params.get("talhaoId") || params.get("talhao");
+      if (requested) {
+        $("[data-talhao-filter-bar]").hidden = false; $("[data-talhao-filter-label]").textContent = "Talhão: " + requested;
+        const plot = plots.find((p) => p.id === requested || p.nome === requested);
+        if (!plot) throw new Error("O talhão solicitado não pertence à propriedade ativa. Remova o filtro para consultar.");
+        $("[data-occ-plot-filter]").value = plot.id; $("[data-talhao-filter-label]").textContent = "Talhão: " + plot.nome;
+      }
+      ready = true; setBusy(false); await load();
+      if (params.get("ocorrenciaId")) await showDetail(params.get("ocorrenciaId")).catch(reportDetail);
+    } catch (error) { clearList(); message(error.message, true); }
+  }
+
+  // Eventos da tela: fechar uma confirmação nunca modifica o registro.
   function init() {
-    persist = window.AgroLocal.connect("occurrences", () => $$("[data-occ-table] tbody tr").map((row) => ({id: row.dataset.id, occ: row.dataset.occ, tipo: row.dataset.tipo, talhao: row.dataset.talhao, date: row.dataset.date, severity: row.dataset.severity, status: row.dataset.status, timeline: timelineFor(row)})), restoreOccurrences);
-    populateActionMenus();
-    initGenericModals();
-    initTalhaoFilterChip();
-    initSearch();
-    initDetailModal();
-    initResolve();
-    initDelete();
-    initOccForm();
-    applyFilters();
-    recomputeMetrics();
+    $("[data-occ-month]").value = today().slice(0, 7);
+    $$("[data-modal^='occ-']").forEach((modal) => {
+      $$("[data-close-modal]", modal).forEach((b) => b.addEventListener("click", () => { if (!busy) closeModals(); }));
+      modal.addEventListener("click", (e) => { if (e.target === modal && !busy) closeModals(); });
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !busy) closeModals(); });
+    $("[data-open-modal='occ-form']").addEventListener("click", () => edit(null));
+    $$("[data-priority]").forEach((b) => b.addEventListener("click", () => priority(b.dataset.priority)));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault(); $$(".field-error", form).forEach((el) => { el.textContent = ""; });
+      const payload = Object.fromEntries(new FormData(form)); if (editing) payload.versao = editing.versao;
+      write("/api/ocorrencias" + (editing ? "/" + editing.id : ""), editing ? "PUT" : "POST", payload, $("[data-occ-form-error]"), async (saved) => { closeModals(); await showDetail(saved.id); });
+    });
+    $("[data-detail-edit]").addEventListener("click", () => edit(active));
+    $("[data-detail-follow]").addEventListener("click", () => publish("acompanhamento"));
+    $("[data-detail-publish]").addEventListener("click", () => publish("atualizacao"));
+    $("[data-detail-reload]").addEventListener("click", () => showDetail(active.id).catch(reportDetail));
+    $("[data-detail-resolve]").addEventListener("click", () => {
+      $("[data-resolve-desc]").textContent = active.titulo + " será marcada como resolvida. O histórico será preservado.";
+      $("[data-resolution-text]").value = ""; $("[data-resolve-error]").textContent = ""; openModal("occ-resolve");
+    });
+    $("[data-confirm-resolve]").addEventListener("click", () => write("/api/ocorrencias/" + active.id + "/timeline", "POST", { versao: active.versao, acao: "resolucao", descricao: $("[data-resolution-text]").value }, $("[data-resolve-error]"), async (saved) => { active = saved; closeModals(); await showDetail(saved.id); }));
+    $("[data-detail-delete]").addEventListener("click", () => { $("[data-delete-error]").textContent = ""; openModal("occ-delete"); });
+    $("[data-confirm-delete]").addEventListener("click", () => write("/api/ocorrencias/" + active.id, "DELETE", { versao: active.versao }, $("[data-delete-error]"), async () => { closeModals(); active = null; }));
+    let timer;
+    $("[data-occ-search]").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => load().catch(() => {}), 200); });
+    $$("[data-occ-month], [data-occ-plot-filter], [data-occ-archives]").forEach((el) => el.addEventListener("change", () => load().catch(() => {})));
+    $("[data-clear-talhao-filter]").addEventListener("click", () => {
+      const url = new URL(location.href); url.searchParams.delete("talhao"); url.searchParams.delete("talhaoId"); history.replaceState({}, "", url);
+      $("[data-talhao-filter-bar]").hidden = true; $("[data-occ-plot-filter]").value = ""; if (!ready) initialize(); else load().catch(() => {});
+    });
+    $("[data-occ-retry]").addEventListener("click", () => ready ? load().catch(() => {}) : initialize()); initialize();
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  document.addEventListener("DOMContentLoaded", init);
 })();

@@ -13,6 +13,15 @@ Senha/e-mail confirmados novamente encerram os logins ativos. A propriedade
 padrão vale no próximo login; a seleção da sessão atual permanece independente.
 Contrato, limites de foto/equipe/plano e testes: [docs/perfil.md](../../docs/perfil.md).
 
+## Ocorrências
+
+O módulo usa API autenticada, registros e timeline em MongoDB, CRUD com versão,
+acompanhamento e resolução, exclusão lógica e resumo mensal pela data real de
+resolução. Detalhes do contrato, decisões e testes em [docs/ocorrencias.md](../../docs/ocorrencias.md).
+`testar.sh`/`testar.bat` executam também `TesteOcorrencias` em memória. Para validar
+MongoDB: `java -cp 'bin:lib/*' TesteOcorrencias --mongo`, com banco dedicado `_teste`.
+Uma propriedade com histórico de ocorrências é preservada contra exclusão.
+
 ## Propriedades e contexto autenticado
 
 `GET/POST /api/propriedades`, `GET/PUT/DELETE /api/propriedades/{id}` e
@@ -46,7 +55,7 @@ biblioteca externa é o driver oficial do MongoDB (`lib/`).
 
 O mesmo servidor entrega:
 
-- a **API** em `/api/**` (autenticação e talhões);
+- a **API** em `/api/**` (autenticação, propriedades, talhões e ocorrências);
 - os **arquivos do front** (raiz do repositório), na mesma origem da API;
 - `/health` e `/ready`.
 

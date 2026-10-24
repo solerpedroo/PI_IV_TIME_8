@@ -66,6 +66,7 @@ async function open(browserContext, name) {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(origin + "/" + name + ".html", {waitUntil: "load"});
   if (name === "insumos") await page.locator("[data-stock-retry]").waitFor();
+  else if (name === "ocorrencias") await page.waitForFunction(() => /contexto consultado|possível consultar/.test(document.querySelector("[data-occ-message]").textContent));
   else await page.waitForFunction(() => Boolean(window.AgroLocal));
   assert.deepEqual(errors, [], name + " apresentou erro JavaScript");
   return page;
@@ -123,35 +124,16 @@ async function test(name, run) {
       } finally { await ctx.close(); }
     });
 
-    await test("ocorrências: cadastro, atualização, resolução e recarga", async () => {
+    // O fluxo de ocorrências agora usa servidor real em tests/ocorrencias-real.cjs.
+    await test("ocorrências ignoram o cache local legado", async () => {
       const ctx = await context(browser);
       try {
         const page = await open(ctx, "ocorrencias");
-        await page.locator("[data-open-modal='occ-form']").click();
-        await page.locator("[data-occ-form] [name='titulo']").fill("Ocorrência teste <segura>");
-        await page.locator("[data-occ-form] [name='tipo']").selectOption("Praga");
-        await page.locator("[data-occ-form] [name='talhao']").selectOption("T-01 Norte");
-        await submit(page, "[data-occ-form]");
-        const row = () => page.locator("[data-occ-table] tbody tr").last();
-        assert.equal(await row().getAttribute("data-occ"), "Ocorrência teste <segura>");
-        await row().locator("[data-row-action='detail']").evaluate((button) => button.click());
-        await page.locator("[data-update-text]").fill("Tratamento <confirmado>");
-        await page.locator("[data-detail-publish]").click();
-        assert.match(await page.locator("[data-detail-timeline]").textContent(), /Tratamento <confirmado>/);
-        await page.locator("[data-detail-resolve]").click();
-        await page.locator("[data-confirm-resolve]").click();
+        await page.evaluate((p) => localStorage.setItem(p + "occurrences", JSON.stringify({version: 1, data: [{occ: "Legada"}]})), prefix);
         await page.reload();
-        assert.equal(await row().getAttribute("data-status"), "Resolvida");
-        assert.equal(await page.locator("[data-metric='resolvidas']").textContent(), "4");
-        await row().locator("[data-row-action='detail']").evaluate((button) => button.click());
-        assert.match(await page.locator("[data-detail-timeline]").textContent(), /Tratamento <confirmado>/);
-        assert.equal(await page.locator("[data-detail-timeline] script").count(), 0);
-        assert.equal((await stored(page, "occurrences")).data.at(-1).timeline.length, 3);
-        await page.locator("[data-detail-delete]").click();
-        await page.locator("[data-confirm-delete]").click();
-        await page.reload();
-        assert.equal(await page.locator("[data-occ-table] tbody tr").count(), 8);
-        assert.equal(await page.locator("[data-metric='resolvidas']").textContent(), "3");
+        await page.waitForFunction(() => document.querySelector("[data-occ-message]").textContent.includes("contexto consultado"));
+        assert.equal(await page.locator("[data-occ-table] tbody tr").count(), 0);
+        assert.equal(await page.locator("[data-metric='abertas']").textContent(), "0");
       } finally { await ctx.close(); }
     });
 
@@ -210,10 +192,9 @@ async function test(name, run) {
     await test("falha de leitura não inventa dados recuperados", async () => {
       const ctx = await context(browser, "read");
       try {
-        const page = await open(ctx, "ocorrencias");
-        assert.equal(await page.locator("[data-occ-table] tbody tr").count(), 0);
+        const page = await open(ctx, "insumos");
+        assert.equal(await page.locator("[data-stock-table] tbody tr").count(), 0);
         assert.equal(await page.locator("[data-storage-error]").count(), 1);
-        assert.equal(await page.locator(".toast-title:has-text('Ocorrência registrada')").count(), 0);
       } finally { await ctx.close(); }
     });
   } finally {
