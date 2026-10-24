@@ -2,13 +2,23 @@
 
 Miguel — RA: 25003110
 
+Autor Secundário: Pedro Henrique Contardi Soler - 25005592
+
+Atualização da branch de ocorrências (24/10/2026): o módulo e os alertas de
+ocorrências do Dashboard agora usam a API Java/MongoDB. Seu cache local legado é
+ignorado e preservado. Consulte [ocorrencias.md](ocorrencias.md) para contrato,
+histórico, indicador mensal e validação real; as regras locais abaixo se aplicam
+aos módulos que continuam usando `AgroLocal`.
+
 O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
 
 - `scripts/data/operational-defaults.js` — dados de demonstração (carregados só nas telas operacionais).
 - `scripts/agro-local.js` — API `AgroLocal` (leitura, gravação, validação, `connect`).
 - `scripts/shell.js` — chrome do app (notificações, popovers, logout).
 
-O servidor Java continua responsável pela camada de servidor e não participa da recuperação local. Não foram criados novos módulos funcionais ou endpoints.
+Nos módulos que ainda usam `AgroLocal`, a recuperação é feita no navegador.
+Propriedades, talhões e ocorrências também possuem APIs, com regras próprias
+documentadas no servidor; o armazenamento local não comprova sua persistência.
 
 ## O que é salvo
 
@@ -19,7 +29,6 @@ Cada chave começa com `agro.operational.v1.`. O conteúdo tem o formato `{ "ver
 | `plots` | Identificador, nome, cultura, hectares e status dos talhões. |
 | `activities` | Identificador, nome, tipo, talhão, data e status das atividades. Painel, Kanban e Lista compartilham os mesmos registros. |
 | `stock` | Produtos, categorias, saldos, unidades, mínimos e movimentações com quantidade, data e fornecedor/destino. |
-| `occurrences` | Ocorrências, severidade, status e histórico de atualizações e resolução. |
 | `costs` | Lançamentos, orçamento e período selecionado. |
 | `settings` | Perfil, propriedade, safra e preferências de notificação. |
 | `notifications` | Identificação das notificações estáticas já lidas. |
@@ -41,7 +50,7 @@ O controle entre abas compara o conteúdo lido com o conteúdo existente antes d
 - Áreas ativas contam talhões com status `Ativo`; hectares somam os registros existentes.
 - Atividades pendentes incluem `Pendente` e `Agendada`; concluídas e em andamento têm contagens próprias.
 - Estoque aplica a regra existente: saldo/mínimo abaixo de 0,6 é crítico; abaixo de 1 é baixo; a partir de 1 é normal. Entradas do mês são calculadas pelo histórico local dos produtos existentes.
-- Ocorrências mantêm a regra atual: resolvidas representam a contagem dos registros resolvidos, sem implementar um novo relatório mensal.
+- Ocorrências usam o resumo da API, com mês/ano da resolução e contexto da consulta, conforme `ocorrencias.md`.
 - Custos e gráficos somam os lançamentos, sem totais históricos fictícios ocultos. O custo por hectare usa a área da propriedade nas configurações. O período selecionado é preservado; não foi criado um novo mecanismo de fechamento ou filtro contábil por safra.
 - Concluir atividades ou movimentar estoque não cria automaticamente registros em outros módulos: as mensagens que afirmavam integrações simuladas foram corrigidas. Isso exigiria regras e vínculos adicionais fora desta task.
 
