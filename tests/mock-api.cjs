@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 const path = require('node:path');
 const vm = require('node:vm');
 
@@ -12,6 +13,9 @@ async function mockApi(context, origin) {
   const history = [];
   const properties = [{id: 'e2e-property', nome: 'Fazenda Santa Rita', areaHectares: 1284,
     localizacao: 'Rodovia SP-101, km 12', municipio: 'Campinas, SP', safraAtual: '2025/26', selecionada: true}];
+  const user = {id: 'e2e-local', name: 'João Silva', email: 'joao@fazendasantarita.com', phone: '(19) 99999-1234',
+    propriedadeId: 'e2e-property', propriedadePadraoId: 'e2e-property', emailConfirmado: true};
+  const preferences = {stock: true, weather: true, activities: true, occurrences: true, reports: false};
   await context.route('http://127.0.0.1:8080/api/**', async route => {
     const req = route.request();
     const url = new URL(req.url());
@@ -21,7 +25,24 @@ async function mockApi(context, origin) {
     const reply = (status, body) => route.fulfill({status, headers, contentType: 'application/json', body: JSON.stringify(body)});
     if (req.method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     if (req.headers().authorization !== 'Bearer e2e-local') return reply(401, {error: 'Unauthorized'});
-    if (url.pathname === '/api/me') return reply(200, {usuario: {id: 'e2e-local', propriedadeId: properties.find(item => item.selecionada).id}});
+    if (url.pathname === '/api/me') {
+      const ativa = properties.find(item => item.selecionada);
+      return reply(200, {usuario: {...user, propriedadeId: ativa.id}, propriedade: {id: ativa.id, farm: ativa.nome}});
+    }
+    if (url.pathname === '/api/perfil') {
+      if (req.method() === 'PUT') {
+        const body = req.postDataJSON();
+        Object.assign(user, {name: body.name, email: body.email, phone: body.phone});
+      }
+      return reply(200, {usuario: user, preferencias: preferences});
+    }
+    if (url.pathname === '/api/perfil/preferencias' && req.method() === 'PUT') {
+      Object.assign(preferences, req.postDataJSON()); return reply(200, {preferencias: preferences});
+    }
+    if (url.pathname === '/api/perfil/propriedade-padrao' && req.method() === 'PUT') {
+      user.propriedadePadraoId = req.postDataJSON().propriedadeId;
+      return reply(200, {propriedadePadraoId: user.propriedadePadraoId});
+    }
     if (url.pathname === '/api/propriedades' && req.method() === 'GET') return reply(200, properties);
     if (url.pathname === '/api/propriedades' && req.method() === 'POST') {
       const item = {id: 'property-' + properties.length, ...req.postDataJSON(), selecionada: false};
@@ -54,6 +75,6 @@ async function mockApi(context, origin) {
     }
     return reply(404, {error: 'Not found'});
   });
-  return {plots, history, properties};
+  return {plots, history, properties, user, preferences};
 }
 module.exports = {mockApi};
