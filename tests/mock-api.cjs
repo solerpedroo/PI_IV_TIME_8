@@ -1,9 +1,10 @@
+/* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
 // Contrato HTTP compartilhado pelas suítes de UI; os testes Java usam servidor real.
-async function mockApi(context, origin) {
+async function mockApi(context, origin, options = {}) {
   const sandbox = {window: {}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../scripts/data/operational-defaults.js'), 'utf8'), sandbox);
   const plots = sandbox.window.AgroOperationalDefaults.plots.map(item => ({id: item.id, nome: item.plot,
@@ -21,6 +22,10 @@ async function mockApi(context, origin) {
     const reply = (status, body) => route.fulfill({status, headers, contentType: 'application/json', body: JSON.stringify(body)});
     if (req.method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     if (req.headers().authorization !== 'Bearer e2e-local') return reply(401, {error: 'Unauthorized'});
+    // Apenas inicialização das telas: o CRUD de ocorrências é testado no Java real.
+    if (req.method() === 'GET' && url.pathname === '/api/ocorrencias') return reply(200, options.occurrences || []);
+    if (req.method() === 'GET' && url.pathname === '/api/ocorrencias/resumo') return reply(200,
+      {abertas: 0, emAcompanhamento: 0, resolvidasMes: 0, prioridadeAlta: 0, mes: url.searchParams.get('mes')});
     if (url.pathname === '/api/me') return reply(200, {usuario: {id: 'e2e-local', propriedadeId: properties.find(item => item.selecionada).id}});
     if (url.pathname === '/api/propriedades' && req.method() === 'GET') return reply(200, properties);
     if (url.pathname === '/api/propriedades' && req.method() === 'POST') {
