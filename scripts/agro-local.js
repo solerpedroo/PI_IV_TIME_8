@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 /* Persistência operacional compartilhada. Java continua no servidor; somente
  * JavaScript no navegador consegue acessar o localStorage deste dispositivo.
@@ -42,12 +43,26 @@
         && new Set(value.map((entry) => entry.id)).size === value.length}),
     notifications: list(text),
     settings: shape({profile: shape({name: text, email: text, phone: string, role: string}),
-      property: shape({farm: text, area: positive, city: string, harvest: oneOf("2025/26", "2026/27", "2024/25")}),
+      // Aceita o registro anterior sem localização apenas para leitura; no próximo
+      // salvamento a tela exige o novo campo e grava o formato completo.
+      property: (value) => shape({farm: text, area: positive, location: text, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value)
+        || shape({farm: text, area: positive, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value),
       preferences: shape(Object.fromEntries(["stock", "weather", "activities", "occurrences", "reports"].map((key) => [key, (value) => typeof value === "boolean"])))})
   };
   const blocked = new Set();
   const known = new Map();
-  const prefix = "agro.operational.v1.";
+  function sessionScope() {
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    if (!text(user?.id) || !text(user?.propriedadeId)) throw new Error("Sessão sem propriedade");
+    return encodeURIComponent(user.id) + "." + encodeURIComponent(user.propriedadeId) + ".";
+  }
+  let scope;
+  try { scope = sessionScope(); } catch { scope = null; }
+  function storageKey(key) {
+    // Uma aba aberta no contexto antigo nunca grava na propriedade recém-selecionada.
+    if (!scope || sessionScope() !== scope) throw new Error("Recarregue a sessão");
+    return "agro.operational.v1." + scope + key;
+  }
   const labels = {plots: "os talhões", activities: "as atividades", stock: "o estoque",
     occurrences: "as ocorrências", costs: "os custos", settings: "as configurações", notifications: "as notificações"};
 
@@ -71,7 +86,7 @@
 
   function read(key, fallback = defaults[key], empty = []) {
     try {
-      const raw = window.localStorage.getItem(prefix + key);
+      const raw = window.localStorage.getItem(storageKey(key));
       const envelope = raw === null ? null : JSON.parse(raw);
       if (envelope && (envelope.version !== 1 || !schemas[key]?.(envelope.data))) throw new Error("invalid");
       if (raw !== null && !envelope) throw new Error("invalid");
@@ -88,10 +103,10 @@
     try {
       if (blocked.has(key) || !schemas[key]?.(data)) throw new Error("invalid");
       // Impede que uma aba desatualizada apague silenciosamente alterações de outra.
-      const current = window.localStorage.getItem(prefix + key);
+      const current = window.localStorage.getItem(storageKey(key));
       if (known.has(key) && current !== known.get(key)) throw new Error("conflict");
       const raw = JSON.stringify({version: 1, data});
-      window.localStorage.setItem(prefix + key, raw);
+      window.localStorage.setItem(storageKey(key), raw);
       known.set(key, raw);
       return true;
     } catch (error) {

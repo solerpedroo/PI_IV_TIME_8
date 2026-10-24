@@ -1,3 +1,5 @@
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import http.ErroHttp;
 import http.ParceiroHttp;
 import http.Requisicao;

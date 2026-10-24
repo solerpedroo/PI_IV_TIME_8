@@ -1,5 +1,7 @@
 package http;
 
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -202,7 +204,7 @@ public class Roteador
 
         resposta.setCabecalho ("Access-Control-Allow-Origin",  origem);
         resposta.setCabecalho ("Vary",                         "Origin");
-        resposta.setCabecalho ("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+        resposta.setCabecalho ("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         resposta.setCabecalho ("Access-Control-Allow-Headers", "Content-Type, Authorization");
         resposta.setCabecalho ("Access-Control-Max-Age",       "600");
     }

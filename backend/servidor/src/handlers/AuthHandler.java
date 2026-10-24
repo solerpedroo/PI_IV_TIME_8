@@ -1,6 +1,6 @@
 package handlers;
 
-/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.RepositorioUsuarios;
 import http.Requisicao;
@@ -14,6 +14,7 @@ import seguranca.Senhas;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import seguranca.LimitadorDeTaxa;
+import servicos.ServicoEmail;
 import util.Validacao;
 
 /*
@@ -29,12 +30,13 @@ public class AuthHandler
 
     private final RepositorioUsuarios usuarios;
     private final Sessoes             sessoes;
+    private final ServicoEmail        email;
     private final LimitadorDeTaxa     limitador = new LimitadorDeTaxa ();
 
     // protege as operacoes que leem e depois gravam tokens (reenvio, confirmacao, redefinicao)
     private final Object trava = new Object ();
 
-    public AuthHandler (RepositorioUsuarios usuarios, Sessoes sessoes) throws Exception
+    public AuthHandler (RepositorioUsuarios usuarios, Sessoes sessoes, ServicoEmail email) throws Exception
     {
         if (usuarios == null)
             throw new Exception ("Repositorio de usuarios ausente");
@@ -42,8 +44,12 @@ public class AuthHandler
         if (sessoes == null)
             throw new Exception ("Sessoes ausentes");
 
+        if (email == null)
+            throw new Exception ("Servico de e-mail ausente");
+
         this.usuarios = usuarios;
         this.sessoes  = sessoes;
+        this.email    = email;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -67,11 +73,6 @@ public class AuthHandler
                    .append  ("phone",           usuario.getString  ("phone"))
                    .append  ("emailConfirmado", usuario.getBoolean ("emailConfirmado"))
                    .append  ("propriedadeId",   usuario.getString  ("propriedadeId"));
-    }
-
-    private static void enviarEmailSimulado (String email, String assunto, String token)
-    {
-        System.out.println ("[e-mail simulado] para " + email + " | " + assunto + " | token: " + token);
     }
 
     private static Resposta mensagem (String texto)
@@ -134,7 +135,7 @@ public class AuthHandler
             return Resposta.json (409, new Document ("error", "Email already registered")
                                            .append ("fields", new Document ("email", "Este e-mail já está cadastrado.")));
 
-        AuthHandler.enviarEmailSimulado (email, "Confirmação de e-mail", token);
+        this.email.enviarCodigo (email, "Confirmação de e-mail", token);
 
         return Resposta.json (201, new Document ("usuario", AuthHandler.usuarioPublico (criado)));
     }
@@ -164,8 +165,21 @@ public class AuthHandler
         if (!Senhas.conferir ((String) password, usuario == null ? null : usuario.getString ("senhaHash")))
             return Resposta.erro (401, "Invalid email or password");
 
-        String token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
-                                           usuario.getString ("propriedadeId"));
+        // A senha correta identifica o próprio titular; só então informamos
+        // que falta ativar a conta. Assim não há enumeração de e-mails.
+        if (!Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")))
+            return Resposta.erro (403, "Email confirmation required");
+
+        String token;
+        synchronized (this.sessoes)
+        {
+            // Uma exclusão pode ter alterado a propriedade padrão durante o hash.
+            usuario = this.usuarios.buscarPorId (((ObjectId) usuario.get ("_id")).toHexString ());
+            if (usuario == null || this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
+                return Resposta.erro (401, "Invalid email or password");
+            token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                        usuario.getString ("propriedadeId"));
+        }
 
         return Resposta.json (200, new Document ("token", token).append ("usuario", AuthHandler.usuarioPublico (usuario)));
     }
@@ -187,12 +201,13 @@ public class AuthHandler
             return Resposta.erro (401, "Unauthorized");
 
         Document propriedade = this.usuarios.buscarPropriedade (sessao.getPropriedadeId ());
-        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario));
+        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario)
+                                         .append ("propriedadeId", sessao.getPropriedadeId ()));
 
         if (propriedade != null)
             ret.append ("propriedade", new Document ("id",   sessao.getPropriedadeId ())
-                                           .append ("farm", propriedade.getString ("farm"))
-                                           .append ("area", propriedade.getString ("area")));
+                                           .append ("farm", propriedade.getString ("nome") == null ? propriedade.getString ("farm") : propriedade.getString ("nome"))
+                                           .append ("area", propriedade.containsKey ("areaHectares") ? propriedade.get ("areaHectares") : propriedade.get ("area")));
 
         return Resposta.json (200, ret);
     }
@@ -258,7 +273,7 @@ public class AuthHandler
                 this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
                                          new Document ("tokenConfirmacao", token).append ("ultimoEnvioConfirmacao", agora));
 
-                AuthHandler.enviarEmailSimulado (email, "Confirmação de e-mail (reenvio)", token);
+                this.email.enviarCodigo (email, "Confirmação de e-mail (reenvio)", token);
             }
         }
 
@@ -288,7 +303,7 @@ public class AuthHandler
                                          new Document ("tokenRedefinicao", token)
                                              .append ("redefinicaoExpiraEm", System.currentTimeMillis () + AuthHandler.VALIDADE_REDEFINICAO));
 
-                AuthHandler.enviarEmailSimulado (email, "Redefinição de senha", token);
+                this.email.enviarCodigo (email, "Redefinição de senha", token);
             }
         }
 

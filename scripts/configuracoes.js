@@ -157,6 +157,14 @@
     $$('[data-harvest-close]', modal).forEach((button) => button.addEventListener("click", close));
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
     $("[data-confirm-harvest]", modal).addEventListener("click", () => {
+      if (sessionStorage.getItem("agro.sessionToken") && $("[data-new-property]")) {
+        native.value = pending;
+        native.dispatchEvent(new Event("change", { bubbles: true }));
+        syncLabel();
+        close();
+        toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
+        return;
+      }
       settings.property.harvest = pending;
       if (!persist()) return;
       native.value = pending;

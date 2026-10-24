@@ -1,4 +1,33 @@
+<!-- Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 -->
+
 # Servidor AgroGestão (Java, HTTP feito à mão)
+
+## Propriedades e contexto autenticado
+
+`GET/POST /api/propriedades`, `GET/PUT/DELETE /api/propriedades/{id}` e
+`POST /api/propriedades/{id}/selecionar` usam o usuário autenticado como dono.
+Nome, área numérica em hectares, localização, município e safra são validados
+no servidor. Configurações permite cadastrar, editar e selecionar a propriedade;
+a safra escolhida no modal só é confirmada pelo botão **Salvar propriedade**.
+
+A seleção vale para o token atual; `/api/me` devolve esse contexto ativo.
+O navegador recarrega após selecionar e passa a usar o cache local separado
+por usuário/propriedade. Talhões sempre são filtrados pelo contexto do servidor.
+Não se exclui a última propriedade, uma propriedade com talhões ou em uso em
+qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
+do usuário muda para uma das restantes na mesma operação de persistência.
+
+No MongoDB, propriedades antigas sem `usuarioId` são vinculadas somente quando
+o próprio documento do usuário comprova o vínculo por `propriedadeId`; um dono
+já definido nunca é sobrescrito. As exclusões e a atualização da referência
+padrão usam transação, exigindo replica set (como o cadastro).
+Sessões e coordenação de contexto são locais ao processo Java; esta execução
+não oferece implantação com múltiplas instâncias compartilhando sessões.
+
+`bash testar.sh` valida o servidor em memória. `teste/TesteMongo.java` inclui
+testes de migração e exclusão transacional, exige banco com nome terminado em
+`_teste` e limpa somente esse banco de testes. A execução com MongoDB/SMTP
+externos precisa de ambiente configurado e não é substituída pela suíte em memória.
 
 Servidor do projeto em Java 21 puro. O HTTP é implementado manualmente sobre
 `java.net.ServerSocket`/`Socket` (sem `HttpServer`, Spring, Netty etc.). A única
@@ -52,6 +81,8 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_HOST` | `127.0.0.1` | Interface onde o servidor escuta. |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
 | `SERVIDOR_RAIZ` | `../..` | Pasta do front, relativa a `backend/servidor/`. |
+| `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
+| `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
 Se o MongoDB estiver fora do ar na partida, o servidor não sobe e mostra
 `MongoDB indisponivel`. Se cair depois, `/ready` responde 503.
@@ -64,9 +95,11 @@ docker compose up -d mongo
 
 ## Testando manualmente
 
-O front ainda **não** chama a API (continua com os mocks em JS). Pelo navegador
-dá para ver as páginas sendo servidas. A API se testa com `curl`. No Windows,
-use o **Git Bash**: no PowerShell as aspas do JSON dão problema.
+O front chama esta API para cadastro, login, confirmação de e-mail,
+recuperação de senha, validação de sessão e logout. Pelo navegador, abra o
+servidor em `http://localhost:8080`; assim interface e API ficam na mesma
+origem. A API também pode ser testada com `curl`. No Windows, use o **Git Bash**:
+no PowerShell as aspas do JSON dão problema.
 
 ```bash
 B=http://localhost:8080
@@ -100,9 +133,12 @@ curl -i -X PUT -H "Authorization: Bearer $T" -H "Content-Type: application/json"
 curl -i -X POST -H "Authorization: Bearer $T" $B/api/auth/logout
 ```
 
-### E-mail simulado
+### E-mail: SMTP ou modo local
 
-Nenhum e-mail é enviado de verdade. Os tokens aparecem no terminal do servidor:
+Com `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM` configurados,
+o servidor envia códigos por SMTP com TLS implícito (porta 465 por padrão). Não
+registre essas credenciais no repositório. Sem essas variáveis, o modo local
+imprime os tokens no terminal:
 
 ```
 [e-mail simulado] para ana@agro.com | Confirmação de e-mail | token: 3f2c...
@@ -171,7 +207,7 @@ Erro simples: `{"error": "mensagem"}`. Erro de validação (400) ou conflito (40
 | Método e rota | Corpo | Respostas |
 |---|---|---|
 | `POST /api/auth/register` | `name, email, phone, password, password-confirm` (ou `confirm`), `farm, area, terms` | 201 `{usuario}` · 400 · 409 |
-| `POST /api/auth/login` | `email, password` | 200 `{token, usuario}` · 400 · 401 genérico |
+| `POST /api/auth/login` | `email, password` | 200 `{token, usuario}` · 400 · 401 genérico · 403 se o e-mail não foi confirmado |
 | `POST /api/auth/logout` | (token no cabeçalho) | 204 |
 | `GET /api/me` | | 200 `{usuario, propriedade}` · 401 |
 | `POST /api/auth/confirm-email` | `token` | 200 · 400 token inválido |
@@ -278,5 +314,4 @@ Os índices garantem as regras de unicidade mesmo com requisições simultâneas
 ## Fora desta entrega
 
 Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e
-Configurações. A integração do front com a API também fica para depois: os
-scripts ainda usam mocks.
+Configurações. Os formulários de autenticação do front usam as rotas desta API.

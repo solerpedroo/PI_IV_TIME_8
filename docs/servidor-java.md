@@ -1,8 +1,10 @@
+<!-- Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 -->
+
 # Ofício técnico: Servidor Java manual do AgroGestão
 
-Responsável: _(nome — RA)_
+Responsável: Pedro Henrique Contardi Soler — RA 25005592
 Data: 17/10/2026
-Branch: `server`
+Branch: `feat/auth`
 Escopo do PR: novo projeto `backend/servidor/`
 
 ---
@@ -28,8 +30,8 @@ As instruções de uso (comandos, variáveis, exemplos com `curl`) estão em
 
 Antes deste trabalho:
 
-- o front (HTML, CSS e JS puros na raiz) não fazia nenhuma chamada de rede. Tudo
-  era mock em JS, com persistência em `localStorage` (ver `docs/persistencia-local.md`);
+- o front (HTML, CSS e JS puros na raiz) usa as rotas de autenticação do
+  servidor e mantém o token apenas em `sessionStorage`;
 - `backend/gateway` usava `com.sun.net.httpserver.HttpServer`, e `backend/core`
   era um Spring Boot vazio. Nenhum dos dois atende ao requisito de servidor manual,
   e ambos **não foram alterados**;
@@ -221,9 +223,11 @@ Validações do cadastro, espelhando `scripts/auth.js`:
 - telefone `(DD) 9XXXX-XXXX`;
 - `terms` igual a `true`, `"true"` ou `"on"`.
 
-O e-mail é **simulado**: os tokens de confirmação e redefinição são impressos no
-console do servidor. O token de redefinição vale 30 minutos e é de uso único. A
-redefinição encerra todas as sessões do usuário.
+Com `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM`, o servidor
+envia os tokens por SMTP com TLS implícito (porta `465`, ou `SMTP_PORT`). Sem
+essas variáveis, o modo local imprime os códigos no console. O token de
+redefinição vale 30 minutos e é de uso único. A redefinição encerra todas as
+sessões do usuário. O login só cria sessão depois que o e-mail foi confirmado.
 
 ### 7.2 Talhões
 
@@ -319,7 +323,7 @@ Verificação manual feita em modo memória, na porta 8080:
 | Item | Situação |
 |---|---|
 | **Validação com MongoDB real** | `backend/servidor/testar-mongo.sh` valida cadastro, índice único e criação transacional contra o banco `agrogestao_teste`. Requer `docker compose up -d mongo`. |
-| Integração do front | Fora deste PR. Os scripts continuam com mocks e `localStorage`. |
+| Integração do front | Formulários de autenticação integrados por `fetch`, com token em `sessionStorage`. |
 | Demais módulos | Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e Configurações ficam para as próximas entregas. |
 | Sessões em memória | Reiniciar o servidor desloga todos (aceitável nesta fase). |
 | Keep-alive e `chunked` | Não suportados de propósito (uma requisição por conexão). |
@@ -352,7 +356,9 @@ backend/servidor/
 docs/servidor-java.md             este documento
 ```
 
-Nenhum arquivo do front, de `backend/gateway` ou de `backend/core` foi alterado.
+Os arquivos de autenticação do front foram alterados para consumir as rotas
+correspondentes do servidor Java. `backend/gateway` e `backend/core` não foram
+alterados.
 
 ## 14. Como revisar
 

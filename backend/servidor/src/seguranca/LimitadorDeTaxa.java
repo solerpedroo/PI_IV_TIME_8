@@ -1,6 +1,6 @@
 package seguranca;
 
-/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import java.util.concurrent.ConcurrentHashMap;
 

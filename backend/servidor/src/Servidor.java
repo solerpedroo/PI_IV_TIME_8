@@ -9,6 +9,7 @@ import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.EstaticosHandler;
+import handlers.PropriedadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import http.Roteador;
@@ -18,6 +19,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import seguranca.Sessoes;
+import servicos.ServicoEmail;
 
 /*
     Servidor HTTP do AgroGestao feito na mao sobre ServerSocket.
@@ -78,8 +80,9 @@ public class Servidor
         Roteador roteador = new Roteador (sessoes);
 
         new SaudeHandler   (conexao).registrar           (roteador);
-        new AuthHandler    (usuarios, sessoes).registrar (roteador);
-        new TalhoesHandler (talhoes).registrar           (roteador);
+        new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
+        new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
+        new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 

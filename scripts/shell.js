@@ -1,4 +1,4 @@
-/* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — chrome do app shell
  * --------------------------------------------------------------------------
@@ -16,7 +16,47 @@
 
   const STORAGE = {
     flashSuccess: "agro.flashSuccess",
+    sessionToken: "agro.sessionToken",
+    sessionUser: "agro.sessionUser",
   };
+
+  // Mantém a mesma origem do servidor Java e permite desenvolvimento local.
+  const API_BASE = window.location.port === "8080"
+    ? window.location.origin
+    : "http://127.0.0.1:8080";
+
+  /** Remove qualquer dado de sessão que não possa mais ser usado. */
+  function clearSession() {
+    sessionStorage.removeItem(STORAGE.sessionToken);
+    sessionStorage.removeItem(STORAGE.sessionUser);
+  }
+
+  /**
+   * Protege páginas internas também no cliente. A API continua sendo a fonte
+   * de verdade: o token é validado em GET /api/me antes de inicializar a tela.
+   */
+  async function ensureAuthenticated() {
+    const token = sessionStorage.getItem(STORAGE.sessionToken);
+    if (!token) {
+      window.location.replace("login.html");
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Sessão inválida");
+      const data = await response.json();
+      sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
+      return true;
+    } catch {
+      clearSession();
+      sessionStorage.setItem(STORAGE.flashSuccess, "Sua sessão expirou. Entre novamente.");
+      window.location.replace("login.html");
+      return false;
+    }
+  }
 
   /** Itens navegáveis de um popover com role="menu". */
   const menuItems = (popover) => $$('[role="menuitem"]', popover).filter((item) => !item.hidden);
@@ -377,7 +417,24 @@
 
     const confirm = $("[data-confirm-logout]", modal);
     if (confirm) {
-      confirm.addEventListener("click", () => {
+      confirm.addEventListener("click", async () => {
+        confirm.disabled = true;
+        const token = sessionStorage.getItem(STORAGE.sessionToken);
+
+        // Mesmo que a rede caia, limpamos o token local para não manter uma
+        // sessão aparentemente ativa no navegador.
+        if (token) {
+          try {
+            await fetch(`${API_BASE}/api/auth/logout`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch {
+            // O redirecionamento abaixo encerra a sessão local com segurança.
+          }
+        }
+
+        clearSession();
         sessionStorage.setItem(
           STORAGE.flashSuccess,
           "Você saiu com segurança."
@@ -408,7 +465,8 @@
     });
   }
 
-  function init() {
+  async function init() {
+    if (!(await ensureAuthenticated())) return;
     // O texto da navegação fica oculto na sidebar compacta, mas preserva seu nome.
     $$(".sidebar-link").forEach((link) => {
       const label = link.textContent.trim();
