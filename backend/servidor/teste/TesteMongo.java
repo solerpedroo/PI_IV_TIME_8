@@ -1,6 +1,7 @@
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
+import dados.RepositorioSafrasMongo;
 import dados.RepositorioUsuariosMongo;
 import com.mongodb.ConnectionString;
 import org.bson.Document;
@@ -63,6 +64,24 @@ public class TesteMongo
             conferir (!usuarios.excluirPropriedade (uid, alternativa.getObjectId ("_id").toHexString ()),
                       "repositorio deve preservar ultima propriedade");
             System.out.println ("MongoDB: testes de cadastro, propriedades, legado e transacao ok");
+            RepositorioSafrasMongo safras = new RepositorioSafrasMongo (conexao.getBanco ());
+            Document safra = new Document ("nome", "Soja").append ("nomeNormalizado", "soja").append ("propriedadeId", principal)
+                .append ("talhoes", java.util.List.of ("t1", "t2")).append ("etapa", "Planejamento");
+            conferir (safras.criar (safra), "safra Mongo deve ser criada");
+            String sid = safra.getObjectId ("_id").toHexString ();
+            conferir (!safras.criar (new Document ("nome", "SOJA").append ("nomeNormalizado", "soja").append ("propriedadeId", principal)),
+                      "indice unico deve recusar nome de safra repetido na propriedade");
+            conferir (safras.criar (new Document ("nome", "Soja").append ("nomeNormalizado", "soja").append ("propriedadeId", "outra")),
+                      "o mesmo nome e aceito em outra propriedade");
+            conferir (safras.buscarPorId ("outra", sid) == null, "safra de outra propriedade nao e encontrada");
+            safras.atualizar (principal, sid, new Document ("etapa", "Plantio").append ("talhoes", java.util.List.of ("t1")));
+            Document lida = safras.buscarPorId (principal, sid);
+            conferir ("Plantio".equals (lida.getString ("etapa")) && lida.getList ("talhoes", String.class).size () == 1,
+                      "atualizacao da safra deve persistir etapa e talhoes");
+            conferir (safras.listar (principal).size () == 1, "listar safras filtra pela propriedade");
+            conferir (!safras.excluir ("outra", sid) && safras.excluir (principal, sid) && safras.listar (principal).isEmpty (),
+                      "excluir safra respeita a propriedade");
+            System.out.println ("MongoDB: safras ok");
         }
         finally
         {
