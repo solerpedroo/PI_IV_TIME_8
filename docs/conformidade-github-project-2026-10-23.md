@@ -1,4 +1,11 @@
+<!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Conformidade de `dev` com o GitHub Project — 23/10/2026
+
+Atualização de 24/10/2026, somente na branch `feat/ocorrencias`: as frentes #33,
+#20/#148–#150 e #21/#151–#153 têm implementação e validação descritas em
+[ocorrencias.md](ocorrencias.md). Os cards foram atribuídos a `solerpedroo`.
+O snapshot de `dev` abaixo é histórico e permanece distinto desta entrega em
+branch. O estado de conclusão no Project depende da revisão e publicação do PR.
 
 ## Objetivo e recorte
 
