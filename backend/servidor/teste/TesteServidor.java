@@ -1,6 +1,7 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
+import dados.RepositorioSafrasMemoria;
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioEstoqueMemoria;
 import dados.RepositorioUsuariosMemoria;
@@ -12,6 +13,8 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -608,6 +611,140 @@ public class TesteServidor
         conferir ("repositorio tambem preserva ultima propriedade", !repo.excluirPropriedade (uid, p.getObjectId ("_id").toHexString ()));
     }
 
+    private static List<Document> lista (Resp resp)
+    {
+        return Document.parse ("{\"l\":" + resp.corpo + "}").getList ("l", Document.class);
+    }
+
+    private static String safra (String nome, String cultura, String inicio, String fim, String... talhoes)
+    {
+        return new Document ("nome", nome).append ("cultura", cultura).append ("dataInicio", inicio)
+                   .append ("dataFim", fim).append ("talhoes", List.of (talhoes)).toJson ();
+    }
+
+    // id do talhao com esse nome na propriedade ativa de quem tem o token
+    private static String idDoTalhao (String token, String nome) throws Exception
+    {
+        for (Document talhao : lista (get ("/api/talhoes", token)))
+            if (talhao.getString ("nome").equalsIgnoreCase (nome))
+                return talhao.getString ("id");
+        return null;
+    }
+
+    private static void testarSafras () throws Exception
+    {
+        System.out.println ("\n# safras, ciclo produtivo e isolamento");
+
+        String a = login ("maria@agro.com", "Nova@1234");
+        String b = login ("joao@agro.com",  "Senha@123");
+
+        String t1 = idDoTalhao (a, "T-01 Norte");
+        String t2 = idDoTalhao (a, "t-02 sul");
+        String t3 = idDoTalhao (a, "T-03 V\u00e1rzea");
+        String tb = idDoTalhao (b, "T-01 Norte");
+
+        LocalDate hoje   = LocalDate.now (ZoneId.of ("America/Sao_Paulo"));
+        String    inicio = hoje.minusDays (30).toString ();
+        String    fim    = hoje.plusDays (150).toString ();
+
+        conferir ("listar safras sem token -> 401", 401, get ("/api/safras", null));
+        conferir ("criar safra sem token -> 401",   401, post ("/api/safras", safra ("S", "Soja", inicio, fim, t1), null));
+
+        Document vazio = camposComErro (post ("/api/safras", "{}", a));
+        conferir ("safra vazia -> 400 com nome, cultura, datas e talhoes",
+                  vazio.keySet ().containsAll (List.of ("nome", "cultura", "dataInicio", "dataFim", "talhoes")));
+        conferir ("cultura fora da lista -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Arroz", inicio, fim, t1), a)).containsKey ("cultura"));
+        conferir ("data inexistente (30/02) -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", "2026-02-30", fim, t1), a)).containsKey ("dataInicio"));
+        conferir ("data em outro formato -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", "01/09/2026", fim, t1), a)).containsKey ("dataInicio"));
+        conferir ("termino antes do inicio -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", fim, inicio, t1), a)).containsKey ("dataFim"));
+        conferir ("talhao de outro usuario -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", inicio, fim, tb), a)).containsKey ("talhoes"));
+        conferir ("talhao inexistente -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", inicio, fim, "abc"), a)).containsKey ("talhoes"));
+        conferir ("talhao repetido -> 400",
+                  camposComErro (post ("/api/safras", safra ("S", "Soja", inicio, fim, t1, t1), a)).containsKey ("talhoes"));
+        conferir ("talhoes como texto -> 400",
+                  camposComErro (post ("/api/safras", "{\"nome\":\"S\",\"cultura\":\"Soja\",\"dataInicio\":\"" + inicio +
+                                       "\",\"dataFim\":\"" + fim + "\",\"talhoes\":\"" + t1 + "\"}", a)).containsKey ("talhoes"));
+
+        Resp s1 = post ("/api/safras", safra ("Soja Ver\u00e3o", "Soja", inicio, fim, t1, t2), a);
+        conferir ("criar safra -> 201", 201, s1);
+        Document d1 = s1.status == 201 ? s1.json () : new Document ();
+        String   id1 = d1.getString ("id");
+        conferir ("safra comeca em Planejamento com uma etapa no historico",
+                  "Planejamento".equals (d1.getString ("etapa")) && d1.getList ("historicoEtapas", Document.class).size () == 1);
+        conferir ("area da safra = soma dos talhoes (124 + 100)",
+                  d1.get ("areaHectares", Number.class).doubleValue () == 224);
+        conferir ("safra esconde campos internos",
+                  !s1.corpo.contains ("propriedadeId") && !s1.corpo.contains ("nomeNormalizado"));
+
+        conferir ("nome de safra repetido -> 409", 409,
+                  post ("/api/safras", safra ("SOJA VER\u00c3O", "Soja", hoje.plusYears (2).toString (), hoje.plusYears (3).toString (), t3), a));
+        Resp cruzada = post ("/api/safras", safra ("Milho Safrinha", "Milho", hoje.toString (), hoje.plusDays (300).toString (), t2), a);
+        conferir ("talhao em duas safras no mesmo periodo -> 409", 409, cruzada);
+        conferir ("conflito aponta o campo talhoes", cruzada.status == 409 && cruzada.json ().get ("fields", Document.class).containsKey ("talhoes"));
+
+        Resp s2 = post ("/api/safras", safra ("Caf\u00e9 2026", "Caf\u00e9", inicio, fim, t3), a);
+        conferir ("outro talhao no mesmo periodo -> 201", 201, s2);
+        String id2 = s2.status == 201 ? s2.json ().getString ("id") : "x";
+        Resp s3 = post ("/api/safras", safra ("Milho Safrinha", "Milho", hoje.plusDays (151).toString (), hoje.plusDays (300).toString (), t1), a);
+        conferir ("mesmo talhao em periodo seguinte -> 201", 201, s3);
+        String id3 = s3.status == 201 ? s3.json ().getString ("id") : "x";
+
+        conferir ("usuario A lista 3 safras", lista (get ("/api/safras", a)).size () == 3);
+        conferir ("usuario B nao ve safras de A", get ("/api/safras", b).corpo.equals ("[]"));
+        conferir ("filtro cultura=soja",    lista (get ("/api/safras?cultura=soja", a)).size () == 1);
+        conferir ("filtro etapa=planejamento", lista (get ("/api/safras?etapa=planejamento", a)).size () == 3);
+        conferir ("busca q=safrinha",       lista (get ("/api/safras?q=safrinha", a)).size () == 1);
+        conferir ("consultar safra -> 200", 200, get ("/api/safras/" + id1, a));
+        conferir ("B consulta safra de A -> 404", 404, get ("/api/safras/" + id1, b));
+        conferir ("B altera safra de A -> 404",   404, put ("/api/safras/" + id1, safra ("X", "Soja", inicio, fim, tb), b));
+        conferir ("B avanca safra de A -> 404",   404, post ("/api/safras/" + id1 + "/avancar", null, b));
+        conferir ("B exclui safra de A -> 404",   404, requisitar ("DELETE", "/api/safras/" + id1, null, b));
+        conferir ("B ve historico de A -> 404",   404, get ("/api/safras/" + id1 + "/historico", b));
+        conferir ("id invalido -> 404",           404, get ("/api/safras/xyz", a));
+
+        Resp editada = put ("/api/safras/" + id1, safra ("Soja Ver\u00e3o 26/27", "Soja", inicio, fim, t1), a);
+        conferir ("editar safra -> 200", 200, editada);
+        conferir ("edicao recalcula a area (so T-01: 124 ha)",
+                  editada.status == 200 && editada.json ().get ("areaHectares", Number.class).doubleValue () == 124);
+        conferir ("edicao nao mexe na etapa", editada.status == 200 && "Planejamento".equals (editada.json ().getString ("etapa")));
+        conferir ("editar trazendo talhao ocupado -> 409", 409,
+                  put ("/api/safras/" + id1, safra ("Soja Ver\u00e3o 26/27", "Soja", inicio, fim, t1, t3), a));
+        conferir ("talhao liberado pela edicao entra em outra safra", 201,
+                  post ("/api/safras", safra ("Trigo Inverno", "Trigo", hoje.toString (), hoje.plusDays (60).toString (), t2), a));
+
+        Resp avancou = post ("/api/safras/" + id1 + "/avancar", null, a);
+        conferir ("avancar -> 200 em Preparacao", avancou.status == 200 && "Prepara\u00e7\u00e3o".equals (avancou.json ().getString ("etapa")));
+        conferir ("exclusao fora do planejamento -> 409", 409, requisitar ("DELETE", "/api/safras/" + id1, null, a));
+        conferir ("excluir safra em planejamento -> 204", 204, requisitar ("DELETE", "/api/safras/" + id3, null, a));
+        conferir ("safra excluida -> 404", 404, get ("/api/safras/" + id3, a));
+
+        post ("/api/talhoes/" + t1 + "/historico", "{\"tipo\":\"atividade\",\"descricao\":\"Plantio da soja\"}", a);
+        Resp historico = get ("/api/safras/" + id1 + "/historico", a);
+        conferir ("historico da safra traz eventos dos seus talhoes no periodo",
+                  historico.status == 200 && historico.corpo.contains ("Plantio da soja") && historico.corpo.contains ("T-01 Norte"));
+        conferir ("historico de outra safra nao traz o evento",
+                  !get ("/api/safras/" + id2 + "/historico", a).corpo.contains ("Plantio da soja"));
+
+        for (int i = 0; i < 4; i++)
+            post ("/api/safras/" + id1 + "/avancar", null, a);
+        Document finalizada = get ("/api/safras/" + id1, a).json ();
+        conferir ("ciclo completo chega em Finalizacao com 6 etapas no historico",
+                  "Finaliza\u00e7\u00e3o".equals (finalizada.getString ("etapa")) && finalizada.getString ("finalizadaEm") != null &&
+                  finalizada.getList ("historicoEtapas", Document.class).size () == 6);
+        conferir ("avancar safra finalizada -> 409", 409, post ("/api/safras/" + id1 + "/avancar", null, a));
+        conferir ("editar safra finalizada -> 409",  409, put ("/api/safras/" + id1, safra ("Outra", "Soja", inicio, fim, t1), a));
+        conferir ("excluir safra finalizada -> 409", 409, requisitar ("DELETE", "/api/safras/" + id1, null, a));
+        conferir ("historico da finalizada segue consultavel",
+                  get ("/api/safras/" + id1 + "/historico", a).corpo.contains ("Plantio da soja"));
+        conferir ("PATCH nao existe -> 405", 405, requisitar ("PATCH", "/api/safras/" + id1, "{}", a));
+    }
+
     private static void testarConcorrencia () throws Exception
     {
         System.out.println ("\n# concorrencia e erros");
@@ -696,7 +833,7 @@ public class TesteServidor
         System.out.println ("\n# limite de conexoes simultaneas (503)");
 
         Roteador roteador = Servidor.montarRoteador (new RepositorioUsuariosMemoria (), new RepositorioTalhoesMemoria (), new RepositorioEstoqueMemoria (),
-                                                     null, Path.of ("../.."));
+                                                     new RepositorioSafrasMemoria (), null, Path.of ("../.."));
         Servidor pequeno  = new Servidor ("127.0.0.1", 0, roteador, null, 2);
 
         // duas conexoes paradas ocupam as duas vagas
@@ -767,7 +904,7 @@ public class TesteServidor
         TesteServidor.estoque = new RepositorioEstoqueMemoria ();
 
         Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (), TesteServidor.estoque,
-                                                     null, Path.of ("../.."));
+                                                     new RepositorioSafrasMemoria (), null, Path.of ("../.."));
 
         // rota de teste que sempre lanca excecao
         roteador.adicionarPublica ("GET", "/explodir", requisicao -> { throw new RuntimeException ("de proposito"); });
@@ -785,6 +922,7 @@ public class TesteServidor
             TesteServidor.testarTalhoes ();
             TesteServidor.testarEstoque ();
             TesteServidor.testarPropriedades ();
+            TesteServidor.testarSafras ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();

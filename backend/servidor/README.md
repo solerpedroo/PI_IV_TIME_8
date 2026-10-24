@@ -55,7 +55,7 @@ biblioteca externa é o driver oficial do MongoDB (`lib/`).
 
 O mesmo servidor entrega:
 
-- a **API** em `/api/**` (autenticação, propriedades, talhões e ocorrências);
+- a **API** em `/api/**` (autenticação, perfil, propriedades, talhões, estoque, ocorrências e safras);
 - os **arquivos do front** (raiz do repositório), na mesma origem da API;
 - `/health` e `/ready`.
 
@@ -146,6 +146,13 @@ curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
 curl -i -H "Authorization: Bearer $T" $B/api/talhoes
 curl -i -H "Authorization: Bearer $T" "$B/api/talhoes?cultura=Soja&q=norte"
 curl -i -H "Authorization: Bearer $T" $B/api/talhoes/resumo
+
+# safras (use os ids dos talhões devolvidos acima)
+curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  -d '{"nome":"Soja 2026/27","cultura":"Soja","dataInicio":"2026-09-01","dataFim":"2027-03-31","talhoes":["ID-DO-TALHAO"]}' $B/api/safras
+curl -i -H "Authorization: Bearer $T" "$B/api/safras?etapa=Planejamento"
+curl -i -X POST -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/avancar
+curl -i -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/historico
 curl -i -X PUT -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
   -d '{"nome":"T-01 Norte","cultura":"Soja","hectares":130,"status":"Em preparo"}' $B/api/talhoes/COLE-O-ID
 
@@ -204,6 +211,8 @@ reais por socket. Cobre:
 - cadastro: cada validação e e-mail duplicado;
 - login, logout e token; confirmação de e-mail, reenvio com intervalo e redefinição de senha;
 - talhões: validações, CRUD, filtros, resumo e isolamento entre dois usuários;
+- safras: validações, conflito de talhão no mesmo período, ciclo completo até a
+  finalização, histórico do período e isolamento entre dois usuários;
 - concorrência: 50 requisições paralelas, cadastros simultâneos com o mesmo e-mail,
   talhões simultâneos com o mesmo nome, exceção em handler (500), clientes que
   desconectam no meio e limite de conexões (503).
@@ -309,6 +318,45 @@ conflitos transitórios. O Compose inicializa um replica set local de um membro.
 
 Os comandos e evidências dos testes estão em [docs/estoque.md](../../docs/estoque.md).
 
+### Safras
+
+Uma safra é um ciclo produtivo de uma cultura em um ou mais talhões da
+propriedade ativa, dentro de um período.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/safras?etapa=&cultura=&q=` | 200 com a lista (`etapa` e `cultura` sem diferenciar maiúsculas, `todas`/`todos` = sem filtro; `q` busca no nome) |
+| `POST /api/safras` | 201 com a safra · 400 · 409 nome repetido ou talhão ocupado |
+| `GET /api/safras/{id}` | 200 · 404 |
+| `PUT /api/safras/{id}` | 200 · 400 · 404 · 409 (inclusive safra finalizada) |
+| `DELETE /api/safras/{id}` | 204 · 404 · 409 se já saiu do Planejamento |
+| `POST /api/safras/{id}/avancar` | 200 com a safra na próxima etapa · 404 · 409 se já finalizada |
+| `GET /api/safras/{id}/historico` | 200 com os eventos dos talhões da safra dentro do período · 404 |
+
+Campos da safra:
+
+- `nome`: obrigatório, até 80 caracteres, único por propriedade sem diferenciar maiúsculas;
+- `cultura`: Soja, Milho, Trigo, Café ou Algodão (a mesma lista dos talhões);
+- `dataInicio` e `dataFim`: `AAAA-MM-DD`, término igual ou depois do início;
+- `talhoes`: lista com ao menos um id de talhão da propriedade, sem repetição.
+
+A resposta traz também `etapa`, `historicoEtapas` (etapa e instante de cada
+mudança), `finalizadaEm` (só depois de finalizar) e `areaHectares`, que é a soma
+atual dos hectares dos talhões associados (não é digitada).
+
+Regras do ciclo:
+
+- etapas: Planejamento → Preparação → Plantio → Manejo → Colheita → Finalização;
+- toda safra nasce em Planejamento; a etapa só muda por `/avancar`, uma por vez e sem voltar;
+- safra finalizada fica só para consulta: não é editada, avançada nem excluída;
+- só se exclui safra em Planejamento (depois disso ela já tem histórico);
+- um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`).
+
+O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
+`/api/talhoes/{id}/historico` dos seus talhões cuja data, no fuso de São Paulo,
+cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
+`talhaoNome`.
+
 ### Saúde
 
 - `GET /health` → `{"status":"UP"}`
@@ -348,10 +396,11 @@ backend/servidor/
     handlers/
       AuthHandler.java          rotas /api/auth/* e /api/me
       TalhoesHandler.java       rotas /api/talhoes
+      SafrasHandler.java        rotas /api/safras (ciclo produtivo)
       EstaticosHandler.java     arquivos do front
       SaudeHandler.java         /health e /ready
     dados/
-      RepositorioUsuarios.java / RepositorioTalhoes.java    interfaces
+      RepositorioUsuarios.java / RepositorioTalhoes.java / RepositorioSafras.java    interfaces
       *Mongo.java               implementações com MongoDB
       *Memoria.java             implementações em memória (testes e --memoria)
       ConexaoMongo.java         MongoClient único (thread-safe)
@@ -370,6 +419,7 @@ backend/servidor/
 - `usuarios`: índice único em `email`.
 - `propriedades`.
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
@@ -377,3 +427,4 @@ Os índices garantem as regras de unicidade mesmo com requisições simultâneas
 
 Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e
 Configurações. Os formulários de autenticação do front usam as rotas desta API.
+O front ainda não tem uma tela de Safras consumindo `/api/safras`.
