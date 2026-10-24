@@ -14,23 +14,7 @@
   <link rel="stylesheet" href="styles/motion.css">
 </head>
 <body>
-  <!--
-    Tela: Ocorrências (frame UX9SC — designSystemProjetoAgro)
-    Layout: Sidebar 260 + Main (header, métricas, tabela de ocorrências)
-
-    Critérios de aceite fechados nesta tela (Fluxos de Interação D —
-    "Ocorrências, Custos e Relatórios" / Flow "Registrar ocorrência" e
-    "Ações da ocorrência"):
-    - Registrar ocorrência: formulário com tipo, talhão e prioridade
-      (segmented control Baixa/Média/Alta) → validação (G3) → nova linha
-      "Aberta" → toast de sucesso.
-    - Ficha de detalhe (modal largo): meta grid + linha do tempo (timeline)
-      + campo de nova atualização que publica um novo evento na timeline.
-    - Resolver (confirmação → status "Resolvida" + evento na timeline) e
-      Excluir (confirmação destrutiva).
-    - Suporte a `?talhao=` na URL (vindo de Áreas de Cultivo) com chip
-      removível, igual ao padrão usado em Atividades.
-  -->
+  <!-- Ocorrências da propriedade ativa: dados e histórico confirmados pela API. -->
   <div class="app-shell">
 
     <!-- ================================================================== -->
@@ -86,10 +70,10 @@
 
       <div class="sidebar-user">
         <button class="sidebar-user-trigger" type="button" data-popover-trigger aria-controls="profile-menu" aria-expanded="false" aria-haspopup="menu">
-          <span class="sidebar-avatar" aria-hidden="true">PS</span>
+          <span class="sidebar-avatar" aria-hidden="true">—</span>
           <span class="sidebar-user-meta">
-            <span class="sidebar-user-name">Pedro Silva</span>
-            <span class="sidebar-user-property">Gerente de fazenda</span>
+            <span class="sidebar-user-name">—</span>
+            <span class="sidebar-user-property">Carregando propriedade…</span>
           </span>
           <svg class="sidebar-user-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
         </button>
@@ -129,7 +113,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Ocorrências</h1>
-          <p>Registro de eventos e problemas · Fazenda Santa Rita</p>
+          <p data-occ-property>Carregando propriedade…</p>
         </div>
         <div class="page-header-actions">
           <label class="search-box">
@@ -137,7 +121,7 @@
             <span class="visually-hidden">Buscar ocorrência</span>
             <input type="search" placeholder="Buscar ocorrência..." data-occ-search autocomplete="off">
           </label>
-          <button class="btn btn-primary" type="button" data-open-modal="occ-form">
+          <button class="btn btn-primary" type="button" data-open-modal="occ-form" disabled>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
             Registrar Ocorrência
           </button>
@@ -153,6 +137,14 @@
         </button>
       </div>
 
+      <div class="occ-filters" aria-label="Filtros de ocorrências">
+        <label>Talhão <select data-occ-plot-filter aria-label="Filtrar por talhão"><option value="">Toda a propriedade</option></select></label>
+        <label>Mês das resoluções <input type="month" data-occ-month aria-label="Mês das resoluções"></label>
+        <label><input type="checkbox" data-occ-archives> Incluir excluídas (consulta)</label>
+      </div>
+      <div class="occ-message" role="status" aria-live="polite" data-occ-message>Carregando ocorrências…</div>
+      <button class="btn btn-outline" type="button" data-occ-retry hidden>Tentar novamente</button>
+
       <!-- Métricas -->
       <section class="metrics-row" aria-label="Indicadores de ocorrências">
         <article class="metric-card">
@@ -161,19 +153,19 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="abertas">8</p>
+            <p class="metric-card-value" data-metric="abertas">—</p>
             <span class="metric-card-change is-flat">aguardando ação</span>
           </div>
           <p class="metric-card-desc">requer avaliação</p>
         </article>
         <article class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Em Análise</span>
+            <span class="metric-card-label">Em acompanhamento</span>
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="em-analise">3</p>
-            <span class="metric-card-change is-flat">em investigação</span>
+            <p class="metric-card-value" data-metric="em-analise">—</p>
+            <span class="metric-card-change is-flat">em acompanhamento</span>
           </div>
           <p class="metric-card-desc">acompanhamento ativo</p>
         </article>
@@ -183,10 +175,10 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="resolvidas">14</p>
-            <span class="metric-card-change">+12%</span>
+            <p class="metric-card-value" data-metric="resolvidas">—</p>
+            <span class="metric-card-change is-flat">no mês selecionado</span>
           </div>
-          <p class="metric-card-desc">fechadas em agosto</p>
+          <p class="metric-card-desc" data-occ-month-label>Data real de resolução · Brasília</p>
         </article>
         <article class="metric-card">
           <div class="metric-card-top">
@@ -194,7 +186,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-.76a2.87 2.87 0 1 1 5.74 0v.76"/><path d="M12 11a5 5 0 0 1 5 4.5l.3 1.5H6.7l.3-1.5A5 5 0 0 1 12 11Z"/><path d="M6.7 17h10.6"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="severidade-alta">2</p>
+            <p class="metric-card-value" data-metric="severidade-alta">—</p>
             <span class="metric-card-change is-flat">atenção imediata</span>
           </div>
           <p class="metric-card-desc">monitorar de perto</p>
@@ -212,78 +204,6 @@
               <tr><th>Ocorrência</th><th>Tipo</th><th>Talhão</th><th>Data</th><th>Severidade</th><th>Status</th><th><span class="visually-hidden">Ações</span></th></tr>
             </thead>
             <tbody>
-              <tr data-occ="Infestação de lagarta-do-cartucho" data-tipo="Praga" data-talhao="T-01 Norte" data-date="05 ago" data-severity="Alta" data-status="Aberta">
-                <td class="col-occ-name">Infestação de lagarta-do-cartucho</td>
-                <td class="col-muted">Praga</td>
-                <td class="col-muted">T-01 Norte</td>
-                <td class="col-muted">05 ago</td>
-                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
-                <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o1" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o1" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Chuva excessiva — 85mm em 24h" data-tipo="Clima" data-talhao="T-01 Norte" data-date="04 ago" data-severity="Média" data-status="Em análise">
-                <td class="col-occ-name">Chuva excessiva — 85mm em 24h</td>
-                <td class="col-muted">Clima</td>
-                <td class="col-muted">T-01 Norte</td>
-                <td class="col-muted">04 ago</td>
-                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
-                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o2" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o2" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Falha no sistema de irrigação" data-tipo="Equipamento" data-talhao="T-02 Sul" data-date="03 ago" data-severity="Alta" data-status="Aberta">
-                <td class="col-occ-name">Falha no sistema de irrigação</td>
-                <td class="col-muted">Equipamento</td>
-                <td class="col-muted">T-02 Sul</td>
-                <td class="col-muted">03 ago</td>
-                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
-                <td><span class="badge badge-warning" data-status-badge>Aberta</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o3" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o3" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Mancha-alvo na soja" data-tipo="Doença" data-talhao="T-02 Sul" data-date="01 ago" data-severity="Média" data-status="Em análise">
-                <td class="col-occ-name">Mancha-alvo na soja</td>
-                <td class="col-muted">Doença</td>
-                <td class="col-muted">T-02 Sul</td>
-                <td class="col-muted">01 ago</td>
-                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
-                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o4" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o4" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Geada leve registrada" data-tipo="Clima" data-talhao="T-03 Leste" data-date="28 jul" data-severity="Baixa" data-status="Resolvida">
-                <td class="col-occ-name">Geada leve registrada</td>
-                <td class="col-muted">Clima</td>
-                <td class="col-muted">T-03 Leste</td>
-                <td class="col-muted">28 jul</td>
-                <td><span class="badge badge-neutral" data-severity-badge>Baixa</span></td>
-                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o5" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o5" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Percevejo-marrom detectado" data-tipo="Praga" data-talhao="T-04 Oeste" data-date="26 jul" data-severity="Média" data-status="Resolvida">
-                <td class="col-occ-name">Percevejo-marrom detectado</td>
-                <td class="col-muted">Praga</td>
-                <td class="col-muted">T-04 Oeste</td>
-                <td class="col-muted">26 jul</td>
-                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
-                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o6" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o6" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Trator MF 4275 — superaquecimento" data-tipo="Equipamento" data-talhao="T-05 Centro" data-date="24 jul" data-severity="Alta" data-status="Resolvida">
-                <td class="col-occ-name">Trator MF 4275 — superaquecimento</td>
-                <td class="col-muted">Equipamento</td>
-                <td class="col-muted">T-05 Centro</td>
-                <td class="col-muted">24 jul</td>
-                <td><span class="badge badge-error" data-severity-badge>Alta</span></td>
-                <td><span class="badge badge-success" data-status-badge>Resolvida</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o7" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o7" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-occ="Ferrugem asiática — início" data-tipo="Doença" data-talhao="T-03 Leste" data-date="22 jul" data-severity="Média" data-status="Em análise">
-                <td class="col-occ-name">Ferrugem asiática — início</td>
-                <td class="col-muted">Doença</td>
-                <td class="col-muted">T-03 Leste</td>
-                <td class="col-muted">22 jul</td>
-                <td><span class="badge badge-warning" data-severity-badge>Média</span></td>
-                <td><span class="badge badge-info" data-status-badge>Em análise</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-o8" aria-expanded="false" aria-label="Mais ações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-o8" data-popover role="menu"></div></div></td>
-              </tr>
             </tbody>
           </table>
           <div class="empty-state" data-occ-empty hidden>
@@ -300,16 +220,16 @@
   <div class="modal-backdrop" data-modal="occ-form" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-form-title">
       <h2 id="occ-form-title">Registrar ocorrência</h2>
-      <p>Descreva o problema e vincule ao talhão. Os campos com * são obrigatórios.</p>
+      <p>Descreva o problema. O vínculo com um talhão é opcional. Os campos com * são obrigatórios.</p>
       <form class="stack-form" data-occ-form novalidate>
         <div class="input-group">
           <label for="occ-titulo">Título *</label>
-          <input id="occ-titulo" name="titulo" placeholder="Ex.: Lagarta-do-cartucho" required>
+          <input id="occ-titulo" name="titulo" placeholder="Ex.: Lagarta-do-cartucho" maxlength="160" required>
           <p class="field-error" data-error-for="titulo"></p>
         </div>
         <div class="input-group">
-          <label for="occ-tipo-trigger">Tipo *</label>
-          <select id="occ-tipo" name="tipo" required data-enhance-select data-placeholder="Selecione o tipo">
+          <label for="occ-tipo">Tipo *</label>
+          <select id="occ-tipo" name="tipo" required>
             <option value="">Selecione o tipo</option>
             <option value="Praga">Praga</option>
             <option value="Doença">Doença</option>
@@ -320,31 +240,31 @@
           <p class="field-error" data-error-for="tipo"></p>
         </div>
         <div class="input-group">
-          <label for="occ-talhao-trigger">Talhão *</label>
-          <select id="occ-talhao" name="talhao" required data-enhance-select data-placeholder="Selecione o talhão">
-            <option value="">Selecione o talhão</option>
-            <!-- Os valores são os mesmos nomes usados em Áreas de Cultivo. -->
-            <option value="T-01 Norte">T-01 Norte</option>
-            <option value="T-02 Sul">T-02 Sul</option>
-            <option value="T-03 Leste">T-03 Leste</option>
-            <option value="T-04 Oeste">T-04 Oeste</option>
-            <option value="T-05 Centro">T-05 Centro</option>
-          </select>
-          <p class="field-error" data-error-for="talhao"></p>
+          <label for="occ-talhao">Talhão (opcional)</label>
+          <select id="occ-talhao" name="talhaoId"><option value="">Ocorrência geral da propriedade</option></select>
+          <p class="field-error" data-error-for="talhaoId"></p>
         </div>
         <div class="input-group">
-          <label>Prioridade</label>
+          <label for="occ-data">Data da ocorrência *</label>
+          <input id="occ-data" type="date" name="data" required>
+          <p class="field-error" data-error-for="data"></p>
+        </div>
+        <div class="input-group">
+          <label>Prioridade *</label>
           <div class="segmented" role="group" aria-label="Prioridade">
             <button type="button" class="segmented-option" data-priority="Baixa" data-tone="baixa" aria-pressed="true">Baixa</button>
             <button type="button" class="segmented-option" data-priority="Média" data-tone="media" aria-pressed="false">Média</button>
             <button type="button" class="segmented-option" data-priority="Alta" data-tone="alta" aria-pressed="false">Alta</button>
           </div>
-          <input type="hidden" name="prioridade" value="Baixa">
+          <input type="hidden" name="prioridade" value="Baixa"><p class="field-error" data-error-for="prioridade"></p>
         </div>
         <div class="textarea-group">
           <label for="occ-descricao">Descrição</label>
-          <textarea id="occ-descricao" name="descricao" placeholder="Descreva o que foi observado, área afetada e ações já tomadas..."></textarea>
+          <textarea id="occ-descricao" name="descricao" maxlength="6000" placeholder="Descreva o que foi observado, área afetada e ações já tomadas..."></textarea>
+          <p class="field-error" data-error-for="descricao"></p>
         </div>
+        <p class="field-hint">Anexo de foto ainda não está disponível.</p>
+        <p class="field-error" data-occ-form-error role="alert"></p>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
           <button class="btn btn-primary" type="submit">Registrar ocorrência</button>
@@ -365,19 +285,25 @@
       </div>
       <div class="modal-body-scroll">
         <div class="meta-grid" data-detail-meta></div>
+        <h3 class="occ-detail-subhead">Descrição informada</h3>
+        <p class="occ-text" data-detail-description></p>
         <div>
           <h3 class="occ-detail-subhead">Linha do tempo</h3>
           <div class="timeline" data-detail-timeline></div>
         </div>
         <div class="textarea-group">
           <label for="occ-update-text">Nova atualização</label>
-          <textarea id="occ-update-text" data-update-text placeholder="Descreva o andamento, ações tomadas e próximos passos..."></textarea>
+          <textarea id="occ-update-text" data-update-text maxlength="6000" placeholder="Descreva o andamento, ações tomadas e próximos passos..."></textarea>
         </div>
       </div>
+      <p class="field-error" data-occ-detail-error role="alert"></p>
+      <button class="btn btn-outline" type="button" data-detail-reload>Atualizar detalhe</button>
       <div class="modal-actions occ-detail-actions">
         <button class="btn btn-destructive" type="button" data-detail-delete>Excluir</button>
+        <button class="btn btn-outline" type="button" data-detail-edit>Editar</button>
         <span class="filter-spacer"></span>
         <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
+        <button class="btn btn-secondary" type="button" data-detail-follow>Acompanhar</button>
         <button class="btn btn-secondary" type="button" data-detail-publish>Publicar atualização</button>
         <button class="btn btn-primary" type="button" data-detail-resolve>Marcar resolvida</button>
       </div>
@@ -389,6 +315,8 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-resolve-title">
       <h2 id="occ-resolve-title">Confirmar resolução</h2>
       <p data-resolve-desc>A ocorrência será marcada como resolvida.</p>
+      <div class="textarea-group"><label for="occ-resolution">Desfecho *</label><textarea id="occ-resolution" maxlength="6000" data-resolution-text></textarea></div>
+      <p class="field-error" data-resolve-error role="alert"></p>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
         <button class="btn btn-primary" type="button" data-confirm-resolve>Confirmar</button>
@@ -400,7 +328,8 @@
   <div class="modal-backdrop" data-modal="occ-delete" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="occ-delete-title">
       <h2 id="occ-delete-title">Excluir ocorrência?</h2>
-      <p>Esta ação não pode ser desfeita. Atualizações registradas serão removidas.</p>
+      <p class="field-error" data-delete-error role="alert"></p>
+      <p>A ocorrência sai da lista ativa. Seus dados e atualizações serão preservados em “Incluir excluídas (consulta)”.</p>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
         <button class="btn btn-destructive" type="button" data-confirm-delete>Excluir</button>
@@ -424,10 +353,7 @@
 
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
-  <script src="scripts/data/operational-defaults.js" defer></script>
-  <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/ocorrencias.js" defer></script>
-  <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>
