@@ -4,6 +4,7 @@
 */
 package handlers;
 
+import dados.RepositorioCustos;
 import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Manipulador;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
@@ -37,6 +39,7 @@ import util.Validacao;
     Ciclo: Planejamento -> Preparacao -> Plantio -> Manejo -> Colheita -> Finalizacao.
     Avanca uma etapa por vez e nao volta. Safra finalizada fica so para consulta.
     Um talhao nao pode estar em duas safras com periodos que se cruzam.
+    Safra com custos lancados nao e excluida, e nao perde talhao que tenha custo nela.
 */
 public class SafrasHandler implements Manipulador
 {
@@ -52,9 +55,11 @@ public class SafrasHandler implements Manipulador
 
     private final RepositorioSafras  safras;
     private final RepositorioTalhoes talhoes;
+    private final RepositorioCustos  custos;
     private final Sessoes            sessoes;
 
-    public SafrasHandler (RepositorioSafras safras, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    public SafrasHandler (RepositorioSafras safras, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                          Sessoes sessoes) throws Exception
     {
         if (safras == null)
             throw new Exception ("Repositorio de safras ausente");
@@ -62,11 +67,15 @@ public class SafrasHandler implements Manipulador
         if (talhoes == null)
             throw new Exception ("Repositorio de talhoes ausente");
 
+        if (custos == null)
+            throw new Exception ("Repositorio de custos ausente");
+
         if (sessoes == null)
             throw new Exception ("Sessoes ausentes");
 
         this.safras  = safras;
         this.talhoes = talhoes;
+        this.custos  = custos;
         this.sessoes = sessoes;
     }
 
@@ -122,7 +131,7 @@ public class SafrasHandler implements Manipulador
         return valor instanceof ObjectId ? ((ObjectId) valor).toHexString () : String.valueOf (valor);
     }
 
-    private static double hectares (Document talhao)
+    public static double hectares (Document talhao)
     {
         Object valor = talhao.get ("hectares");
 
@@ -141,7 +150,7 @@ public class SafrasHandler implements Manipulador
     }
 
     // area da safra = soma dos hectares atuais dos talhoes associados
-    private static double area (Document safra, LinkedHashMap<String, Document> talhoes)
+    public static double area (Document safra, Map<String, Document> talhoes)
     {
         double ret = 0;
 
@@ -235,6 +244,41 @@ public class SafrasHandler implements Manipulador
                     ret = Resposta.json (409, new Document ("error", "Plot already in another crop season")
                                                   .append ("fields", new Document ("talhoes", mensagem)));
                 }
+            }
+        }
+
+        return ret;
+    }
+
+    private ArrayList<Document> custosDaSafra (String propriedadeId, String safraId) throws Exception
+    {
+        ArrayList<Document> ret = new ArrayList<Document> ();
+
+        for (Document custo : this.custos.listar (propriedadeId))
+            if (safraId.equals (custo.getString ("safraId")))
+                ret.add (custo);
+
+        return ret;
+    }
+
+    // 409 se a edicao tirar da safra um talhao que tem custo lancado nela; null se puder
+    private Resposta talhaoComCusto (String propriedadeId, String safraId, Document campos,
+                                     LinkedHashMap<String, Document> talhoes) throws Exception
+    {
+        Resposta     ret      = null;
+        List<String> mantidos = campos.getList ("talhoes", String.class);
+
+        for (Document custo : this.custosDaSafra (propriedadeId, safraId))
+        {
+            String talhaoId = custo.getString ("talhaoId");
+
+            if (ret == null && talhaoId != null && !mantidos.contains (talhaoId))
+            {
+                Document talhao   = talhoes.get (talhaoId);
+                String   mensagem = "O talh\u00e3o " + (talhao == null ? talhaoId : talhao.getString ("nome")) +
+                                    " tem custos lan\u00e7ados nesta safra.";
+                ret = Resposta.json (409, new Document ("error", "Plot has costs in this crop season")
+                                              .append ("fields", new Document ("talhoes", mensagem)));
             }
         }
 
@@ -393,6 +437,10 @@ public class SafrasHandler implements Manipulador
             if (ret != null)
                 return ret;
 
+            ret = this.talhaoComCusto (propriedadeId, id, campos, talhoes);
+            if (ret != null)
+                return ret;
+
             if (!this.safras.atualizar (propriedadeId, id, campos))
                 return SafrasHandler.nomeRepetido ();
 
@@ -418,6 +466,9 @@ public class SafrasHandler implements Manipulador
             else if (!safra.getString ("etapa").equals (SafrasHandler.PLANEJAMENTO))
                 ret = Resposta.json (409, new Document ("error",
                           "S\u00f3 \u00e9 poss\u00edvel excluir uma safra em planejamento."));
+            else if (!this.custosDaSafra (propriedadeId, id).isEmpty ())
+                ret = Resposta.json (409, new Document ("error",
+                          "Exclua ou mova os custos da safra antes de exclu\u00ed-la."));
             else if (!this.safras.excluir (propriedadeId, id))
                 ret = Resposta.erro (404, "Not found");
             else

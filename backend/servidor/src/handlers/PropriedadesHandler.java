@@ -3,6 +3,7 @@
 
 package handlers;
 
+import dados.RepositorioCustos;
 import dados.RepositorioTalhoes;
 import dados.RepositorioOcorrencias;
 import dados.RepositorioUsuarios;
@@ -27,6 +28,7 @@ public class PropriedadesHandler
 {
     private final RepositorioUsuarios usuarios;
     private final RepositorioTalhoes  talhoes;
+    private final RepositorioCustos   custos;
     private final Sessoes             sessoes;
     private dados.RepositorioEstoque estoque;
     private final RepositorioOcorrencias ocorrencias;
@@ -37,18 +39,26 @@ public class PropriedadesHandler
         this.estoque = estoque;
     }
 
-    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                                Sessoes sessoes) throws Exception
     {
-        this (usuarios, talhoes, sessoes, null);
+        this (usuarios, talhoes, custos, sessoes, null);
     }
 
     public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes,
                                 RepositorioOcorrencias ocorrencias) throws Exception
     {
+        this (usuarios, talhoes, null, sessoes, ocorrencias);
+    }
+
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                                Sessoes sessoes, RepositorioOcorrencias ocorrencias) throws Exception
+    {
         if (usuarios == null || talhoes == null || sessoes == null)
             throw new Exception ("Dependencia de propriedades ausente");
         this.usuarios = usuarios;
         this.talhoes  = talhoes;
+        this.custos   = custos;
         this.sessoes  = sessoes;
         this.ocorrencias = ocorrencias;
     }
@@ -192,6 +202,9 @@ public class PropriedadesHandler
         // Uma ocorrência geral também depende da propriedade, mesmo depois de excluída da lista.
         if (this.ocorrencias != null && this.ocorrencias.temRegistros (id))
             return Resposta.erro (409, "A propriedade possui ocorrências ou histórico preservado e não pode ser excluída.");
+        // custos sem talhao tambem pertencem a propriedade e ficariam orfaos
+        if (this.custos != null && !this.custos.listar (id).isEmpty ())
+            return Resposta.json (409, new Document ("error", "Exclua os custos antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();

@@ -89,7 +89,8 @@ public class CenarioEstoqueTeste
         }
         Servidor servidor = new Servidor ("127.0.0.1", 8080,
             Servidor.montarRoteador (usuarios, new RepositorioTalhoesMongo (conexao.getBanco ()),
-                new RepositorioEstoqueMongo (conexao), new RepositorioSafrasMongo (conexao.getBanco ()), conexao, Path.of ("../..")), conexao, 100);
+                new RepositorioEstoqueMongo (conexao), new RepositorioSafrasMongo (conexao.getBanco ()),
+                new RepositorioCustosMongo (conexao.getBanco ()), conexao, Path.of ("../..")), conexao, 100);
         System.out.println ("CENARIO_ESTOQUE_PRONTO");
         try (java.util.Scanner entrada = new java.util.Scanner (System.in))
         {

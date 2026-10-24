@@ -1,6 +1,7 @@
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
+import dados.RepositorioCustosMongo;
 import dados.RepositorioSafrasMongo;
 import dados.RepositorioUsuariosMongo;
 import com.mongodb.ConnectionString;
@@ -82,6 +83,24 @@ public class TesteMongo
             conferir (!safras.excluir ("outra", sid) && safras.excluir (principal, sid) && safras.listar (principal).isEmpty (),
                       "excluir safra respeita a propriedade");
             System.out.println ("MongoDB: safras ok");
+            RepositorioCustosMongo custos = new RepositorioCustosMongo (conexao.getBanco ());
+            Document custo = new Document ("description", "Diesel").append ("category", "Outros").append ("value", 10.5)
+                .append ("date", "2026-08-01").append ("talhaoId", null).append ("propriedadeId", principal);
+            custos.criar (custo);
+            String cid = custo.getObjectId ("_id").toHexString ();
+            conferir (custos.buscarPorId (principal, cid) != null && custos.buscarPorId ("outra", cid) == null,
+                      "custo Mongo so e encontrado na propria propriedade");
+            conferir (!custos.atualizar ("outra", cid, new Document ("value", 1)), "outra propriedade nao altera o custo");
+            conferir (custos.atualizar (principal, cid, new Document ("value", 20.25).append ("talhaoId", "t1")),
+                      "atualizacao do custo deve encontrar o lancamento");
+            Document lido = custos.buscarPorId (principal, cid);
+            conferir (lido.getDouble ("value") == 20.25 && "t1".equals (lido.getString ("talhaoId")),
+                      "atualizacao do custo deve persistir");
+            conferir (custos.listar (principal).size () == 1 && custos.listar ("outra").isEmpty (),
+                      "listar custos filtra pela propriedade");
+            conferir (!custos.excluir ("outra", cid) && custos.excluir (principal, cid) && custos.listar (principal).isEmpty (),
+                      "excluir custo respeita a propriedade");
+            System.out.println ("MongoDB: custos ok");
         }
         finally
         {

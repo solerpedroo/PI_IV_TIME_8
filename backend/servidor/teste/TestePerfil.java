@@ -56,7 +56,8 @@ public class TestePerfil
         }
         else usuarios = new RepositorioUsuariosMemoria ();
         Roteador rotas = Servidor.montarRoteador (usuarios, mongo ? new RepositorioTalhoesMongo (conexao.getBanco ()) :
-            new RepositorioTalhoesMemoria (), new RepositorioEstoqueMemoria (), new RepositorioSafrasMemoria (), conexao, Path.of ("../.."));
+            new RepositorioTalhoesMemoria (), new RepositorioEstoqueMemoria (), new RepositorioSafrasMemoria (),
+            new RepositorioCustosMemoria (), conexao, Path.of ("../.."));
         servidor = new Servidor ("127.0.0.1", 0, rotas, conexao, 100);
     }
 

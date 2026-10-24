@@ -4,6 +4,9 @@ import dados.ConexaoMongo;
 import dados.RepositorioOcorrencias;
 import dados.RepositorioOcorrenciasMemoria;
 import dados.RepositorioOcorrenciasMongo;
+import dados.RepositorioCustos;
+import dados.RepositorioCustosMemoria;
+import dados.RepositorioCustosMongo;
 import dados.RepositorioSafras;
 import dados.RepositorioSafrasMemoria;
 import dados.RepositorioSafrasMongo;
@@ -17,6 +20,7 @@ import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
+import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
@@ -87,7 +91,8 @@ public class Servidor
 
     // conexao pode ser null (modo memoria / testes)
     public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioEstoque estoque,
-                                           RepositorioSafras safras, ConexaoMongo conexao, Path raiz) throws Exception
+                                           RepositorioSafras safras, RepositorioCustos custos,
+                                           ConexaoMongo conexao, Path raiz) throws Exception
     {
         RepositorioOcorrencias ocorrencias = conexao == null ? new RepositorioOcorrenciasMemoria () : new RepositorioOcorrenciasMongo (conexao);
         Sessoes  sessoes  = new Sessoes ();
@@ -96,13 +101,14 @@ public class Servidor
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
-        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, sessoes, ocorrencias);
+        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
         propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
         new EstoqueHandler (estoque, sessoes).registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
-        new SafrasHandler  (safras, talhoes, sessoes).registrar (roteador);
+        new SafrasHandler  (safras, talhoes, custos, sessoes).registrar (roteador);
+        new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
@@ -163,6 +169,7 @@ public class Servidor
             RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
             RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  ();
             RepositorioSafras   safras   = new RepositorioSafrasMemoria   ();
+            RepositorioCustos   custos   = new RepositorioCustosMemoria   ();
 
             if (!memoria)
             {
@@ -175,6 +182,7 @@ public class Servidor
                     talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
                     estoque  = new RepositorioEstoqueMongo  (conexao);
                     safras   = new RepositorioSafrasMongo   (conexao.getBanco ());
+                    custos   = new RepositorioCustosMongo   (conexao.getBanco ());
                 }
                 catch (Exception erro)
                 {
@@ -183,7 +191,7 @@ public class Servidor
                 }
             }
 
-            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, estoque, safras, conexao, raiz);
+            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, estoque, safras, custos, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +
