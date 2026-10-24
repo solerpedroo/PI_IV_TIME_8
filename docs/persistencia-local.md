@@ -1,6 +1,12 @@
 # Persistência local dos dados operacionais
 
 Miguel — RA: 25003110
+Autor secundário: Pedro Henrique Contardi Soler - 25005592
+
+Atualização de estoque em 24/10/2026: `insumos.html` passou a consultar a API
+Java e o MongoDB, conforme [estoque.md](estoque.md). Esta documentação de
+armazenamento local descreve os demais módulos. A chave `stock` legada fica
+intacta, mas não alimenta o catálogo persistido e não é importada automaticamente.
 
 O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
 
@@ -18,7 +24,7 @@ Cada chave começa com `agro.operational.v1.`. O conteúdo tem o formato `{ "ver
 | --- | --- |
 | `plots` | Identificador, nome, cultura, hectares e status dos talhões. |
 | `activities` | Identificador, nome, tipo, talhão, data e status das atividades. Painel, Kanban e Lista compartilham os mesmos registros. |
-| `stock` | Produtos, categorias, saldos, unidades, mínimos e movimentações com quantidade, data e fornecedor/destino. |
+| `stock` | Legado preservado; não é mais lido nem escrito pela tela de insumos. |
 | `occurrences` | Ocorrências, severidade, status e histórico de atualizações e resolução. |
 | `costs` | Lançamentos, orçamento e período selecionado. |
 | `settings` | Perfil, propriedade, safra e preferências de notificação. |
@@ -40,12 +46,15 @@ O controle entre abas compara o conteúdo lido com o conteúdo existente antes d
 
 - Áreas ativas contam talhões com status `Ativo`; hectares somam os registros existentes.
 - Atividades pendentes incluem `Pendente` e `Agendada`; concluídas e em andamento têm contagens próprias.
-- Estoque aplica a regra existente: saldo/mínimo abaixo de 0,6 é crítico; abaixo de 1 é baixo; a partir de 1 é normal. Entradas do mês são calculadas pelo histórico local dos produtos existentes.
+- Estoque usa indicadores e regras do servidor documentados em `estoque.md`, sem a regra mock 0,6.
 - Ocorrências mantêm a regra atual: resolvidas representam a contagem dos registros resolvidos, sem implementar um novo relatório mensal.
 - Custos e gráficos somam os lançamentos, sem totais históricos fictícios ocultos. O custo por hectare usa a área da propriedade nas configurações. O período selecionado é preservado; não foi criado um novo mecanismo de fechamento ou filtro contábil por safra.
 - Concluir atividades ou movimentar estoque não cria automaticamente registros em outros módulos: as mensagens que afirmavam integrações simuladas foram corrigidas. Isso exigiria regras e vínculos adicionais fora desta task.
 
-Os dados são locais a este navegador e à mesma origem do site (protocolo, domínio e porta). Limpar os dados do site os remove. Não existe sincronização com servidor ou entre dispositivos. A recuperação não precisa do backend nem de rede, desde que os arquivos estáticos da aplicação estejam disponíveis no navegador ou sejam servidos localmente. Esta task não instala um service worker nem promete abrir um site ainda não carregado sem conexão.
+Os dados dos módulos locais são limitados a este navegador e à mesma origem
+(protocolo, domínio e porta). Estas limitações não descrevem o estoque atual,
+que exige API e guarda catálogo/histórico no MongoDB. Esta task não instala
+service worker nem promete abrir um site ainda não carregado sem conexão.
 
 ## Validação reproduzível
 
