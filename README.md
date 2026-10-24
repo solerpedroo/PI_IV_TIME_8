@@ -1,5 +1,11 @@
 # Agro — frontend estático
 
+<!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
+
+Perfil em Configurações está integrado ao servidor Java puro: dados pessoais,
+preferências, propriedade padrão, confirmação de novo e-mail, senha e logout.
+Contrato, limites de foto/equipe/plano e validação: [docs/perfil.md](docs/perfil.md).
+
 > Esta branch também contém a fundação separada do backend (gateway em Java puro, core em Java com Spring Boot e MongoDB). Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
 
 Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
