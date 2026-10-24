@@ -4,11 +4,15 @@ import dados.ConexaoMongo;
 import dados.RepositorioTalhoes;
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioTalhoesMongo;
+import dados.RepositorioEstoque;
+import dados.RepositorioEstoqueMemoria;
+import dados.RepositorioEstoqueMongo;
 import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.EstaticosHandler;
+import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
@@ -73,7 +77,7 @@ public class Servidor
     }
 
     // conexao pode ser null (modo memoria / testes)
-    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes,
+    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioEstoque estoque,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
         Sessoes  sessoes  = new Sessoes ();
@@ -81,8 +85,11 @@ public class Servidor
 
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
-        new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
+        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, sessoes);
+        propriedades.setEstoque (estoque);
+        propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
+        new EstoqueHandler (estoque, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
@@ -141,6 +148,7 @@ public class Servidor
             ConexaoMongo        conexao  = null;
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
             RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
+            RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  ();
 
             if (!memoria)
             {
@@ -151,6 +159,7 @@ public class Servidor
                 {
                     usuarios = new RepositorioUsuariosMongo (conexao);
                     talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
+                    estoque  = new RepositorioEstoqueMongo  (conexao);
                 }
                 catch (Exception erro)
                 {
@@ -159,7 +168,7 @@ public class Servidor
                 }
             }
 
-            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, conexao, raiz);
+            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, estoque, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +

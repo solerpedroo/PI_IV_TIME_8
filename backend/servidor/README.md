@@ -1,4 +1,5 @@
 <!-- Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 -->
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 
 # Servidor AgroGestão (Java, HTTP feito à mão)
 
@@ -246,6 +247,48 @@ Campos do talhão:
 
 Cada usuário só vê e edita os talhões da própria propriedade. Talhão de outra
 propriedade responde 404. Não há DELETE nesta entrega.
+
+### Estoque
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/insumos` | 200 com o catálogo da propriedade ativa |
+| `GET /api/insumos/{id}` | 200 com um item ativo · 404 |
+| `GET /api/insumos/atividades` | atividades persistidas acessíveis ao titular e propriedade da sessão |
+| `POST /api/insumos` | 201 · 400 |
+| `PUT /api/insumos/{id}` | 200 · 400 · 404 |
+| `DELETE /api/insumos/{id}` | 204 · 404 · 409 se houver saldo |
+| `GET /api/insumos/{id}/movimentacoes` | 200 com o histórico persistido |
+| `POST /api/insumos/{id}/movimentacoes` | 201 · 400 · 404 · 409 por saldo insuficiente |
+| `GET /api/insumos/resumo` | indicadores reais de produtos, críticos, entradas do mês e valor atual |
+
+O catálogo guarda `nome`, `categoria`, `unidade`, `saldo`, `minimo`,
+`limiarCritico` opcional e `custoUnitario`. A regra 0,6 do mock não é aplicada:
+saldo abaixo de `minimo` fica Baixo; se houver `limiarCritico` explícito, saldo
+menor ou igual a esse limiar fica Crítico. O limiar não pode superar o mínimo.
+
+As movimentações são `entrada`, `saida` ou `ajuste`; registram data do servidor,
+saldo anterior/posterior, unidade histórica, fornecedor, observação e custo.
+O ajuste informa o **saldo contado**, pode zerar o item e exige motivo.
+Uma saída manual pode omitir atividade; com `atividadeId`, o servidor exige
+uma atividade persistida do titular na mesma propriedade e conserva ID/título
+no histórico. A leitura aceita os IDs BSON da modelagem da #6. Não há criação
+de atividades nem geração de custos de outro módulo por estas rotas de estoque.
+
+Entradas com custo informado atualizam o custo médio ponderado; preço omitido
+conserva o anterior. O valor em estoque é a soma de saldo × custo médio, com
+arredondamento monetário para centavos. Entradas mensais comparam mês e ano
+no fuso `America/Sao_Paulo`, incluindo entradas de produtos depois arquivados.
+
+A saída nunca permite saldo negativo. O saldo inicial tem evento auditável.
+Exclusão exige saldo zero e apenas arquiva o catálogo, preservando a rota de
+histórico do ID antigo. Unidade não pode ser reinterpretada depois de saldo ou
+movimentações: nesse caso, cadastre outro produto. A propriedade com estoque
+ou histórico não pode ser excluída. Os repositórios em memória e Mongo usam as
+mesmas regras numéricas; Mongo grava saldo/histórico em transação com retry de
+conflitos transitórios. O Compose inicializa um replica set local de um membro.
+
+Os comandos e evidências dos testes estão em [docs/estoque.md](../../docs/estoque.md).
 
 ### Saúde
 

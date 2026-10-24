@@ -1,546 +1,258 @@
 /* Miguel — RA: 25003110 */
-/**
- * Agro — interações da tela Insumos (dados mock híbridos)
- * --------------------------------------------------------------------------
- * Cobre o "Flow 5 — Ações do estoque" e o "Flow 6 — Insumo → Atividade →
- * Talhão → Custo" do board Fluxos de Interação:
- * - Ver detalhes (meta + rastreio operacional ilustrativo)
- * - Registrar entrada / saída (recalcula o status do item automaticamente)
- * - Editar (categoria / estoque mínimo) e Excluir (só com saldo = 0)
- * - Busca por nome + filtro por categoria + alerta de itens críticos
- *
- * Regra de status (reaplicada sempre que o saldo muda — os valores
- * iniciais vêm do mock do pen.dev e podem não seguir exatamente esta
- * fórmula, mas toda movimentação feita nesta tela passa a obedecê-la):
- *   saldo / mínimo <  0.6  → Crítico
- *   saldo / mínimo <  1.0  → Baixo
- *   saldo / mínimo >= 1.0  → Normal
- */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
+/* Estoque: o servidor confirma toda gravação. Não há dados operacionais locais
+   nem alteração antecipada de saldo; falhas de consulta limpam a apresentação. */
 (() => {
   "use strict";
-
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  let products = [], activities = [], active = null, category = "todas", ready = false;
+  const qty = value => Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 6 });
+  const money = value => Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
 
-  const state = {
-    totalProducts: 0,
-    entriesThisMonth: 0,
-    activeRow: null, // linha da tabela em contexto (saída/editar/detalhe/excluir)
-  };
-
-  let persist = () => true;
-  const movements = new Map();
-  function toast(type, title, description) {
-    if (window.AgroToast) window.AgroToast.show({ type, title, description });
-    return true;
-  }
-
-  function formatQty(value) {
-    return value.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Modal helpers                                                          */
-  /* ---------------------------------------------------------------------- */
-  function openModal(modal) {
-    if (!modal) return;
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-    modal.querySelector("input:not([disabled]), select, button")?.focus();
-  }
-
-  function closeModal(modal) {
-    if (!modal) return;
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-  }
-
-  function initGenericModals() {
-    $$(".modal-backdrop").forEach((modal) => {
-      $$("[data-close-modal]", modal).forEach((btn) => btn.addEventListener("click", () => closeModal(modal)));
-      modal.addEventListener("click", (event) => {
-        if (event.target === modal) closeModal(modal);
-      });
+  async function api(path, options = {}) {
+    const token = sessionStorage.getItem("agro.sessionToken");
+    if (!token) throw new Error("Entre na sua conta para acessar o estoque.");
+    const response = await fetch(base + path, {
+      ...options, signal: AbortSignal.timeout(15000),
+      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
     });
+    const data = response.status === 204 ? null : await response.json();
+    if (!response.ok) throw Object.assign(new Error(data.error || "Não foi possível concluir a operação."), { fields: data.fields || {} });
+    return data;
   }
 
-  function clearErrors(form) {
-    $$(".field-error", form).forEach((el) => (el.textContent = ""));
-    $$("input, select", form).forEach((el) => el.removeAttribute("aria-invalid"));
+  function modal(name, open) {
+    const box = $(`[data-modal='${name}']`);
+    box.classList.toggle("is-open", open);
+    box.setAttribute("aria-hidden", String(!open));
+    if (open) box.querySelector("input, select, button")?.focus();
   }
 
-  function setError(form, field, message) {
-    const errorEl = form.querySelector(`[data-error-for="${field}"]`);
-    if (errorEl) errorEl.textContent = message;
-    form.querySelector(`[name="${field}"]`)?.setAttribute("aria-invalid", "true");
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Status do item (recalculado a cada movimentação)                       */
-  /* ---------------------------------------------------------------------- */
-  function statusFor(qty, min) {
-    const ratio = min > 0 ? qty / min : 1;
-    if (ratio < 0.6) return { label: "Crítico", cls: "badge-error" };
-    if (ratio < 1) return { label: "Baixo", cls: "badge-warning" };
-    return { label: "Normal", cls: "badge-success" };
-  }
-
-  function applyRowStatus(row) {
-    const qty = Number(row.dataset.qty);
-    const min = Number(row.dataset.min);
-    const { label, cls } = statusFor(qty, min);
-    const badge = $("[data-status-badge]", row);
-    const wasCritical = badge.classList.contains("badge-error");
-    badge.className = `badge ${cls}`;
-    badge.textContent = label;
-    $("[data-qty-cell]", row).textContent = formatQty(qty);
-    return { becameCritical: !wasCritical && cls === "badge-error", label };
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Alerta crítico + métrica "Estoque Crítico"                             */
-  /* ---------------------------------------------------------------------- */
-  function recomputeCriticalAlert() {
-    const rows = $$("[data-stock-table] tbody tr");
-    const critical = rows.filter((row) => $("[data-status-badge]", row)?.classList.contains("badge-error"));
-
-    const metric = $("[data-metric='critical']");
-    if (metric) metric.textContent = String(critical.length);
-
-    const alertBox = $("[data-critical-alert]");
-    const countEl = $("[data-critical-count]");
-    const namesEl = $("[data-critical-names]");
-    if (!alertBox) return;
-
-    if (critical.length === 0) {
-      alertBox.hidden = true;
-      return;
-    }
-
-    alertBox.hidden = false;
-    if (countEl) countEl.textContent = String(critical.length);
-    const names = critical.slice(0, 3).map((row) => row.dataset.product);
-    const extra = critical.length - names.length;
-    let text = names.join(", ");
-    if (extra > 0) text += ` e outros ${extra}`;
-    if (namesEl) namesEl.textContent = `${text} precisam de reposição.`;
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Menu de ações por linha (construído via JS — evita repetir 7x no HTML) */
-  /* ---------------------------------------------------------------------- */
-  function actionMenuMarkup() {
-    return `
-      <button type="button" class="action-menu-item" role="menuitem" data-row-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-      <button type="button" class="action-menu-item" role="menuitem" data-row-action="entrada"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></span><span class="action-menu-label">Registrar entrada</span></button>
-      <button type="button" class="action-menu-item" role="menuitem" data-row-action="saida"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></span><span class="action-menu-label">Registrar saída</span></button>
-      <button type="button" class="action-menu-item" role="menuitem" data-row-action="edit"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-      <button type="button" class="action-menu-item is-danger" role="menuitem" data-row-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-    `;
-  }
-
-  function populateActionMenus() {
-    $$("[data-stock-table] tbody tr").forEach((row) => {
-      const menu = $("[data-popover]", row);
-      if (menu) menu.innerHTML = actionMenuMarkup();
+  function errors(form, fields = {}) {
+    $$("[data-error-for]", form).forEach(el => { el.textContent = ""; });
+    $$("[aria-invalid]", form).forEach(el => el.removeAttribute("aria-invalid"));
+    Object.entries(fields).forEach(([key, message]) => {
+      const el = $(`[data-error-for='${key}']`, form);
+      if (el) el.textContent = message;
+      form.elements.namedItem(key)?.setAttribute("aria-invalid", "true");
     });
+    if (Object.keys(fields).length) $("[aria-invalid]", form)?.focus();
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Busca + filtro por categoria                                           */
-  /* ---------------------------------------------------------------------- */
-  function initFilters() {
-    const search = $("[data-stock-search]");
-    const chips = $$("[data-filter-category]");
-    const count = $("[data-stock-count]");
-    const empty = $("[data-stock-empty]");
-    const table = $("[data-stock-table]");
-    let activeCategory = "todas";
-
-    function apply() {
-      const rows = $$("[data-stock-table] tbody tr");
-      const q = (search?.value || "").trim().toLowerCase();
-      let visible = 0;
-
-      rows.forEach((row) => {
-        const matchesCategory = activeCategory === "todas" || row.dataset.category === activeCategory;
-        const matchesQuery = !q || row.dataset.product.toLowerCase().includes(q);
-        const show = matchesCategory && matchesQuery;
-        row.hidden = !show;
-        if (show) visible += 1;
-      });
-
-      if (count) count.textContent = `${visible} produto${visible === 1 ? "" : "s"} encontrado${visible === 1 ? "" : "s"}`;
-      if (empty) empty.hidden = visible > 0;
-      if (table) table.hidden = visible === 0;
-    }
-
-    search?.addEventListener("input", apply);
-    chips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        chips.forEach((c) => c.classList.remove("is-active"));
-        chip.classList.add("is-active");
-        activeCategory = chip.dataset.filterCategory;
-        apply();
-      });
-    });
-
-    apply();
+  function busy(form, saving) {
+    form.setAttribute("aria-busy", String(saving));
+    $$('button[type="submit"], button:not([type])', form).forEach(button => { button.disabled = saving; });
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Registrar entrada                                                      */
-  /* ---------------------------------------------------------------------- */
-  function initEntrada() {
-    const modal = $("[data-modal='entrada']");
-    const form = $("[data-entrada-form]", modal);
-    const produtoSelect = $("[name='produto']", form);
-    const produtoWrap = $("[data-entrada-produto-wrap]", modal);
-
-    window.AgroSelect?.enhance(produtoSelect);
-
-    function openFor(row) {
-      state.activeRow = row;
-      clearErrors(form);
-      form.reset();
-      if (row) {
-        produtoWrap.hidden = true;
-        $("[data-entrada-desc]", modal).textContent = `Aumenta o saldo de ${row.dataset.product}.`;
-      } else {
-        produtoWrap.hidden = false;
-        $("[data-entrada-desc]", modal).textContent = "Selecione o produto e informe a quantidade recebida.";
-      }
-      openModal(modal);
-    }
-
-    $$("[data-open-entrada]").forEach((btn) => {
-      btn.addEventListener("click", () => openFor(btn.dataset.context === "header" ? null : btn.closest("tr")));
-    });
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='entrada']");
-      if (!btn) return;
-      openFor(btn.closest("tr"));
-    });
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      clearErrors(form);
-
-      const qty = Number(form.quantidade.value);
-      let row = state.activeRow;
-
-      if (!row) {
-        const produtoNome = produtoSelect.value;
-        if (!produtoNome) {
-          setError(form, "produto", "Selecione um produto.");
-          toast("error", "Falha ao salvar", "Selecione o produto para registrar a entrada.");
-          return;
-        }
-        row = $$("[data-stock-table] tbody tr").find((r) => r.dataset.product === produtoNome);
-      }
-
-      if (!Number.isFinite(qty) || qty <= 0) {
-        setError(form, "quantidade", "Informe uma quantidade maior que zero.");
-        toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
-        return;
-      }
-
-      if (!row) { toast("error", "Produto indisponível", "Selecione um produto existente."); return; }
-      recordMovement(row, "entrada", qty, form.fornecedor.value.trim());
-      row.dataset.qty = String(Number(row.dataset.qty) + qty);
-      applyRowStatus(row);
-      recomputeCriticalAlert();
-
-      updateStockMetrics();
-      if (!persist()) return;
-
-      closeModal(modal);
-      toast("success", "Entrada registrada", `${formatQty(qty)} ${row.dataset.unit} de ${row.dataset.product} adicionados ao estoque.`);
-    });
+  // Uma confirmação HTTP e uma consulta posterior são etapas diferentes.
+  // Se a gravação deu certo mas a atualização falhou, informa isso sem sugerir
+  // repetir a operação (uma nova tentativa poderia duplicar a movimentação).
+  async function save(form, name, action) {
+    if (form.getAttribute("aria-busy") === "true") return;
+    errors(form); busy(form, true);
+    let confirmed = false;
+    try {
+      await action();
+      confirmed = true;
+      modal(name, false);
+      await load();
+      toast("success", "Estoque atualizado", "Operação registrada com sucesso.");
+    } catch (error) {
+      if (!confirmed) errors(form, error.fields);
+      toast("error", confirmed ? "Gravação confirmada" : "Não foi possível confirmar", confirmed
+        ? "O registro foi salvo, mas a consulta falhou. Use Tentar novamente para atualizar a lista."
+        : error.message + " Se a conexão caiu durante o envio, atualize o histórico antes de repetir.");
+    } finally { busy(form, false); }
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Registrar saída                                                        */
-  /* ---------------------------------------------------------------------- */
-  function initSaida() {
-    const modal = $("[data-modal='saida']");
-    const form = $("[data-saida-form]", modal);
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='saida']");
-      if (!btn) return;
-      const row = btn.closest("tr");
-      state.activeRow = row;
-      clearErrors(form);
-      form.reset();
-      $("[data-saida-desc]", modal).textContent = `Reduz o saldo de ${row.dataset.product} — opcionalmente vincule a uma atividade.`;
-      openModal(modal);
-    });
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      clearErrors(form);
-      const row = state.activeRow;
-      if (!row) return;
-
-      const qty = Number(form.quantidade.value);
-      const currentQty = Number(row.dataset.qty);
-
-      if (!Number.isFinite(qty) || qty <= 0) {
-        setError(form, "quantidade", "Informe uma quantidade maior que zero.");
-        toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
-        return;
-      }
-      if (qty > currentQty) {
-        setError(form, "quantidade", `Saldo disponível: ${formatQty(currentQty)} ${row.dataset.unit}.`);
-        toast("error", "Falha ao salvar", "Quantidade maior que o saldo disponível.");
-        return;
-      }
-
-      recordMovement(row, "saida", qty, form.destino.value.trim());
-      row.dataset.qty = String(currentQty - qty);
-      const { becameCritical, label } = applyRowStatus(row);
-      recomputeCriticalAlert();
-
-      if (!persist()) return;
-      closeModal(modal);
-      const destino = form.destino.value.trim();
-      toast(
-        "success",
-        "Saída registrada",
-        `${formatQty(qty)} ${row.dataset.unit} de ${row.dataset.product} baixados${destino ? ` · ${destino}` : ""}.`
-      );
-
-      if (becameCritical || label === "Baixo") {
-        window.setTimeout(() => {
-          toast("warning", "Estoque baixo", `${row.dataset.product} está ${label.toLowerCase()} (${formatQty(Number(row.dataset.qty))} ${row.dataset.unit}).`);
-        }, 260);
-      }
-    });
+  function unavailable(message) {
+    ready = false; products = []; active = null;
+    $("[data-stock-table] tbody").replaceChildren();
+    $("[data-stock-table]").hidden = true;
+    $("[data-stock-empty]").hidden = true;
+    $("[data-critical-alert]").hidden = true;
+    $$("[data-metric]").forEach(el => { el.textContent = "—"; });
+    $("[data-stock-count]").textContent = "Estoque não carregado";
+    $("[data-stock-message]").textContent = message;
+    $("[data-stock-retry]").hidden = false;
+    $$("[data-open-produto], [data-open-entrada]").forEach(button => { button.disabled = true; });
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Editar produto                                                         */
-  /* ---------------------------------------------------------------------- */
-  function initEditar() {
-    const modal = $("[data-modal='produto-editar']");
-    const form = $("[data-produto-editar-form]", modal);
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='edit']");
-      if (!btn) return;
-      const row = btn.closest("tr");
-      state.activeRow = row;
-      clearErrors(form);
-      const categoryLabel = row.querySelector(".col-muted").textContent;
-      form.categoria.value = categoryLabel;
-      form.categoria.dispatchEvent(new Event("change"));
-      form.minimo.value = row.dataset.min;
-      openModal(modal);
-    });
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      clearErrors(form);
-      const row = state.activeRow;
-      if (!row) return;
-
-      const categoria = form.categoria.value;
-      const minimo = Number(form.minimo.value);
-      let hasError = false;
-      if (!categoria) { setError(form, "categoria", "Selecione a categoria."); hasError = true; }
-      if (!Number.isFinite(minimo) || minimo <= 0) { setError(form, "minimo", "Informe um estoque mínimo maior que zero."); hasError = true; }
-
-      if (hasError) {
-        toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
-        return;
-      }
-
-      row.dataset.category = categoria.toLowerCase();
-      row.dataset.min = String(minimo);
-      // Ordem das células .col-muted na linha: [0] Categoria, [1] Unidade, [2] Est. Mín.
-      const mutedCells = $$(".col-muted", row);
-      mutedCells[0].textContent = categoria;
-      mutedCells[2].textContent = String(minimo);
-      applyRowStatus(row);
-      recomputeCriticalAlert();
-
-      if (!persist()) return;
-      closeModal(modal);
-      toast("success", "Produto atualizado", `${row.dataset.product} foi salvo com sucesso.`);
-    });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Ver detalhes                                                           */
-  /* ---------------------------------------------------------------------- */
-  function initDetalhe() {
-    const modal = $("[data-modal='produto-detalhe']");
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='detail']");
-      if (!btn) return;
-      const row = btn.closest("tr");
-
-      $("[data-detalhe-title]", modal).textContent = row.dataset.product;
-      $("[data-detalhe-subtitle]", modal).textContent = `${row.querySelector(".col-muted").textContent} · Unidade ${row.dataset.unit}`;
-      $("[data-detalhe-meta]", modal).innerHTML = `
-        <div class="meta-cell"><span class="meta-cell-label">Saldo atual</span><span class="meta-cell-value">${formatQty(Number(row.dataset.qty))} ${window.AgroLocal.escape(row.dataset.unit)}</span></div>
-        <div class="meta-cell"><span class="meta-cell-label">Estoque mínimo</span><span class="meta-cell-value">${row.dataset.min} ${window.AgroLocal.escape(row.dataset.unit)}</span></div>
-        <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${$("[data-status-badge]", row).textContent}</span></div>
-      `;
-      const chain = $("[data-detalhe-chain]", modal);
-      if (chain) chain.hidden = true;
-      const traceNote = $(".trace-note", modal);
-      if (traceNote) traceNote.hidden = true;
-      let history = $("[data-movement-history]", modal);
-      if (!history) {
-        history = document.createElement("div");
-        history.dataset.movementHistory = "";
-        chain?.after(history);
-      }
-      history.replaceChildren();
-      const title = document.createElement("h3");
-      title.textContent = "Histórico de movimentações";
-      history.append(title);
-      const entries = movements.get(row.dataset.id) || [];
-      if (!entries.length) {
-        const empty = document.createElement("p");
-        empty.textContent = "Nenhuma movimentação registrada.";
-        history.append(empty);
-      } else {
-        const list = document.createElement("ul");
-        entries.slice().reverse().forEach((movement) => {
-          const item = document.createElement("li");
-          const date = new Date(movement.date);
-          const when = Number.isNaN(date.getTime()) ? movement.date : date.toLocaleString("pt-BR");
-          item.textContent = `${when} · ${movement.type === "entrada" ? "Entrada" : "Saída"} de ${formatQty(movement.qty)} ${row.dataset.unit}${movement.note ? " · " + movement.note : ""}`;
-          list.append(item);
-        });
-        history.append(list);
-      }
-      openModal(modal);
-    });
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* Excluir produto (só permitido com saldo = 0)                           */
-  /* ---------------------------------------------------------------------- */
-  function initExcluir() {
-    const modal = $("[data-modal='produto-excluir']");
-
-    document.addEventListener("click", (event) => {
-      const btn = event.target.closest("[data-row-action='delete']");
-      if (!btn) return;
-      const row = btn.closest("tr");
-      const qty = Number(row.dataset.qty);
-
-      if (qty > 0) {
-        toast(
-          "error",
-          "Não é possível excluir",
-          `${row.dataset.product} ainda tem ${formatQty(qty)} ${row.dataset.unit} em estoque. Zere o saldo antes de excluir.`
-        );
-        return;
-      }
-
-      state.activeRow = row;
-      $("[data-excluir-desc]", modal).textContent = `${row.dataset.product} será removido do inventário.`;
-      openModal(modal);
-    });
-
-    $("[data-confirm-excluir]", modal)?.addEventListener("click", () => {
-      const row = state.activeRow;
-      if (!row) return;
-      const name = row.dataset.product;
-      movements.delete(row.dataset.id);
-      row.remove();
-      if (!persist()) return;
-      closeModal(modal);
-
-      refreshProductOptions();
-      updateStockMetrics();
-
-      recomputeCriticalAlert();
-      $("[data-stock-search]")?.dispatchEvent(new Event("input"));
-      toast("info", "Produto excluído", `${name} foi removido do inventário.`);
-    });
-  }
-
-  // Quantidade, fornecedor/destino e data ficam juntos no histórico do produto.
-  function recordMovement(row, type, qty, note) {
-    const entries = movements.get(row.dataset.id) || [];
-    entries.push({id: window.AgroLocal.id(), type, qty, date: new Date().toISOString(), note});
-    movements.set(row.dataset.id, entries);
-  }
-
-  function refreshProductOptions() {
-    const select = $("[data-entrada-form] [name='produto']");
-    if (!select) return;
-    select.replaceChildren(new Option("Selecione o produto", ""));
-    $$("[data-stock-table] tbody tr").forEach((row) => select.add(new Option(row.dataset.product, row.dataset.product)));
-    select.dispatchEvent(new Event("change"));
-  }
-
-  // Os indicadores vêm do inventário e das entradas confirmadas no mês atual.
-  function updateStockMetrics() {
-    const rows = $$("[data-stock-table] tbody tr");
-    state.totalProducts = rows.length;
-    const total = $("[data-metric='total-products']");
-    if (total) total.textContent = String(rows.length);
-    const now = new Date();
-    state.entriesThisMonth = [...movements.values()].flat().filter((movement) => {
-      const date = new Date(movement.date);
-      return movement.type === "entrada" && !Number.isNaN(date.getTime())
-        && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-    }).length;
-    const entries = $("[data-metric='entries']");
-    if (entries) entries.textContent = String(state.entriesThisMonth);
-  }
-
-  function restoreStock(records) {
-    const activeId = state.activeRow?.dataset.id;
-    movements.clear();
-    $("[data-stock-table] tbody").replaceChildren(...records.map((record, index) => {
+  function render() {
+    const query = $("[data-stock-search]").value.trim().toLowerCase();
+    const shown = products.filter(p => (category === "todas" || p.categoria.toLowerCase() === category) && p.nome.toLowerCase().includes(query));
+    const body = $("[data-stock-table] tbody");
+    body.replaceChildren(...shown.map(p => {
       const row = document.createElement("tr");
-      const {movements: history, ...fields} = record;
-      Object.assign(row.dataset, fields);
-      movements.set(record.id, history);
-      const category = record.category.charAt(0).toUpperCase() + record.category.slice(1);
-      const esc = window.AgroLocal.escape;
-      const menuId = "stock-menu-" + index;
-      row.innerHTML = `<td class="col-product-name">${esc(record.product)}</td><td class="col-muted">${esc(category)}</td><td data-qty-cell></td><td class="col-muted">${esc(record.unit)}</td><td class="col-muted">${record.min}</td><td><span class="badge" data-status-badge></span></td><td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${menuId}" aria-expanded="false" aria-label="Mais ações">⋮</button><div class="action-menu" id="${menuId}" data-popover role="menu">${actionMenuMarkup()}</div></div></td>`;
-      applyRowStatus(row);
+      row.dataset.id = p.id;
+      const cls = p.status === "Crítico" ? "badge-error" : p.status === "Baixo" ? "badge-warning" : "badge-success";
+      const menuId = "stock-menu-" + p.id;
+      row.innerHTML = `<td class="col-product-name">${esc(p.nome)}</td><td class="col-muted">${esc(p.categoria)}</td>
+        <td>${qty(p.saldo)}</td><td class="col-muted">${esc(p.unidade)}</td><td class="col-muted">${qty(p.minimo)}</td>
+        <td><span class="badge ${cls}">${esc(p.status)}</span></td><td class="col-actions"><div class="action-menu-wrap">
+        <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${menuId}" aria-expanded="false" aria-label="Ações de ${esc(p.nome)}">⋮</button>
+        <div class="action-menu" id="${menuId}" data-popover role="menu">
+        ${[["detail", "Ver detalhes"], ["entrada", "Registrar entrada"], ["saida", "Registrar saída"], ["ajuste", "Ajustar saldo"], ["editar", "Editar produto"], ["excluir", "Excluir produto"]].map(([key, label]) =>
+          `<button type="button" class="action-menu-item" role="menuitem" data-operation="${key}">${label}</button>`).join("")}
+        </div></div></td>`;
       return row;
     }));
-    // Após rollback, ações do modal apontam para a linha restaurada, nunca para uma linha removida.
-    state.activeRow = $$("[data-stock-table] tbody tr").find((row) => row.dataset.id === activeId) || null;
-    recomputeCriticalAlert();
-    updateStockMetrics();
-    refreshProductOptions();
-    $("[data-stock-search]")?.dispatchEvent(new Event("input"));
+    $("[data-stock-table]").hidden = shown.length === 0;
+    $("[data-stock-empty]").hidden = shown.length > 0;
+    $("[data-stock-count]").textContent = `${shown.length} produto(s) encontrado(s)`;
+    const low = products.filter(p => p.saldo < p.minimo || p.status === "Crítico");
+    $("[data-critical-alert]").hidden = !low.length;
+    $("[data-critical-count]").textContent = low.length;
+    $("[data-critical-names]").textContent = low.map(p => p.nome).join(", ") + " precisam de reposição.";
+  }
+
+  async function load() {
+    try {
+      const [items, summary, options, me] = await Promise.all([
+        api("/api/insumos"), api("/api/insumos/resumo"), api("/api/insumos/atividades"), api("/api/me"),
+      ]);
+      products = items; activities = options; ready = true;
+      $("[data-metric='total-products']").textContent = summary.totalProdutos;
+      $("[data-metric='critical']").textContent = summary.criticos;
+      $("[data-metric='value']").textContent = money(summary.valorEmEstoque);
+      $("[data-metric='entries']").textContent = summary.entradasNoMes;
+      $("[data-stock-context]").textContent = "Controle de estoque · " + (me.propriedade.nome || me.propriedade.farm);
+      $(".sidebar-user-name").textContent = me.usuario.name;
+      $(".sidebar-user-property").textContent = me.propriedade.nome || me.propriedade.farm;
+      $(".sidebar-avatar").textContent = me.usuario.name.split(/\s+/).slice(0, 2).map(part => part[0]).join("");
+      $("[data-stock-message]").textContent = "Estoque atualizado.";
+      $("[data-stock-retry]").hidden = true;
+      $$("[data-open-produto], [data-open-entrada]").forEach(button => { button.disabled = false; });
+      render();
+    } catch (error) { unavailable("Não foi possível consultar o estoque. " + error.message); throw error; }
+  }
+
+  function productPayload(form, creating) {
+    const value = name => form.elements.namedItem(name).value;
+    const data = { nome: value("nome"), categoria: value("categoria"), unidade: value("unidade"),
+      minimo: value("minimo") === "" ? null : Number(value("minimo")),
+      custoUnitario: value("custoUnitario") === "" ? null : Number(value("custoUnitario")),
+      limiarCritico: value("limiarCritico") === "" ? null : Number(value("limiarCritico")) };
+    if (creating) data.saldo = value("saldo") === "" ? null : Number(value("saldo"));
+    return data;
+  }
+
+  function openMovement(type, product = null) {
+    active = product;
+    const form = $(`[data-${type}-form]`);
+    form.reset(); errors(form);
+    if (type === "entrada") {
+      const select = form.elements.namedItem("produto");
+      select.replaceChildren(new Option("Selecione o produto", ""), ...products.map(p => new Option(p.nome, p.id)));
+      if (product) select.value = product.id;
+    }
+    if (type === "saida") {
+      form.elements.namedItem("atividadeId").replaceChildren(new Option("Saída manual (sem atividade)", ""), ...activities.map(a => new Option(a.nome, a.id)));
+      $("[data-saida-desc]").textContent = `${product.nome} · Saldo: ${qty(product.saldo)} ${product.unidade}.`;
+    }
+    if (type === "ajuste") {
+      form.elements.namedItem("quantidade").value = product.saldo;
+      $("[data-ajuste-desc]").textContent = `Informe o saldo contado de ${product.nome} e o motivo do ajuste.`;
+    }
+    modal(type, true);
+  }
+
+  async function details(product) {
+    $("[data-detalhe-title]").textContent = product.nome;
+    $("[data-detalhe-subtitle]").textContent = `${product.categoria} · Unidade ${product.unidade}`;
+    $("[data-detalhe-meta]").textContent = `Saldo: ${qty(product.saldo)} ${product.unidade} · Mínimo: ${qty(product.minimo)} · Custo médio: ${money(product.custoUnitario)}`;
+    const box = $("[data-movement-history]");
+    box.textContent = "Carregando histórico…";
+    modal("produto-detalhe", true);
+    try {
+      const history = await api(`/api/insumos/${product.id}/movimentacoes`);
+      box.replaceChildren();
+      const heading = document.createElement("h3"); heading.textContent = "Histórico de movimentações"; box.append(heading);
+      if (!history.length) { box.append("Nenhuma movimentação registrada."); return; }
+      const list = document.createElement("ul");
+      history.forEach(m => {
+        const item = document.createElement("li");
+        item.textContent = [new Date(m.criadoEm).toLocaleString("pt-BR"), m.tipo,
+          `${qty(m.quantidade)} ${m.unidade}`, `Saldo: ${qty(m.saldoAnterior)} → ${qty(m.saldoPosterior)}`,
+          m.fornecedor && "Fornecedor: " + m.fornecedor,
+          m.atividadeId && `Atividade: ${m.atividade} (${m.atividadeId})`,
+          m.custoUnitario != null && "Custo unitário: " + money(m.custoUnitario), m.observacao].filter(Boolean).join(" · ");
+        list.append(item);
+      });
+      box.append(list);
+    } catch (error) { box.textContent = "Histórico indisponível. " + error.message; }
   }
 
   function init() {
-    persist = window.AgroLocal.connect("stock", () => $$("[data-stock-table] tbody tr").map((row) => ({
-      id: row.dataset.id, product: row.dataset.product, category: row.dataset.category,
-      qty: Number(row.dataset.qty), unit: row.dataset.unit, min: Number(row.dataset.min), movements: movements.get(row.dataset.id) || []
-    })), restoreStock);
-    populateActionMenus();
-    initGenericModals();
-    initFilters();
-    initEntrada();
-    initSaida();
-    initEditar();
-    initDetalhe();
-    initExcluir();
-    recomputeCriticalAlert();
-  }
+    // Fecha os modais por botão, fundo ou Escape; o shell cuida dos popovers.
+    $$('[data-close-modal]').forEach(button => button.addEventListener("click", () => modal(button.closest("[data-modal]").dataset.modal, false)));
+    $$(".modal-backdrop").forEach(box => box.addEventListener("click", e => { if (e.target === box) modal(box.dataset.modal, false); }));
+    document.addEventListener("keydown", e => { if (e.key === "Escape") $$(".modal-backdrop.is-open").forEach(box => modal(box.dataset.modal, false)); });
+    $("[data-stock-search]").addEventListener("input", () => { if (ready) render(); });
+    $$('[data-filter-category]').forEach(button => button.addEventListener("click", () => {
+      category = button.dataset.filterCategory;
+      $$('[data-filter-category]').forEach(other => other.classList.toggle("is-active", other === button));
+      if (ready) render();
+    }));
+    $("[data-stock-retry]").addEventListener("click", () => load().catch(() => {}));
+    $("[data-open-produto]").addEventListener("click", () => {
+      const form = $("[data-produto-novo-form]"); form.reset(); errors(form); modal("produto-novo", true);
+    });
+    $("[data-open-entrada]").addEventListener("click", () => openMovement("entrada"));
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
+    for (const [selector, name, creating] of [["[data-produto-novo-form]", "produto-novo", true], ["[data-produto-editar-form]", "produto-editar", false]]) {
+      $(selector).addEventListener("submit", e => {
+        e.preventDefault(); const form = e.currentTarget; const id = active?.id;
+        save(form, name, () => api("/api/insumos" + (creating ? "" : "/" + id), {
+          method: creating ? "POST" : "PUT", body: JSON.stringify(productPayload(form, creating)),
+        }));
+      });
+    }
+    for (const type of ["entrada", "saida", "ajuste"]) {
+      $(`[data-${type}-form]`).addEventListener("submit", e => {
+        e.preventDefault(); const form = e.currentTarget;
+        const field = name => form.elements.namedItem(name)?.value;
+        const product = type === "entrada" ? products.find(p => p.id === field("produto")) : active;
+        if (!product) { errors(form, { produto: "Selecione um produto." }); return; }
+        const payload = { tipo: type, quantidade: field("quantidade") === "" ? null : Number(field("quantidade")),
+          fornecedor: field("fornecedor") || "", atividadeId: field("atividadeId") || "", observacao: field("observacao") || "",
+          custoUnitario: field("custoUnitario") ? Number(field("custoUnitario")) : null };
+        save(form, type, () => api(`/api/insumos/${product.id}/movimentacoes`, { method: "POST", body: JSON.stringify(payload) }));
+      });
+    }
+
+    $("[data-stock-table] tbody").addEventListener("click", e => {
+      const button = e.target.closest("[data-operation]"); if (!button) return;
+      const product = products.find(p => p.id === button.closest("tr").dataset.id); if (!product) return;
+      active = product;
+      const operation = button.dataset.operation;
+      if (operation === "detail") { details(product); return; }
+      if (["entrada", "saida", "ajuste"].includes(operation)) { openMovement(operation, product); return; }
+      if (operation === "editar") {
+        const form = $("[data-produto-editar-form]"); errors(form);
+        for (const field of ["nome", "categoria", "unidade", "minimo", "custoUnitario", "limiarCritico"])
+          form.elements.namedItem(field).value = product[field] ?? "";
+        form.elements.namedItem("categoria").dispatchEvent(new Event("change"));
+        modal("produto-editar", true);
+      }
+      if (operation === "excluir") {
+        $("[data-excluir-desc]").textContent = `${product.nome} sairá do catálogo se o saldo estiver zerado. O histórico será preservado.`;
+        modal("produto-excluir", true);
+      }
+    });
+    $("[data-confirm-excluir]").addEventListener("click", async e => {
+      const button = e.currentTarget; if (button.disabled) return;
+      const id = active?.id; button.disabled = true;
+      try { await api(`/api/insumos/${id}`, { method: "DELETE" }); modal("produto-excluir", false); await load(); toast("success", "Produto excluído", "Histórico preservado."); }
+      catch (error) { toast("error", "Não foi possível atualizar o catálogo", error.message); }
+      finally { button.disabled = false; }
+    });
+    unavailable("Carregando estoque…");
+    load().catch(() => {});
   }
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", init) : init();
 })();
