@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 /* Interações da tela de Configurações: abas, formulários e preferências. */
 (() => {
   "use strict";
@@ -28,80 +29,7 @@
     showTab(["profile", "property", "notifications", "security", "team", "plan"].includes(initial) ? initial : "profile", false);
   }
 
-  function validateRequired(form) {
-    let valid = true;
-    $$('[required]', form).forEach((control) => {
-      const empty = !control.value.trim();
-      control.toggleAttribute("aria-invalid", empty);
-      const error = control.parentElement.querySelector(".field-error");
-      if (error) error.textContent = empty ? "Preencha este campo." : "";
-      valid = valid && !empty;
-    });
-    return valid;
-  }
-
-  let settings;
-  let persist = () => true;
-
-  // A lista explícita de campos garante que senhas e tokens jamais entrem no JSON.
-  function captureForm(form) {
-    return Object.fromEntries([...form.elements].filter((control) => control.name && control.type !== "password")
-      .map((control) => [control.name, control.name === "area" ? Number(control.value) : control.value]));
-  }
-
-  function restoreSettings(data) {
-    settings = data;
-    $$('[data-settings-form]').forEach((form) => {
-      Object.entries(data[form.dataset.settingsForm]).forEach(([key, value]) => {
-        form.elements[key].value = value;
-        form.elements[key].dispatchEvent(new Event("change"));
-      });
-    });
-    $$('[data-preference]').forEach((control) => { control.checked = data.preferences[control.dataset.preference]; });
-  }
-
-  function initForms() {
-    $$('[data-settings-form]').forEach((form) => form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      if (!validateRequired(form)) {
-        toast("error", "Não foi possível salvar", "Revise os campos obrigatórios.");
-        return;
-      }
-      if (form.dataset.settingsForm === "property" && (!Number.isFinite(Number(form.elements.area.value)) || Number(form.elements.area.value) <= 0)) {
-        toast("error", "Área inválida", "Informe uma área maior que zero."); return;
-      }
-      settings[form.dataset.settingsForm] = captureForm(form);
-      if (!persist()) return;
-      toast("success", "Alterações salvas", "As informações foram salvas neste navegador.");
-    }));
-
-    $("[data-security-form]")?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const current = form.elements.current;
-      const next = form.elements.new;
-      const confirm = form.elements.confirm;
-      [current, next, confirm].forEach((control) => { control.removeAttribute("aria-invalid"); control.parentElement.querySelector(".field-error").textContent = ""; });
-      let invalid = false;
-      if (!current.value) { current.setAttribute("aria-invalid", "true"); current.parentElement.querySelector(".field-error").textContent = "Informe sua senha atual."; invalid = true; }
-      if (next.value.length < 8) { next.setAttribute("aria-invalid", "true"); next.parentElement.querySelector(".field-error").textContent = "Use pelo menos 8 caracteres."; invalid = true; }
-      if (next.value !== confirm.value) { confirm.setAttribute("aria-invalid", "true"); confirm.parentElement.querySelector(".field-error").textContent = "As senhas não coincidem."; invalid = true; }
-      if (invalid) { toast("error", "Senha não atualizada", "Revise os campos destacados."); return; }
-      form.reset();
-      toast("info", "Alteração indisponível", "A troca de senha depende do servidor e ainda não está conectada. Nenhuma senha foi alterada ou armazenada localmente.");
-    });
-  }
-
-  function initPreferences() {
-    $("[data-save-notifications]")?.addEventListener("click", () => {
-      settings.preferences = Object.fromEntries($$('[data-preference]').map((control) => [control.dataset.preference, control.checked]));
-      if (!persist()) return;
-      const enabled = $$('[data-preference]:checked').length;
-      toast("success", "Preferências salvas", `${enabled} tipo${enabled === 1 ? "" : "s"} de alerta${enabled === 1 ? "" : "s"} ativado${enabled === 1 ? "" : "s"}.`);
-    });
-    $("[data-change-photo]")?.addEventListener("click", () => toast("info", "Alteração de foto", "A seleção de arquivo será conectada ao perfil quando a API estiver disponível."));
-    $("[data-team-action]")?.addEventListener("click", () => toast("info", "Convite de colaborador", "O convite será enviado quando o gerenciamento de equipe estiver conectado."));
-  }
+  // Dados pessoais, preferências e senha são tratados em perfil-api.js.
 
   function initHarvestPicker() {
     const native = $("#property-harvest");
@@ -157,36 +85,18 @@
     $$('[data-harvest-close]', modal).forEach((button) => button.addEventListener("click", close));
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
     $("[data-confirm-harvest]", modal).addEventListener("click", () => {
-      if (sessionStorage.getItem("agro.sessionToken") && $("[data-new-property]")) {
-        native.value = pending;
-        native.dispatchEvent(new Event("change", { bubbles: true }));
-        syncLabel();
-        close();
-        toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
-        return;
-      }
-      settings.property.harvest = pending;
-      if (!persist()) return;
       native.value = pending;
       native.dispatchEvent(new Event("change", { bubbles: true }));
       syncLabel();
       close();
-      toast("success", "Safra atualizada", `A propriedade agora acompanha a safra ${pending}.`);
+      toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
     });
     native.addEventListener("change", syncLabel);
     syncLabel();
   }
 
   function init() {
-    const initial = {
-      profile: captureForm($("[data-settings-form='profile']")),
-      property: captureForm($("[data-settings-form='property']")),
-      preferences: Object.fromEntries($$('[data-preference]').map((control) => [control.dataset.preference, control.checked]))
-    };
-    persist = window.AgroLocal.connect("settings", () => settings, restoreSettings, initial, initial);
     initTabs();
-    initForms();
-    initPreferences();
     initHarvestPicker();
   }
 
