@@ -3,6 +3,7 @@
 package handlers;
 
 import dados.RepositorioTalhoes;
+import dados.RepositorioOcorrencias;
 import dados.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
@@ -26,14 +27,22 @@ public class PropriedadesHandler
     private final RepositorioUsuarios usuarios;
     private final RepositorioTalhoes  talhoes;
     private final Sessoes             sessoes;
+    private final RepositorioOcorrencias ocorrencias;
 
     public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    {
+        this (usuarios, talhoes, sessoes, null);
+    }
+
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes,
+                                RepositorioOcorrencias ocorrencias) throws Exception
     {
         if (usuarios == null || talhoes == null || sessoes == null)
             throw new Exception ("Dependencia de propriedades ausente");
         this.usuarios = usuarios;
         this.talhoes  = talhoes;
         this.sessoes  = sessoes;
+        this.ocorrencias = ocorrencias;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -170,6 +179,9 @@ public class PropriedadesHandler
             return Resposta.json (409, new Document ("error", "A propriedade está em uso em outra sessão. Encerre ou troque esse contexto antes de excluir."));
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
+        // Uma ocorrência geral também depende da propriedade, mesmo depois de excluída da lista.
+        if (this.ocorrencias != null && this.ocorrencias.temRegistros (id))
+            return Resposta.erro (409, "A propriedade possui ocorrências ou histórico preservado e não pode ser excluída.");
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();
