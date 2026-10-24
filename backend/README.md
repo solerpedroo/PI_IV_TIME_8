@@ -1,5 +1,7 @@
 # Backend Java do AgroGestão
 
+<!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
+
 O ponto de entrada principal é `servidor/`: Java puro com `ServerSocket`, sem
 Spring e sem Maven. Ele serve as páginas do frontend e a API na mesma origem.
 O diretório `core/` é uma fundação anterior e não participa deste fluxo.
@@ -44,10 +46,13 @@ o `/ready` do gateway consulte a prontidão sem depender de Spring.
 
 ## Dados operacionais no navegador
 
-Atividades, insumos, ocorrências, custos e preferências ainda usam armazenamento
+Atividades, insumos, ocorrências e custos ainda usam armazenamento
 local, separado pelo ID do usuário e da propriedade da sessão. Não são um
 substituto para persistência/autorização no servidor nem sincronizam dispositivos.
 Registros legados em `agro.operational.v1.*` sem identificação de dono permanecem
 intactos, mas não são importados automaticamente: não é possível determinar a
 qual conta pertencem. Uma eventual recuperação deve confirmar o dono antes de
 copiar os registros para o contexto correspondente.
+
+Perfil, preferências de conta, propriedade padrão e troca de senha usam a API
+Java com persistência no servidor. Veja [docs/perfil.md](../docs/perfil.md).
