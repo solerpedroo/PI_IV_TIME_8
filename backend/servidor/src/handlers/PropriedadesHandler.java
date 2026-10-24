@@ -2,6 +2,7 @@
 
 package handlers;
 
+import dados.RepositorioCustos;
 import dados.RepositorioTalhoes;
 import dados.RepositorioUsuarios;
 import http.Requisicao;
@@ -25,14 +26,17 @@ public class PropriedadesHandler
 {
     private final RepositorioUsuarios usuarios;
     private final RepositorioTalhoes  talhoes;
+    private final RepositorioCustos   custos;
     private final Sessoes             sessoes;
 
-    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                                Sessoes sessoes) throws Exception
     {
-        if (usuarios == null || talhoes == null || sessoes == null)
+        if (usuarios == null || talhoes == null || custos == null || sessoes == null)
             throw new Exception ("Dependencia de propriedades ausente");
         this.usuarios = usuarios;
         this.talhoes  = talhoes;
+        this.custos   = custos;
         this.sessoes  = sessoes;
     }
 
@@ -170,6 +174,9 @@ public class PropriedadesHandler
             return Resposta.json (409, new Document ("error", "A propriedade está em uso em outra sessão. Encerre ou troque esse contexto antes de excluir."));
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
+        // custos sem talhao tambem pertencem a propriedade e ficariam orfaos
+        if (!this.custos.listar (id).isEmpty ())
+            return Resposta.json (409, new Document ("error", "Exclua os custos antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();
