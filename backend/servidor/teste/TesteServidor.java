@@ -1,6 +1,8 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 import dados.RepositorioTalhoesMemoria;
+import dados.RepositorioEstoqueMemoria;
 import dados.RepositorioUsuariosMemoria;
 import http.Roteador;
 import java.io.ByteArrayOutputStream;
@@ -36,6 +38,7 @@ public class TesteServidor
     private static int porta;
 
     private static RepositorioUsuariosMemoria usuarios;
+    private static RepositorioEstoqueMemoria estoque;
 
     // ------------------------------------------------------------------ auxiliares
 
@@ -488,6 +491,81 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    /* Exercita o contrato do estoque, inclusive a saída concorrente que não pode negativar saldo. */
+    private static void testarEstoque () throws Exception
+    {
+        System.out.println ("\n# estoque persistente");
+        String a = login ("maria@agro.com", "Nova@1234");
+        String b = login ("joao@agro.com", "Senha@123");
+        Document produto = new Document ("nome", "Ureia teste").append ("categoria", "Fertilizante")
+            .append ("unidade", "kg").append ("saldo", 10).append ("minimo", 4);
+        Resp criado = post ("/api/insumos", produto.toJson (), a);
+        conferir ("criar insumo -> 201", 201, criado);
+        String id = criado.status == 201 ? criado.json ().getString ("id") : "";
+        conferir ("estoque isolado por propriedade", !get ("/api/insumos", b).corpo.contains ("Ureia teste"));
+        conferir ("entrada atualiza saldo", 201, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":5}", a));
+        conferir ("saída acima do saldo -> 409", 409, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":16}", a));
+        conferir ("ajuste registra saldo contado", 201, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"ajuste\",\"quantidade\":7,\"observacao\":\"contagem\"}", a));
+        conferir ("histórico preserva saldo inicial e operações confirmadas", Document.parse ("{\"l\":" + get ("/api/insumos/" + id + "/movimentacoes", a).corpo + "}").getList ("l", Document.class).size () == 3);
+        Document lista = Document.parse ("{\"l\":" + get ("/api/insumos", a).corpo + "}");
+        conferir ("saldo após ajuste permanece 7", lista.getList ("l", Document.class).get (0).get ("saldo", Number.class).doubleValue () == 7);
+        // Duas saídas de 5 para saldo 7 chegam juntas: somente uma pode vencer.
+        ExecutorService grupo = Executors.newFixedThreadPool (2);
+        Future<Resp> primeira = grupo.submit (() -> post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":5}", a));
+        Future<Resp> segunda  = grupo.submit (() -> post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":5}", a));
+        Resp uma = primeira.get (); Resp duas = segunda.get (); grupo.shutdown ();
+        conferir ("consumos simultâneos não negativam saldo", (uma.status == 201 && duas.status == 409) || (uma.status == 409 && duas.status == 201));
+        conferir ("outro usuário não acessa produto", 404, get ("/api/insumos/" + id + "/movimentacoes", b));
+        conferir ("catálogo sem token exige autenticação", 401, get ("/api/insumos", null));
+        conferir ("quantidade como texto é inválida", 400, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":\"2\"}", a));
+        conferir ("quantidade negativa é inválida", 400, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":-1}", a));
+        conferir ("ajuste exige motivo", 400, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"ajuste\",\"quantidade\":0}", a));
+        conferir ("outro produtor não edita", 404, put ("/api/insumos/" + id, produto.toJson (), b));
+        conferir ("outro produtor não exclui", 404, requisitar ("DELETE", "/api/insumos/" + id, null, b));
+        conferir ("não exclui produto com saldo", 409, requisitar ("DELETE", "/api/insumos/" + id, null, a));
+
+        Document usuario = usuarios.buscarPor ("email", "maria@agro.com");
+        String uid = usuario.getObjectId ("_id").toHexString (), pid = usuario.getString ("propriedadeId");
+        ObjectId atividadeId = new ObjectId ();
+        estoque.adicionarAtividadeParaTeste (new Document ("_id", atividadeId).append ("usuarioId", uid)
+            .append ("propriedadeId", pid).append ("titulo", "Aplicação de teste"));
+        conferir ("lista somente atividade persistida do titular", get ("/api/insumos/atividades", a).corpo.contains (atividadeId.toHexString ()) && !get ("/api/insumos/atividades", b).corpo.contains (atividadeId.toHexString ()));
+        String consumo = new Document ("tipo", "saida").append ("quantidade", 1).append ("atividadeId", atividadeId.toHexString ()).toJson ();
+        conferir ("saída vinculada à atividade real", 201, post ("/api/insumos/" + id + "/movimentacoes", consumo, a));
+        conferir ("histórico retém ID e título da atividade", get ("/api/insumos/" + id + "/movimentacoes", a).corpo.contains ("Aplicação de teste"));
+        conferir ("referência inexistente rejeitada", 400, post ("/api/insumos/" + id + "/movimentacoes", consumo.replace (atividadeId.toHexString (), new ObjectId ().toHexString ()), a));
+        conferir ("ajuste zero permitido com motivo", 201, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"ajuste\",\"quantidade\":0,\"observacao\":\"contagem física\"}", a));
+        conferir ("exclusão lógica com saldo zero", 204, requisitar ("DELETE", "/api/insumos/" + id, null, a));
+        conferir ("exclusão preserva histórico", get ("/api/insumos/" + id + "/movimentacoes", a).corpo.contains ("Aplicação de teste"));
+        conferir ("produto excluído não recebe entrada", 404, post ("/api/insumos/" + id + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":1}", a));
+
+        // Conjunto conhecido: 10 a R$2 + 10 a R$4 = 20 a R$3 = R$60.
+        produto.put ("nome", "Conjunto conhecido"); produto.put ("custoUnitario", 2);
+        produto.put ("minimo", 25); produto.put ("limiarCritico", 5);
+        String conhecido = post ("/api/insumos", produto.toJson (), a).json ().getString ("id");
+        post ("/api/insumos/" + conhecido + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":10,\"custoUnitario\":4,\"fornecedor\":\"Fornecedor teste\"}", a);
+        Document resumo = get ("/api/insumos/resumo", a).json ();
+        conferir ("indicador conhecido R$60 e item abaixo do mínimo", resumo.get ("valorEmEstoque", Number.class).doubleValue () == 60 && resumo.getInteger ("abaixoMinimo") == 1 && resumo.getInteger ("criticos") == 0);
+        int entradas = resumo.getInteger ("entradasNoMes");
+        estoque.movimentar (pid, conhecido, new Document ("tipo", "entrada").append ("quantidade", 1.0)
+            .append ("criadoEm", java.time.ZonedDateTime.now (java.time.ZoneId.of ("America/Sao_Paulo")).minusYears (1).toInstant ().toString ()));
+        conferir ("mesmo mês de outro ano não conta", get ("/api/insumos/resumo", a).json ().getInteger ("entradasNoMes") == entradas);
+        conferir ("catálogo vazio aponta campos inválidos", 400, post ("/api/insumos", "{}", a));
+        conferir ("estoque mínimo negativo rejeitado", 400, post ("/api/insumos", new Document (produto).append ("minimo", -1).toJson (), a));
+        produto.put ("categoria", "Inválida");
+        conferir ("categoria fora do catálogo rejeitada", 400, post ("/api/insumos", produto.toJson (), a));
+        produto.put ("categoria", "Fertilizante"); produto.put ("limiarCritico", 30);
+        conferir ("limiar acima do mínimo rejeitado", 400, post ("/api/insumos", produto.toJson (), a));
+        produto.put ("limiarCritico", 5); produto.put ("saldo", 0);
+        String zerado = post ("/api/insumos", produto.toJson (), a).json ().getString ("id");
+        produto.put ("nome", "Catálogo editado"); produto.put ("unidade", "L"); produto.put ("categoria", "Herbicida");
+        conferir ("edita unidade antes de haver saldo ou histórico", 200, put ("/api/insumos/" + zerado, produto.toJson (), a));
+        Document editado = get ("/api/insumos/" + zerado, a).json ();
+        conferir ("consulta confirma nome categoria unidade e mínimo", "Catálogo editado".equals (editado.getString ("nome")) &&
+            "L".equals (editado.getString ("unidade")) && "Herbicida".equals (editado.getString ("categoria")) && editado.getDouble ("minimo") == 25);
+        conferir ("unidade histórica não pode ser reinterpretada", 400, put ("/api/insumos/" + conhecido, produto.toJson (), a));
+    }
+
     private static void testarPropriedades () throws Exception
     {
         System.out.println ("\n# propriedades, contexto e autorizacao");
@@ -617,7 +695,7 @@ public class TesteServidor
     {
         System.out.println ("\n# limite de conexoes simultaneas (503)");
 
-        Roteador roteador = Servidor.montarRoteador (new RepositorioUsuariosMemoria (), new RepositorioTalhoesMemoria (),
+        Roteador roteador = Servidor.montarRoteador (new RepositorioUsuariosMemoria (), new RepositorioTalhoesMemoria (), new RepositorioEstoqueMemoria (),
                                                      null, Path.of ("../.."));
         Servidor pequeno  = new Servidor ("127.0.0.1", 0, roteador, null, 2);
 
@@ -686,8 +764,9 @@ public class TesteServidor
     public static void main (String[] args) throws Exception
     {
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
+        TesteServidor.estoque = new RepositorioEstoqueMemoria ();
 
-        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (),
+        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (), TesteServidor.estoque,
                                                      null, Path.of ("../.."));
 
         // rota de teste que sempre lanca excecao
@@ -704,6 +783,7 @@ public class TesteServidor
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
+            TesteServidor.testarEstoque ();
             TesteServidor.testarPropriedades ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
