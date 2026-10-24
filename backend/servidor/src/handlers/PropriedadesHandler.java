@@ -1,4 +1,5 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 package handlers;
 
@@ -26,6 +27,13 @@ public class PropriedadesHandler
     private final RepositorioUsuarios usuarios;
     private final RepositorioTalhoes  talhoes;
     private final Sessoes             sessoes;
+    private dados.RepositorioEstoque estoque;
+
+    // O servidor injeta o estoque para impedir exclusão de propriedade com histórico.
+    public void setEstoque (dados.RepositorioEstoque estoque)
+    {
+        this.estoque = estoque;
+    }
 
     public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
     {
@@ -170,6 +178,8 @@ public class PropriedadesHandler
             return Resposta.json (409, new Document ("error", "A propriedade está em uso em outra sessão. Encerre ou troque esse contexto antes de excluir."));
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
+        if (this.estoque != null && (!this.estoque.listar (id).isEmpty () || !this.estoque.listarMovimentacoes (id, null).isEmpty ()))
+            return Resposta.erro (409, "A propriedade possui catálogo ou histórico de estoque e não pode ser excluída.");
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();
