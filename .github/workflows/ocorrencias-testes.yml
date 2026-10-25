@@ -4,10 +4,10 @@ on:
   pull_request:
     paths:
       - 'backend/servidor/**'
-      - 'scripts/ocorrencias.js'
-      - 'scripts/dashboard.js'
-      - 'ocorrencias.html'
-      - 'styles/ocorrencias.css'
+      - 'frontend/scripts/ocorrencias.js'
+      - 'frontend/scripts/dashboard.js'
+      - 'frontend/ocorrencias.html'
+      - 'frontend/styles/ocorrencias.css'
       - 'tests/ocorrencias-real.cjs'
       - '.github/workflows/ocorrencias-testes.yml'
 permissions:

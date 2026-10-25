@@ -8,7 +8,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
 const { mockApi } = require("./mock-api.cjs");
 
-const root = process.cwd();
+const root = path.resolve(__dirname, '../frontend');
 const origin = "http://agro.local";
 const prefix = "agro.operational.v1.e2e-local.e2e-property.";
 const mime = {

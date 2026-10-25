@@ -1020,7 +1020,7 @@ public class TesteServidor
 
         Roteador roteador = Servidor.montarRoteador (new RepositorioUsuariosMemoria (), new RepositorioTalhoesMemoria (), new RepositorioEstoqueMemoria (),
                                                      new RepositorioSafrasMemoria (),
-                                                     new RepositorioCustosMemoria (), null, Path.of ("../.."));
+                                                     new RepositorioCustosMemoria (), null, Path.of ("../../frontend"));
         Servidor pequeno  = new Servidor ("127.0.0.1", 0, roteador, null, 2);
 
         // duas conexoes paradas ocupam as duas vagas
@@ -1092,7 +1092,7 @@ public class TesteServidor
 
         Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (), TesteServidor.estoque,
                                                      new RepositorioSafrasMemoria (),
-                                                     new RepositorioCustosMemoria (), null, Path.of ("../.."));
+                                                     new RepositorioCustosMemoria (), null, Path.of ("../../frontend"));
 
         // rota de teste que sempre lanca excecao
         roteador.adicionarPublica ("GET", "/explodir", requisicao -> { throw new RuntimeException ("de proposito"); });
