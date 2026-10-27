@@ -20,8 +20,19 @@ public record Ocorrencia(ObjectId id, ContextoOperacao contexto, String titulo, 
         obrigatorio(data, "data");
         obrigatorio(prioridade, "prioridade");
         descricao = texto(descricao, "descricao");
-        fotoUrl = fotoUrl == null || fotoUrl.isBlank() ? null : fotoUrl.trim();
+        // Foto é opcional; se vier, só aceitamos http(s) para evitar javascript: e esquemas internos.
+        fotoUrl = normalizarFoto(fotoUrl);
         criadaEm = obrigatorio(criadaEm, "criadaEm").truncatedTo(ChronoUnit.MILLIS);
+    }
+
+    private static String normalizarFoto(String fotoUrl) {
+        if (fotoUrl == null || fotoUrl.isBlank()) return null;
+        String url = fotoUrl.trim();
+        String minuscula = url.toLowerCase();
+        if (!(minuscula.startsWith("https://") || minuscula.startsWith("http://"))) {
+            throw new IllegalArgumentException("fotoUrl deve começar com http:// ou https://");
+        }
+        return url;
     }
 
     public static boolean permiteTransicao(String anterior, String proximo) {
