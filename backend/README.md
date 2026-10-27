@@ -8,6 +8,8 @@ O core contém a base de usuários/propriedades da #100 e os modelos operacionai
 
 Siga [o guia do MongoDB Atlas](../docs/mongodb-atlas.md) para criar o projeto, o cluster gratuito, o usuário individual do banco e o arquivo `.env` local. As credenciais não pertencem ao repositório.
 
+O `compose.yaml` na raiz sobe um Mongo local com replica set (loopback) — opcional, útil para o servidor HTTP de outras branches. O caminho principal desta base de dados continua sendo o Atlas Free.
+
 Depois de carregar o `.env` conforme o guia, em um terminal:
 
 ```bash
@@ -30,7 +32,7 @@ Verifique `http://127.0.0.1:8081/health`, `http://127.0.0.1:8081/ready`, `http:/
 
 ## Validar o modelo de dados
 
-Na raiz do repositório, execute `./backend/core/testar.sh` para os sete testes locais, sem credenciais. Após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os dois ciclos persistentes das #101–#105, com dados fictícios removidos ao final. Requer JDK 21, Maven e Bash (no Windows, Git Bash ou WSL).
+Na raiz do repositório, execute `./backend/core/testar.sh` para os sete testes locais, sem credenciais. Após carregar o `.env` com `MONGODB_DATABASE` terminado em `_teste` (ex.: `agrogestao_ci_teste`), use `./backend/core/testar.sh --atlas` para repetir também a #100 e os dois ciclos persistentes das #101–#105, com dados fictícios removidos ao final. Requer JDK 21, Maven e Bash (no Windows, Git Bash ou WSL).
 
 ## Demonstração prática e revisão do PR #198
 
