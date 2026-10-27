@@ -5,8 +5,8 @@ on:
   pull_request:
     paths:
       - 'backend/servidor/**'
-      - 'scripts/insumos.js'
-      - 'insumos.html'
+      - 'frontend/scripts/insumos.js'
+      - 'frontend/insumos.html'
       - 'compose.yaml'
       - 'tests/estoque-real.cjs'
       - '.github/workflows/estoque-testes.yml'

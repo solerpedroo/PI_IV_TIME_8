@@ -111,7 +111,7 @@ public class Validacao
         return ret.toLowerCase ();
     }
 
-    // mesmas regras do medidor de forca do front (scripts/auth.js, getPasswordChecks)
+    // mesmas regras do medidor de forca do front (frontend/scripts/auth.js, getPasswordChecks)
     public static boolean senhaForte (String senha)
     {
         return senha.length () >= 8 &&

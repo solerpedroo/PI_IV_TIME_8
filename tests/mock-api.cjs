@@ -7,7 +7,7 @@ const vm = require('node:vm');
 // Contrato HTTP compartilhado pelas suítes de UI; os testes Java usam servidor real.
 async function mockApi(context, origin, options = {}) {
   const sandbox = {window: {}};
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../scripts/data/operational-defaults.js'), 'utf8'), sandbox);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../frontend/scripts/data/operational-defaults.js'), 'utf8'), sandbox);
   const plots = sandbox.window.AgroOperationalDefaults.plots.map(item => ({id: item.id, nome: item.plot,
     cultura: item.crop.charAt(0).toUpperCase() + item.crop.slice(1), hectares: item.hectares,
     status: item.status, safra: '2025/26'}));

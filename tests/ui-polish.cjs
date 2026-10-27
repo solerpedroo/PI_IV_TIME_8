@@ -8,7 +8,7 @@ const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { mockApi } = require('./mock-api.cjs');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../frontend');
 const origin = 'http://agro.local';
 const screens = ['dashboard', 'areas-cultivo', 'atividades', 'insumos', 'ocorrencias', 'custos', 'configuracoes', 'login', 'criar-conta', 'recuperar-senha', 'redefinir-senha', 'confirmar-email'];
 const sizes = [[1024, 768], [1100, 700], [1200, 768], [1280, 720], [1366, 768], [1440, 900], [1920, 1080]];

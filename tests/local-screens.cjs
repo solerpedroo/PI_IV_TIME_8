@@ -8,7 +8,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { launchTestBrowser } = require('./browser-launch.cjs');
 const { mockApi } = require('./mock-api.cjs');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../frontend');
 const origin = 'http://agro.local/';
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 

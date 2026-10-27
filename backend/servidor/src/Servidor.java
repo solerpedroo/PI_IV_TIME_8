@@ -46,7 +46,7 @@ import servicos.ServicoEmail;
     SERVIDOR_HOST  127.0.0.1
     SERVIDOR_PORT  8080        (o argumento da linha de comando tem prioridade)
     MONGODB_URI    obrigatoria (ou use o argumento --memoria, sem banco)
-    SERVIDOR_RAIZ  ../..       (pasta do front)
+    SERVIDOR_RAIZ  ../../frontend       (pasta do front)
 
     Digite "desativar" no terminal para encerrar.
 */
@@ -162,7 +162,7 @@ public class Servidor
             }
 
             String host = Servidor.variavel ("SERVIDOR_HOST", "127.0.0.1");
-            Path   raiz = Path.of (Servidor.variavel ("SERVIDOR_RAIZ", "../.."));
+            Path   raiz = Path.of (Servidor.variavel ("SERVIDOR_RAIZ", "../../frontend"));
 
             ConexaoMongo        conexao  = null;
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
