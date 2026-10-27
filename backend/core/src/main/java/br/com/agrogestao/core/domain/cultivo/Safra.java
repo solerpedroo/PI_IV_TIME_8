@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.domain.cultivo;
 
 import java.math.BigDecimal;
@@ -43,5 +44,14 @@ public record Safra(ObjectId id, EscopoPropriedade escopo, String nome, ObjectId
                 d.getObjectId("culturaId"), d.getList("talhaoIds", ObjectId.class),
                 LocalDate.parse(d.getString("inicio")), LocalDate.parse(d.getString("fim")),
                 d.get("areaHectares", Decimal128.class).bigDecimalValue(), Status.valueOf(d.getString("status")));
+    }
+
+    /** Mantém o avanço do ciclo sequencial e preserva o mesmo documento histórico. */
+    public Safra avancar(Status proximo) {
+        obrigatorio(proximo, "status");
+        if (status.ordinal() + 1 != proximo.ordinal()) {
+            throw new IllegalArgumentException("status deve avançar para a próxima etapa do ciclo");
+        }
+        return new Safra(id, escopo, nome, culturaId, talhaoIds, inicio, fim, areaHectares, proximo);
     }
 }

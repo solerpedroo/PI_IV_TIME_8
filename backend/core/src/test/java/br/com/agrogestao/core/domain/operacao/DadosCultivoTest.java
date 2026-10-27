@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.domain.operacao;
 
 import java.math.BigDecimal;
@@ -21,12 +22,15 @@ public final class DadosCultivoTest {
         talhoes.clear();
         verificar(safra.talhaoIds().size() == 1, "lista original não pode alterar uma safra já validada");
         verificar(Safra.doDocumento(safra.paraDocumento()).equals(safra), "período e vínculos devem sobreviver ao BSON");
+        Safra finalizada = safra.avancar(Safra.Status.COLHEITA).avancar(Safra.Status.FINALIZADA);
+        verificar(finalizada.status() == Safra.Status.FINALIZADA, "finalização deve permanecer no ciclo consultável");
         invalido(() -> new EscopoPropriedade(null, new ObjectId()));
         invalido(() -> new Talhao(null, escopo, "A", BigDecimal.ZERO, Talhao.Status.ATIVO));
         invalido(() -> new Talhao(null, escopo, " ", BigDecimal.ONE, Talhao.Status.ATIVO));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)));
         invalido(() -> safra(escopo, culturaId, List.of(), LocalDate.now(), LocalDate.now()));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId, talhaoId), LocalDate.now(), LocalDate.now()));
+        invalido(() -> safra.avancar(Safra.Status.COLHEITA));
         System.out.println("DadosCultivoTest: OK");
     }
 
