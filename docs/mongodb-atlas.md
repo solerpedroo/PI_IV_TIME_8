@@ -42,7 +42,7 @@ Em **Network Access**, adicione o IP público atual da máquina que executará o
 
 ## Etapa 3 — criar usuários individuais do banco
 
-Em **Database Access**, crie um usuário por integrante, por exemplo `dev_vinicius`. Conceda `readWrite` somente ao banco `agrogestao_dev`.
+Em **Database Access**, crie um usuário por integrante, por exemplo `dev_vinicius`. Conceda `readWrite` aos bancos `agrogestao_dev` (aplicação) e `agrogestao_ci_teste` (suítes `--atlas`). O sufixo `_teste` é obrigatório nos testes para não misturar dados fictícios com o banco de desenvolvimento.
 
 Não use uma credencial compartilhada. Se alguém sair do grupo, seu acesso poderá ser removido sem trocar a senha dos demais.
 
@@ -63,6 +63,8 @@ Não use uma credencial compartilhada. Se alguém sair do grupo, seu acesso pode
    MONGODB_DATABASE=agrogestao_dev
    MONGODB_URI='mongodb+srv://dev_vinicius:SENHA@CLUSTER.mongodb.net/?retryWrites=true&w=majority&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000'
    ```
+
+Para `./backend/core/testar.sh --atlas`, altere temporariamente `MONGODB_DATABASE` para um nome terminado em `_teste` (ex.: `agrogestao_ci_teste`). A fábrica `MongoConexao.paraTestes()` recusa qualquer outro nome.
 
 Se a senha tiver caracteres reservados de URL, use a versão codificada indicada pelo Atlas. As aspas simples protegem os caracteres da URI ao carregar o arquivo no terminal.
 
@@ -115,7 +117,7 @@ As duas respostas devem retornar HTTP 200 e `{"status":"UP"}`. `health` confirma
 
 ## Validação da issue #100
 
-Sem publicar credenciais, o teste usa identificadores únicos e limpa seus registros fictícios no banco `agrogestao_dev`:
+Sem publicar credenciais, o teste usa identificadores únicos e limpa seus registros fictícios no banco `agrogestao_ci_teste` (ou outro nome terminado em `_teste`):
 
 1. Criar dois usuários fictícios (produtores A e B) e uma propriedade para cada um.
 2. Verificar que a consulta por `_id` e `proprietarioId` devolve somente a propriedade do próprio produtor; para um ID alheio, deve ter o mesmo resultado de propriedade inexistente.
@@ -129,7 +131,7 @@ O teste executável é `br.com.agrogestao.core.infra.mongo.MongoAtlasValidacaoTe
 mvn -q test-compile exec:java -Dexec.mainClass=br.com.agrogestao.core.infra.mongo.MongoAtlasValidacaoTest -Dexec.classpathScope=test
 ```
 
-Em 23/10/2026, no projeto `time 08`, cluster `Cluster0` e banco `agrogestao_dev`, a execução retornou `MongoAtlasValidacaoTest: OK`. Foram confirmados: conexão real por `ping`, dois produtores fictícios, propriedades de mesmo nome para titulares diferentes, índices únicos para e-mail e nome por titular, bloqueio da leitura cruzada, rejeição de proprietário inexistente e consulta persistente após fechar e reabrir a conexão Java. O teste remove seus registros fictícios ao final.
+Em 23/10/2026, no projeto `time 08`, cluster `Cluster0`, a execução retornou `MongoAtlasValidacaoTest: OK` (hoje a suíte exige banco `*_teste`). Foram confirmados: conexão real por `ping`, dois produtores fictícios, propriedades de mesmo nome para titulares diferentes, índices únicos para e-mail e nome por titular, bloqueio da leitura cruzada, rejeição de proprietário inexistente e consulta persistente após fechar e reabrir a conexão Java. O teste remove seus registros fictícios ao final.
 
 Os testes locais sem Atlas exercitam somente validações e regras em memória; a evidência acima usa o MongoDB real. A autorização de usuários autenticados por API pertence à frente de autenticação, não a este modelo de dados.
 
@@ -149,7 +151,7 @@ Nunca commitar o `.env`. Nunca publicar a URI completa em issue, pull request, c
 
 - O `.gitignore` bloqueia `.env`, variações de ambiente, chaves, certificados e dumps do MongoDB.
 - `.env.example` possui somente marcadores e pode ser versionado.
-- Cada integrante usa uma credencial própria com `readWrite` apenas em `agrogestao_dev`.
+- Cada integrante usa uma credencial própria com `readWrite` em `agrogestao_dev` e no banco `*_teste` das suítes Atlas.
 - A senha da conta Atlas nunca é usada pela aplicação Java.
 - O IP de cada integrante é autorizado individualmente; não usar `0.0.0.0/0`.
 - A URI do Atlas usa TLS pelo esquema `mongodb+srv://`.
