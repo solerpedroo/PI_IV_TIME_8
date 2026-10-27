@@ -20,9 +20,14 @@ public final class CultivoRepositorioMongo {
     }
 
     public void criarIndices() {
-        for (String colecao : List.of("talhoes", "culturas", "safras")) {
-            banco.getCollection(colecao).createIndex(ascending("proprietarioId", "propriedadeId", "nome"));
-        }
+        // Nome único por propriedade: dois talhões/culturas/safras iguais no mesmo escopo são erro.
+        // Se o Atlas ainda tiver o índice antigo (não único), apague-o antes de subir o core.
+        banco.getCollection("talhoes").createIndex(ascending("proprietarioId", "propriedadeId", "nome"),
+                new com.mongodb.client.model.IndexOptions().unique(true).name("talhao_nome_unico"));
+        banco.getCollection("culturas").createIndex(ascending("proprietarioId", "propriedadeId", "nome"),
+                new com.mongodb.client.model.IndexOptions().unique(true).name("cultura_nome_unico"));
+        banco.getCollection("safras").createIndex(ascending("proprietarioId", "propriedadeId", "nome"),
+                new com.mongodb.client.model.IndexOptions().unique(true).name("safra_nome_unico"));
         banco.getCollection("safras").createIndex(ascending("proprietarioId", "propriedadeId", "talhaoIds", "inicio"));
     }
 
