@@ -56,7 +56,13 @@ public final class Usuario {
 
     private static String normalizarEmail(String email) {
         String normalizado = obrigatorio(email, "email").toLowerCase(Locale.ROOT);
-        if (!normalizado.contains("@")) {
+        // Checagem simples: parte local, @ e domínio com ponto. Hash/KDF ficam na auth.
+        int arroba = normalizado.indexOf('@');
+        if (arroba < 1 || arroba != normalizado.lastIndexOf('@')) {
+            throw new IllegalArgumentException("email deve ser válido");
+        }
+        String dominio = normalizado.substring(arroba + 1);
+        if (!dominio.contains(".") || dominio.startsWith(".") || dominio.endsWith(".")) {
             throw new IllegalArgumentException("email deve ser válido");
         }
         return normalizado;
