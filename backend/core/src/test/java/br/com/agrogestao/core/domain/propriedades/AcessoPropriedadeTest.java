@@ -33,6 +33,13 @@ public final class AcessoPropriedadeTest {
                 "email deve ser normalizado no documento");
 
         try {
+            new Usuario("sem-dominio@", "X", "hash");
+            throw new AssertionError("email sem domínio válido deve ser rejeitado");
+        } catch (IllegalArgumentException esperado) {
+            // Formato mínimo: local@domínio.com
+        }
+
+        try {
             acesso.exigirDoProprietario(propriedadeId, usuarioB);
             throw new AssertionError("não pode revelar propriedade de outro produtor");
         } catch (PropriedadeNaoEncontradaException esperado) {
