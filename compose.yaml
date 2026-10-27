@@ -1,5 +1,5 @@
-# Mongo local opcional (loopback). O caminho principal do core nesta branch é o Atlas.
-# Útil para o servidor Java/HTTP de outras branches que precisam de replica set.
+# Mongo local opcional (loopback). Útil para o servidor Java/HTTP e testes com replica set.
+# O core desta branch também usa Atlas Free; não é obrigatório subir o compose para o Atlas.
 services:
   mongo:
     image: mongo:8.0.32

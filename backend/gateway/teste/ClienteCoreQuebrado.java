@@ -1,7 +1,4 @@
-/*
-    Autor: Tomas de Paula Michelon Toniato
-    RA: 25004211
-*/
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 import util.ClienteCore;
 
 // Cliente do core que sempre falha, para exercitar o tratamento de erro do RotasHandler.

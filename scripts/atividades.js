@@ -577,6 +577,7 @@
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
       }
 
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "atividade", descricao: nome, talhao}}));
       closeModal(modal);
       form.reset();
       applyFilters();

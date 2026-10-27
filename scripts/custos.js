@@ -10,18 +10,10 @@
 
   /* Filtros ficam na sessão; lançamentos, orçamento e período são persistidos. */
   const state = {
-    budget: 520000,
+    ...window.AgroLocal.initial("costs"),
     filter: "Todos",
     search: "",
-    plot: new URLSearchParams(window.location.search).get("talhao") || "",
-    period: "Jan — Ago 2026",
-    entries: [
-      { id: 1, description: "Glifosato 20L", category: "Insumos", plot: "T-03 Leste", date: "2026-08-05", value: 2840 },
-      { id: 2, description: "Salário operador — Jul", category: "Mão de Obra", plot: "Propriedade", date: "2026-08-01", value: 4200 },
-      { id: 3, description: "Manutenção pulverizador", category: "Maquinário", plot: "T-01 Norte", date: "2026-07-28", value: 1650 },
-      { id: 4, description: "Diesel — 500 L", category: "Combustível", plot: "Propriedade", date: "2026-07-25", value: 3100 },
-      { id: 5, description: "Sementes de soja — 2 t", category: "Insumos", plot: "T-01 Norte", date: "2026-07-20", value: 8400 }
-    ]
+    plot: new URLSearchParams(window.location.search).get("talhao") || ""
   };
 
   let persist = () => true;
@@ -44,6 +36,9 @@
     input.type = "hidden";
     const trigger = document.createElement("button");
     trigger.type = "button";
+    trigger.id = `${input.id}-trigger`;
+    // O rótulo continua acionando o controle visível após trocar o input nativo.
+    document.querySelector(`label[for="${input.id}"]`)?.setAttribute('for', trigger.id);
     trigger.className = "date-picker-trigger";
     trigger.dataset.openDateModal = "";
     trigger.setAttribute("aria-haspopup", "dialog");
@@ -53,6 +48,7 @@
 
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
+    modal.id = "date-form";
     modal.dataset.modal = "date-form";
     modal.setAttribute("aria-hidden", "true");
     modal.setAttribute("role", "presentation");
@@ -143,8 +139,8 @@
 
   function updateMetrics() {
     const total = totalSpent();
-    const budgetPercent = Math.min(100, (total / state.budget) * 100);
-    const remaining = Math.max(0, state.budget - total);
+    const budgetPercent = state.budget > 0 ? (total / state.budget) * 100 : 0;
+    const remaining = state.budget - total;
     const totalEl = $("[data-cost-total]");
     const hectareEl = $("[data-cost-hectare]");
     const spentEl = $("[data-budget-spent]");
@@ -152,17 +148,52 @@
     const remainingEl = $("[data-budget-remaining]");
     const progressEl = $("[data-budget-progress]");
     if (totalEl) totalEl.textContent = formatCompact(total);
+    // Os textos auxiliares acompanham os valores, sem percentuais antigos fixos.
+    const totalDescription = totalEl?.closest('.metric-card').querySelector('.metric-card-desc');
+    if (totalDescription) totalDescription.textContent = `${Math.round(budgetPercent)}% do orçamento previsto`;
     const area = window.AgroLocal.read("settings").property?.area;
     if (hectareEl) hectareEl.textContent = area > 0 ? money.format(total / area) : "—";
     if (spentEl) spentEl.textContent = money.format(total);
     if (percentEl) percentEl.textContent = `${Math.round(budgetPercent)}% utilizado`;
-    if (remainingEl) remainingEl.textContent = `${money.format(remaining)} restantes`;
-    if (progressEl) progressEl.style.width = `${budgetPercent}%`;
+    if (remainingEl) remainingEl.textContent = remaining >= 0 ? `${money.format(remaining)} restantes` : `${money.format(-remaining)} acima do orçamento`;
+    if (progressEl) progressEl.style.width = `${Math.min(100, budgetPercent)}%`;
     ["Insumos", "Mão de Obra"].forEach((category) => {
       const categoryTotal = state.entries.filter((entry) => entry.category === category).reduce((sum, entry) => sum + entry.value, 0);
       const element = $(`[data-cost-category="${category}"]`);
       if (element) element.textContent = formatCompact(categoryTotal);
+      const description = element?.closest('.metric-card').querySelector('.metric-card-desc');
+      const percentage = total > 0 ? (categoryTotal / total) * 100 : 0;
+      if (description) description.textContent = `${percentage.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% do custo total`;
     });
+    renderCropCosts();
+  }
+
+  /* Agrupa somente vínculos existentes. Gastos da propriedade não são atribuídos
+   * a uma cultura por suposição e aparecem separados dos talhões cadastrados. */
+  function renderCropCosts() {
+    const list = $('.crop-cost-list');
+    if (!list) return;
+    const plots = window.AgroLocal.read('plots');
+    const byPlot = new Map(plots.map((plot) => [plot.plot, plot]));
+    const labels = { soja: 'Soja', milho: 'Milho', trigo: 'Trigo', pastagem: 'Pastagem' };
+    const groups = new Map();
+    plots.forEach((plot) => {
+      if (!groups.has(plot.crop)) groups.set(plot.crop, { label: labels[plot.crop] || plot.crop, hectares: 0, value: 0 });
+      groups.get(plot.crop).hectares += plot.hectares;
+    });
+    state.entries.forEach((entry) => {
+      const crop = byPlot.get(entry.plot)?.crop;
+      if (crop) groups.get(crop).value += entry.value;
+      else {
+        if (!groups.has('unassigned')) groups.set('unassigned', { label: 'Sem vínculo com cultura', hectares: null, value: 0 });
+        groups.get('unassigned').value += entry.value;
+      }
+    });
+    list.innerHTML = [...groups].map(([crop, group]) => {
+      const color = Object.hasOwn(labels, crop) ? `crop-${crop}` : '';
+      const detail = group.hectares === null ? 'Propriedade ou talhão sem vínculo' : `${group.hectares.toLocaleString('pt-BR')} ha`;
+      return `<div class="crop-cost-item"><span class="crop-cost-dot ${color}" aria-hidden="true"></span><span class="crop-cost-info"><strong>${window.AgroLocal.escape(group.label)}</strong><small>${detail}</small></span><strong>${money.format(group.value)}</strong></div>`;
+    }).join('');
   }
 
   function renderChart() {
@@ -208,7 +239,10 @@
   function setError(form, name, message) {
     const control = form.elements[name];
     const error = $(`[data-error-for="${name}"]`, form);
-    if (control) control.setAttribute("aria-invalid", "true");
+    if (control) {
+      if (message) control.setAttribute("aria-invalid", "true");
+      else control.removeAttribute("aria-invalid");
+    }
     if (error) error.textContent = message;
   }
 
@@ -314,6 +348,11 @@
   function initForm() {
     const form = $("[data-cost-form]");
     if (!form) return;
+    // Uma correção válida remove o aviso antigo daquele campo, sem limpar os demais.
+    ["input", "change"].forEach((type) => form.addEventListener(type, (event) => {
+      const control = event.target;
+      if (control.matches("input, select") && control.getAttribute("aria-invalid") === "true" && control.value.trim() && control.checkValidity()) setError(form, control.name, "");
+    }));
     $("[data-open-cost-modal]")?.addEventListener("click", () => openCostModal());
     $$('[data-close-modal]', $("[data-modal='cost-form']")).forEach((button) => button.addEventListener("click", closeCostModal));
     $("[data-modal='cost-form']")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) closeCostModal(); });
@@ -341,6 +380,7 @@
       }
       if (!persist()) return;
       toast("success", editingId ? "Custo atualizado" : "Custo registrado", `${description} foi ${editingId ? "atualizado" : "adicionado aos lançamentos"}.`);
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "custo", descricao: description, talhao: plot}}));
       closeCostModal();
       updateMetrics();
       renderChart();

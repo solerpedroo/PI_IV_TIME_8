@@ -1,4 +1,6 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
+<!-- Miguel — RA: 25003110 -->
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -206,7 +208,7 @@
 
       <!-- Metrics -->
       <section class="metrics-row" aria-label="Indicadores">
-        <article class="metric-card">
+        <article class="metric-card" data-dashboard-link="areas-cultivo.html" tabindex="0" role="link" aria-label="Ver áreas de cultivo">
           <div class="metric-card-top">
             <span class="metric-card-label">Áreas Ativas</span>
             <span class="metric-card-icon" aria-hidden="true">
@@ -217,7 +219,7 @@
           <p class="metric-card-desc">talhões em produção</p>
         </article>
 
-        <article class="metric-card">
+        <article class="metric-card" data-dashboard-link="atividades.html" tabindex="0" role="link" aria-label="Ver atividades pendentes">
           <div class="metric-card-top">
             <span class="metric-card-label">Atividades Pendentes</span>
             <span class="metric-card-icon" aria-hidden="true">
@@ -228,7 +230,7 @@
           <p class="metric-card-desc">para esta semana</p>
         </article>
 
-        <article class="metric-card">
+        <article class="metric-card" data-dashboard-link="insumos.html" tabindex="0" role="link" aria-label="Ver insumos com estoque baixo">
           <div class="metric-card-top">
             <span class="metric-card-label">Estoque Baixo</span>
             <span class="metric-card-icon" aria-hidden="true">
@@ -239,14 +241,14 @@
           <p class="metric-card-desc">insumos críticos</p>
         </article>
 
-        <article class="metric-card">
+        <article class="metric-card" data-dashboard-link="custos.html" tabindex="0" role="link" aria-label="Ver custos da safra">
           <div class="metric-card-top">
             <span class="metric-card-label">Custo Safra</span>
             <span class="metric-card-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
             </span>
           </div>
-          <p class="metric-card-value">R$ 48.2K</p>
+          <p class="metric-card-value" data-metric="cost">—</p>
           <p class="metric-card-desc">acumulado</p>
         </article>
       </section>
@@ -383,7 +385,7 @@
             <div class="card-header">
               <h2 class="card-title" id="cultures-title">Culturas em Safra</h2>
             </div>
-            <div class="cultures-list">
+            <div class="cultures-list" data-cultures-list>
               <article class="culture-item">
                 <div class="culture-meta">
                   <span class="culture-name">Soja</span>
@@ -435,7 +437,7 @@
   <div class="modal-backdrop" data-modal="new-activity" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-activity-title">
       <h2 id="new-activity-title">Nova Atividade</h2>
-      <p>Registre uma atividade operacional. Os dados são mock e atualizam o painel localmente.</p>
+      <p>Registre uma atividade operacional. Ela será incluída na lista e mantida neste navegador.</p>
       <form class="activity-form" data-new-activity-form novalidate>
         <div class="input-group">
           <label for="activity-name">Nome da atividade</label>
@@ -452,10 +454,12 @@
             data-placeholder="Selecione…"
           >
             <option value="">Selecione…</option>
-            <option value="A3">Talhão A3</option>
-            <option value="B1">Talhão B1</option>
-            <option value="C2">Talhão C2</option>
-            <option value="D4">Talhão D4</option>
+            <!-- Mantém o mesmo identificador exibido em Áreas de Cultivo. -->
+            <option value="T-01 Norte">T-01 Norte</option>
+            <option value="T-02 Sul">T-02 Sul</option>
+            <option value="T-03 Leste">T-03 Leste</option>
+            <option value="T-04 Oeste">T-04 Oeste</option>
+            <option value="T-05 Centro">T-05 Centro</option>
           </select>
         </div>
         <div class="modal-actions">
@@ -486,5 +490,6 @@
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/dashboard.js" defer></script>
+  <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>

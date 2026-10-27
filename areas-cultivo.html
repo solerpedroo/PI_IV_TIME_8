@@ -1,4 +1,6 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -470,6 +472,15 @@
           <p class="field-error" data-error-for="hectares"></p>
         </div>
         <div class="input-group">
+          <label for="talhao-safra">Safra *</label>
+          <select id="talhao-safra" name="safra" required>
+            <option value="2025/26">2025/26</option>
+            <option value="2024/25">2024/25</option>
+            <option value="2026/27">2026/27</option>
+          </select>
+          <p class="field-error" data-error-for="safra"></p>
+        </div>
+        <div class="input-group">
           <label for="talhao-status-trigger">Status</label>
           <select id="talhao-status" name="status" data-enhance-select data-placeholder="Ativo">
             <option value="Ativo">Ativo</option>
@@ -505,5 +516,6 @@
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/areas-cultivo.js" defer></script>
+  <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>

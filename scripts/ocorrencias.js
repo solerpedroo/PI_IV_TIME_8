@@ -422,6 +422,7 @@
       $("[data-occ-table] tbody").appendChild(row);
       if (!persist()) return;
 
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "ocorrencia", descricao: titulo, talhao}}));
       closeModal(modal);
       form.reset();
       $$(".segmented-option", form).forEach((o, i) => o.setAttribute("aria-pressed", i === 0 ? "true" : "false"));

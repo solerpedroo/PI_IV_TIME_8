@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — Select / Dropdown do design system (Forest Sage)
  * --------------------------------------------------------------------------
@@ -14,6 +15,8 @@
     '<svg class="select-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   const CHECK =
     '<svg class="select-option-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  let sequence = 0;
 
   function closeSelect(root) {
     root.classList.remove("is-open");
@@ -35,6 +38,11 @@
   function enhance(native) {
     if (!native || native.dataset.selectEnhanced === "true") return;
     native.dataset.selectEnhanced = "true";
+    // Os filtros sem id também precisam de um vínculo único com a lista visual.
+    if (!native.id) {
+      do { native.id = `agro-select-${++sequence}`; }
+      while (document.querySelectorAll(`[id="${native.id}"]`).length > 1);
+    }
 
     const placeholder =
       native.dataset.placeholder ||
@@ -44,12 +52,17 @@
     const root = document.createElement("div");
     root.className = "select";
     root.dataset.select = "";
+    if (native.classList.contains("filter-select")) {
+      root.classList.add("filter-select");
+      native.classList.remove("filter-select");
+    }
 
     const trigger = document.createElement("button");
     trigger.type = "button";
     trigger.className = "select-trigger";
     trigger.setAttribute("aria-haspopup", "listbox");
     trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-label", native.getAttribute("aria-label") || native.labels?.[0]?.textContent.trim() || placeholder);
     if (native.id) {
       trigger.id = `${native.id}-trigger`;
       // Reassocia labels que ainda apontam para o select nativo
@@ -71,7 +84,9 @@
     if (native.id) menu.id = `${native.id}-listbox`;
     trigger.setAttribute("aria-controls", menu.id);
 
-    [...native.options].forEach((opt, index) => {
+    function renderOptions() {
+      menu.replaceChildren();
+      [...native.options].forEach((opt, index) => {
       // Pula o option vazio do placeholder na lista visual? Mantém como no nativo.
       const li = document.createElement("li");
       li.setAttribute("role", "none");
@@ -82,6 +97,7 @@
       btn.setAttribute("role", "option");
       btn.dataset.value = opt.value;
       btn.setAttribute("aria-selected", "false");
+      btn.disabled = opt.disabled;
       if (index === 0 && !opt.value) btn.dataset.placeholder = "true";
 
       const label = document.createElement("span");
@@ -99,7 +115,9 @@
 
       li.appendChild(btn);
       menu.appendChild(li);
-    });
+      });
+    }
+    renderOptions();
 
     function syncFromNative() {
       const selected = native.options[native.selectedIndex];
@@ -114,6 +132,8 @@
       });
 
       root.classList.toggle("is-invalid", native.getAttribute("aria-invalid") === "true");
+      trigger.setAttribute("aria-invalid", String(native.getAttribute("aria-invalid") === "true"));
+      trigger.disabled = native.disabled;
     }
 
     trigger.addEventListener("click", (event) => {
@@ -128,15 +148,16 @@
       if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         if (!root.classList.contains("is-open")) {
+          closeAll(root);
           root.classList.add("is-open");
           trigger.setAttribute("aria-expanded", "true");
         }
-        menu.querySelector(".select-option")?.focus();
+        (menu.querySelector(".select-option.is-selected:not(:disabled)") || menu.querySelector(".select-option:not(:disabled)"))?.focus();
       }
     });
 
     menu.addEventListener("keydown", (event) => {
-      const options = [...menu.querySelectorAll(".select-option")];
+      const options = [...menu.querySelectorAll(".select-option:not(:disabled)")];
       const index = options.indexOf(document.activeElement);
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -145,6 +166,8 @@
         event.preventDefault();
         options[Math.max(index - 1, 0)]?.focus();
       } else if (event.key === "Escape") {
+        // Escape fecha primeiro o select, mantendo o formulário aberto.
+        event.stopPropagation();
         closeSelect(root);
         trigger.focus();
       } else if (event.key === "Enter" || event.key === " ") {
@@ -163,6 +186,11 @@
     root.appendChild(native);
 
     native.addEventListener("change", syncFromNative);
+    // A API substitui as opções após o carregamento inicial da página.
+    new MutationObserver(() => { renderOptions(); syncFromNative(); })
+      .observe(native, {childList: true, subtree: true, characterData: true});
+    // A validação das telas altera o nativo; o controle visível acompanha o erro.
+    new MutationObserver(syncFromNative).observe(native, { attributes: true, attributeFilter: ["aria-invalid", "disabled"] });
     syncFromNative();
   }
 
@@ -173,8 +201,16 @@
       if (!event.target.closest(".select")) closeAll();
     });
 
+    // Tab para outro campo encerra o menu, assim como o clique fora dele.
+    document.addEventListener("focusin", (event) => closeAll(event.target.closest(".select")));
+
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeAll();
+      if (event.key === "Escape" && document.querySelector(".select.is-open")) {
+        event.stopImmediatePropagation();
+        const root = document.querySelector(".select.is-open");
+        closeAll();
+        root.querySelector(".select-trigger")?.focus();
+      }
     });
   }
 

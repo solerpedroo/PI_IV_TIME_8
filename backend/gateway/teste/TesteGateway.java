@@ -1,8 +1,4 @@
-/*
-    Alterado por: Vinícius Panutti Salgado — R.A. 25007329
-    Autor: Tomas de Paula Michelon Toniato
-    RA: 25004211
-*/
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -11,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.URI;
 import com.sun.net.httpserver.HttpServer;
 import handlers.RotasHandler;
+import util.ClienteCore;
 
 /*
     Substitui o antigo server.test.ts (node:test), sem JUnit.
@@ -22,6 +19,7 @@ public class TesteGateway
     private static final String DOWN      = "{\"status\":\"DOWN\"}";
     private static final String NOT_FOUND = "{\"error\":\"Not found\"}";
     private static final String ERRO      = "{\"error\":\"Internal server error\"}";
+    private static final String CORE_DOWN = "{\"error\":\"Core unavailable\"}";
 
     private static int falhas = 0;
     private static int total  = 0;
@@ -57,10 +55,23 @@ public class TesteGateway
     // devolve { status, corpo, content-type }
     private static String[] requisitar (String metodo, String url) throws Exception
     {
+        return TesteGateway.requisitar (metodo, url, null);
+    }
+
+    // Permite conferir que o proxy conserva metodo e corpo enviados pelo front.
+    private static String[] requisitar (String metodo, String url, String corpoRequisicao) throws Exception
+    {
         HttpURLConnection conexao = (HttpURLConnection) URI.create (url).toURL().openConnection ();
         conexao.setRequestMethod  (metodo);
         conexao.setConnectTimeout (5000);
         conexao.setReadTimeout    (5000);
+
+        if (corpoRequisicao != null)
+        {
+            conexao.setDoOutput (true);
+            conexao.setRequestProperty ("Content-Type", "application/json");
+            conexao.getOutputStream ().write (corpoRequisicao.getBytes ("UTF-8"));
+        }
 
         int         status = conexao.getResponseCode ();
         InputStream corpo  = status < 400 ? conexao.getInputStream () : conexao.getErrorStream ();
@@ -130,6 +141,11 @@ public class TesteGateway
             TesteGateway.conferir ("ready com core fora", 503, TesteGateway.DOWN,
                                    Integer.parseInt (r[0]), r[1]);
 
+            // Indisponibilidade de produto nao vira 503 de readiness: e uma falha de proxy 502.
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/parcelas");
+            TesteGateway.conferir ("dominio com core fora", 502, TesteGateway.CORE_DOWN,
+                                   Integer.parseInt (r[0]), r[1]);
+
             // 3) rota desconhecida -> 404
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/qualquer");
             TesteGateway.conferir ("rota desconhecida", 404, TesteGateway.NOT_FOUND,
@@ -155,9 +171,29 @@ public class TesteGateway
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/ready");
             TesteGateway.conferir ("ready com core saudavel", 200, TesteGateway.UP,
                                    Integer.parseInt (r[0]), r[1]);
+
+            // Rota de dominio: metodo, corpo, query, status e JSON do core passam pelo gateway.
+            r = TesteGateway.requisitar ("POST", TesteGateway.endereco (gw) + "/api/parcelas?ativo=true", "{\"nome\":\"Sul\"}");
+            TesteGateway.conferir ("POST de dominio encaminhado", 201,
+                                   "{\"method\":\"POST\",\"body\":{\"nome\":\"Sul\"}}",
+                                   Integer.parseInt (r[0]), r[1]);
+            TesteGateway.conferir ("resposta de dominio continua JSON", r[2].startsWith ("application/json"));
+
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/query?termo=a%20b%26c");
+            TesteGateway.conferir ("query preserva escapes", 200,
+                                   "{\"query\":\"termo=a%20b%26c\"}", Integer.parseInt (r[0]), r[1]);
+
+            r = TesteGateway.requisitar ("POST", TesteGateway.endereco (gw) + "/api/parcelas",
+                                         "{\"payload\":\"" + "x".repeat (ClienteCore.MAXIMO_CORPO) + "\"}");
+            TesteGateway.conferir ("corpo acima do limite e rejeitado", 413,
+                                   "{\"error\":\"Request body too large\"}", Integer.parseInt (r[0]), r[1]);
+
+            r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/erro");
+            TesteGateway.conferir ("erro de negocio preservado", 422, "{\"error\":\"Business rule\"}",
+                                   Integer.parseInt (r[0]), r[1]);
             gw.stop (0);
 
-            // JAVA_BASE_URL com barra no final nao pode gerar "//ready"
+            // JAVA_BASE_URL com barra no final nao pode gerar "//actuator"
             gw = TesteGateway.gateway (TesteGateway.endereco (core) + "/");
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/ready");
             TesteGateway.conferir ("ready com barra no final da base", 200, TesteGateway.UP,

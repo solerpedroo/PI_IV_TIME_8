@@ -1,13 +1,13 @@
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
 /**
  * Agro — interações das telas de autenticação
  * --------------------------------------------------------------------------
  * Responsabilidades:
  * - Validação client-side (obrigatórios, e-mail, senha, termos)
  * - Toggle de senha, medidor de força e máscara de telefone
- * - Navegação mock entre páginas (sem API real)
- * - Persistência leve via sessionStorage (e-mail / flash de sucesso)
- *
- * Quando a API existir, substitua a função `simulateRequest` por fetch real.
+ * - Integração com a API local de autenticação
+ * - Persistência leve da sessão, do e-mail e das mensagens de sucesso
  */
 (() => {
   "use strict";
@@ -21,7 +21,15 @@
   const STORAGE = {
     pendingEmail: "agro.pendingEmail",
     flashSuccess: "agro.flashSuccess",
+    sessionToken: "agro.sessionToken",
+    sessionUser: "agro.sessionUser",
   };
+
+  // Quando o front é servido pelo Java, usa a mesma origem. Em um servidor
+  // estático local, usa a porta padrão do servidor Java para facilitar o desenvolvimento.
+  const API_BASE = window.location.port === "8080"
+    ? window.location.origin
+    : "http://127.0.0.1:8080";
 
   const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
 
@@ -101,9 +109,45 @@
     form.setAttribute("aria-busy", String(loading));
   }
 
-  /** Simulação de latência de rede — trocar por fetch quando houver API. */
-  function simulateRequest(ms = 550) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  /**
+   * Faz uma chamada JSON e transforma erros da API em uma exceção tratável
+   * pela tela. Não envia o token por padrão porque as rotas deste arquivo são
+   * públicas; a sessão é usada pelo shell das telas autenticadas.
+   */
+  async function requestApi(path, body) {
+    let response;
+
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      throw new Error("Não foi possível conectar ao servidor. Verifique se ele está em execução.");
+    }
+
+    const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.error || "Não foi possível concluir a solicitação.");
+      error.fields = data.fields || {};
+      error.retryAfter = data.retryAfter || response.headers.get("Retry-After");
+      throw error;
+    }
+
+    return data;
+  }
+
+  /** Mostra os erros de campo que o servidor validou. */
+  function showApiErrors(form, error) {
+    Object.entries(error.fields || {}).forEach(([field, message]) => {
+      const input = form.elements.namedItem(field);
+      if (input instanceof HTMLElement) setError(input, message);
+    });
+    const message = error.message === "Email confirmation required"
+      ? "Confirme seu e-mail antes de entrar. Use o código enviado para sua caixa de entrada."
+      : (error.message || "Não foi possível concluir a solicitação.");
+    showMessage(form, message);
   }
 
   /* ------------------------------------------------------------------------ */
@@ -215,6 +259,11 @@
       placeholder.textContent = email;
       sessionStorage.setItem(STORAGE.pendingEmail, email);
     }
+
+    // Um link de e-mail pode informar o código pela query string.
+    const token = params.get("token");
+    const tokenInput = $("[name=token]");
+    if (token && tokenInput) tokenInput.value = token;
   }
 
   /* ------------------------------------------------------------------------ */
@@ -229,8 +278,23 @@
       resend.dataset.originalLabel ||= resend.textContent.trim();
       resend.disabled = true;
 
-      // Simula envio; depois aplica cooldown visual.
-      await simulateRequest(400);
+      const email = sessionStorage.getItem(STORAGE.pendingEmail);
+      if (!email) {
+        resend.disabled = false;
+        showMessage($("[data-confirm-email-form]"), "Informe um e-mail antes de solicitar o reenvio.");
+        return;
+      }
+
+      try {
+        await requestApi("/api/auth/resend-confirmation", { email });
+      } catch (error) {
+        resend.disabled = false;
+        const seconds = Number(error.retryAfter || 0);
+        showMessage($("[data-confirm-email-form]"), seconds
+          ? `Aguarde ${seconds}s antes de solicitar outro código.`
+          : error.message);
+        return;
+      }
 
       let seconds = 30;
       resend.textContent = `Reenviar em ${seconds}s`;
@@ -245,6 +309,50 @@
         resend.textContent = `Reenviar em ${seconds}s`;
       }, 1000);
     });
+  }
+
+  /** Confirma o código recebido pelo e-mail antes de liberar a conta. */
+  function initConfirmEmailForm() {
+    const form = $("[data-confirm-email-form]");
+    if (!form) return;
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const token = String(form.elements.token.value || "").trim();
+      if (!token) {
+        setError(form.elements.token, "Informe o código recebido.");
+        showMessage(form, "Informe o código de confirmação.");
+        return;
+      }
+
+      setLoading(form, true);
+      try {
+        await requestApi("/api/auth/confirm-email", { token });
+        sessionStorage.setItem(STORAGE.flashSuccess, "E-mail confirmado. Agora você já pode entrar.");
+        window.location.href = "login.html";
+      } catch (error) {
+        showApiErrors(form, error);
+      } finally {
+        setLoading(form, false);
+      }
+    });
+  }
+
+  /** Determina a rota pública a partir dos campos que cada formulário possui. */
+  function authRoute(form) {
+    if (form.elements.name) return "/api/auth/register";
+    if (form.elements.token) return "/api/auth/reset-password";
+    if (form.querySelector("[data-password]")) return "/api/auth/login";
+    return "/api/auth/forgot-password";
+  }
+
+  /** Cria o corpo exatamente com os nomes de campos aceitos pela API Java. */
+  function authPayload(form) {
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    // Checkboxes não marcados não aparecem no FormData.
+    if (form.elements.terms) data.terms = form.elements.terms.checked;
+    return data;
   }
 
   /* ------------------------------------------------------------------------ */
@@ -311,13 +419,44 @@
           return;
         }
 
+        const route = authRoute(form);
+        let result;
+
         setLoading(form, true);
-        await simulateRequest();
-        setLoading(form, false);
+        try {
+          result = await requestApi(route, authPayload(form));
+        } catch (error) {
+          // Permite que o link "Confirmar e-mail" já saiba para qual conta
+          // pedir novo código depois de um login bloqueado por confirmação.
+          if (route === "/api/auth/login" && error.message === "Email confirmation required" && email) {
+            sessionStorage.setItem(STORAGE.pendingEmail, email.value.trim());
+          }
+          showApiErrors(form, error);
+          return;
+        } finally {
+          setLoading(form, false);
+        }
 
         // Persistência leve para a tela de confirmação de e-mail.
         if (email && form.dataset.persistEmail === "true") {
           sessionStorage.setItem(STORAGE.pendingEmail, email.value.trim());
+        }
+
+        // Somente o login devolve uma sessão. O token fica no sessionStorage
+        // para não sobreviver ao fechamento do navegador.
+        if (route === "/api/auth/login") {
+          sessionStorage.setItem(STORAGE.sessionToken, result.token);
+          sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(result.usuario));
+        }
+
+        // A resposta de recuperação não revela se o e-mail existe. Mantemos
+        // a mensagem neutra e levamos o usuário à tela que aceita o código.
+        if (route === "/api/auth/forgot-password") {
+          sessionStorage.setItem(STORAGE.pendingEmail, email.value.trim());
+          sessionStorage.setItem(
+            STORAGE.flashSuccess,
+            "Se o e-mail estiver cadastrado, enviamos um código de redefinição."
+          );
         }
 
         const successRoute = form.dataset.successRoute;
@@ -351,6 +490,7 @@
     initPhoneMask();
     initConfirmEmail();
     initResend();
+    initConfirmEmailForm();
     initAuthForms();
     consumeFlashMessage();
   }

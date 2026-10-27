@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /**
  * Agro — animações e transições
  * --------------------------------------------------------------------------
@@ -131,7 +132,8 @@
 /* Shell / dashboard                                                          */
 /* -------------------------------------------------------------------------- */
 .app-sidebar {
-  animation: auth-slide-in var(--dur-slow) var(--ease-out) both;
+  /* Libera o transform ao terminar para não deslocar o menu fixo do perfil. */
+  animation: auth-slide-in var(--dur-slow) var(--ease-out) backwards;
 }
 
 /*

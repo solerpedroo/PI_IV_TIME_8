@@ -120,6 +120,8 @@
     if (label) label.htmlFor = trigger.id = "property-harvest-custom-trigger";
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
+    // Mantém o vínculo aria-controls do botão de safra com o diálogo criado.
+    modal.id = "harvest-form";
     modal.dataset.modal = "harvest-form";
     modal.setAttribute("aria-hidden", "true");
     modal.setAttribute("role", "presentation");
@@ -155,6 +157,14 @@
     $$('[data-harvest-close]', modal).forEach((button) => button.addEventListener("click", close));
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
     $("[data-confirm-harvest]", modal).addEventListener("click", () => {
+      if (sessionStorage.getItem("agro.sessionToken") && $("[data-new-property]")) {
+        native.value = pending;
+        native.dispatchEvent(new Event("change", { bubbles: true }));
+        syncLabel();
+        close();
+        toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
+        return;
+      }
       settings.property.harvest = pending;
       if (!persist()) return;
       native.value = pending;
