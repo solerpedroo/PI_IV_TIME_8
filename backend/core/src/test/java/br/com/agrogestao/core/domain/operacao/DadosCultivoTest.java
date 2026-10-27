@@ -30,7 +30,7 @@ public final class DadosCultivoTest {
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)));
         invalido(() -> safra(escopo, culturaId, List.of(), LocalDate.now(), LocalDate.now()));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId, talhaoId), LocalDate.now(), LocalDate.now()));
-        invalido(() -> safra.avancar(Safra.Status.COLHEITA));
+        invalido(() -> safra.avancar(Safra.Status.PLANTIO));
         System.out.println("DadosCultivoTest: OK");
     }
 
