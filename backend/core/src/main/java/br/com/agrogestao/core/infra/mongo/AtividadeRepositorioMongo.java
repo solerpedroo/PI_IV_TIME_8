@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.infra.mongo;
 
 import java.util.ArrayList;
@@ -41,6 +42,13 @@ public final class AtividadeRepositorioMongo {
     public List<Atividade> listarDoContexto(ContextoOperacao contexto) {
         vinculos.exigirContexto(contexto);
         return atividades.find(contexto.documento()).map(Atividade::doDocumento).into(new ArrayList<>());
+    }
+
+    /** Consulta todas as atividades da safra, inclusive após a finalização do ciclo. */
+    public List<Atividade> listarDaSafra(EscopoPropriedade escopo, ObjectId safraId) {
+        vinculos.exigir("safras", escopo, safraId);
+        return atividades.find(escopo.documento().append("safraId", safraId))
+                .map(Atividade::doDocumento).into(new ArrayList<>());
     }
 
     public List<EventoHistorico> listarHistorico(EscopoPropriedade escopo, ObjectId id) {

@@ -17,12 +17,24 @@ import br.com.agrogestao.core.domain.cultivo.Cultura;
 import br.com.agrogestao.core.domain.cultivo.Safra;
 import br.com.agrogestao.core.domain.operacao.EscopoPropriedade;
 import br.com.agrogestao.core.infra.mongo.CultivoRepositorioMongo;
+import br.com.agrogestao.core.infra.mongo.AtividadeRepositorioMongo;
+import br.com.agrogestao.core.infra.mongo.OcorrenciaRepositorioMongo;
+import br.com.agrogestao.core.infra.mongo.CustoRepositorioMongo;
 
 /** API mínima de cultivo; o escopo obrigatório evita que IDs cruzem propriedades. */
 public final class ApiCultivoHandler implements HttpHandler {
     private final CultivoRepositorioMongo cultivo;
+    private final AtividadeRepositorioMongo atividades;
+    private final OcorrenciaRepositorioMongo ocorrencias;
+    private final CustoRepositorioMongo custos;
 
-    public ApiCultivoHandler(CultivoRepositorioMongo cultivo) { this.cultivo = cultivo; }
+    public ApiCultivoHandler(CultivoRepositorioMongo cultivo, AtividadeRepositorioMongo atividades,
+            OcorrenciaRepositorioMongo ocorrencias, CustoRepositorioMongo custos) {
+        this.cultivo = cultivo;
+        this.atividades = atividades;
+        this.ocorrencias = ocorrencias;
+        this.custos = custos;
+    }
 
     @Override public void handle(HttpExchange troca) throws IOException {
         try {
@@ -42,6 +54,9 @@ public final class ApiCultivoHandler implements HttpHandler {
         String[] partes = sufixo.split("/");
         if (partes.length < 2 || partes[1].isBlank()) { responder(t, 404, erro("Rota não encontrada.")); return; }
         ObjectId id = objeto(partes[1]);
+        if (partes.length == 3 && "vinculos".equals(partes[2]) && metodo.equals("GET")) {
+            responder(t, 200, vinculosSafra(e, id)); return;
+        }
         if (partes.length == 3 && "fase".equals(partes[2]) && metodo.equals("POST")) {
             Safra.Status fase = Safra.Status.valueOf(corpo(t).getString("status"));
             responder(t, 200, cultivo.avancarSafra(e, id, fase).paraDocumento()); return;
@@ -80,5 +95,12 @@ public final class ApiCultivoHandler implements HttpHandler {
     private Document erro(String mensagem) { return new Document("erro", mensagem); }
     private Document listaSafras(List<Safra> safras) { return new Document("safras", safras.stream().map(Safra::paraDocumento).toList()); }
     private Document listaCulturas(EscopoPropriedade e) { return new Document("culturas", cultivo.listarCulturas(e).stream().map(Cultura::paraDocumento).toList()); }
+    private Document vinculosSafra(EscopoPropriedade e, ObjectId id) {
+        Document safra = cultivo.buscarSafra(e, id).orElseThrow(() -> new IllegalArgumentException("safra não encontrada")).paraDocumento();
+        return new Document("safra", safra)
+                .append("atividades", atividades.listarDaSafra(e, id).stream().map(a -> a.paraDocumento()).toList())
+                .append("ocorrencias", ocorrencias.listarDaSafra(e, id).stream().map(o -> o.paraDocumento()).toList())
+                .append("custos", custos.listarDaSafra(e, id).stream().map(c -> c.paraDocumento()).toList());
+    }
     private void responder(HttpExchange t, int status, Document d) throws IOException { if (status == 204) { t.sendResponseHeaders(status, -1); t.close(); return; } byte[] b = d.toJson().getBytes(StandardCharsets.UTF_8); t.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8"); t.sendResponseHeaders(status, b.length); t.getResponseBody().write(b); t.close(); }
 }

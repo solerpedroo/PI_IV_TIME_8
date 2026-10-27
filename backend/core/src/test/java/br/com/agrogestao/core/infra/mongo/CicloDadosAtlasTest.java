@@ -270,5 +270,12 @@ public final class CicloDadosAtlasTest {
                 "finalização permanece consultável após reconectar");
         verificar(reaberto.listarSafras(c.a).stream().anyMatch(s -> s.id().equals(c.safraA)),
                 "consulta da propriedade inclui histórico finalizado");
+        verificar(new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+                "atividades continuam consultáveis pela safra finalizada");
+        verificar(new OcorrenciaRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+                "ocorrências continuam consultáveis pela safra finalizada");
+        verificar(new CustoRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+                "custos continuam consultáveis pela safra finalizada");
+        invalido(() -> new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.b, c.safraA));
     }
 }

@@ -56,7 +56,9 @@ public final class CoreApplication {
                 }
             });
             // Rotas de domínio são encaminhadas pelo gateway somente sob /api/.
-            servidor.createContext("/api/", new ApiCultivoHandler(new CultivoRepositorioMongo(conexao.banco())));
+            servidor.createContext("/api/", new ApiCultivoHandler(new CultivoRepositorioMongo(conexao.banco()),
+                    new AtividadeRepositorioMongo(conexao.banco()), new OcorrenciaRepositorioMongo(conexao.banco()),
+                    new CustoRepositorioMongo(conexao.banco())));
             servidor.setExecutor(Executors.newFixedThreadPool(10));
             servidor.start();
 

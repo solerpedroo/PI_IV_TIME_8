@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.infra.mongo;
 
 import java.util.ArrayList;
@@ -41,6 +42,13 @@ public final class OcorrenciaRepositorioMongo {
     public List<Ocorrencia> listarDoContexto(ContextoOperacao contexto) {
         vinculos.exigirContexto(contexto);
         return ocorrencias.find(contexto.documento()).map(Ocorrencia::doDocumento).into(new ArrayList<>());
+    }
+
+    /** Consulta todas as ocorrências vinculadas à safra sem exigir um talhão específico. */
+    public List<Ocorrencia> listarDaSafra(EscopoPropriedade escopo, ObjectId safraId) {
+        vinculos.exigir("safras", escopo, safraId);
+        return ocorrencias.find(escopo.documento().append("safraId", safraId))
+                .map(Ocorrencia::doDocumento).into(new ArrayList<>());
     }
 
     public List<EventoHistorico> listarTimeline(EscopoPropriedade escopo, ObjectId id) {
