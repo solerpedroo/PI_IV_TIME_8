@@ -1,3 +1,4 @@
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -13,21 +14,7 @@
   <link rel="stylesheet" href="styles/motion.css">
 </head>
 <body>
-  <!--
-    Tela: Insumos (frame QpBVa — designSystemProjetoAgro)
-    Layout: Sidebar 260 + Main (header, métricas, alerta crítico, tabela)
-
-    Critérios de aceite fechados nesta tela (Fluxos de Interação C — "Ações
-    do estoque" / Flow 5, Flow 6 "Insumo → Atividade → Talhão → Custo"):
-    - Alerta de estoque crítico no topo (G1 "Notificação → Destinos": clique
-      no alerta rola/realça a primeira linha crítica da tabela).
-    - Ações por linha "⋮": Ver detalhes (com rastreio operacional), Registrar
-      entrada, Registrar saída (com validação de saldo), Editar, Excluir
-      (regra: só permitido com saldo = 0).
-    - Registrar entrada/saída recalcula o status do item (Normal/Baixo/
-      Crítico) automaticamente a partir do estoque mínimo.
-    - Busca por nome + filtro por categoria.
-  -->
+  <!-- Estoque da propriedade autenticada, carregado exclusivamente da API Java. -->
   <div class="app-shell">
 
     <!-- ================================================================== -->
@@ -83,10 +70,10 @@
 
       <div class="sidebar-user">
         <button class="sidebar-user-trigger" type="button" data-popover-trigger aria-controls="profile-menu" aria-expanded="false" aria-haspopup="menu">
-          <span class="sidebar-avatar" aria-hidden="true">PS</span>
+          <span class="sidebar-avatar" aria-hidden="true">—</span>
           <span class="sidebar-user-meta">
-            <span class="sidebar-user-name">Pedro Silva</span>
-            <span class="sidebar-user-property">Gerente de fazenda</span>
+            <span class="sidebar-user-name">Carregando…</span>
+            <span class="sidebar-user-property">Propriedade ativa</span>
           </span>
           <svg class="sidebar-user-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
         </button>
@@ -126,7 +113,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Insumos</h1>
-          <p>Controle de estoque · Fazenda Santa Rita · Safra 2025/26</p>
+          <p data-stock-context>Controle de estoque da propriedade ativa</p>
         </div>
         <div class="page-header-actions">
           <label class="search-box">
@@ -138,8 +125,12 @@
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
             Registrar Entrada
           </button>
+          <button class="btn btn-outline" type="button" data-open-produto>Novo produto</button>
         </div>
       </header>
+
+      <p data-stock-message role="status">Carregando estoque…</p>
+      <button type="button" class="btn btn-outline" data-stock-retry hidden>Tentar novamente</button>
 
       <!-- Métricas -->
       <section class="metrics-row" aria-label="Indicadores de estoque">
@@ -149,8 +140,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="total-products">47</p>
-            <span class="metric-card-change">+12%</span>
+            <p class="metric-card-value" data-metric="total-products">—</p>
           </div>
           <p class="metric-card-desc">cadastrados no sistema</p>
         </article>
@@ -160,8 +150,8 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="critical">5</p>
-            <span class="metric-card-change is-flat">abaixo do mínimo</span>
+            <p class="metric-card-value" data-metric="critical">—</p>
+            <span class="metric-card-change is-flat">limiar configurado</span>
           </div>
           <p class="metric-card-desc">repor o quanto antes</p>
         </article>
@@ -171,10 +161,9 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value">R$ 284K</p>
-            <span class="metric-card-change">+12%</span>
+            <p class="metric-card-value" data-metric="value">—</p>
           </div>
-          <p class="metric-card-desc">atualizado hoje</p>
+          <p class="metric-card-desc">saldo × custo médio unitário</p>
         </article>
         <article class="metric-card">
           <div class="metric-card-top">
@@ -182,19 +171,18 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="entries">12</p>
-            <span class="metric-card-change">+12%</span>
+            <p class="metric-card-value" data-metric="entries">—</p>
           </div>
-          <p class="metric-card-desc">registros em agosto</p>
+          <p class="metric-card-desc">registros no mês atual</p>
         </article>
       </section>
 
       <!-- Alerta crítico -->
-      <div class="stat-alert" data-critical-alert>
+      <div class="stat-alert" data-critical-alert hidden>
         <span class="stat-alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
         <div>
-          <p class="stat-alert-title"><span data-critical-count>3</span> produtos com estoque abaixo do mínimo</p>
-          <p class="stat-alert-desc" data-critical-names>Glifosato 480 SL, Semente Soja RR e Fungicida Azoxistrobina precisam de reposição.</p>
+          <p class="stat-alert-title"><span data-critical-count>0</span> produtos precisam de reposição</p>
+          <p class="stat-alert-desc" data-critical-names></p>
         </div>
       </div>
 
@@ -208,7 +196,7 @@
         <button type="button" class="filter-chip" data-filter-category="fungicida">Fungicida</button>
         <button type="button" class="filter-chip" data-filter-category="inseticida">Inseticida</button>
         <span class="filter-spacer"></span>
-        <span class="filter-results" data-stock-count>7 produtos encontrados</span>
+        <span class="filter-results" data-stock-count>Carregando…</span>
       </div>
 
       <!-- Tabela de produtos -->
@@ -217,75 +205,11 @@
           <h2 class="card-title" id="stock-title">Produtos em Estoque</h2>
         </div>
         <div class="table-wrap">
-          <table class="data-table" data-stock-table>
+          <table class="data-table" data-stock-table hidden>
             <thead>
               <tr><th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Unidade</th><th>Est. Mín.</th><th>Status</th><th><span class="visually-hidden">Ações</span></th></tr>
             </thead>
-            <tbody>
-              <tr data-product="Glifosato 480 SL" data-category="herbicida" data-qty="85" data-unit="L" data-min="200">
-                <td class="col-product-name">Glifosato 480 SL</td>
-                <td class="col-muted">Herbicida</td>
-                <td data-qty-cell>85</td>
-                <td class="col-muted">L</td>
-                <td class="col-muted">200</td>
-                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p1" aria-expanded="false" aria-label="Mais ações — Glifosato 480 SL"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p1" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="Ureia 45% N" data-category="fertilizante" data-qty="320" data-unit="kg" data-min="500">
-                <td class="col-product-name">Ureia 45% N</td>
-                <td class="col-muted">Fertilizante</td>
-                <td data-qty-cell>320</td>
-                <td class="col-muted">kg</td>
-                <td class="col-muted">500</td>
-                <td><span class="badge badge-warning" data-status-badge>Baixo</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p2" aria-expanded="false" aria-label="Mais ações — Ureia 45% N"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p2" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="Semente Soja RR" data-category="semente" data-qty="42" data-unit="sc" data-min="80">
-                <td class="col-product-name">Semente Soja RR</td>
-                <td class="col-muted">Semente</td>
-                <td data-qty-cell>42</td>
-                <td class="col-muted">sc</td>
-                <td class="col-muted">80</td>
-                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p3" aria-expanded="false" aria-label="Mais ações — Semente Soja RR"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p3" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="Herbicida 2,4-D" data-category="herbicida" data-qty="156" data-unit="L" data-min="100">
-                <td class="col-product-name">Herbicida 2,4-D</td>
-                <td class="col-muted">Herbicida</td>
-                <td data-qty-cell>156</td>
-                <td class="col-muted">L</td>
-                <td class="col-muted">100</td>
-                <td><span class="badge badge-success" data-status-badge>Normal</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p4" aria-expanded="false" aria-label="Mais ações — Herbicida 2,4-D"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p4" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="Fungicida Azoxistrobina" data-category="fungicida" data-qty="28" data-unit="L" data-min="50">
-                <td class="col-product-name">Fungicida Azoxistrobina</td>
-                <td class="col-muted">Fungicida</td>
-                <td data-qty-cell>28</td>
-                <td class="col-muted">L</td>
-                <td class="col-muted">50</td>
-                <td><span class="badge badge-error" data-status-badge>Crítico</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p5" aria-expanded="false" aria-label="Mais ações — Fungicida Azoxistrobina"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p5" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="MAP 11-52-00" data-category="fertilizante" data-qty="1240" data-unit="kg" data-min="800">
-                <td class="col-product-name">MAP 11-52-00</td>
-                <td class="col-muted">Fertilizante</td>
-                <td data-qty-cell>1.240</td>
-                <td class="col-muted">kg</td>
-                <td class="col-muted">800</td>
-                <td><span class="badge badge-success" data-status-badge>Normal</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p6" aria-expanded="false" aria-label="Mais ações — MAP 11-52-00"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p6" data-popover role="menu"></div></div></td>
-              </tr>
-              <tr data-product="Inseticida Lambda" data-category="inseticida" data-qty="64" data-unit="L" data-min="40">
-                <td class="col-product-name">Inseticida Lambda</td>
-                <td class="col-muted">Inseticida</td>
-                <td data-qty-cell>64</td>
-                <td class="col-muted">L</td>
-                <td class="col-muted">40</td>
-                <td><span class="badge badge-warning" data-status-badge>Baixo</span></td>
-                <td class="col-actions"><div class="action-menu-wrap"><button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-p7" aria-expanded="false" aria-label="Mais ações — Inseticida Lambda"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="action-menu" id="menu-p7" data-popover role="menu"></div></div></td>
-              </tr>
-            </tbody>
+            <tbody></tbody>
           </table>
           <div class="empty-state" data-stock-empty hidden>
             <span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/></svg></span>
@@ -297,6 +221,24 @@
     </main>
   </div>
 
+  <!-- Modal: Novo produto -->
+  <div class="modal-backdrop" data-modal="produto-novo" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="produto-novo-title">
+      <h2 id="produto-novo-title">Novo produto</h2><p>Cadastre o insumo para esta propriedade.</p>
+      <form class="stack-form" data-produto-novo-form novalidate>
+        <div class="input-group"><label for="stock-field-1">Nome *</label><input id="stock-field-1" name="nome" maxlength="100"><p class="field-error" data-error-for="nome"></p></div>
+        <div class="input-group"><label for="stock-field-2">Categoria *</label><select id="stock-field-2" name="categoria"><option value="">Selecione</option><option>Herbicida</option><option>Fertilizante</option><option>Semente</option><option>Fungicida</option><option>Inseticida</option></select><p class="field-error" data-error-for="categoria"></p></div>
+        <div class="input-group"><label for="stock-field-3">Unidade *</label><input id="stock-field-3" name="unidade" placeholder="kg, L, sc"><p class="field-error" data-error-for="unidade"></p></div>
+        <div class="input-group"><label for="stock-field-4">Saldo inicial *</label><input id="stock-field-4" name="saldo" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="saldo"></p></div>
+        <div class="input-group"><label for="stock-field-5">Estoque mínimo *</label><input id="stock-field-5" name="minimo" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="minimo"></p></div>
+        <div class="input-group"><label for="stock-field-6">Custo unitário (R$)</label><input id="stock-field-6" name="custoUnitario" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="custoUnitario"></p></div>
+        <div class="input-group"><label for="novo-limiar">Limiar crítico (opcional)</label><input id="novo-limiar" name="limiarCritico" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="limiarCritico"></p><small>Saldo até este valor será crítico. Em branco, usa somente o alerta abaixo do mínimo.</small></div>
+        <div class="modal-actions"><button class="btn btn-outline" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary">Cadastrar</button></div>
+
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Registrar entrada -->
   <div class="modal-backdrop" data-modal="entrada" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="entrada-title">
@@ -304,11 +246,8 @@
       <p data-entrada-desc>Aumenta o saldo do item selecionado.</p>
       <form class="stack-form" data-entrada-form novalidate>
         <div class="input-group" data-entrada-produto-wrap>
-          <label for="entrada-produto-trigger">Produto *</label>
-          <!-- Sem data-enhance-select: as opções são preenchidas via JS (lista de
-               produtos da tabela) antes do enhance manual em insumos.js — se o
-               select.js montasse o dropdown agora, ele capturaria só o
-               placeholder e nunca veria as opções adicionadas depois. -->
+          <label for="entrada-produto">Produto *</label>
+          <!-- Opções do catálogo persistido, atualizadas ao abrir o formulário. -->
           <select id="entrada-produto" name="produto" required data-placeholder="Selecione o produto">
             <option value="">Selecione o produto</option>
           </select>
@@ -316,13 +255,14 @@
         </div>
         <div class="input-group">
           <label for="entrada-qty">Quantidade *</label>
-          <input id="entrada-qty" name="quantidade" type="number" min="1" step="0.1" placeholder="Ex.: 120">
+          <input id="entrada-qty" name="quantidade" type="number" min="0.000001" step="0.000001" placeholder="Ex.: 120">
           <p class="field-error" data-error-for="quantidade"></p>
         </div>
         <div class="input-group">
           <label for="entrada-fornecedor">Fornecedor</label>
-          <input id="entrada-fornecedor" name="fornecedor" placeholder="Ex.: Agropecuária Central">
+          <input id="entrada-fornecedor" name="fornecedor" maxlength="120" placeholder="Ex.: Agropecuária Central"><p class="field-error" data-error-for="fornecedor"></p>
         </div>
+        <div class="input-group"><label for="entrada-custo">Custo unitário (R$)</label><input id="entrada-custo" name="custoUnitario" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="custoUnitario"></p></div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
           <button class="btn btn-primary" type="submit">Confirmar entrada</button>
@@ -330,6 +270,9 @@
       </form>
     </div>
   </div>
+
+  <!-- Modal: Ajustar saldo contado -->
+  <div class="modal-backdrop" data-modal="ajuste" aria-hidden="true" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ajuste-title"><h2 id="ajuste-title">Ajustar saldo</h2><p data-ajuste-desc>Informe o saldo contado fisicamente.</p><form class="stack-form" data-ajuste-form novalidate><div class="input-group"><label for="stock-field-7">Saldo contado *</label><input id="stock-field-7" name="quantidade" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="quantidade"></p></div><div class="input-group"><label for="stock-field-8">Motivo *</label><input id="stock-field-8" name="observacao" maxlength="240"><p class="field-error" data-error-for="observacao"></p></div><div class="modal-actions"><button class="btn btn-outline" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary">Confirmar ajuste</button></div></form></div></div>
 
   <!-- Modal: Registrar saída -->
   <div class="modal-backdrop" data-modal="saida" aria-hidden="true" role="presentation">
@@ -339,12 +282,12 @@
       <form class="stack-form" data-saida-form novalidate>
         <div class="input-group">
           <label for="saida-qty">Quantidade *</label>
-          <input id="saida-qty" name="quantidade" type="number" min="1" step="0.1" placeholder="Ex.: 20">
+          <input id="saida-qty" name="quantidade" type="number" min="0.000001" step="0.000001" placeholder="Ex.: 20">
           <p class="field-error" data-error-for="quantidade"></p>
         </div>
         <div class="input-group">
-          <label for="saida-destino">Atividade / destino</label>
-          <input id="saida-destino" name="destino" placeholder="Ex.: Pulverização Talhão B2">
+          <label for="saida-destino">Atividade consumidora (opcional)</label>
+          <select id="saida-destino" name="atividadeId"><option value="">Saída manual (sem atividade)</option></select><p class="field-error" data-error-for="atividadeId"></p>
         </div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
@@ -358,8 +301,10 @@
   <div class="modal-backdrop" data-modal="produto-editar" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="produto-editar-title">
       <h2 id="produto-editar-title">Editar produto</h2>
-      <p>Ajuste categoria e estoque mínimo.</p>
+      <p>Edite os dados completos do catálogo.</p>
       <form class="stack-form" data-produto-editar-form novalidate>
+        <div class="input-group"><label for="produto-editar-nome">Nome *</label><input id="produto-editar-nome" name="nome" maxlength="100"><p class="field-error" data-error-for="nome"></p></div>
+        <div class="input-group"><label for="produto-editar-unidade">Unidade *</label><input id="produto-editar-unidade" name="unidade" maxlength="12"><small>Depois de haver saldo ou histórico, outra unidade exige novo produto.</small><p class="field-error" data-error-for="unidade"></p></div>
         <div class="input-group">
           <label for="produto-editar-categoria-trigger">Categoria *</label>
           <select id="produto-editar-categoria" name="categoria" required data-enhance-select data-placeholder="Selecione a categoria">
@@ -374,13 +319,16 @@
         </div>
         <div class="input-group">
           <label for="produto-editar-min">Estoque mínimo *</label>
-          <input id="produto-editar-min" name="minimo" type="number" min="1" step="1">
+          <input id="produto-editar-min" name="minimo" type="number" min="0" step="0.000001">
           <p class="field-error" data-error-for="minimo"></p>
         </div>
+        <div class="input-group"><label for="produto-editar-custo">Custo unitário (R$)</label><input id="produto-editar-custo" name="custoUnitario" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="custoUnitario"></p></div>
+        <div class="input-group"><label for="editar-limiar">Limiar crítico (opcional)</label><input id="editar-limiar" name="limiarCritico" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="limiarCritico"></p><small>Saldo até este valor será crítico. Em branco, usa somente o alerta abaixo do mínimo.</small></div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
           <button class="btn btn-primary" type="submit">Salvar alterações</button>
         </div>
+
       </form>
     </div>
   </div>
@@ -392,16 +340,7 @@
       <p data-detalhe-subtitle>Categoria · Unidade</p>
       <div class="modal-body-scroll">
         <div class="meta-grid" data-detalhe-meta></div>
-        <div class="trace-chain" data-detalhe-chain aria-label="Rastreio Insumo → Atividade → Talhão → Custo">
-          <span class="trace-node tone-primary"><svg viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/></svg>Insumo</span>
-          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          <span class="trace-node tone-info"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Atividade</span>
-          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          <span class="trace-node tone-secondary"><svg viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/></svg>Talhão</span>
-          <svg class="trace-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          <span class="trace-node tone-success"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg>Custo</span>
-        </div>
-        <p class="trace-note">Cada saída vincula automaticamente o custo ao talhão da atividade selecionada.</p>
+        <div data-movement-history aria-live="polite"></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
@@ -413,7 +352,7 @@
   <div class="modal-backdrop" data-modal="produto-excluir" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="produto-excluir-title">
       <h2 id="produto-excluir-title">Excluir produto?</h2>
-      <p data-excluir-desc>Esta ação não pode ser desfeita.</p>
+      <p data-excluir-desc>O item sairá do catálogo. Seu histórico será preservado.</p>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
         <button class="btn btn-destructive" type="button" data-confirm-excluir>Excluir</button>
@@ -437,8 +376,6 @@
 
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
-  <script src="scripts/data/operational-defaults.js" defer></script>
-  <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/insumos.js" defer></script>
 </body>

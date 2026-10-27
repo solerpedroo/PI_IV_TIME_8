@@ -13,6 +13,7 @@
   const local = window.AgroLocal;
   const money = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
   let activities = [];
+  let occurrenceQuery = 0;
 
   // Centraliza a escrita para que a ausência de um card não interrompa o painel.
   function setMetric(name, value) {
@@ -56,7 +57,7 @@
 
   // Alertas são links para a ocorrência e o talhão que lhes deram origem.
   function renderAlerts(occurrences) {
-    const open = occurrences.filter((record) => record.status !== 'Resolvida');
+    const open = occurrences.filter((record) => record.status !== 'RESOLVIDA');
     const alertHost = $('.alerts-list');
     const counter = $('[data-alerts-count]');
     if (counter) counter.textContent = String(open.length);
@@ -66,12 +67,33 @@
       const article = document.createElement('article');
       article.className = 'alert-item';
       const link = document.createElement('a');
-      link.href = 'ocorrencias.html?talhao=' + encodeURIComponent(record.talhao);
+      link.href = 'ocorrencias.html?ocorrenciaId=' + encodeURIComponent(record.id);
       link.className = 'alert-link';
-      link.textContent = `${record.occ} · ${record.talhao}`;
+      link.textContent = `${record.titulo} · ${record.talhaoNome || 'Geral da propriedade'}`;
       article.appendChild(link);
       return article;
     }));
+  }
+
+  // Alertas de ocorrências usam a mesma fonte da tela do módulo, sem cache mock.
+  async function loadOccurrences() {
+    const query = ++occurrenceQuery;
+    const host = $('.alerts-list');
+    if (host) host.textContent = 'Carregando ocorrências…';
+    if ($('[data-alerts-count]')) $('[data-alerts-count]').textContent = '—';
+    try {
+      const token = sessionStorage.getItem('agro.sessionToken');
+      if (!token) throw new Error('Sessão ausente');
+      const base = location.port === '8080' ? location.origin : 'http://127.0.0.1:8080';
+      const response = await fetch(base + '/api/ocorrencias', {headers: {Authorization: 'Bearer ' + token}, signal: AbortSignal.timeout(15000)});
+      if (!response.ok) throw new Error('Consulta indisponível');
+      const records = await response.json();
+      if (query !== occurrenceQuery) return;
+      renderAlerts(records);
+      if (host && !records.some(record => record.status !== 'RESOLVIDA')) host.textContent = 'Nenhuma ocorrência aberta ou em acompanhamento.';
+    } catch {
+      if (query === occurrenceQuery && host) host.textContent = 'Não foi possível consultar as ocorrências. Recarregue o painel para tentar novamente.';
+    }
   }
 
   // Produção é representada pela área cadastrada para cada cultura nos talhões.
@@ -101,7 +123,6 @@
     activities = local.read('activities');
     const plots = local.read('plots');
     const stock = local.read('stock');
-    const occurrences = local.read('occurrences');
     const costs = local.read('costs');
     const totalCosts = Array.isArray(costs.entries)
       ? costs.entries.reduce((total, entry) => total + entry.value, 0)
@@ -110,7 +131,7 @@
     setMetric('areas', String(plots.filter((record) => record.status === 'Ativo').length));
     setMetric('stock', String(stock.filter((record) => record.qty < record.min).length));
     setMetric('cost', totalCosts === null ? '—' : money.format(totalCosts));
-    renderAlerts(occurrences);
+    loadOccurrences();
     renderCultures(plots);
     render();
   }

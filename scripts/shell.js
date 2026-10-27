@@ -49,6 +49,7 @@
       if (!response.ok) throw new Error("Sessão inválida");
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
+      fillProfile(data.usuario, data.propriedade?.farm);
       return true;
     } catch {
       clearSession();
@@ -57,6 +58,14 @@
       return false;
     }
   }
+
+  // Usa sempre a conta autenticada, sem nomes fixos do protótipo na navegação.
+  function fillProfile(user, property) {
+    $$(".sidebar-user-name").forEach(el => { el.textContent = user.name; });
+    if (property) $$(".sidebar-user-property").forEach(el => { el.textContent = property; });
+    $$(".sidebar-avatar").forEach(el => { el.textContent = (user.name || "").split(/\s+/).slice(0, 2).map(part => part[0]).join(""); });
+  }
+  document.addEventListener("agro:profile-updated", e => fillProfile(e.detail));
 
   /** Itens navegáveis de um popover com role="menu". */
   const menuItems = (popover) => $$('[role="menuitem"]', popover).filter((item) => !item.hidden);
@@ -420,15 +429,18 @@
       confirm.addEventListener("click", async () => {
         confirm.disabled = true;
         const token = sessionStorage.getItem(STORAGE.sessionToken);
+        let revoked = !token;
 
         // Mesmo que a rede caia, limpamos o token local para não manter uma
         // sessão aparentemente ativa no navegador.
         if (token) {
           try {
-            await fetch(`${API_BASE}/api/auth/logout`, {
+            const response = await fetch(`${API_BASE}/api/auth/logout`, {
               method: "POST",
               headers: { Authorization: `Bearer ${token}` },
+              signal: AbortSignal.timeout(10000),
             });
+            revoked = response.ok;
           } catch {
             // O redirecionamento abaixo encerra a sessão local com segurança.
           }
@@ -437,7 +449,7 @@
         clearSession();
         sessionStorage.setItem(
           STORAGE.flashSuccess,
-          "Você saiu com segurança."
+          revoked ? "Você saiu com segurança." : "Você saiu deste navegador. Não foi possível confirmar o encerramento no servidor."
         );
         window.location.href = "login.html";
       });
@@ -449,6 +461,11 @@
   /* ---------------------------------------------------------------------- */
   function initPrepLinks() {
     $$("[data-prep-link]").forEach((link) => {
+      if (/meu perfil/i.test(link.textContent)) {
+        link.href = "configuracoes.html#settings-profile";
+        link.removeAttribute("data-prep-link");
+        return;
+      }
       link.addEventListener("click", (event) => {
         const href = link.getAttribute("href");
         if (href && href !== "#" && !href.startsWith("#")) return;

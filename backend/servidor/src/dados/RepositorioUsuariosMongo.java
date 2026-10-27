@@ -125,6 +125,39 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         return this.propriedades.find (Filters.eq ("_id", objectId)).first ();
     }
 
+    public boolean atualizarCondicional (String id, Document esperado, Document campos) throws Exception
+    {
+        ObjectId objectId = paraId (id);
+        if (objectId == null) return false;
+        ArrayList<Bson> filtros = new ArrayList<> ();
+        filtros.add (Filters.eq ("_id", objectId));
+        for (String campo : esperado.keySet ()) filtros.add (Filters.eq (campo, esperado.get (campo)));
+        try
+        {
+            return this.usuarios.updateOne (Filters.and (filtros), new Document ("$set", campos)).getMatchedCount () == 1;
+        }
+        catch (MongoWriteException erro)
+        {
+            if (erro.getError ().getCategory () == ErrorCategory.DUPLICATE_KEY) return false;
+            throw erro;
+        }
+    }
+
+    public boolean definirPropriedadePadrao (String usuarioId, String propriedadeId) throws Exception
+    {
+        ObjectId id = paraId (usuarioId);
+        if (id == null) return false;
+        // Atualizar o mesmo usuário também serializa com a exclusão de propriedades.
+        try (ClientSession sessao = this.cliente.startSession ())
+        {
+            return sessao.withTransaction (() -> {
+                if (this.propriedades.find (sessao, filtroDaPropriedade (usuarioId, propriedadeId)).first () == null) return false;
+                return this.usuarios.updateOne (sessao, Filters.eq ("_id", id),
+                    new Document ("$set", new Document ("propriedadeId", propriedadeId))).getMatchedCount () == 1;
+            });
+        }
+    }
+
     public List<Document> listarPropriedades (String usuarioId) throws Exception
     {
         // A #194 gravava somente o vínculo no usuário. Migra apenas esse vínculo

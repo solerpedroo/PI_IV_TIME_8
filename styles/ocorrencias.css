@@ -1,3 +1,4 @@
+/* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
 /**
  * Agro — Ocorrências (frame UX9SC)
  * --------------------------------------------------------------------------
@@ -85,3 +86,16 @@
 .occ-detail-actions {
   flex-wrap: wrap;
 }
+
+/* Mantém quebras de linha sem alargar a página com textos extensos. */
+.occ-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.occ-filters { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 12px; }
+.occ-filters label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.occ-filters select, .occ-filters input[type="month"] { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, white); color: var(--text-primary); }
+.occ-message { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.occ-detail-link { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; padding: 4px 0; overflow-wrap: anywhere; }
+.occ-detail-link:hover { text-decoration: underline; }
+[data-modal="occ-form"] .modal { max-height: 90vh; overflow-y: auto; }
+[data-modal="occ-detail"] .modal { width: min(760px, 100%); display: flex; flex-direction: column; }
+[data-modal="occ-detail"] .modal-body-scroll { min-height: 0; flex: 1; }
+[data-detail-description] { margin: 0; }
