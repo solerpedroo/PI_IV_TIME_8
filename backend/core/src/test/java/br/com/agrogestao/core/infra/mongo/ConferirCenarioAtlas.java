@@ -22,7 +22,7 @@ public final class ConferirCenarioAtlas {
         ObjectId talhaoId = ids.get(4), safraId = ids.get(5), atividadeId = ids.get(6),
                 insumoId = ids.get(7), consumoId = ids.get(8), ocorrenciaId = ids.get(9);
 
-        try (MongoConexao conexao = MongoConexao.peloAmbiente()) {
+        try (MongoConexao conexao = MongoConexao.paraTestes()) {
             conexao.verificar();
             CultivoRepositorioMongo cultivo = new CultivoRepositorioMongo(conexao.banco());
             AtividadeRepositorioMongo atividades = new AtividadeRepositorioMongo(conexao.banco());
