@@ -24,6 +24,11 @@ if ! command -v "$agro_maven" >/dev/null 2>&1; then
 fi
 if "$agro_atlas"; then
   : "${MONGODB_URI:?Carregue o .env antes de executar o teste no Atlas}"
+  # Evita gravar dados fictícios em agrogestao_dev: o Java também exige o sufixo.
+  if [[ "${MONGODB_DATABASE:-}" != *_teste ]]; then
+    echo "Para --atlas, defina MONGODB_DATABASE com nome terminado em _teste (ex.: agrogestao_ci_teste)." >&2
+    exit 1
+  fi
 fi
 "$agro_maven" -q "-Dagro.build.directory=$agro_build_dir" test-compile
 agro_testes=(
