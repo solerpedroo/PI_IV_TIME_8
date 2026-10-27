@@ -1,0 +1,28 @@
+name: Testes do modelo de dados
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'backend/core/**'
+      - '.github/workflows/dados-testes.yml'
+  pull_request:
+    paths:
+      - 'backend/core/**'
+      - '.github/workflows/dados-testes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Validar modelo de dados sem credenciais
+        run: ./backend/core/testar.sh
