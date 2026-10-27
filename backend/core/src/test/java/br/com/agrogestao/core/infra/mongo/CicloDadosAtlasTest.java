@@ -262,10 +262,15 @@ public final class CicloDadosAtlasTest {
 
     private static void validarVinculosDaSafra(CenarioDadosAtlas c) {
         CultivoRepositorioMongo persistido = new CultivoRepositorioMongo(c.conexao.banco());
-        Safra colheita = persistido.avancarSafra(c.a, c.safraA, Safra.Status.COLHEITA);
-        Safra finalizada = persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA);
-        verificar(finalizada.status() == Safra.Status.FINALIZADA && colheita.status() == Safra.Status.COLHEITA,
+        Safra ciclo = persistido.buscarSafra(c.a, c.safraA).orElseThrow();
+        for (Safra.Status etapa : new Safra.Status[] { Safra.Status.PREPARACAO, Safra.Status.PLANTIO,
+                Safra.Status.MANEJO, Safra.Status.COLHEITA, Safra.Status.FINALIZADA }) {
+            ciclo = persistido.avancarSafra(c.a, c.safraA, etapa);
+        }
+        Safra finalizada = ciclo;
+        verificar(finalizada.status() == Safra.Status.FINALIZADA,
                 "fases devem avançar em ordem até a finalização");
+        invalido(() -> persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA));
         invalido(() -> persistido.atualizarSafra(finalizada));
         invalido(() -> persistido.excluirSafra(c.a, c.safraA));
         invalido(() -> persistido.excluirCultura(c.a, c.culturaA));

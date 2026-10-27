@@ -22,7 +22,11 @@ public final class DadosCultivoTest {
         talhoes.clear();
         verificar(safra.talhaoIds().size() == 1, "lista original não pode alterar uma safra já validada");
         verificar(Safra.doDocumento(safra.paraDocumento()).equals(safra), "período e vínculos devem sobreviver ao BSON");
-        Safra finalizada = safra.avancar(Safra.Status.COLHEITA).avancar(Safra.Status.FINALIZADA);
+        Safra ciclo = new Safra(new ObjectId(), escopo, "Soja ciclo", culturaId, List.of(talhaoId),
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), new BigDecimal("12.75"), Safra.Status.PLANEJAMENTO);
+        for (Safra.Status etapa : new Safra.Status[] { Safra.Status.PREPARACAO, Safra.Status.PLANTIO,
+                Safra.Status.MANEJO, Safra.Status.COLHEITA, Safra.Status.FINALIZADA }) ciclo = ciclo.avancar(etapa);
+        Safra finalizada = ciclo;
         verificar(finalizada.status() == Safra.Status.FINALIZADA, "finalização deve permanecer no ciclo consultável");
         invalido(() -> new EscopoPropriedade(null, new ObjectId()));
         invalido(() -> new Talhao(null, escopo, "A", BigDecimal.ZERO, Talhao.Status.ATIVO));
@@ -30,7 +34,9 @@ public final class DadosCultivoTest {
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)));
         invalido(() -> safra(escopo, culturaId, List.of(), LocalDate.now(), LocalDate.now()));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId, talhaoId), LocalDate.now(), LocalDate.now()));
-        invalido(() -> safra.avancar(Safra.Status.PLANTIO));
+        invalido(() -> new Safra(new ObjectId(), escopo, "Salto", culturaId, List.of(talhaoId),
+                LocalDate.now(), LocalDate.now(), BigDecimal.ONE, Safra.Status.PLANEJAMENTO).avancar(Safra.Status.PLANTIO));
+        invalido(() -> finalizada.avancar(Safra.Status.FINALIZADA));
         System.out.println("DadosCultivoTest: OK");
     }
 

@@ -50,7 +50,7 @@ final class CenarioDadosAtlas implements AutoCloseable {
 
     Safra safra(EscopoPropriedade escopo, ObjectId cultura, List<ObjectId> talhoes) {
         return new Safra(null, escopo, "Safra 2026", cultura, talhoes, LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 12, 31), new BigDecimal("12.75"), Safra.Status.MANEJO);
+                LocalDate.of(2026, 12, 31), new BigDecimal("12.75"), Safra.Status.PLANEJAMENTO);
     }
 
     void reabrir() {

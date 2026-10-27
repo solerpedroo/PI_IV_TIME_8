@@ -84,7 +84,7 @@ public final class ApiCultivoHandler implements HttpHandler {
         List<ObjectId> talhoes = new ArrayList<>(); for (Object valor : d.getList("talhaoIds", Object.class)) talhoes.add(objeto(String.valueOf(valor)));
         return new Safra(id, e, d.getString("nome"), objeto(d.getString("culturaId")), talhoes,
                 LocalDate.parse(d.getString("inicio")), LocalDate.parse(d.getString("fim")), new BigDecimal(String.valueOf(d.get("areaHectares"))),
-                Safra.Status.valueOf(d.getString("status")));
+                id == null ? Safra.Status.PLANEJAMENTO : Safra.Status.valueOf(d.getString("status")));
     }
     private Cultura cultura(Document d, EscopoPropriedade e, ObjectId id) { return new Cultura(id, e, d.getString("nome")); }
     private EscopoPropriedade escopo(HttpExchange t) { Map<String, String> q = query(t); return new EscopoPropriedade(objeto(q.get("proprietarioId")), objeto(q.get("propriedadeId"))); }
