@@ -23,7 +23,10 @@ public final class InsumoRepositorioMongo {
     }
 
     public void criarIndices() {
-        insumos.createIndex(ascending("proprietarioId", "propriedadeId", "nome"));
+        // Nome único por propriedade evita dois "NPK" no mesmo catálogo.
+        // Se existir índice antigo não único com as mesmas chaves, remova-o no Atlas antes.
+        insumos.createIndex(ascending("proprietarioId", "propriedadeId", "nome"),
+                new com.mongodb.client.model.IndexOptions().unique(true).name("insumo_nome_unico"));
         movimentacoes.createIndex(ascending("proprietarioId", "propriedadeId", "insumoId", "ocorridaEm", "_id"));
         movimentacoes.createIndex(ascending("proprietarioId", "propriedadeId", "atividadeId"));
     }
@@ -35,7 +38,11 @@ public final class InsumoRepositorioMongo {
         return d.getObjectId("_id");
     }
 
-    /** Registra o documento; a baixa transacional e a validação concorrente de saldo pertencem à #142/#160. */
+    /**
+     * Só registra o histórico da movimentação.
+     * Não calcula saldo nem bloqueia saída maior que o estoque: isso fica para #142/#160.
+     * Até lá, nenhuma rota HTTP deve tratar este método como baixa segura de estoque.
+     */
     public ObjectId inserir(MovimentacaoInsumo movimento) {
         vinculos.exigirPropriedade(movimento.escopo());
         Document insumo = vinculos.exigir("insumos", movimento.escopo(), movimento.insumoId());
