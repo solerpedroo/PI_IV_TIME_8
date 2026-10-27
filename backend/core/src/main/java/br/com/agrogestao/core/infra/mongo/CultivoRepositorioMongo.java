@@ -57,6 +57,11 @@ public final class CultivoRepositorioMongo {
                 .map(Cultura::doDocumento);
     }
 
+    public List<Cultura> listarCulturas(EscopoPropriedade escopo) {
+        vinculos.exigirPropriedade(escopo);
+        return banco.getCollection("culturas").find(escopo.documento()).map(Cultura::doDocumento).into(new ArrayList<>());
+    }
+
     public Cultura atualizarCultura(Cultura cultura) {
         if (cultura.id() == null) throw new IllegalArgumentException("id é obrigatório");
         vinculos.exigirPropriedade(cultura.escopo());
@@ -69,7 +74,7 @@ public final class CultivoRepositorioMongo {
     /** Uma cultura com safra não é apagada para não quebrar o histórico produtivo. */
     public void excluirCultura(EscopoPropriedade escopo, ObjectId id) {
         buscarCultura(escopo, id).orElseThrow(() -> new IllegalArgumentException("cultura não encontrada no escopo"));
-        if (banco.getCollection("safras").find(escopo.documento().append("culturaId", id)).first() != null) {
+        if (referenciada(escopo, "safras", "culturaId", id) || referenciada(escopo, "custos", "culturaId", id)) {
             throw new IllegalArgumentException("cultura possui safras e deve permanecer no histórico");
         }
         banco.getCollection("culturas").deleteOne(vinculos.filtro(escopo, id));
@@ -94,6 +99,14 @@ public final class CultivoRepositorioMongo {
 
     public Safra atualizarSafra(Safra safra) {
         if (safra.id() == null) throw new IllegalArgumentException("id é obrigatório");
+        Safra atual = buscarSafra(safra.escopo(), safra.id())
+                .orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
+        if (atual.status() == Safra.Status.FINALIZADA) {
+            throw new IllegalArgumentException("safra finalizada é somente para consulta histórica");
+        }
+        if (atual.status() != safra.status()) {
+            throw new IllegalArgumentException("status só pode mudar pelo avanço sequencial do ciclo");
+        }
         inserirReferenciasValidas(safra);
         if (banco.getCollection("safras").replaceOne(vinculos.filtro(safra.escopo(), safra.id()), safra.paraDocumento()).getMatchedCount() == 0) {
             throw new IllegalArgumentException("safra não encontrada no escopo");
@@ -103,13 +116,22 @@ public final class CultivoRepositorioMongo {
 
     public Safra avancarSafra(EscopoPropriedade escopo, ObjectId id, Safra.Status proximo) {
         Safra atual = buscarSafra(escopo, id).orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
-        return atualizarSafra(atual.avancar(proximo));
+        Safra avancada = atual.avancar(proximo);
+        Document filtro = vinculos.filtro(escopo, id).append("status", atual.status().name());
+        if (banco.getCollection("safras").replaceOne(filtro, avancada.paraDocumento()).getMatchedCount() == 0) {
+            throw new IllegalArgumentException("safra alterada por outra operação; consulte novamente");
+        }
+        return avancada;
     }
 
     public void excluirSafra(EscopoPropriedade escopo, ObjectId id) {
         Safra safra = buscarSafra(escopo, id).orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
         if (safra.status() != Safra.Status.PLANEJAMENTO) {
             throw new IllegalArgumentException("somente safras em planejamento podem ser excluídas");
+        }
+        if (referenciada(escopo, "atividades", "safraId", id) || referenciada(escopo, "ocorrencias", "safraId", id)
+                || referenciada(escopo, "custos", "safraId", id)) {
+            throw new IllegalArgumentException("safra possui registros operacionais e deve permanecer no histórico");
         }
         banco.getCollection("safras").deleteOne(vinculos.filtro(escopo, id));
     }
@@ -118,6 +140,10 @@ public final class CultivoRepositorioMongo {
         vinculos.exigirPropriedade(safra.escopo());
         vinculos.exigir("culturas", safra.escopo(), safra.culturaId());
         for (ObjectId talhaoId : safra.talhaoIds()) vinculos.exigir("talhoes", safra.escopo(), talhaoId);
+    }
+
+    private boolean referenciada(EscopoPropriedade escopo, String colecao, String campo, ObjectId id) {
+        return banco.getCollection(colecao).find(escopo.documento().append(campo, id)).first() != null;
     }
 
     private ObjectId inserir(String colecao, Document documento) {

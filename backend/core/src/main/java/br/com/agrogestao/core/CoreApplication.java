@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 // Autor: Vinícius Panutti Salgado — R.A. 25007329
 package br.com.agrogestao.core;
 
@@ -16,6 +17,7 @@ import br.com.agrogestao.core.infra.mongo.OcorrenciaRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.CustoRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.PropriedadeRepositorioMongo;
 import br.com.agrogestao.core.infra.mongo.UsuarioRepositorioMongo;
+import br.com.agrogestao.core.http.ApiCultivoHandler;
 
 public final class CoreApplication {
     private CoreApplication() {}
@@ -53,6 +55,8 @@ public final class CoreApplication {
                     responder(troca, 503, "{\"status\":\"DOWN\"}");
                 }
             });
+            // Rotas de domínio são encaminhadas pelo gateway somente sob /api/.
+            servidor.createContext("/api/", new ApiCultivoHandler(new CultivoRepositorioMongo(conexao.banco())));
             servidor.setExecutor(Executors.newFixedThreadPool(10));
             servidor.start();
 

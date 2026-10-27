@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
@@ -256,5 +257,18 @@ public final class CicloDadosAtlasTest {
         verificar(persistido.buscarSafra(c.b, c.safraA).isEmpty(), "safra não pode vazar entre produtores");
         verificar(persistido.buscarTalhao(c.extra, c.talhaoA).isEmpty(), "talhão não pode vazar entre propriedades");
         verificar(persistido.buscarCultura(c.b, c.culturaA).isEmpty(), "cultura não pode vazar entre produtores");
+        Safra colheita = persistido.avancarSafra(c.a, c.safraA, Safra.Status.COLHEITA);
+        Safra finalizada = persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA);
+        verificar(finalizada.status() == Safra.Status.FINALIZADA && colheita.status() == Safra.Status.COLHEITA,
+                "fases devem avançar em ordem até a finalização");
+        invalido(() -> persistido.atualizarSafra(finalizada));
+        invalido(() -> persistido.excluirSafra(c.a, c.safraA));
+        invalido(() -> persistido.excluirCultura(c.a, c.culturaA));
+        c.reabrir();
+        CultivoRepositorioMongo reaberto = new CultivoRepositorioMongo(c.conexao.banco());
+        verificar(reaberto.buscarSafra(c.a, c.safraA).orElseThrow().status() == Safra.Status.FINALIZADA,
+                "finalização permanece consultável após reconectar");
+        verificar(reaberto.listarSafras(c.a).stream().anyMatch(s -> s.id().equals(c.safraA)),
+                "consulta da propriedade inclui histórico finalizado");
     }
 }
