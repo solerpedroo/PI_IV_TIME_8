@@ -25,7 +25,7 @@ public final class MongoAtlasValidacaoTest {
         String sufixo = new ObjectId().toHexString();
 
         try {
-            try (MongoConexao primeiraConexao = MongoConexao.peloAmbiente()) {
+            try (MongoConexao primeiraConexao = MongoConexao.paraTestes()) {
                 primeiraConexao.verificar();
                 UsuarioRepositorioMongo usuarios = new UsuarioRepositorioMongo(primeiraConexao.banco());
                 PropriedadeRepositorioMongo propriedades = new PropriedadeRepositorioMongo(primeiraConexao.banco());
@@ -72,7 +72,7 @@ public final class MongoAtlasValidacaoTest {
                 }
             }
 
-            try (MongoConexao segundaConexao = MongoConexao.peloAmbiente()) {
+            try (MongoConexao segundaConexao = MongoConexao.paraTestes()) {
                 PropriedadeRepositorioMongo propriedades = new PropriedadeRepositorioMongo(segundaConexao.banco());
                 UsuarioRepositorioMongo usuarios = new UsuarioRepositorioMongo(segundaConexao.banco());
                 verificar(usuarios.buscarPorEmail("produtor-a-" + sufixo + "@teste.invalid").isPresent(),
@@ -91,7 +91,7 @@ public final class MongoAtlasValidacaoTest {
 
     private static void limparDadosDeTeste(ObjectId produtorAId, ObjectId produtorBId,
             ObjectId propriedadeAId, ObjectId propriedadeBId) {
-        try (MongoConexao conexao = MongoConexao.peloAmbiente()) {
+        try (MongoConexao conexao = MongoConexao.paraTestes()) {
             if (propriedadeAId != null) conexao.banco().getCollection("propriedades", Document.class)
                     .deleteOne(new Document("_id", propriedadeAId));
             if (propriedadeBId != null) conexao.banco().getCollection("propriedades", Document.class)
