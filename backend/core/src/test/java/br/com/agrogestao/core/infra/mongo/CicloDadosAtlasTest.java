@@ -30,6 +30,7 @@ public final class CicloDadosAtlasTest {
             validarInsumos(c);
             validarOcorrencias(c);
             validarCustos(c);
+            validarVinculosDaSafra(c);
             if (opcoes.contains("--demonstrar")) demonstrarEmOutroProcesso(c);
             if (opcoes.contains("--pausar")) {
                 System.out.println("Dados fictícios disponíveis para inspeção no Atlas. Filtro:");
@@ -257,6 +258,10 @@ public final class CicloDadosAtlasTest {
         verificar(persistido.buscarSafra(c.b, c.safraA).isEmpty(), "safra não pode vazar entre produtores");
         verificar(persistido.buscarTalhao(c.extra, c.talhaoA).isEmpty(), "talhão não pode vazar entre propriedades");
         verificar(persistido.buscarCultura(c.b, c.culturaA).isEmpty(), "cultura não pode vazar entre produtores");
+    }
+
+    private static void validarVinculosDaSafra(CenarioDadosAtlas c) {
+        CultivoRepositorioMongo persistido = new CultivoRepositorioMongo(c.conexao.banco());
         Safra colheita = persistido.avancarSafra(c.a, c.safraA, Safra.Status.COLHEITA);
         Safra finalizada = persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA);
         verificar(finalizada.status() == Safra.Status.FINALIZADA && colheita.status() == Safra.Status.COLHEITA,
@@ -270,7 +275,7 @@ public final class CicloDadosAtlasTest {
                 "finalização permanece consultável após reconectar");
         verificar(reaberto.listarSafras(c.a).stream().anyMatch(s -> s.id().equals(c.safraA)),
                 "consulta da propriedade inclui histórico finalizado");
-        verificar(new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+        verificar(new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 2,
                 "atividades continuam consultáveis pela safra finalizada");
         verificar(new OcorrenciaRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
                 "ocorrências continuam consultáveis pela safra finalizada");
