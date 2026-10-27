@@ -13,7 +13,8 @@ import br.com.agrogestao.core.domain.usuarios.Usuario;
 
 /** IDs exclusivos são conhecidos antes da primeira escrita para permitir limpeza mesmo em caso de falha. */
 final class CenarioDadosAtlas implements AutoCloseable {
-    MongoConexao conexao = MongoConexao.peloAmbiente();
+    // Suíte Atlas só grava em banco cujo nome termina em _teste (ver MongoConexao.paraTestes).
+    MongoConexao conexao = MongoConexao.paraTestes();
     final ObjectId produtorA = new ObjectId();
     final ObjectId produtorB = new ObjectId();
     final ObjectId propriedadeA = new ObjectId();
@@ -54,13 +55,13 @@ final class CenarioDadosAtlas implements AutoCloseable {
 
     void reabrir() {
         conexao.close();
-        conexao = MongoConexao.peloAmbiente();
+        conexao = MongoConexao.paraTestes();
         conexao.verificar();
     }
 
     @Override public void close() {
         // Conexão própria: a limpeza funciona mesmo se uma tentativa de reconexão do teste falhar.
-        try (MongoConexao limpeza = MongoConexao.peloAmbiente()) {
+        try (MongoConexao limpeza = MongoConexao.paraTestes()) {
             for (String colecao : List.of("custos", "ocorrencias_timeline", "ocorrencias", "movimentacoes_insumos", "insumos", "atividades_historico", "atividades", "safras", "culturas", "talhoes")) {
                 for (EscopoPropriedade escopo : List.of(a, b, extra)) {
                     limpeza.banco().getCollection(colecao).deleteMany(escopo.documento());
