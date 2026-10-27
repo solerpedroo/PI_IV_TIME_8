@@ -14,7 +14,7 @@ MongoDB não oferece chave estrangeira: as escritas da aplicação devem passar 
 - `culturas`: `_id`, titularidade, `nome`. O catálogo é da propriedade.
 - `safras`: `_id`, titularidade, `nome`, `culturaId`, `talhaoIds`, `inicio`, `fim`, `areaHectares`, `status`.
 
-São coleções separadas: a safra referencia uma cultura e um ou mais talhões, permitindo várias safras ao longo do tempo sem substituir a cultura histórica do talhão. Datas de calendário usam ISO `YYYY-MM-DD`, sem conversão de fuso. O fim não pode anteceder o início; a lista de talhões deve ser não vazia, sem duplicatas. Status da safra: PLANEJAMENTO, PREPARACAO, PLANTIO, MANEJO, COLHEITA, FINALIZADA. Índices começam pelo titular e propriedade; há índice para consultar safras por talhão e início.
+São coleções separadas: a safra referencia uma cultura e um ou mais talhões, permitindo várias safras ao longo do tempo sem substituir a cultura histórica do talhão. Datas de calendário usam ISO `YYYY-MM-DD`, sem conversão de fuso. O fim não pode anteceder o início; a lista de talhões deve ser não vazia, sem duplicatas. Status da safra: PLANEJAMENTO, PREPARACAO, PLANTIO, MANEJO, COLHEITA, FINALIZADA. Índices começam pelo titular e propriedade; nome de talhão, cultura e safra é único por propriedade; há índice para consultar safras por talhão e início.
 
 ## Validação reproduzível
 
@@ -54,7 +54,7 @@ O vocabulário segue o documento do projeto §8.5; divergências gerais de termi
 
 ## #103 — Insumos e movimentações
 
-`insumos`: `_id`, titularidade, nome, categoria, unidade normalizada e `estoqueMinimo` não negativo (Decimal128). `movimentacoes_insumos`: `_id`, titularidade, `insumoId`, tipo, quantidade (Decimal128), unidade, `atividadeId` opcional, `ocorridaEm`, motivo.
+`insumos`: `_id`, titularidade, nome (único por propriedade), categoria, unidade normalizada e `estoqueMinimo` não negativo (Decimal128). `movimentacoes_insumos`: `_id`, titularidade, `insumoId`, tipo, quantidade (Decimal128), unidade, `atividadeId` opcional, `ocorridaEm`, motivo.
 
 Entradas e saídas possuem quantidade positiva. AJUSTE representa uma diferença assinada, não zero, com motivo. Uma saída com `atividadeId` é consumo daquela atividade; uma saída manual pode omitir esse vínculo. Entradas e ajustes não apontam para uma atividade consumidora. A unidade da movimentação deve corresponder ao catálogo; não há conversão implícita de unidades. O repositório confere insumo e atividade na mesma propriedade e oferece consultas por insumo e por atividade. Movimentações são documentos separados e não substituem o histórico anterior.
 
@@ -71,7 +71,7 @@ O exemplo oficial preserva entrada de 500 kg e consumo de 50 kg; a soma das vari
 
 `ocorrencias_timeline`: titularidade, `ocorrenciaId`, ordem, data do registro, status e descrição. Usa a mesma estratégia de eventos separados da atividade. ABERTA admite acompanhamento ou resolução; EM_ACOMPANHAMENTO admite novas anotações e resolução; RESOLVIDA preserva o desfecho. A consulta mantém todos os eventos em ordem depois da resolução. A leitura do estado atual usa apenas o último evento pelo índice, sem carregar toda a timeline. Não há exclusão/cascata nesta frente.
 
-Vocabulário e foto opcional seguem o projeto §8.7; as divergências da #5 permanecem naquela frente. Execute também `br.com.agrogestao.core.domain.operacao.DadosOcorrenciaTest` para a validação local. O cenário Atlas inclui dois clientes concorrendo pela mesma ordem e exige exatamente uma atualização aceita.
+Vocabulário e foto opcional seguem o projeto §8.7; se `fotoUrl` for informada, deve começar com `http://` ou `https://`. As divergências da #5 permanecem naquela frente. Execute também `br.com.agrogestao.core.domain.operacao.DadosOcorrenciaTest` para a validação local. O cenário Atlas inclui dois clientes concorrendo pela mesma ordem e exige exatamente uma atualização aceita.
 
 ### Evidência da #104 — 23/10/2026
 
