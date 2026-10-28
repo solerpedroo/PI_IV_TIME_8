@@ -12,6 +12,12 @@ safra, data, horário, responsável, prioridade e status. A API aceita uma safra
 somente se ela pertence à propriedade ativa e contém o talhão informado. O
 histórico mantém o evento inicial e as mudanças de status.
 
+Para preservar referências existentes, o servidor recusa renomear talhão com
+atividades e recusa excluir safra vinculada ou alterar seu nome, cultura ou
+remover talhões existentes. As validações compartilham sincronização dentro de
+uma instância do servidor; concorrência entre várias instâncias ainda não tem
+garantia transacional para esses vínculos.
+
 ## Limite deliberado
 
 Concluir uma atividade ainda não gera consumo de estoque ou custo automaticamente:

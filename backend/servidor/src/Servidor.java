@@ -122,11 +122,13 @@ public class Servidor
         propriedades.setEstoque (estoque);
         propriedades.setAtividades (atividades);
         propriedades.registrar (roteador);
-        new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
+        TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, sessoes);
+        handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
         new EstoqueHandler (estoque, sessoes).registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
-        new SafrasHandler  (safras, talhoes, custos, sessoes).registrar (roteador);
+        SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
+        handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);

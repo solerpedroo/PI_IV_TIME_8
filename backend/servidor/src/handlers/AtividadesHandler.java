@@ -57,9 +57,9 @@ public class AtividadesHandler
     public void registrar (Roteador roteador) throws Exception
     {
         roteador.adicionar ("GET",  "/api/atividades",                  this::listar);
-        roteador.adicionar ("POST", "/api/atividades",                  this::criar);
+        roteador.adicionar ("POST", "/api/atividades",                  r -> { synchronized (this.sessoes) { return this.criar (r); } });
         roteador.adicionar ("GET",  "/api/atividades/{id}",             this::consultar);
-        roteador.adicionar ("PUT",  "/api/atividades/{id}",             this::atualizar);
+        roteador.adicionar ("PUT",  "/api/atividades/{id}",             r -> { synchronized (this.sessoes) { return this.atualizar (r); } });
         roteador.adicionar ("POST", "/api/atividades/{id}/concluir",    this::concluir);
         roteador.adicionar ("POST", "/api/atividades/{id}/cancelar",    this::cancelar);
         roteador.adicionar ("POST", "/api/atividades/{id}/status",      this::alterarStatus);

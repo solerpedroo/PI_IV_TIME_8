@@ -528,6 +528,12 @@ public class TesteServidor
         conferir ("edicao nao preserva safra incompatível com novo talhao", 400,
                   put ("/api/atividades/" + id, "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Talhão sem safra\",\"data\":\"08 ago\"}", token));
         conferir ("vinculo anterior permanece após edição inválida", safraId.equals (get ("/api/atividades/" + id, token).json ().getString ("safraId")));
+        conferir ("talhao com atividade nao pode ser renomeado", 409,
+                  put ("/api/talhoes/" + talhaoId, talhao ("Talhão renomeado", "Trigo", 40, null), token));
+        conferir ("safra com atividade nao pode ser excluida", 409,
+                  requisitar ("DELETE", "/api/safras/" + safraId, null, token));
+        conferir ("safra com atividade nao pode mudar cultura", 409,
+                  put ("/api/safras/" + safraId, safra ("Safra da atividade", "Milho", "2026-01-01", "2026-12-31", talhaoId), token));
         Resp editada = put ("/api/atividades/" + id,
                             "{\"nome\":\"Aplicação revisada\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"08:15\",\"responsavel\":\"Equipe Sul\",\"prioridade\":\"Média\"}", token);
         conferir ("editar preserva os campos de planejamento", editada.status == 200 &&

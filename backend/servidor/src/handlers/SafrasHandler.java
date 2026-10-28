@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /*
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
@@ -5,6 +6,7 @@
 package handlers;
 
 import dados.RepositorioCustos;
+import dados.RepositorioAtividades;
 import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Manipulador;
@@ -57,9 +59,18 @@ public class SafrasHandler implements Manipulador
     private final RepositorioTalhoes talhoes;
     private final RepositorioCustos  custos;
     private final Sessoes            sessoes;
+    private final RepositorioAtividades atividades;
+
+    // Evita perder vínculos ou alterar os dados de safra preservados nas atividades.
+    private boolean temAtividades (String propriedadeId, String safraId) throws Exception
+    {
+        for (Document atividade : this.atividades.listar (propriedadeId))
+            if (safraId.equals (atividade.getString ("safraId"))) return true;
+        return false;
+    }
 
     public SafrasHandler (RepositorioSafras safras, RepositorioTalhoes talhoes, RepositorioCustos custos,
-                          Sessoes sessoes) throws Exception
+                          RepositorioAtividades atividades, Sessoes sessoes) throws Exception
     {
         if (safras == null)
             throw new Exception ("Repositorio de safras ausente");
@@ -69,6 +80,8 @@ public class SafrasHandler implements Manipulador
 
         if (custos == null)
             throw new Exception ("Repositorio de custos ausente");
+        if (atividades == null)
+            throw new Exception ("Repositorio de atividades ausente");
 
         if (sessoes == null)
             throw new Exception ("Sessoes ausentes");
@@ -76,6 +89,7 @@ public class SafrasHandler implements Manipulador
         this.safras  = safras;
         this.talhoes = talhoes;
         this.custos  = custos;
+        this.atividades = atividades;
         this.sessoes = sessoes;
     }
 
@@ -433,6 +447,12 @@ public class SafrasHandler implements Manipulador
             if (campos == null)
                 return validacao.resposta ();
 
+            if (this.temAtividades (propriedadeId, id) &&
+                (!atual.getString ("nome").equals (campos.getString ("nome")) ||
+                 !atual.getString ("cultura").equals (campos.getString ("cultura")) ||
+                 !campos.getList ("talhoes", String.class).containsAll (atual.getList ("talhoes", String.class))))
+                return Resposta.json (409, new Document ("error", "Safra possui atividades vinculadas; preserve nome, cultura e talhões existentes."));
+
             ret = this.conflitoDeTalhao (propriedadeId, id, campos, talhoes);
             if (ret != null)
                 return ret;
@@ -469,6 +489,8 @@ public class SafrasHandler implements Manipulador
             else if (!this.custosDaSafra (propriedadeId, id).isEmpty ())
                 ret = Resposta.json (409, new Document ("error",
                           "Exclua ou mova os custos da safra antes de exclu\u00ed-la."));
+            else if (this.temAtividades (propriedadeId, id))
+                ret = Resposta.json (409, new Document ("error", "Safra possui atividades vinculadas."));
             else if (!this.safras.excluir (propriedadeId, id))
                 ret = Resposta.erro (404, "Not found");
             else
