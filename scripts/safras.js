@@ -1,10 +1,13 @@
 // Miguel — RA: 25003110
-// Tela de Safras: acompanha as etapas oficiais do ciclo produtivo e o histórico persistidos na API.
+// Tela de Safras: acompanha etapas oficiais, vínculos operacionais e histórico persistido na API.
 (() => {
   "use strict";
   const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ETAPAS = ["Planejamento", "Preparação", "Plantio", "Manejo", "Colheita", "Finalização"];
-  const state = { safras: [], talhoes: [] };
+  const ROTULOS_TIPO = { atividade: "Atividade", ocorrencia: "Ocorrência", custo: "Custo" };
+  const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const state = { safras: [], talhoes: [], historySafra: null, historyRecords: [], historyFilter: "" };
   const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -22,10 +25,23 @@
     return body;
   }
 
+  function syncHistoryUrl(safraId, tipo = "") {
+    const url = new URL(window.location.href);
+    if (safraId) url.searchParams.set("historico", safraId);
+    else url.searchParams.delete("historico");
+    if (safraId && tipo) url.searchParams.set("tipo", tipo);
+    else url.searchParams.delete("tipo");
+    window.history.replaceState({}, "", url);
+  }
+
   function modal(name, open) {
     const target = $(`[data-modal='${name}']`);
     target.classList.toggle("is-open", open);
     target.setAttribute("aria-hidden", String(!open));
+    if (!open && name === "safra-history") {
+      state.historySafra = null;
+      syncHistoryUrl("");
+    }
     if (open) target.querySelector("input, select, button")?.focus();
   }
 
@@ -65,6 +81,16 @@
     return true;
   }
 
+  // Monta os atalhos contextuais para Atividades, Ocorrências e Custos usando os talhões reais da safra.
+  function renderLinksContextuais(safra, nomesTalhoes) {
+    return (safra.talhoes || []).map((id) => {
+      const nome = nomesTalhoes.get(id) || id;
+      const paramNome = encodeURIComponent(nome);
+      const paramId = encodeURIComponent(id);
+      return `<span><strong>${esc(nome)}:</strong> <a href="atividades.html?talhao=${paramNome}" data-context-link="atividades" data-plot-name="${esc(nome)}">Atividades</a> · <a href="ocorrencias.html?talhaoId=${paramId}&amp;talhao=${paramNome}" data-context-link="ocorrencias" data-plot-id="${esc(id)}">Ocorrências</a> · <a href="custos.html?talhao=${paramNome}" data-context-link="custos" data-plot-name="${esc(nome)}">Custos</a></span>`;
+    }).join(" · ");
+  }
+
   // Monta a trilha oficial de 6 etapas usando a etapa atual e o historicoEtapas da API.
   function renderEtapas(safra, indiceAtual) {
     const historico = new Map((safra.historicoEtapas || []).map((item) => [item.etapa, item.em]));
@@ -88,9 +114,109 @@
       const proxima = indiceAtual < ETAPAS.length - 1 ? ETAPAS[indiceAtual + 1] : null;
       const talhoes = (safra.talhoes || []).map((id) => nomesTalhoes.get(id) || id).join(", ");
       const finalizada = safra.etapa === "Finalização";
-      return `<article class="list-item" data-safra-id="${esc(safra.id)}" data-safra-stage="${esc(safra.etapa)}"><div class="safra-head"><div><strong>${esc(safra.nome)}</strong><p class="safra-meta">${esc(safra.cultura)} · ${esc(safra.dataInicio)} a ${esc(safra.dataFim)} · ${esc(safra.areaHectares)} ha${talhoes ? ` · Talhões: ${esc(talhoes)}` : ""}</p><span class="badge ${finalizada ? "badge-success" : "badge-neutral"}" data-current-stage>${esc(safra.etapa)} (${indiceAtual + 1}/${ETAPAS.length})</span></div><div class="safra-actions"><button class="btn btn-outline" type="button" data-history="${esc(safra.id)}">Registros relacionados</button>${proxima ? `<button class="btn btn-primary" type="button" data-advance="${esc(safra.id)}" data-next-stage="${esc(proxima)}">Avançar para ${esc(proxima)}</button>` : `<span class="badge badge-success" data-safra-readonly>Ciclo finalizado · Somente leitura</span>`}</div></div>${renderEtapas(safra, indiceAtual)}</article>`;
+      return `<article class="list-item" data-safra-id="${esc(safra.id)}" data-safra-stage="${esc(safra.etapa)}"><div class="safra-head"><div><strong>${esc(safra.nome)}</strong><p class="safra-meta">${esc(safra.cultura)} · ${esc(safra.dataInicio)} a ${esc(safra.dataFim)} · ${esc(safra.areaHectares)} ha${talhoes ? ` · Talhões: ${esc(talhoes)}` : ""}</p><span class="badge ${finalizada ? "badge-success" : "badge-neutral"}" data-current-stage>${esc(safra.etapa)} (${indiceAtual + 1}/${ETAPAS.length})</span></div><div class="safra-actions"><button class="btn btn-outline" type="button" data-history="${esc(safra.id)}">Registros relacionados</button>${proxima ? `<button class="btn btn-primary" type="button" data-advance="${esc(safra.id)}" data-next-stage="${esc(proxima)}">Avançar para ${esc(proxima)}</button>` : `<span class="badge badge-success" data-safra-readonly>Ciclo finalizado · Somente leitura</span>`}</div></div>${renderEtapas(safra, indiceAtual)}<div class="safra-links" data-safra-links>Acesso contextual — ${renderLinksContextuais(safra, nomesTalhoes)}</div></article>`;
     }).join("");
     $("[data-safras-empty]").hidden = lista.length > 0;
+  }
+
+  // Unifica registros do histórico do talhão, ocorrências no período e custos vinculados à safra.
+  function consolidarRegistros(safra, historicoTalhoes, ocorrencias, custos) {
+    const talhoesSet = new Set(safra.talhoes || []);
+    const registros = [];
+    const chaves = new Set();
+    const adicionar = (item) => {
+      const chave = `${item.tipo}|${item.talhaoNome}|${item.descricao}`;
+      if (chaves.has(chave)) return;
+      chaves.add(chave);
+      registros.push(item);
+    };
+
+    (historicoTalhoes || []).forEach((ev) => {
+      const tipo = String(ev.tipo || "atividade").toLowerCase();
+      adicionar({
+        tipo,
+        rotulo: ROTULOS_TIPO[tipo] || ev.tipo || "Registro",
+        descricao: ev.descricao || ev.titulo || ev.nome || "Registro da safra",
+        talhaoNome: ev.talhaoNome || "Talhão",
+        data: String(ev.criadoEm || "").slice(0, 10),
+      });
+    });
+
+    (ocorrencias || []).forEach((occ) => {
+      if (!talhoesSet.has(occ.talhaoId)) return;
+      if (!occ.data || occ.data < safra.dataInicio || occ.data > safra.dataFim) return;
+      adicionar({
+        tipo: "ocorrencia",
+        rotulo: "Ocorrência",
+        descricao: `${occ.titulo} (${occ.tipo} · Prioridade ${occ.prioridade})`,
+        talhaoNome: occ.talhaoNome || "Talhão",
+        data: occ.data,
+      });
+    });
+
+    (custos || []).forEach((custo) => {
+      adicionar({
+        tipo: "custo",
+        rotulo: "Custo",
+        descricao: `${custo.description} (${custo.category} · ${moeda.format(Number(custo.value || 0))})`,
+        talhaoNome: custo.talhaoNome || "Safra geral",
+        data: custo.date || String(custo.criadoEm || "").slice(0, 10),
+      });
+    });
+
+    return registros.sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  }
+
+  function renderHistoryModal() {
+    const safra = state.historySafra;
+    if (!safra) return;
+    const nomesTalhoes = new Map(state.talhoes.map((talhao) => [talhao.id, talhao.nome]));
+    const finalizada = safra.etapa === "Finalização";
+    $("[data-history-title]").textContent = `Histórico da safra — ${safra.nome}`;
+    $("[data-history-subtitle]").textContent = `${safra.cultura} · ${safra.dataInicio} a ${safra.dataFim} · ${safra.areaHectares} ha${finalizada ? " · Safra finalizada (somente leitura)" : ""}`;
+
+    const qtdAtividades = state.historyRecords.filter((r) => r.tipo === "atividade").length;
+    const qtdOcorrencias = state.historyRecords.filter((r) => r.tipo === "ocorrencia").length;
+    const qtdCustos = state.historyRecords.filter((r) => r.tipo === "custo").length;
+    const etapasConcluidas = (safra.historicoEtapas || []).map((e) => e.etapa).join(" → ");
+
+    $("[data-safra-history-summary]").innerHTML = `
+      <div class="meta-cell"><span class="meta-cell-label">Etapa do ciclo</span><span class="meta-cell-value" data-history-stage>${esc(safra.etapa)}${finalizada ? " (Finalizada)" : ""}</span><small>${esc(etapasConcluidas)}</small></div>
+      <div class="meta-cell"><span class="meta-cell-label">Atividades</span><span class="meta-cell-value" data-history-count="atividade">${qtdAtividades}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Ocorrências</span><span class="meta-cell-value" data-history-count="ocorrencia">${qtdOcorrencias}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Custos na safra</span><span class="meta-cell-value" data-history-count="custo">${qtdCustos} · ${esc(moeda.format(state.historyTotalCost || 0))}</span></div>
+    `;
+    $("[data-safra-context-links]").innerHTML = `<span>Ir para módulos filtrados por talhão:</span> ${renderLinksContextuais(safra, nomesTalhoes)}`;
+
+    $$("[data-history-filter]").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.historyFilter === state.historyFilter);
+    });
+
+    const filtrados = state.historyRecords.filter((item) => !state.historyFilter || item.tipo === state.historyFilter);
+    const list = $("[data-safra-history-list]");
+    if (!filtrados.length) {
+      list.innerHTML = '<div class="empty-state"><h3>Sem registros no período</h3><p>Os eventos dos talhões aparecerão aqui quando forem registrados.</p></div>';
+      return;
+    }
+    list.innerHTML = filtrados.map((record) => `<article class="meta-cell" data-history-item="${esc(record.tipo)}"><strong>${esc(record.rotulo)}</strong><span class="meta-cell-value">${esc(record.descricao)}</span><small>${esc(record.talhaoNome)} · ${esc(record.data)}</small></article>`).join("");
+  }
+
+  async function abrirHistorico(safraId, filtro = "") {
+    const id = encodeURIComponent(safraId);
+    const [safra, historicoTalhoes, ocorrencias, custos, resumoCustos] = await Promise.all([
+      api(`/api/safras/${id}`),
+      api(`/api/safras/${id}/historico`),
+      api("/api/ocorrencias").catch(() => []),
+      api(`/api/custos?safraId=${id}`).catch(() => []),
+      api(`/api/custos/resumo?safraId=${id}`).catch(() => ({ total: 0 })),
+    ]);
+    state.historySafra = safra;
+    state.historyFilter = ["atividade", "ocorrencia", "custo"].includes(filtro) ? filtro : "";
+    state.historyTotalCost = Number(resumoCustos?.total || 0);
+    state.historyRecords = consolidarRegistros(safra, historicoTalhoes, ocorrencias, custos);
+    syncHistoryUrl(safra.id, state.historyFilter);
+    renderHistoryModal();
+    modal("safra-history", true);
   }
 
   async function carregar() {
@@ -99,21 +225,28 @@
     state.talhoes = talhoes;
     $("[name='talhoes']").innerHTML = talhoes.map((talhao) => `<option value="${esc(talhao.id)}">${esc(talhao.nome)}</option>`).join("");
     render();
-  }
 
-  function renderHistory(records) {
-    const list = $("[data-safra-history-list]");
-    if (!records.length) {
-      list.innerHTML = '<div class="empty-state"><h3>Sem registros no período</h3><p>Os eventos dos talhões aparecerão aqui quando forem registrados.</p></div>';
-      return;
+    const params = new URLSearchParams(window.location.search);
+    const historicoId = params.get("historico");
+    if (historicoId) {
+      try {
+        await abrirHistorico(historicoId, params.get("tipo") || "");
+      } catch (error) {
+        syncHistoryUrl("");
+        toast("error", "Não foi possível consultar a safra", error?.error || "Safra não encontrada para consulta de histórico.");
+      }
     }
-    list.innerHTML = records.map((record) => `<article class="meta-cell"><strong>${esc(record.tipo || "Registro")}</strong><span class="meta-cell-value">${esc(record.descricao || record.titulo || record.nome || "Registro da safra")}</span><small>${esc(record.talhaoNome || "Talhão")} · ${esc(record.criadoEm || "")}</small></article>`).join("");
   }
 
   $("[data-new-safra]").addEventListener("click", () => modal("safra-form", true));
   $("[data-close-safra]").addEventListener("click", () => modal("safra-form", false));
   $("[data-close-history]").addEventListener("click", () => modal("safra-history", false));
   $("[data-filter-stage]").addEventListener("change", render);
+  $$("[data-history-filter]").forEach((btn) => btn.addEventListener("click", () => {
+    state.historyFilter = btn.dataset.historyFilter || "";
+    if (state.historySafra) syncHistoryUrl(state.historySafra.id, state.historyFilter);
+    renderHistoryModal();
+  }));
   document.querySelectorAll("[data-modal]").forEach((target) => target.addEventListener("click", (event) => {
     if (event.target === target) modal(target.dataset.modal, false);
   }));
@@ -143,8 +276,7 @@
     const advance = event.target.closest("[data-advance]");
     try {
       if (history) {
-        renderHistory(await api(`/api/safras/${history.dataset.history}/historico`));
-        modal("safra-history", true);
+        await abrirHistorico(history.dataset.history);
       }
       if (advance) {
         if (advance.disabled) return;
