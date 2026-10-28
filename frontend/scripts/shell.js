@@ -330,62 +330,24 @@
   /* Notificações                                                           */
   /* ---------------------------------------------------------------------- */
   function initNotifications() {
+    // A geração a partir dos registros, a navegação e a persistência de leitura
+    // ficam em notificacoes.js (#26 / #166–#168).
+    if (window.AgroNotificacoes?.init) {
+      window.AgroNotificacoes.init();
+      return;
+    }
+
     const list = $("[data-notif-list]");
     const empty = $("[data-notif-empty]");
-    const markAll = $("[data-notif-mark-all]");
     const dot = $("[data-notif-dot]");
     if (!list) return;
-
-    // A leitura de uma notificação também é uma alteração local. Usamos o
-    // texto como chave porque esses itens estáticos ainda não têm IDs da API.
-    let readItems = window.AgroLocal.read("notifications", []);
-    const notificationKey = (item) => item.textContent.replace(/\s+/g, " ").trim();
-    $$(".notif-item", list).forEach((item) => {
-      if (readItems.includes(notificationKey(item))) item.classList.remove("is-unread");
-    });
-
-    function refreshUnread() {
-      const unread = $$(".notif-item.is-unread", list);
-      if (dot) dot.classList.toggle("is-hidden", unread.length === 0);
-      if (empty) empty.hidden = list.children.length > 0;
-      list.hidden = list.children.length === 0;
+    list.replaceChildren();
+    list.hidden = true;
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = "Nenhuma notificação no momento.";
     }
-
-    list.addEventListener("click", (event) => {
-      const item = event.target.closest(".notif-item");
-      if (!item) return;
-      const next = [...new Set([...readItems, notificationKey(item)])];
-      if (!window.AgroLocal.save("notifications", next)) return;
-      readItems = next;
-      item.classList.remove("is-unread");
-      refreshUnread();
-      if (window.AgroToast) {
-        window.AgroToast.show({
-          type: "info",
-          title: "Notificação aberta",
-          description: item.dataset.toast || "Destino do módulo ainda em preparação.",
-        });
-      }
-    });
-
-    if (markAll) {
-      markAll.addEventListener("click", () => {
-        const next = [...new Set([...readItems, ...$$(".notif-item", list).map(notificationKey)])];
-        if (!window.AgroLocal.save("notifications", next)) return;
-        readItems = next;
-        $$(".notif-item.is-unread", list).forEach((item) => item.classList.remove("is-unread"));
-        refreshUnread();
-        if (window.AgroToast) {
-          window.AgroToast.show({
-            type: "success",
-            title: "Tudo lido",
-            description: "Todas as notificações foram marcadas como lidas.",
-          });
-        }
-      });
-    }
-
-    refreshUnread();
+    if (dot) dot.classList.add("is-hidden");
   }
 
   /* ---------------------------------------------------------------------- */
