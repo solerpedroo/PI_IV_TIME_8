@@ -1,13 +1,16 @@
 // Miguel — RA: 25003110
-// Tela de Safras: acompanha etapas oficiais, vínculos operacionais e histórico persistido na API.
+// I11 (UI #15/#132–#134): consome a API I10 já autenticada do backend/servidor
+// (/api/safras, Bearer). O core (8081) só expõe /health e /ready — não é o backend desta tela.
 (() => {
   "use strict";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ETAPAS = ["Planejamento", "Preparação", "Plantio", "Manejo", "Colheita", "Finalização"];
+  // Mesmo catálogo de TalhoesHandler.CULTURAS no servidor — base oficial do select.
+  const CULTURAS_OFICIAIS = ["Soja", "Milho", "Trigo", "Café", "Algodão"];
   const ROTULOS_TIPO = { atividade: "Atividade", ocorrencia: "Ocorrência", custo: "Custo" };
   const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const state = { safras: [], talhoes: [], historySafra: null, historyRecords: [], historyFilter: "" };
+  const state = { safras: [], talhoes: [], culturas: [...CULTURAS_OFICIAIS], historySafra: null, historyRecords: [], historyFilter: "" };
   const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -68,6 +71,7 @@
     const errors = {};
     if (!data.nome?.trim()) errors.nome = "Informe o nome da safra.";
     if (!data.cultura) errors.cultura = "Selecione uma cultura.";
+    else if (!state.culturas.includes(data.cultura)) errors.cultura = "Selecione uma cultura válida.";
     if (!data.talhoes.length) errors.talhoes = "Selecione ao menos um talhão.";
     if (!data.dataInicio) errors.dataInicio = "Informe a data de início.";
     if (!data.dataFim) errors.dataFim = "Informe a data de término.";
@@ -79,6 +83,22 @@
       return false;
     }
     return true;
+  }
+
+  // Une o catálogo oficial às culturas já usadas em talhões/safras (sem duplicar).
+  function montarCulturas(talhoes, safras) {
+    const extras = [...talhoes.map((t) => t.cultura), ...safras.map((s) => s.cultura)]
+      .filter(Boolean)
+      .filter((nome) => !CULTURAS_OFICIAIS.includes(nome));
+    return [...CULTURAS_OFICIAIS, ...new Set(extras)];
+  }
+
+  function preencherCulturas(culturas) {
+    const select = $("[name='cultura']");
+    const atual = select.value;
+    select.innerHTML = `<option value="">Selecione</option>${culturas.map((nome) =>
+      `<option value="${esc(nome)}">${esc(nome)}</option>`).join("")}`;
+    if (atual && culturas.includes(atual)) select.value = atual;
   }
 
   // Monta os atalhos contextuais para Atividades, Ocorrências e Custos usando os talhões reais da safra.
@@ -221,9 +241,12 @@
 
   async function carregar() {
     const [safras, talhoes] = await Promise.all([api("/api/safras"), api("/api/talhoes")]);
-    state.safras = safras;
-    state.talhoes = talhoes;
-    $("[name='talhoes']").innerHTML = talhoes.map((talhao) => `<option value="${esc(talhao.id)}">${esc(talhao.nome)}</option>`).join("");
+    state.safras = Array.isArray(safras) ? safras : [];
+    state.talhoes = Array.isArray(talhoes) ? talhoes : [];
+    state.culturas = montarCulturas(state.talhoes, state.safras);
+    preencherCulturas(state.culturas);
+    $("[name='talhoes']").innerHTML = state.talhoes.map((talhao) =>
+      `<option value="${esc(talhao.id)}">${esc(talhao.nome)}</option>`).join("");
     render();
 
     const params = new URLSearchParams(window.location.search);
