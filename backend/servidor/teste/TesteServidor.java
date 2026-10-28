@@ -505,6 +505,8 @@ public class TesteServidor
         conferir ("listar atividades sem token -> 401", 401, get ("/api/atividades", null));
         conferir ("talhao inexistente e rejeitado", 400, post ("/api/atividades",
                   "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Ausente\",\"data\":\"08 ago\"}", token));
+        conferir ("tipo fora do catálogo e rejeitado", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Inválido\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token));
 
         Resp criada = post ("/api/atividades", "{\"nome\":\"Aplicação teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token);
         conferir ("criar atividade -> 201", 201, criada);

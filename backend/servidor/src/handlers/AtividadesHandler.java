@@ -163,6 +163,9 @@ public class AtividadesHandler
         else if (!STATUS_VALIDOS.contains (status))
             v.erro ("status", "Status inválido.");
 
+        if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
+            v.erro ("tipo", "Selecione um tipo válido.");
+
         if (talhao != null && !this.talhaoDaPropriedade (requisicao.getSessao ().getPropriedadeId (), talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 
@@ -215,6 +218,8 @@ public class AtividadesHandler
         String talhao = v.texto ("talhao", "Selecione o talhão.",          60);
         String data   = v.texto ("data",   "Informe a data.",              30);
 
+        if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
+            v.erro ("tipo", "Selecione um tipo válido.");
         if (talhao != null && !this.talhaoDaPropriedade (propriedadeId, talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 

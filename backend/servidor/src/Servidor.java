@@ -120,6 +120,7 @@ public class Servidor
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
+        propriedades.setAtividades (atividades);
         propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
         new AtividadesHandler (atividades, talhoes, sessoes).registrar (roteador);

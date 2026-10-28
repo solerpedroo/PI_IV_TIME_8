@@ -27,6 +27,9 @@
   // Depois de uma leitura bem-sucedida, a API é a fonte de verdade. Antes
   // disso, o modo local continua atendendo a abertura isolada da interface.
   let apiDisponivel = false;
+  // Todas as mutações aguardam esta consulta para não serem apagadas por uma
+  // resposta remota que chegue depois do primeiro clique do usuário.
+  let carregamentoRemoto = Promise.resolve();
 
   const filters = {
     query: "",
@@ -236,6 +239,7 @@
    * sincronizando com a API do servidor e mantendo a consistência dos dados locais.
    */
   async function atualizarStatusAtividade(card, novoStatus, motivo = "") {
+    await carregamentoRemoto;
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
 
@@ -800,6 +804,7 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      await carregamentoRemoto;
       clearErrors(form);
 
       const nome = form.nome.value.trim();
@@ -954,7 +959,7 @@
     initDeleteConfirm();
     applyFilters();
 
-    carregarAtividadesRemotas();
+    carregamentoRemoto = carregarAtividadesRemotas();
   }
 
   if (document.readyState === "loading") {
