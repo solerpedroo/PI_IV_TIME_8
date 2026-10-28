@@ -349,7 +349,8 @@ public class AtividadesHandler
             campos.put ("cultura", safra == null ? "" : safra.getString ("cultura"));
         }
 
-        this.atividades.atualizar (propriedadeId, id, campos);
+        try { this.atividades.atualizar (propriedadeId, id, campos); }
+        catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));

@@ -168,7 +168,9 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (updates.isEmpty ())
             return true;
 
-        this.atividades.updateOne (filtro (propriedadeId, id), Updates.combine (updates));
+        // Evita editar uma atividade que foi finalizada por outra instância.
+        if (this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("status", statusAtual)), Updates.combine (updates)).getMatchedCount () != 1)
+            throw new IllegalStateException ("Estado alterado por outra operação.");
         return true;
     }
 
