@@ -243,6 +243,17 @@ propriedade inteira, sem aplicar filtros. A busca `q` compara com o nome em
 minúsculas. O filtro `cultura` não diferencia maiúsculas, e `todos` significa
 sem filtro, como nos chips do front.
 
+### 7.3 Safras
+
+Contrato HTTP autenticado (`Authorization: Bearer`): listar/criar/editar/excluir
+em planejamento, `POST /api/safras/{id}/avancar` (uma etapa por vez) e
+`GET /api/safras/{id}/historico`. Detalhes e códigos em
+[backend/servidor/README.md](../backend/servidor/README.md).
+
+A UI está em `frontend/safras.html` + `frontend/scripts/safras.js`, linkada na
+sidebar das telas operacionais. O `core` não publica CRUD de safras — apenas
+modelo/índices e `/health`/`/ready`.
+
 ## 8. Modelo de dados (MongoDB)
 
 | Coleção | Campos | Índices |
