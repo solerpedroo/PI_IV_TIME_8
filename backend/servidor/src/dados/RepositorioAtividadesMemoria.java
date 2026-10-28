@@ -59,9 +59,13 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
         if (propriedadeId == null || propriedadeId.isBlank ())
             throw new Exception ("Propriedade ausente na atividade");
 
-        ObjectId id = new ObjectId ();
-        String idStr = id.toHexString ();
-        atividade.put ("_id", id);
+        String idStr = atividade.getString ("id");
+        if (idStr == null || idStr.isBlank ())
+        {
+            ObjectId id = new ObjectId ();
+            idStr = id.toHexString ();
+        }
+        atividade.put ("_id", idStr);
         atividade.put ("id", idStr);
 
         if (atividade.getString ("status") == null || atividade.getString ("status").isBlank ())
@@ -147,6 +151,8 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
         evento.put ("status", novoStatus);
         evento.put ("acao", acao != null && !acao.isBlank () ? acao : "mudanca_status");
         evento.put ("descricao", descricao != null && !descricao.isBlank () ? descricao : "Status alterado para " + novoStatus);
+        if ("cancelamento".equalsIgnoreCase (acao) || "Cancelada".equalsIgnoreCase (novoStatus))
+            evento.put ("motivo", descricao != null ? descricao : "");
 
         lista.add (evento);
         return true;

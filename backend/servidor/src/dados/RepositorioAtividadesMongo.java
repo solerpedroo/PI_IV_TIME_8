@@ -88,8 +88,9 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (propriedadeId == null || propriedadeId.isBlank ())
             throw new Exception ("Propriedade ausente na atividade");
 
-        ObjectId id = new ObjectId ();
-        String idStr = id.toHexString ();
+        String idStr = atividade.getString ("id");
+        ObjectId id = (idStr != null && ObjectId.isValid (idStr)) ? new ObjectId (idStr) : new ObjectId ();
+        idStr = id.toHexString ();
         atividade.put ("_id", id);
         atividade.put ("id", idStr);
 
@@ -175,6 +176,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         evento.put ("status", novoStatus);
         evento.put ("acao", acao != null && !acao.isBlank () ? acao : "mudanca_status");
         evento.put ("descricao", descricao != null && !descricao.isBlank () ? descricao : "Status alterado para " + novoStatus);
+        if ("cancelamento".equalsIgnoreCase (acao) || "Cancelada".equalsIgnoreCase (novoStatus))
+            evento.put ("motivo", descricao != null ? descricao : "");
 
         this.historicos.insertOne (evento);
         return true;

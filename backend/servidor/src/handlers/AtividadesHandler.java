@@ -157,6 +157,9 @@ public class AtividadesHandler
 
         Sessao sessao = requisicao.getSessao ();
         Document nova = new Document ();
+        String idCorpo = corpo.getString ("id");
+        if (idCorpo != null && !idCorpo.isBlank ())
+            nova.put ("id", idCorpo.trim ());
         nova.put ("usuarioId", sessao.getUsuarioId ());
         nova.put ("propriedadeId", sessao.getPropriedadeId ());
         nova.put ("nome", nome);
@@ -235,7 +238,8 @@ public class AtividadesHandler
         if ("Cancelada".equalsIgnoreCase (statusAtual))
             return Resposta.json (409, new Document ("error", "Atividade cancelada não pode ser concluída."));
 
-        Document corpo = requisicao.getCorpoJson ();
+        Document corpo = null;
+        try { corpo = requisicao.getCorpoJson (); } catch (Exception ignora) {}
         String desc = corpo != null ? corpo.getString ("descricao") : null;
         if (desc == null || desc.isBlank ())
             desc = "Atividade concluída com sucesso";
@@ -262,7 +266,8 @@ public class AtividadesHandler
         if ("Cancelada".equalsIgnoreCase (statusAtual))
             return Resposta.json (409, new Document ("error", "Esta atividade já está cancelada."));
 
-        Document corpo = requisicao.getCorpoJson ();
+        Document corpo = null;
+        try { corpo = requisicao.getCorpoJson (); } catch (Exception ignora) {}
         String motivo = corpo != null ? corpo.getString ("motivo") : null;
         if (motivo == null || motivo.isBlank ())
             motivo = corpo != null ? corpo.getString ("descricao") : null;
