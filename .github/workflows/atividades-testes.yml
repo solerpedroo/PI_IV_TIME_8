@@ -1,0 +1,37 @@
+# Miguel — RA: 25003110
+name: Atividades Java e MongoDB
+on:
+  pull_request:
+    paths:
+      - 'backend/servidor/**'
+      - 'tests/atividades-reinicio.cjs'
+      - 'compose.yaml'
+      - '.github/workflows/atividades-testes.yml'
+permissions:
+  contents: read
+jobs:
+  atividades:
+    # O MongoDB do projeto não inicia com o kernel 6.19 do ubuntu-latest.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compilar e testar servidor
+        run: sh backend/servidor/testar.sh
+      - name: Iniciar MongoDB de teste
+        run: docker compose up -d --wait mongo
+      - name: Validar histórico após reinício e concorrência
+        run: node tests/atividades-reinicio.cjs
+      - name: Diagnóstico do MongoDB
+        if: failure()
+        run: docker compose logs mongo
+      - name: Encerrar serviço de teste
+        if: always()
+        run: docker compose down

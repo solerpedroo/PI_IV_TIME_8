@@ -3,13 +3,21 @@
 const assert = require('node:assert/strict');
 const { spawn, execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
+const net = require('node:net');
 const path = require('node:path');
 const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
 const base = 'http://127.0.0.1:18081';
 const cwd = path.join(__dirname, '../backend/servidor');
+const mongo = execFileSync('docker', ['compose', 'ps', '-q', 'mongo'], {encoding: 'utf8'}).trim();
+if (!mongo) throw new Error('Inicie o serviço mongo do Docker Compose.');
 const env = { ...process.env, MONGODB_URI: `mongodb://127.0.0.1:27017/${banco}?replicaSet=rs0`, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '' };
 let processo, segundo, log = '';
 const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function portaLivre(porta) {
+  const probe = net.createServer();
+  await new Promise((resolve, reject) => { probe.once('error', reject); probe.listen(porta, '127.0.0.1', resolve); });
+  await new Promise((resolve, reject) => probe.close(err => err ? reject(err) : resolve()));
+}
 async function iniciar() {
   processo = spawn('java', ['-cp', process.platform === 'win32' ? 'bin;lib/*' : 'bin:lib/*', 'Servidor', '18081'], { cwd, env });
   processo.stdout.on('data', chunk => { log += chunk; });
@@ -34,10 +42,11 @@ async function api(url, body, token, method) {
 (async () => {
   let criado = false;
   try {
-    try { await fetch(base + '/health'); throw new Error('Porta de teste ocupada'); } catch (err) { if (err.message === 'Porta de teste ocupada') throw err; }
-    const bancos = JSON.parse(execFileSync('docker', ['exec', 'frontend_pi_iv-mongo-1', 'mongosh', '--quiet', '--eval', 'JSON.stringify(db.adminCommand({listDatabases:1,nameOnly:true}).databases.map(x=>x.name))'], { encoding: 'utf8' }));
+    await portaLivre(18081);
+    await portaLivre(18082);
+    const bancos = JSON.parse(execFileSync('docker', ['exec', mongo, 'mongosh', '--quiet', '--eval', 'JSON.stringify(db.adminCommand({listDatabases:1,nameOnly:true}).databases.map(x=>x.name))'], { encoding: 'utf8' }));
     assert.ok(!bancos.includes(banco), 'Banco aleatório já existe');
-    await iniciar(); criado = true;
+    criado = true; await iniciar();
     const email = 'i135@agro.test', password = 'Senha@123';
     assert.equal((await api('/api/auth/register', {name:'Operador Teste',email,phone:'(19) 98888-1111',password,confirm:password,farm:'Fazenda Teste',area:'120 ha',terms:true})).status, 201);
     for (let i = 0; i < 50 && !/token: ([\w-]+)/.test(log); i++) await pausa(100);
@@ -79,6 +88,7 @@ async function api(url, body, token, method) {
     assert.equal((await api('/api/atividades/' + concorrente.data.id + '/status', {status:'Em andamento'}, token)).status, 200);
     segundo = spawn('java', ['-cp', process.platform === 'win32' ? 'bin;lib/*' : 'bin:lib/*', 'Servidor', '18082'], {cwd,env});
     for (let i = 0; i < 100; i++) {
+      if (segundo.exitCode !== null) throw new Error('Segunda instância terminou antes de iniciar');
       try { if ((await fetch('http://127.0.0.1:18082/ready')).ok) break; } catch {}
       if (segundo.exitCode !== null || i === 99) throw new Error('Segunda instância não iniciou');
       await pausa(100);
@@ -134,6 +144,6 @@ async function api(url, body, token, method) {
     if (segundo && segundo.exitCode === null) { const terminado = new Promise(resolve => segundo.once('exit', resolve)); segundo.stdin.write('desativar\n'); await terminado; }
     await parar();
     // Somente o banco de nome aleatório criado nesta execução é removido.
-    if (criado) execFileSync('docker', ['exec','frontend_pi_iv-mongo-1','mongosh','--quiet',banco,'--eval','db.dropDatabase()'], { stdio:'ignore' });
+    if (criado) execFileSync('docker', ['exec',mongo,'mongosh','--quiet',banco,'--eval','db.dropDatabase()'], { stdio:'ignore' });
   }
 })().catch(err => { console.error(err); process.exitCode = 1; });
