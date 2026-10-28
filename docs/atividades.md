@@ -46,3 +46,10 @@ um banco isolado e reinicia o servidor Java. Em 28/10/2026 o teste confirmou
 criação, edição, campos, vínculos, rejeições e consulta após reinício; o banco
 temporário da execução foi removido ao final. A sincronização entre instâncias
 distintas continua sendo um limite descrito acima.
+
+Na #137, o mesmo teste consulta o histórico depois de reiniciar o servidor e
+confere ordem, estado, ação, identificação da atividade, data do registro,
+descrição de conclusão e motivo de cancelamento. Verifica também que uma
+transição inválida não acrescenta evento e que outra propriedade não consegue
+acessar o histórico. Os eventos de edição do planejamento não são registrados
+por esta API; o histórico cobre criação e transições da execução.

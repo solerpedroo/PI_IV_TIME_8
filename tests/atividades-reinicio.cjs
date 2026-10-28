@@ -68,7 +68,7 @@ async function api(url, body, token, method) {
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída'}, token)).status, 409);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Agendada'}, token)).status, 200);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Em andamento'}, token)).status, 200);
-    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída'}, token)).status, 200);
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída',descricao:'Execução conferida'}, token)).status, 200);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Agendada'}, token)).status, 409);
     const cancelavel = await api('/api/atividades', {...valores,nome:'Cancelável'}, token);
     assert.equal(cancelavel.status, 201);
@@ -99,6 +99,34 @@ async function api(url, body, token, method) {
     login = await api('/api/auth/login', {email,password}); assert.equal(login.status, 200); token = login.data.token;
     assert.equal((await api('/api/atividades/' + id, null, token)).data.status, 'Concluída');
     assert.equal((await api('/api/atividades/' + cancelavel.data.id, null, token)).data.status, 'Cancelada');
+    // A consulta após reinício deve recuperar os eventos completos e ordenados,
+    // inclusive a descrição de execução e o motivo literal do cancelamento.
+    const historicoConcluida = await api('/api/atividades/' + id + '/historico', null, token);
+    assert.equal(historicoConcluida.status, 200);
+    assert.deepEqual(historicoConcluida.data.map(e => [e.ordem,e.acao,e.status]), [
+      [0,'criacao','Pendente'], [1,'mudanca_status','Agendada'],
+      [2,'mudanca_status','Em andamento'], [3,'conclusao','Concluída'],
+    ]);
+    assert.equal(historicoConcluida.data[3].descricao, 'Execução conferida');
+    for (const evento of historicoConcluida.data) {
+      assert.equal(evento.atividadeId, id);
+      assert.ok(Number.isFinite(Date.parse(evento.registradoEm)), 'Instante do evento é válido');
+    }
+    const historicoCancelada = await api('/api/atividades/' + cancelavel.data.id + '/historico', null, token);
+    assert.equal(historicoCancelada.status, 200);
+    assert.deepEqual(historicoCancelada.data.map(e => [e.ordem,e.acao,e.status]), [
+      [0,'criacao','Pendente'], [1,'cancelamento','Cancelada'],
+    ]);
+    assert.equal(historicoCancelada.data[1].motivo, 'Chuva');
+    assert.equal(historicoCancelada.data[1].atividadeId, cancelavel.data.id);
+    assert.equal((await api('/api/atividades/inexistente/historico', null, token)).status, 404);
+    // Uma propriedade diferente do mesmo produtor não pode consultar o histórico.
+    const propriedadeOriginal = login.data.usuario.propriedadeId;
+    const outra = await api('/api/propriedades', {nome:'Outra propriedade',areaHectares:10,localizacao:'Estrada',municipio:'Campinas',safraAtual:'2026/27'}, token);
+    assert.equal(outra.status, 201);
+    assert.equal((await api('/api/propriedades/' + outra.data.id + '/selecionar', {}, token)).status, 200);
+    assert.equal((await api('/api/atividades/' + id + '/historico', null, token)).status, 404);
+    assert.equal((await api('/api/propriedades/' + propriedadeOriginal + '/selecionar', {}, token)).status, 200);
     assert.equal((await api('/api/talhoes/' + talhao.data.id, {nome:'Renomeado',cultura:'Soja',hectares:10,status:'Ativo'}, token, 'PUT')).status, 409);
     assert.equal((await api('/api/safras/' + safra.data.id, null, token, 'DELETE')).status, 409);
     console.log('OK: criação, edição, vínculos, casos inválidos e consulta após reinício do servidor com Mongo.');
