@@ -270,14 +270,23 @@ public final class CicloDadosAtlasTest {
         Safra finalizada = ciclo;
         verificar(finalizada.status() == Safra.Status.FINALIZADA,
                 "fases devem avançar em ordem até a finalização");
+        verificar(finalizada.historicoEtapas().size() == 6,
+                "histórico de etapas permanece no documento finalizado");
         invalido(() -> persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA));
         invalido(() -> persistido.atualizarSafra(finalizada));
         invalido(() -> persistido.excluirSafra(c.a, c.safraA));
         invalido(() -> persistido.excluirCultura(c.a, c.culturaA));
+        // Mesmo talhão + período cruzado deve ser rejeitado (regra alinhada ao servidor HTTP).
+        invalido(() -> persistido.inserir(Safra.nova(null, c.a, "Conflito período", c.culturaA,
+                List.of(c.talhaoA), LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31),
+                new BigDecimal("1.0"))));
         c.reabrir();
         CultivoRepositorioMongo reaberto = new CultivoRepositorioMongo(c.conexao.banco());
-        verificar(reaberto.buscarSafra(c.a, c.safraA).orElseThrow().status() == Safra.Status.FINALIZADA,
+        Safra lida = reaberto.buscarSafra(c.a, c.safraA).orElseThrow();
+        verificar(lida.status() == Safra.Status.FINALIZADA,
                 "finalização permanece consultável após reconectar");
+        verificar(lida.historicoEtapas().size() == 6,
+                "trilha de etapas sobrevive à reconexão");
         verificar(reaberto.listarSafras(c.a).stream().anyMatch(s -> s.id().equals(c.safraA)),
                 "consulta da propriedade inclui histórico finalizado");
         verificar(new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 2,
