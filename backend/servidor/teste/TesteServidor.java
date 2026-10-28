@@ -551,6 +551,9 @@ public class TesteServidor
         conferir ("nao pula de agendada para concluida", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));
         conferir ("arraste altera status pela rota unica", 200,
                   post ("/api/atividades/" + id + "/status", "{\"status\":\"Em andamento\"}", token));
+        conferir ("conclusao rejeita JSON malformado", 400, post ("/api/atividades/" + id + "/concluir", "{", token));
+        conferir ("cancelamento rejeita motivo numerico", 400, post ("/api/atividades/" + id + "/cancelar", "{\"motivo\":42}", token));
+        conferir ("falhas nao alteram estado", "Em andamento".equals (get ("/api/atividades/" + id, token).json ().getString ("status")));
         conferir ("nao retrocede em andamento", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Agendada\"}", token));
         conferir ("menu conclui pela rota unica", 200,
                   post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));

@@ -373,9 +373,10 @@ public class AtividadesHandler
         if (!AtividadesHandler.transicaoPermitida (statusAtual, "Concluída"))
             return Resposta.json (409, new Document ("error", "Inicie a atividade antes de concluí-la."));
 
-        Document corpo = null;
-        try { corpo = requisicao.getCorpoJson (); } catch (Exception ignora) {}
-        String desc = corpo != null ? corpo.getString ("descricao") : null;
+        Document corpo = requisicao.getCorpo ().length == 0 ? new Document () : requisicao.getCorpoJson ();
+        Validacao validacao = new Validacao (corpo);
+        String desc = AtividadesHandler.textoOpcional (corpo, validacao, "descricao", 500);
+        if (validacao.temErros ()) return validacao.resposta ();
         if (desc == null || desc.isBlank ())
             desc = "Atividade concluída com sucesso";
 
@@ -402,11 +403,13 @@ public class AtividadesHandler
         if ("Cancelada".equalsIgnoreCase (statusAtual))
             return Resposta.json (409, new Document ("error", "Esta atividade já está cancelada."));
 
-        Document corpo = null;
-        try { corpo = requisicao.getCorpoJson (); } catch (Exception ignora) {}
-        String motivo = corpo != null ? corpo.getString ("motivo") : null;
+        Document corpo = requisicao.getCorpo ().length == 0 ? new Document () : requisicao.getCorpoJson ();
+        Validacao validacao = new Validacao (corpo);
+        String motivo = AtividadesHandler.textoOpcional (corpo, validacao, "motivo", 500);
+        String descricao = AtividadesHandler.textoOpcional (corpo, validacao, "descricao", 500);
+        if (validacao.temErros ()) return validacao.resposta ();
         if (motivo == null || motivo.isBlank ())
-            motivo = corpo != null ? corpo.getString ("descricao") : null;
+            motivo = descricao;
         if (motivo == null || motivo.isBlank ())
             motivo = "Atividade cancelada operacionalmente";
 

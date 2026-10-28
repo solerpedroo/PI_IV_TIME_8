@@ -30,13 +30,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
     private final MongoCollection<Document> historicos;
     private final MongoClient cliente;
 
-    public RepositorioAtividadesMongo (MongoDatabase banco) throws Exception
-    {
-        this (banco, null);
-    }
-
-    // A conexão completa permite transacionar a atividade e seu evento de
-    // histórico; o construtor legado permanece apenas para compatibilidade.
+    // A conexão completa garante transação para atividade e histórico.
     public RepositorioAtividadesMongo (ConexaoMongo conexao) throws Exception
     {
         this (conexao == null ? null : conexao.getBanco (), conexao == null ? null : conexao.getCliente ());
@@ -46,6 +40,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
     {
         if (banco == null)
             throw new Exception ("Banco ausente");
+        if (cliente == null)
+            throw new Exception ("Cliente Mongo ausente");
 
         this.atividades = banco.getCollection ("atividades");
         this.historicos = banco.getCollection ("atividades_historico");
@@ -125,28 +121,13 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         eventoZero.put ("acao", "criacao");
         eventoZero.put ("descricao", "Registro inicial da atividade");
 
-        if (this.cliente != null)
+        try (ClientSession sessao = this.cliente.startSession ())
         {
-            try (ClientSession sessao = this.cliente.startSession ())
-            {
-                sessao.withTransaction (() -> {
-                    this.atividades.insertOne (sessao, atividade);
-                    this.historicos.insertOne (sessao, eventoZero);
-                    return null;
-                });
-            }
-        }
-        else
-        {
-            // Compatibilidade para uso direto do repositório fora do servidor:
-            // se o evento inicial falhar, removemos a atividade recém-inserida.
-            this.atividades.insertOne (atividade);
-            try { this.historicos.insertOne (eventoZero); }
-            catch (Exception erro)
-            {
-                this.atividades.deleteOne (Filters.eq ("_id", id));
-                throw erro;
-            }
+            sessao.withTransaction (() -> {
+                this.atividades.insertOne (sessao, atividade);
+                this.historicos.insertOne (sessao, eventoZero);
+                return null;
+            });
         }
         return true;
     }
@@ -220,11 +201,9 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
             evento.put ("motivo", descricao != null ? descricao : "");
 
         Bson filtroHistorico = Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("atividadeId", id));
-        if (this.cliente != null)
+        try (ClientSession sessao = this.cliente.startSession ())
         {
-            try (ClientSession sessao = this.cliente.startSession ())
-            {
-                sessao.withTransaction (() -> {
+            sessao.withTransaction (() -> {
                     long contagem = this.historicos.countDocuments (sessao, filtroHistorico);
                     evento.put ("ordem", (int) contagem);
                     // A condição impede que uma transição concorrente reabra ou
@@ -233,20 +212,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
                         throw new IllegalStateException ("Estado alterado por outra operação; consulte novamente.");
                     this.historicos.insertOne (sessao, evento);
                     return null;
-                });
-            }
-        }
-        else
-        {
-            long contagem = this.historicos.countDocuments (filtroHistorico);
-            evento.put ("ordem", (int) contagem);
-            this.atividades.updateOne (filtro (propriedadeId, id), Updates.set ("status", novoStatus));
-            try { this.historicos.insertOne (evento); }
-            catch (Exception erro)
-            {
-                this.atividades.updateOne (filtro (propriedadeId, id), Updates.set ("status", statusAtual));
-                throw erro;
-            }
+            });
         }
         return true;
     }
