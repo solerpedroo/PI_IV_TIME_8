@@ -25,6 +25,7 @@ import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.AtividadesHandler;
+import handlers.CalendarioHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
@@ -130,6 +131,7 @@ public class Servidor
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
         handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
+        new CalendarioHandler (atividades).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 

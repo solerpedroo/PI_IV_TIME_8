@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -29,6 +30,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Sessoes;
+import handlers.CalendarioHandler;
 import handlers.EstaticosHandler;
 import http.Requisicao;
 
@@ -709,6 +711,136 @@ public class TesteServidor
         return null;
     }
 
+    private static String atividade (String nome, String tipo, String talhao, String data, String horario)
+    {
+        Document ret = new Document ("nome", nome).append ("tipo", tipo).append ("talhao", talhao).append ("data", data);
+
+        if (horario != null)
+            ret.append ("horario", horario);
+
+        return ret.toJson ();
+    }
+
+    // dia do calendario com essa data
+    private static Document dia (Document calendario, String data)
+    {
+        for (Document dia : calendario.getList ("dias", Document.class))
+            if (dia.getString ("data").equals (data))
+                return dia;
+        return new Document ("total", -1);
+    }
+
+    private static int totalDoCalendario (String consulta, String token) throws Exception
+    {
+        Resp resp = get ("/api/calendario?" + consulta, token);
+
+        return resp.status == 200 ? resp.json ().getInteger ("total") : -1;
+    }
+
+    private static void testarCalendario () throws Exception
+    {
+        System.out.println ("\n# calendario de atividades por semana e mes");
+
+        String a = login ("maria@agro.com", "Nova@1234");
+        String b = login ("joao@agro.com",  "Senha@123");
+
+        String aplicacao  = "Aplica\u00e7\u00e3o";
+        String irrigacao  = "Irriga\u00e7\u00e3o";
+        String manutencao = "Manuten\u00e7\u00e3o";
+        String semana     = "de=2031-03-03&ate=2031-03-09";
+
+        conferir ("calendario sem token -> 401", 401, get ("/api/calendario?" + semana, null));
+        Document semPeriodo = camposComErro (get ("/api/calendario", a));
+        conferir ("calendario sem periodo -> 400 com de e ate",
+                  semPeriodo.containsKey ("de") && semPeriodo.containsKey ("ate"));
+        conferir ("data impossivel -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-02-30&ate=2031-03-09", a)).containsKey ("de"));
+        conferir ("periodo invertido -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-03-09&ate=2031-03-03", a)).containsKey ("ate"));
+        conferir ("periodo maior que 62 dias -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-01-01&ate=2031-03-04", a)).containsKey ("ate"));
+        conferir ("periodo de 62 dias e aceito", 200, get ("/api/calendario?de=2031-01-01&ate=2031-03-03", a));
+
+        // duas semanas e dois meses diferentes
+        String plantio = post ("/api/atividades", atividade ("Plantio", aplicacao, "T-01 Norte", "2031-03-03", "08:00"), a).json ().getString ("id");
+        post ("/api/atividades", atividade ("Irrigar", irrigacao, "t-02 sul",   "2031-03-03", "06:00"), a);
+        post ("/api/atividades", atividade ("Colher",  "Colheita", "T-01 Norte", "2031-03-09", null),   a);
+        post ("/api/atividades", atividade ("Revisar", manutencao, "T-01 Norte", "2031-03-10", null),   a);
+        post ("/api/atividades", atividade ("Abril",   aplicacao,  "T-01 Norte", "2031-04-01", null),   a);
+
+        Resp     respSemana = get ("/api/calendario?" + semana, a);
+        Document doc        = respSemana.status == 200 ? respSemana.json () : new Document ();
+        conferir ("semana -> 200", 200, respSemana);
+        conferir ("semana traz so as 3 atividades do periodo", Integer.valueOf (3).equals (doc.getInteger ("total")));
+        conferir ("semana tem os 7 dias, inclusive os vazios",
+                  doc.containsKey ("dias") && doc.getList ("dias", Document.class).size () == 7 &&
+                  dia (doc, "2031-03-05").getInteger ("total") == 0);
+        conferir ("contagem por dia", dia (doc, "2031-03-03").getInteger ("total") == 2 &&
+                                      dia (doc, "2031-03-09").getInteger ("total") == 1);
+        conferir ("contagem por status no dia",
+                  dia (doc, "2031-03-03").get ("porStatus", Document.class).getInteger ("Pendente") == 2);
+        conferir ("contagem por tipo no periodo",
+                  doc.containsKey ("porTipo") &&
+                  doc.get ("porTipo", Document.class).getInteger (aplicacao) == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger (irrigacao) == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger ("Colheita") == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger (manutencao) == 0);
+
+        ArrayList<String> nomes = new ArrayList<String> ();
+        if (doc.containsKey ("atividades"))
+            for (Document item : doc.getList ("atividades", Document.class))
+                nomes.add (item.getString ("nome") + "@" + item.getString ("dataIso"));
+        conferir ("atividades em ordem de data e horario",
+                  nomes.equals (List.of ("Irrigar@2031-03-03", "Plantio@2031-03-03", "Colher@2031-03-09")));
+        conferir ("resposta nao expoe campos internos", !respSemana.corpo.contains ("propriedadeId"));
+
+        conferir ("semana seguinte so com a manutencao", totalDoCalendario ("de=2031-03-10&ate=2031-03-16", a) == 1);
+        conferir ("mes de marco com 4 atividades", totalDoCalendario ("de=2031-03-01&ate=2031-03-31", a) == 4);
+        conferir ("mes de abril com 1 atividade",  totalDoCalendario ("de=2031-04-01&ate=2031-04-30", a) == 1);
+        Resp marco = get ("/api/calendario?de=2031-03-01&ate=2031-03-31", a);
+        conferir ("mes tem todos os 31 dias",
+                  marco.status == 200 && marco.json ().getList ("dias", Document.class).size () == 31);
+
+        // os filtros sao os mesmos da lista de atividades
+        conferir ("filtro por tipo",   totalDoCalendario (semana + "&tipo=" + URLEncoder.encode (irrigacao, StandardCharsets.UTF_8), a) == 1);
+        conferir ("filtro por talhao", totalDoCalendario (semana + "&talhao=T-01%20Norte", a) == 2);
+        conferir ("filtro por busca",  totalDoCalendario (semana + "&q=COLH", a) == 1);
+        conferir ("filtro todos e ignorado", totalDoCalendario (semana + "&tipo=todos", a) == 3);
+        post ("/api/atividades/" + plantio + "/status", "{\"status\":\"Agendada\"}", a);
+        conferir ("filtro por status acompanha a mudanca", totalDoCalendario (semana + "&status=Agendada", a) == 1);
+        Resp agendada = get ("/api/calendario?" + semana, a);
+        conferir ("contagem por status acompanha a mudanca",
+                  agendada.status == 200 && agendada.json ().get ("porStatus", Document.class).getInteger ("Agendada") == 1 &&
+                  dia (agendada.json (), "2031-03-03").get ("porStatus", Document.class).getInteger ("Agendada") == 1);
+
+        conferir ("calendario de outro usuario nao mostra as atividades", totalDoCalendario ("de=2031-03-01&ate=2031-03-31", b) == 0);
+
+        // formato do prototipo: o ano e o da ocorrencia mais proxima da criacao
+        LocalDate hoje     = LocalDate.now (ZoneId.of ("America/Sao_Paulo"));
+        LocalDate daqui    = hoje.plusDays (3);
+        String    meses    = "jan fev mar abr mai jun jul ago set out nov dez";
+        String    curta    = daqui.getDayOfMonth () + " " + meses.split (" ")[daqui.getMonthValue () - 1];
+        conferir ("atividade no formato do prototipo -> 201", 201,
+                  post ("/api/atividades", atividade ("Prototipo", aplicacao, "T-01 Norte", curta, null), b));
+        Resp proxima = get ("/api/calendario?de=" + hoje + "&ate=" + hoje.plusDays (6), b);
+        boolean   achou    = false;
+        if (proxima.status == 200)
+            for (Document item : proxima.json ().getList ("atividades", Document.class))
+                if ("Prototipo".equals (item.getString ("nome")) && daqui.toString ().equals (item.getString ("dataIso")))
+                    achou = true;
+        conferir ("data sem ano cai na ocorrencia mais proxima", achou);
+
+        conferir ("resolver: 10 jan criada em dezembro vai para o ano seguinte",
+                  LocalDate.of (2027, 1, 10).equals (CalendarioHandler.resolver ("10 jan", LocalDate.of (2026, 12, 10))));
+        conferir ("resolver: 20 mai criada em outubro fica no mesmo ano",
+                  LocalDate.of (2026, 5, 20).equals (CalendarioHandler.resolver ("20 mai", LocalDate.of (2026, 10, 28))));
+        conferir ("resolver: 29 fev usa o ano bissexto mais proximo",
+                  LocalDate.of (2028, 2, 29).equals (CalendarioHandler.resolver ("29 fev", LocalDate.of (2027, 6, 1))));
+        conferir ("resolver: 31 fev nao existe", CalendarioHandler.resolver ("31 fev", LocalDate.of (2026, 10, 28)) == null);
+        conferir ("resolver: ISO e mantido",
+                  LocalDate.of (2031, 3, 3).equals (CalendarioHandler.resolver ("2031-03-03", null)));
+    }
+
     private static void testarSafras () throws Exception
     {
         System.out.println ("\n# safras, ciclo produtivo e isolamento");
@@ -1190,6 +1322,7 @@ public class TesteServidor
             TesteServidor.testarPropriedades ();
             TesteServidor.testarSafras ();
             TesteServidor.testarCustos ();
+            TesteServidor.testarCalendario ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();
