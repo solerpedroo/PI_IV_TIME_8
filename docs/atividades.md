@@ -26,10 +26,10 @@ ela existisse.
 
 ## Transições e decisão pendente
 
-O servidor impede reabertura e qualquer alteração depois de conclusão ou
-cancelamento. A definição formal do grafo entre estados não terminais permanece
-em I01/#5; por isso esta entrega não promove uma sequência presumida a regra
-aprovada. Menu, Lista, arraste e API passam pela mesma rota de status.
+O servidor aplica a sequência do projeto e do modelo de domínio: Agendada →
+Em andamento → Concluída, com cancelamento antes da conclusão. O estado legado
+Pendente precisa ser agendado antes de iniciar. Estados terminais não podem ser
+reabertos. Menu, Lista e arraste passam pela mesma rota de status.
 
 ## Evidência
 

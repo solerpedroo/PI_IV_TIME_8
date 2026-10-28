@@ -225,7 +225,10 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
                 sessao.withTransaction (() -> {
                     long contagem = this.historicos.countDocuments (sessao, filtroHistorico);
                     evento.put ("ordem", (int) contagem);
-                    this.atividades.updateOne (sessao, filtro (propriedadeId, id), Updates.set ("status", novoStatus));
+                    // A condição impede que uma transição concorrente reabra ou
+                    // sobrescreva um estado confirmado em outra instância.
+                    if (this.atividades.updateOne (sessao, Filters.and (filtro (propriedadeId, id), Filters.eq ("status", statusAtual)), Updates.set ("status", novoStatus)).getModifiedCount () != 1)
+                        throw new IllegalStateException ("Estado alterado por outra operação; consulte novamente.");
                     this.historicos.insertOne (sessao, evento);
                     return null;
                 });

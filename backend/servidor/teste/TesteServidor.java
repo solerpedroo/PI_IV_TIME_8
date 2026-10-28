@@ -543,10 +543,15 @@ public class TesteServidor
                   "Média".equals (editada.json ().getString ("prioridade")));
         conferir ("horario invalido e rejeitado", 400, post ("/api/atividades",
                   "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"25:61\"}", token));
+        conferir ("nao conclui atividade pendente", 409, post ("/api/atividades/" + id + "/concluir", "{}", token));
+        conferir ("status ausente aponta erro", 400, post ("/api/atividades/" + id + "/status", "{}", token));
+        conferir ("criacao com status final e rejeitada", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"status\":\"Concluída\"}", token));
         conferir ("lista altera status pela rota unica", 200,
                   post ("/api/atividades/" + id + "/status", "{\"status\":\"Agendada\"}", token));
+        conferir ("nao pula de agendada para concluida", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));
         conferir ("arraste altera status pela rota unica", 200,
                   post ("/api/atividades/" + id + "/status", "{\"status\":\"Em andamento\"}", token));
+        conferir ("nao retrocede em andamento", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Agendada\"}", token));
         conferir ("menu conclui pela rota unica", 200,
                   post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));
         conferir ("estado terminal rejeita nova transicao", 409,

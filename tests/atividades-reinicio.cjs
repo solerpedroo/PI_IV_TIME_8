@@ -65,6 +65,18 @@ async function api(url, body, token, method) {
     assert.equal(consulta.status, 200);
     for (const [campo, esperado] of Object.entries({...valores,nome:'Plantio revisado',horario:'09:15'})) assert.equal(consulta.data[campo], esperado, campo);
     assert.equal(consulta.data.cultura, 'Soja');
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída'}, token)).status, 409);
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Agendada'}, token)).status, 200);
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Em andamento'}, token)).status, 200);
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída'}, token)).status, 200);
+    assert.equal((await api('/api/atividades/' + id + '/status', {status:'Agendada'}, token)).status, 409);
+    const cancelavel = await api('/api/atividades', {...valores,nome:'Cancelável'}, token);
+    assert.equal(cancelavel.status, 201);
+    assert.equal((await api('/api/atividades/' + cancelavel.data.id + '/status', {status:'Cancelada',motivo:'Chuva'}, token)).status, 200);
+    await parar(); log = ''; await iniciar();
+    login = await api('/api/auth/login', {email,password}); assert.equal(login.status, 200); token = login.data.token;
+    assert.equal((await api('/api/atividades/' + id, null, token)).data.status, 'Concluída');
+    assert.equal((await api('/api/atividades/' + cancelavel.data.id, null, token)).data.status, 'Cancelada');
     assert.equal((await api('/api/talhoes/' + talhao.data.id, {nome:'Renomeado',cultura:'Soja',hectares:10,status:'Ativo'}, token, 'PUT')).status, 409);
     assert.equal((await api('/api/safras/' + safra.data.id, null, token, 'DELETE')).status, 409);
     console.log('OK: criação, edição, vínculos, casos inválidos e consulta após reinício do servidor com Mongo.');

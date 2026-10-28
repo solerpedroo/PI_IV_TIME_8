@@ -60,9 +60,9 @@ public class AtividadesHandler
         roteador.adicionar ("POST", "/api/atividades",                  r -> { synchronized (this.sessoes) { return this.criar (r); } });
         roteador.adicionar ("GET",  "/api/atividades/{id}",             this::consultar);
         roteador.adicionar ("PUT",  "/api/atividades/{id}",             r -> { synchronized (this.sessoes) { return this.atualizar (r); } });
-        roteador.adicionar ("POST", "/api/atividades/{id}/concluir",    this::concluir);
-        roteador.adicionar ("POST", "/api/atividades/{id}/cancelar",    this::cancelar);
-        roteador.adicionar ("POST", "/api/atividades/{id}/status",      this::alterarStatus);
+        roteador.adicionar ("POST", "/api/atividades/{id}/concluir",    r -> { synchronized (this.sessoes) { return this.concluir (r); } });
+        roteador.adicionar ("POST", "/api/atividades/{id}/cancelar",    r -> { synchronized (this.sessoes) { return this.cancelar (r); } });
+        roteador.adicionar ("POST", "/api/atividades/{id}/status",      r -> { synchronized (this.sessoes) { return this.alterarStatus (r); } });
         roteador.adicionar ("GET",  "/api/atividades/{id}/historico",   this::historico);
     }
 
@@ -78,6 +78,15 @@ public class AtividadesHandler
         String n1 = java.text.Normalizer.normalize (s1, java.text.Normalizer.Form.NFD).replaceAll ("\\p{M}", "").toLowerCase (Locale.ROOT);
         String n2 = java.text.Normalizer.normalize (s2, java.text.Normalizer.Form.NFD).replaceAll ("\\p{M}", "").toLowerCase (Locale.ROOT);
         return n1.equals (n2);
+    }
+
+    // O projeto define a sequência de execução; Pendente é um estado legado
+    // da interface e deve ser agendado antes do início da execução.
+    private static boolean transicaoPermitida (String atual, String destino)
+    {
+        return ("Pendente".equals (atual) && ("Agendada".equals (destino) || "Cancelada".equals (destino))) ||
+               ("Agendada".equals (atual) && ("Em andamento".equals (destino) || "Cancelada".equals (destino))) ||
+               ("Em andamento".equals (atual) && ("Concluída".equals (destino) || "Cancelada".equals (destino)));
     }
 
     // O formulário trabalha com o nome do talhão, mas o vínculo só é válido
@@ -232,8 +241,8 @@ public class AtividadesHandler
 
         if (status == null || status.isBlank ())
             status = "Pendente";
-        else if (!STATUS_VALIDOS.contains (status))
-            v.erro ("status", "Status inválido.");
+        else if (!"Pendente".equals (status) && !"Agendada".equals (status))
+            v.erro ("status", "A atividade deve começar pendente ou agendada.");
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
@@ -361,6 +370,8 @@ public class AtividadesHandler
             return Resposta.json (409, new Document ("error", "Esta atividade já está concluída."));
         if ("Cancelada".equalsIgnoreCase (statusAtual))
             return Resposta.json (409, new Document ("error", "Atividade cancelada não pode ser concluída."));
+        if (!AtividadesHandler.transicaoPermitida (statusAtual, "Concluída"))
+            return Resposta.json (409, new Document ("error", "Inicie a atividade antes de concluí-la."));
 
         Document corpo = null;
         try { corpo = requisicao.getCorpoJson (); } catch (Exception ignora) {}
@@ -422,14 +433,19 @@ public class AtividadesHandler
         Validacao v = new Validacao (corpo);
         String novoStatus = v.texto ("status", "Selecione o status.", 30);
 
-        if (!STATUS_VALIDOS.contains (novoStatus))
+        if (novoStatus != null && !STATUS_VALIDOS.contains (novoStatus))
             v.erro ("status", "Status inválido.");
+
+        String desc = AtividadesHandler.textoOpcional (corpo, v, "descricao", 500);
+        String motivo = AtividadesHandler.textoOpcional (corpo, v, "motivo", 500);
 
         if (v.temErros ())
             return v.resposta ();
 
+        if (!AtividadesHandler.transicaoPermitida (statusAtual, novoStatus))
+            return Resposta.json (409, new Document ("error", "Transição de status não permitida."));
+
         String acao = "mudanca_status";
-        String desc = corpo.getString ("descricao");
 
         // A rota unica de status preserva os eventos de negocio dos atalhos
         // antigos: concluir e cancelar continuam auditaveis na mesma timeline.
@@ -441,7 +457,6 @@ public class AtividadesHandler
         else if ("Cancelada".equals (novoStatus))
         {
             acao = "cancelamento";
-            String motivo = corpo.getString ("motivo");
             if (motivo != null && !motivo.isBlank ()) desc = motivo;
             if (desc == null || desc.isBlank ()) desc = "Atividade cancelada operacionalmente";
         }
