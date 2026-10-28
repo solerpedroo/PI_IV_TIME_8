@@ -524,6 +524,10 @@ public class TesteServidor
                   "Trigo".equals (criada.json ().getString ("cultura")));
         conferir ("safra inexistente rejeitada", 400, post ("/api/atividades",
                   "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"safraId\":\"inexistente\"}", token));
+        post ("/api/talhoes", talhao ("Talhão sem safra", "Trigo", 1, null), token);
+        conferir ("edicao nao preserva safra incompatível com novo talhao", 400,
+                  put ("/api/atividades/" + id, "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Talhão sem safra\",\"data\":\"08 ago\"}", token));
+        conferir ("vinculo anterior permanece após edição inválida", safraId.equals (get ("/api/atividades/" + id, token).json ().getString ("safraId")));
         Resp editada = put ("/api/atividades/" + id,
                             "{\"nome\":\"Aplicação revisada\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"08:15\",\"responsavel\":\"Equipe Sul\",\"prioridade\":\"Média\"}", token);
         conferir ("editar preserva os campos de planejamento", editada.status == 200 &&
@@ -1017,7 +1021,7 @@ public class TesteServidor
                 certos++;
         conferir ("50 requisicoes paralelas respondidas corretamente", certos == 50);
         conferir ("os 25 talhoes paralelos foram gravados",
-                  get ("/api/talhoes/resumo", token).json ().getInteger ("quantidadeTotal") == 26);
+                  get ("/api/talhoes/resumo", token).json ().getInteger ("quantidadeTotal") == 27);
 
         // 20 cadastros simultaneos com o mesmo e-mail: so um pode passar
         CountDownLatch        largada2 = new CountDownLatch (1);

@@ -224,7 +224,7 @@ public class AtividadesHandler
         String talhao = v.texto ("talhao", "Selecione o talhão.",          60);
         String data   = v.texto ("data",   "Informe a data.",              30);
 
-        String status      = corpo.getString ("status");
+        String status      = AtividadesHandler.textoOpcional (corpo, v, "status", 30);
         String responsavel = AtividadesHandler.textoOpcional (corpo, v, "responsavel", 100);
         String prioridade  = AtividadesHandler.textoOpcional (corpo, v, "prioridade", 20);
         String horario     = AtividadesHandler.textoOpcional (corpo, v, "horario", 5);
@@ -252,9 +252,7 @@ public class AtividadesHandler
 
         Sessao sessao = requisicao.getSessao ();
         Document nova = new Document ();
-        String idCorpo = corpo.getString ("id");
-        if (idCorpo != null && !idCorpo.isBlank ())
-            nova.put ("id", idCorpo.trim ());
+        // A identidade é sempre gerada pelo servidor, nunca escolhida pelo cliente.
         nova.put ("usuarioId", sessao.getUsuarioId ());
         nova.put ("propriedadeId", sessao.getPropriedadeId ());
         nova.put ("nome", nome);
