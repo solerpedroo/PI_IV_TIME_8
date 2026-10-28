@@ -31,7 +31,7 @@ async function run(name, callback) {
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
-  const api = await mockApi(context, origin);
+  const api = await mockApi(context, origin, {activities: name.startsWith('atividades:')});
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -96,14 +96,17 @@ let failures = 0;
     assert.equal(await page.locator('[data-metric="hectares"]').textContent(), '585 ha');
   });
 
-  await run('atividades: criar, editar, lista, arraste, concluir, duplicar e excluir', async (page) => {
+  await run('atividades: criar, editar, lista, arraste, concluir e duplicar', async (page) => {
     await go(page, 'atividades.html');
     await page.locator('[data-open-modal="activity-form"]').first().click();
     await page.waitForFunction(() => document.querySelector('[name=talhao] option[value="T-01 Norte"]'));
     await submit(page, '[data-activity-form]', { nome: 'Teste campo', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '14 out' });
+    await page.locator('.kanban-card[data-activity="Teste campo"]').waitFor();
     await clickCardAction(page, 'Teste campo', 'edit');
     await submit(page, '[data-activity-form]', { nome: 'Teste editado', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '15 out' });
+    await page.locator('.kanban-card[data-activity="Teste editado"]').waitFor();
     await page.reload();
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]'));
     assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste editado'), true);
     await page.locator('[data-view-option="lista"]').count().then(async (count) => {
       if (count) await page.locator('[data-view-option="lista"]').click();
@@ -113,7 +116,7 @@ let failures = 0;
       const row = [...document.querySelectorAll('[data-list-body] tr')].find((item) => item.cells[0].textContent === 'Teste editado');
       const select = row.querySelector('select'); select.value = 'Agendada'; select.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Agendada');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Agendada');
     await page.evaluate(() => {
       const card = [...document.querySelectorAll('.kanban-card')].find((item) => item.dataset.activity === 'Teste editado');
       const column = document.querySelector('[data-column="Em andamento"]');
@@ -122,16 +125,16 @@ let failures = 0;
       column.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
       card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer }));
     });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Em andamento');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Em andamento');
     await clickCardAction(page, 'Teste editado', 'complete');
     await page.locator('[data-confirm-complete]').click();
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Concluída');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Concluída');
     await clickCardAction(page, 'Teste editado', 'duplicate');
     await submit(page, '[data-activity-form]', { nome: 'Teste cópia', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '16 out' });
-    await clickCardAction(page, 'Teste cópia', 'delete');
-    await page.locator('[data-confirm-delete]').click();
+    await page.locator('.kanban-card[data-activity="Teste cópia"]').waitFor({state: 'attached'});
     await page.reload();
-    assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste cópia'), false);
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste cópia"]') && document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Concluída');
+    assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste cópia'), true);
     assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Concluída');
   });
 

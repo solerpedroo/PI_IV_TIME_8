@@ -1,3 +1,4 @@
+# Miguel — RA: 25003110
 # Autor Principal: Pedro Henrique Contardi Soler - 25005592
 name: Estoque Java e MongoDB
 
@@ -39,6 +40,7 @@ jobs:
             fi
             sleep 1
           done
+          docker logs mongo-estoque
           exit 1
       - name: Persistência e concorrência com clientes Mongo independentes
         run: sh backend/servidor/testar-estoque-mongo.sh

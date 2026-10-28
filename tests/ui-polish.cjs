@@ -85,7 +85,7 @@ async function menu(page, trigger) {
     sessionStorage.setItem('agro.sessionToken', 'e2e-local');
     sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
   });
-  await mockApi(context, origin, {occurrences: [{id: 'ocorrencia-layout', titulo: 'Alerta para revisão visual',
+  await mockApi(context, origin, {visual: true, occurrences: [{id: 'ocorrencia-layout', titulo: 'Alerta para revisão visual',
     tipo: 'Praga', status: 'ABERTA', prioridade: 'Alta', data: '2026-10-24', talhaoNome: 'T-01 Norte'}]});
   const page = await context.newPage();
   const errors = [];
@@ -113,7 +113,8 @@ async function menu(page, trigger) {
         const ids = [...document.querySelectorAll('[id]')].map((element) => element.id);
         if (new Set(ids).size !== ids.length) problems.push('ids duplicados');
         for (const wrap of document.querySelectorAll('.table-wrap')) {
-          if (wrap.getClientRects().length && wrap.clientHeight < 160) problems.push('tabela sem altura útil: ' + wrap.className);
+          // Uma tabela vazia não precisa reservar altura para linhas inexistentes.
+          if (wrap.querySelector('tbody tr') && wrap.getClientRects().length && wrap.clientHeight < 160) problems.push('tabela sem altura útil: ' + wrap.className);
         }
         const cards = [...document.querySelectorAll('.cost-chart-card,.transactions-card,.budget-card,.crop-cost-card')];
         for (let i = 0; i < cards.length; i++) {

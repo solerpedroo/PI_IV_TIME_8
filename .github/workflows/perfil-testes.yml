@@ -1,3 +1,4 @@
+# Miguel — RA: 25003110
 # Autor Principal: Pedro Henrique Contardi Soler - 25005592
 name: Perfil Java e persistência
 
@@ -41,6 +42,7 @@ jobs:
             fi
             sleep 1
           done
+          docker logs mongo-perfil
           exit 1
       - name: Perfil com Mongo e reinício
         run: java -cp 'backend/servidor/bin:backend/servidor/lib/*' TestePerfil --mongo
