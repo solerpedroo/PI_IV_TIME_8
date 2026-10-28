@@ -9,6 +9,7 @@ import org.bson.types.ObjectId;
 import com.mongodb.client.MongoDatabase;
 import br.com.agrogestao.core.domain.cultivo.*;
 import br.com.agrogestao.core.domain.operacao.EscopoPropriedade;
+import br.com.agrogestao.core.domain.operacao.RecursoNaoEncontradoException;
 import static com.mongodb.client.model.Indexes.ascending;
 
 public final class CultivoRepositorioMongo {
@@ -66,14 +67,14 @@ public final class CultivoRepositorioMongo {
         if (cultura.id() == null) throw new IllegalArgumentException("id é obrigatório");
         vinculos.exigirPropriedade(cultura.escopo());
         if (banco.getCollection("culturas").replaceOne(vinculos.filtro(cultura.escopo(), cultura.id()), cultura.paraDocumento()).getMatchedCount() == 0) {
-            throw new IllegalArgumentException("cultura não encontrada no escopo");
+            throw new RecursoNaoEncontradoException("cultura não encontrada no escopo");
         }
         return cultura;
     }
 
     /** Uma cultura com safra não é apagada para não quebrar o histórico produtivo. */
     public void excluirCultura(EscopoPropriedade escopo, ObjectId id) {
-        buscarCultura(escopo, id).orElseThrow(() -> new IllegalArgumentException("cultura não encontrada no escopo"));
+        buscarCultura(escopo, id).orElseThrow(() -> new RecursoNaoEncontradoException("cultura não encontrada no escopo"));
         if (referenciada(escopo, "safras", "culturaId", id) || referenciada(escopo, "custos", "culturaId", id)) {
             throw new IllegalArgumentException("cultura possui safras e deve permanecer no histórico");
         }
@@ -100,7 +101,7 @@ public final class CultivoRepositorioMongo {
     public Safra atualizarSafra(Safra safra) {
         if (safra.id() == null) throw new IllegalArgumentException("id é obrigatório");
         Safra atual = buscarSafra(safra.escopo(), safra.id())
-                .orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("safra não encontrada no escopo"));
         if (atual.status() == Safra.Status.FINALIZADA) {
             throw new IllegalArgumentException("safra finalizada é somente para consulta histórica");
         }
@@ -109,13 +110,14 @@ public final class CultivoRepositorioMongo {
         }
         inserirReferenciasValidas(safra);
         if (banco.getCollection("safras").replaceOne(vinculos.filtro(safra.escopo(), safra.id()), safra.paraDocumento()).getMatchedCount() == 0) {
-            throw new IllegalArgumentException("safra não encontrada no escopo");
+            throw new RecursoNaoEncontradoException("safra não encontrada no escopo");
         }
         return safra;
     }
 
     public Safra avancarSafra(EscopoPropriedade escopo, ObjectId id, Safra.Status proximo) {
-        Safra atual = buscarSafra(escopo, id).orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
+        Safra atual = buscarSafra(escopo, id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("safra não encontrada no escopo"));
         Safra avancada = atual.avancar(proximo);
         Document filtro = vinculos.filtro(escopo, id).append("status", atual.status().name());
         if (banco.getCollection("safras").replaceOne(filtro, avancada.paraDocumento()).getMatchedCount() == 0) {
@@ -125,7 +127,8 @@ public final class CultivoRepositorioMongo {
     }
 
     public void excluirSafra(EscopoPropriedade escopo, ObjectId id) {
-        Safra safra = buscarSafra(escopo, id).orElseThrow(() -> new IllegalArgumentException("safra não encontrada no escopo"));
+        Safra safra = buscarSafra(escopo, id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("safra não encontrada no escopo"));
         if (safra.status() != Safra.Status.PLANEJAMENTO) {
             throw new IllegalArgumentException("somente safras em planejamento podem ser excluídas");
         }
@@ -140,6 +143,24 @@ public final class CultivoRepositorioMongo {
         vinculos.exigirPropriedade(safra.escopo());
         vinculos.exigir("culturas", safra.escopo(), safra.culturaId());
         for (ObjectId talhaoId : safra.talhaoIds()) vinculos.exigir("talhoes", safra.escopo(), talhaoId);
+        exigirSemSobreposicao(safra);
+    }
+
+    /**
+     * Um talhão não pode estar em duas safras cujos períodos se cruzam (mesma regra do servidor HTTP).
+     * Intervalos inclusivos em data de calendário: overlap se inicioA ≤ fimB e inicioB ≤ fimA.
+     */
+    private void exigirSemSobreposicao(Safra safra) {
+        for (Safra outra : listarSafras(safra.escopo())) {
+            if (safra.id() != null && safra.id().equals(outra.id())) continue;
+            boolean talhaoCompartilhado = outra.talhaoIds().stream().anyMatch(safra.talhaoIds()::contains);
+            if (!talhaoCompartilhado) continue;
+            boolean overlap = !safra.inicio().isAfter(outra.fim()) && !outra.inicio().isAfter(safra.fim());
+            if (overlap) {
+                throw new IllegalArgumentException(
+                        "talhão já vinculado a outra safra no mesmo período");
+            }
+        }
     }
 
     private boolean referenciada(EscopoPropriedade escopo, String colecao, String campo, ObjectId id) {
