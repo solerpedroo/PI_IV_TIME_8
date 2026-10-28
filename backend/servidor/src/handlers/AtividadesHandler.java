@@ -139,6 +139,37 @@ public class AtividadesHandler
         return safra;
     }
 
+    // Aceita o formato do protótipo ("12 ago") e o ISO canônico (yyyy-MM-dd)
+    // usado nos testes de persistência; rejeita texto livre sem calendário.
+    private static boolean dataPlanejamentoValida (String data)
+    {
+        if (data == null || data.isBlank ())
+            return false;
+
+        String texto = data.trim ();
+        if (texto.matches ("\\d{4}-\\d{2}-\\d{2}"))
+        {
+            try
+            {
+                java.time.LocalDate.parse (texto);
+                return true;
+            }
+            catch (Exception ignorada)
+            {
+                return false;
+            }
+        }
+
+        java.util.regex.Matcher match = java.util.regex.Pattern
+            .compile ("(?i)^(\\d{1,2})\\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)$")
+            .matcher (texto);
+        if (!match.matches ())
+            return false;
+
+        int dia = Integer.parseInt (match.group (1));
+        return dia >= 1 && dia <= 31;
+    }
+
     // Campos de planejamento são opcionais, mas nunca aceitam tipos inesperados
     // nem texto além do limite que a interface também apresenta ao usuário.
     private static String textoOpcional (Document corpo, Validacao validacao, String campo, int maximo)
@@ -246,6 +277,8 @@ public class AtividadesHandler
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
+        if (data != null && !AtividadesHandler.dataPlanejamentoValida (data))
+            v.erro ("data", "Informe a data no formato do protótipo (12 ago) ou ISO (2026-08-12).");
         if (prioridade != null && !prioridade.isBlank () && !PRIORIDADES_VALIDAS.contains (prioridade))
             v.erro ("prioridade", "Selecione uma prioridade válida.");
         if (horario != null && !horario.isBlank () && !horario.matches ("([01]\\d|2[0-3]):[0-5]\\d"))
@@ -315,6 +348,8 @@ public class AtividadesHandler
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
+        if (data != null && !AtividadesHandler.dataPlanejamentoValida (data))
+            v.erro ("data", "Informe a data no formato do protótipo (12 ago) ou ISO (2026-08-12).");
         if (prioridade != null && !prioridade.isBlank () && !PRIORIDADES_VALIDAS.contains (prioridade))
             v.erro ("prioridade", "Selecione uma prioridade válida.");
         if (horario != null && !horario.isBlank () && !horario.matches ("([01]\\d|2[0-3]):[0-5]\\d"))
