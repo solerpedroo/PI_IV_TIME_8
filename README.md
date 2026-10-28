@@ -32,6 +32,7 @@ Com base no documento de produto e nas issues do Project, o MVP contempla:
 - **Ocorrências**: registro, timeline, resolução, exclusão lógica e resumo mensal.
 - **Custos**: lançamentos, indicadores e vínculo com a operação da propriedade.
 - **Dashboard**: visão geral operacional a partir dos módulos integrados.
+- **Notificações**: sino com alertas reais (atraso, estoque, ocorrência, atividades do dia), navegação ao registro e leitura/preferências persistentes.
 - **Configurações / Perfil**: dados pessoais, preferências, propriedade padrão, troca de e-mail/senha e logout.
 
 ## 🚫 Não-escopo (MVP)
@@ -209,7 +210,7 @@ PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 
 Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
 
-Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/estoque.md`](docs/estoque.md), [`docs/ocorrencias.md`](docs/ocorrencias.md), [`docs/perfil.md`](docs/perfil.md), [`docs/safras.md`](docs/safras.md).
+Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/estoque.md`](docs/estoque.md), [`docs/ocorrencias.md`](docs/ocorrencias.md), [`docs/notificacoes.md`](docs/notificacoes.md), [`docs/perfil.md`](docs/perfil.md), [`docs/safras.md`](docs/safras.md).
 
 ## 🛟 Troubleshooting
 
