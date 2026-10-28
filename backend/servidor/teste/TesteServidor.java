@@ -530,9 +530,9 @@ public class TesteServidor
         conferir ("mudar status para Em andamento -> 200", 200, respStatus1);
         conferir ("status atualizado para Em andamento", "Em andamento".equals (respStatus1.json ().getString ("status")));
 
-        // Concluir atividade
-        Resp respConcluir1 = post ("/api/atividades/" + id1 + "/concluir", "{\"descricao\":\"Aplicação finalizada sem intercorrências\"}", token);
-        conferir ("concluir atividade -> 200", 200, respConcluir1);
+        // Conclusao usa a mesma rota de status dos caminhos de Lista e arraste.
+        Resp respConcluir1 = post ("/api/atividades/" + id1 + "/status", "{\"status\":\"Concluída\",\"descricao\":\"Aplicação finalizada sem intercorrências\"}", token);
+        conferir ("concluir pela rota unificada de status -> 200", 200, respConcluir1);
         conferir ("status agora e Concluída", "Concluída".equals (respConcluir1.json ().getString ("status")));
 
         // Consultar historico persistido apos conclusao: deve conter criacao, andamento e conclusao
@@ -557,9 +557,9 @@ public class TesteServidor
         conferir ("criar segunda atividade -> 201", 201, respCria2);
         String id2 = respCria2.json ().getString ("id");
 
-        // Cancelar atividade 2
-        Resp respCancela2 = post ("/api/atividades/" + id2 + "/cancelar", "{\"motivo\":\"Chuva forte no local\"}", token);
-        conferir ("cancelar atividade com motivo -> 200", 200, respCancela2);
+        // Cancelamento tambem usa a rota unificada, preservando o motivo.
+        Resp respCancela2 = post ("/api/atividades/" + id2 + "/status", "{\"status\":\"Cancelada\",\"motivo\":\"Chuva forte no local\"}", token);
+        conferir ("cancelar pela rota unificada com motivo -> 200", 200, respCancela2);
         conferir ("status atualizado para Cancelada", "Cancelada".equals (respCancela2.json ().getString ("status")));
 
         // Consultar historico da atividade cancelada

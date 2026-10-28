@@ -321,11 +321,27 @@ public class AtividadesHandler
         if (v.temErros ())
             return v.resposta ();
 
+        String acao = "mudanca_status";
         String desc = corpo.getString ("descricao");
-        if (desc == null || desc.isBlank ())
+
+        // A rota unica de status preserva os eventos de negocio dos atalhos
+        // antigos: concluir e cancelar continuam auditaveis na mesma timeline.
+        if ("Concluída".equals (novoStatus))
+        {
+            acao = "conclusao";
+            if (desc == null || desc.isBlank ()) desc = "Atividade concluída com sucesso";
+        }
+        else if ("Cancelada".equals (novoStatus))
+        {
+            acao = "cancelamento";
+            String motivo = corpo.getString ("motivo");
+            if (motivo != null && !motivo.isBlank ()) desc = motivo;
+            if (desc == null || desc.isBlank ()) desc = "Atividade cancelada operacionalmente";
+        }
+        else if (desc == null || desc.isBlank ())
             desc = "Status alterado para " + novoStatus;
 
-        this.atividades.mudarStatus (propriedadeId, id, novoStatus, "mudanca_status", desc);
+        this.atividades.mudarStatus (propriedadeId, id, novoStatus, acao, desc);
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));

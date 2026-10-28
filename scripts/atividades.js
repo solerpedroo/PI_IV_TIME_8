@@ -235,18 +235,18 @@
    * Atualiza o status de uma atividade intermediária (Pendente, Agendada, Em andamento)
    * sincronizando com a API do servidor e mantendo a consistência dos dados locais.
    */
-  async function atualizarStatusAtividade(card, novoStatus) {
+  async function atualizarStatusAtividade(card, novoStatus, motivo = "") {
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
 
     if (apiDisponivel && cardId) {
       try {
         await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}/status`, {
-          method: "POST", body: JSON.stringify({ status: novoStatus }),
+          method: "POST", body: JSON.stringify({ status: novoStatus, motivo }),
         });
       } catch (err) {
         toast("error", "Status não alterado", err.message);
-        return;
+        return false;
       }
     }
 
@@ -255,7 +255,7 @@
     recomputeMetrics();
     applyFilters();
     toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
-
+    return true;
   }
 
   /**
@@ -649,24 +649,11 @@
     $("[data-confirm-complete]", modal)?.addEventListener("click", async () => {
       if (!activeCard) return;
       const card = activeCard;
-      const id = card.dataset.id;
       const name = card.dataset.activity;
       const talhao = card.dataset.talhao;
 
-      if (apiDisponivel && id) {
-        try {
-          await apiRequest(`/api/atividades/${encodeURIComponent(id)}/concluir`, {
-            method: "POST", body: JSON.stringify({}),
-          });
-        } catch (err) {
-          toast("error", "Conclusão não confirmada", err.message);
-          return;
-        }
-      }
-
+      if (!await atualizarStatusAtividade(card, "Concluída")) return;
       $(".kanban-card-top .badge", card).className = "badge badge-success";
-      moveCardToStatus(card, "Concluída");
-      if (!persist()) return;
 
       closeModal(modal);
       toast("success", "Atividade concluída", `${name} marcada como concluída em ${talhao}.`);
@@ -693,26 +680,13 @@
     $("[data-confirm-cancel]", modal)?.addEventListener("click", async () => {
       if (!activeCard) return;
       const card = activeCard;
-      const id = card.dataset.id;
       const name = card.dataset.activity;
       const talhao = card.dataset.talhao;
       const reasonInput = $("[data-cancel-reason]", modal);
       const motivo = reasonInput ? reasonInput.value.trim() : "";
 
-      if (apiDisponivel && id) {
-        try {
-          await apiRequest(`/api/atividades/${encodeURIComponent(id)}/cancelar`, {
-            method: "POST", body: JSON.stringify({ motivo }),
-          });
-        } catch (err) {
-          toast("error", "Cancelamento não confirmado", err.message);
-          return;
-        }
-      }
-
+      if (!await atualizarStatusAtividade(card, "Cancelada", motivo)) return;
       $(".kanban-card-top .badge", card).className = "badge badge-neutral";
-      moveCardToStatus(card, "Cancelada");
-      if (!persist()) return;
 
       closeModal(modal);
       toast("info", "Atividade cancelada", `${name} foi cancelada.${motivo ? ` Motivo: ${motivo}` : ""}`);

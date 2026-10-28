@@ -200,8 +200,34 @@ async function clickCardAction(page, name, action) {
     await page.locator('[data-modal="activity-detail"] [data-close-modal]').click();
     console.log("OK - Linha do tempo visualizada com sucesso.");
 
-    // 3. Concluir a Atividade 1
-    console.log("Passo 3: Concluindo atividade...");
+    // 3. Lista -> rota unificada de status
+    console.log("Passo 3: Alterando status pela Lista...");
+    await page.locator('[data-view-option="list"]').click();
+    await page.waitForFunction(() => document.querySelector('[data-list-body] tr'));
+    await page.evaluate(() => {
+      const row = [...document.querySelectorAll('[data-list-body] tr')]
+        .find((item) => item.cells[0].textContent === "Adubação Nitrogenada");
+      const select = row.querySelector("select");
+      select.value = "Agendada";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Adubação Nitrogenada"]')?.dataset.status === "Agendada");
+
+    // 4. Arraste -> a mesma rota unificada de status
+    console.log("Passo 4: Alterando status por arraste...");
+    await page.locator('[data-view-option="kanban"]').click();
+    await page.evaluate(() => {
+      const card = document.querySelector('.kanban-card[data-activity="Adubação Nitrogenada"]');
+      const column = document.querySelector('[data-column="Em andamento"]');
+      const dataTransfer = new DataTransfer();
+      card.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer }));
+      column.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
+      card.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer }));
+    });
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Adubação Nitrogenada"]')?.dataset.status === "Em andamento");
+
+    // 5. Menu -> a mesma rota unificada, com conclusão integrada
+    console.log("Passo 5: Concluindo atividade pelo menu...");
     await clickCardAction(page, "Adubação Nitrogenada", "complete");
     await page.waitForSelector('[data-modal="activity-complete"].is-open');
     await page.click('[data-confirm-complete]');
@@ -231,8 +257,8 @@ async function clickCardAction(page, name, action) {
     assert.equal(hasComplete, false, "Atividade concluída não deve ter opção de Concluir");
     assert.equal(hasCancel, false, "Atividade concluída não deve ter opção de Cancelar");
 
-    // 4. Criar e Cancelar a Atividade 2 com justificativa
-    console.log("Passo 4: Criando e cancelando segunda atividade com justificativa...");
+    // 6. Criar e cancelar pelo menu, com justificativa na mesma rota de status
+    console.log("Passo 6: Criando e cancelando segunda atividade com justificativa...");
     await page.locator('[data-open-modal="activity-form"]').first().click();
     await page.waitForSelector('[data-modal="activity-form"].is-open');
     await submit(page, '[data-activity-form]', {
@@ -271,8 +297,27 @@ async function clickCardAction(page, name, action) {
     assert.equal(eventoCancel.motivo, "Chuva intensa inviabilizou aplicação");
     console.log("OK - Histórico contém evento de cancelamento com o motivo correto.");
 
-    // 5. Validar casos inválidos pertinentes (Rejeição de operações sobre estados terminais)
-    console.log("Passo 5: Validando casos inválidos e proteção de estados terminais...");
+    // 7. Falha da API: a interface preserva o estado confirmado, sem falso sucesso.
+    await page.locator('[data-open-modal="activity-form"]').first().click();
+    await submit(page, '[data-activity-form]', {
+      nome: "Atividade com falha", tipo: "Manutenção", talhao: "T-01 Norte", data: "17 nov",
+    });
+    await page.locator('.kanban-card[data-activity="Atividade com falha"]').waitFor({ state: "visible" });
+    await page.route("**/api/atividades/*/status", (route) => route.abort());
+    await page.locator('[data-view-option="list"]').click();
+    await page.evaluate(() => {
+      const row = [...document.querySelectorAll('[data-list-body] tr')]
+        .find((item) => item.cells[0].textContent === "Atividade com falha");
+      const select = row.querySelector("select");
+      select.value = "Agendada";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente");
+    await page.unroute("**/api/atividades/*/status");
+
+    // 8. Casos inválidos pertinentes (Rejeição de operações sobre estados terminais)
+    console.log("Passo 8: Validando casos inválidos e proteção de estados terminais...");
     console.log("Log do servidor até aqui:\n", serverLog);
     const ativ1NoBackend = await api(`/api/atividades/${idAtividade1}`, null, sessionToken);
     console.log("Atividade 1 no backend:", ativ1NoBackend.data);
@@ -289,8 +334,8 @@ async function clickCardAction(page, name, action) {
     assert.equal(resMudarStatus.status, 409, "Servidor deve retornar 409 Conflict ao tentar mudar status de atividade terminal");
     console.log("OK - Todos os casos inválidos foram devidamente rejeitados com HTTP 409.");
 
-    // 6. Validar persistência após reload completo da página
-    console.log("Passo 6: Validando persistência dos dados e estados reais após reload...");
+    // 9. Validar persistência após reload completo da página
+    console.log("Passo 9: Validando persistência dos dados e estados reais após reload...");
     await page.reload();
     await page.waitForLoadState("domcontentloaded");
     await page.waitForSelector('.kanban-card');
