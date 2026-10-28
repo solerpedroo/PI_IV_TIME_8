@@ -482,6 +482,7 @@ Os índices garantem as regras de unicidade mesmo com requisições simultâneas
 
 Atividades, Insumos, Ocorrências, Dashboard, Notificações e Configurações.
 Os formulários de autenticação do front usam as rotas desta API.
-O front ainda não tem uma tela de Safras consumindo `/api/safras`, e a tela de
-Custos ainda grava no navegador em vez de usar `/api/custos`. O custo gerado
-automaticamente pelo consumo de estoque depende da API de estoque, que ainda não existe.
+A tela `frontend/safras.html` consome `/api/safras` (criar, avançar etapas,
+histórico e vínculos). Escopo I10/I11 e o papel do `core`: [docs/safras.md](../../docs/safras.md).
+A tela de Custos ainda pode gravar no navegador em alguns fluxos; o resumo por
+safra usa `/api/custos` quando autenticado.
