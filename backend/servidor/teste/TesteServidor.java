@@ -543,6 +543,10 @@ public class TesteServidor
                   "Média".equals (editada.json ().getString ("prioridade")));
         conferir ("horario invalido e rejeitado", 400, post ("/api/atividades",
                   "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"25:61\"}", token));
+        conferir ("data livre sem calendario e rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"quando der\"}", token));
+        conferir ("data ISO invalida e rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"2026-13-40\"}", token));
         conferir ("nao conclui atividade pendente", 409, post ("/api/atividades/" + id + "/concluir", "{}", token));
         conferir ("status ausente aponta erro", 400, post ("/api/atividades/" + id + "/status", "{}", token));
         conferir ("criacao com status final e rejeitada", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"status\":\"Concluída\"}", token));
