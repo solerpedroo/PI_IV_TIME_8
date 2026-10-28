@@ -46,7 +46,8 @@ jobs:
           docker logs mongo-perfil
           exit 1
       - name: Perfil com Mongo e reinício
-        run: java -cp 'backend/servidor/bin:backend/servidor/lib/*' TestePerfil --mongo
+        working-directory: backend/servidor
+        run: java -cp 'bin:lib/*' TestePerfil --mongo
       - name: Instalar navegador de testes
         run: |
           npm install --no-save playwright@1.49.1
