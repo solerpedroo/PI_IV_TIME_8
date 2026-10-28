@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.RepositorioTalhoesMemoria;
@@ -488,6 +489,104 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    private static void testarAtividadesEHistorico () throws Exception
+    {
+        System.out.println ("\n# atividades e historico");
+
+        conferir ("listar atividades sem token -> 401", 401, get ("/api/atividades", null));
+        conferir ("criar atividade sem token -> 401", 401, post ("/api/atividades", "{}", null));
+
+        String token = login ("joao@agro.com", "Senha@123");
+
+        // Casos invalidos de criacao
+        conferir ("criar atividade com corpo vazio -> 400", 400, post ("/api/atividades", "{}", token));
+        conferir ("criar atividade sem nome -> 400", 400, post ("/api/atividades", "{\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token));
+        conferir ("criar atividade com status invalido -> 400", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"status\":\"Inexistente\"}", token));
+
+        // Criar atividade valida 1
+        String jsonAtiv1 = new Document ("nome", "Aplicação de fungicida")
+            .append ("tipo", "Aplicação")
+            .append ("talhao", "T-01 Norte")
+            .append ("data", "08 ago")
+            .append ("status", "Agendada")
+            .append ("responsavel", "Carlos")
+            .append ("prioridade", "Alta")
+            .toJson ();
+        Resp respCria1 = post ("/api/atividades", jsonAtiv1, token);
+        conferir ("criar atividade valida -> 201", 201, respCria1);
+        String id1 = respCria1.json ().getString ("id");
+        conferir ("id gerado na criacao", id1 != null && !id1.isBlank ());
+        conferir ("status inicial Agendada", "Agendada".equals (respCria1.json ().getString ("status")));
+
+        // Consultar timeline (historico) da atividade recem-criada: deve conter evento 0
+        Resp respHist1 = get ("/api/atividades/" + id1 + "/historico", token);
+        conferir ("consultar historico inicial -> 200", 200, respHist1);
+        conferir ("historico contem evento 0 de criacao", respHist1.corpo.contains ("\"ordem\": 0") || respHist1.corpo.contains ("\"ordem\":0"));
+        conferir ("historico contem descricao de criacao", respHist1.corpo.contains ("Registro inicial"));
+
+        // Avancar status para Em andamento
+        Resp respStatus1 = post ("/api/atividades/" + id1 + "/status", "{\"status\":\"Em andamento\",\"descricao\":\"Iniciada no campo\"}", token);
+        conferir ("mudar status para Em andamento -> 200", 200, respStatus1);
+        conferir ("status atualizado para Em andamento", "Em andamento".equals (respStatus1.json ().getString ("status")));
+
+        // Concluir atividade
+        Resp respConcluir1 = post ("/api/atividades/" + id1 + "/concluir", "{\"descricao\":\"Aplicação finalizada sem intercorrências\"}", token);
+        conferir ("concluir atividade -> 200", 200, respConcluir1);
+        conferir ("status agora e Concluída", "Concluída".equals (respConcluir1.json ().getString ("status")));
+
+        // Consultar historico persistido apos conclusao: deve conter criacao, andamento e conclusao
+        Resp respHistConcluido = get ("/api/atividades/" + id1 + "/historico", token);
+        conferir ("historico apos conclusao -> 200", 200, respHistConcluido);
+        conferir ("historico contem conclusao", respHistConcluido.corpo.contains ("Concluída") && respHistConcluido.corpo.contains ("finalizada"));
+
+        // Casos invalidos em atividade concluida (estado terminal)
+        conferir ("concluir atividade ja concluida -> 409", 409, post ("/api/atividades/" + id1 + "/concluir", "{}", token));
+        conferir ("cancelar atividade ja concluida -> 409", 409, post ("/api/atividades/" + id1 + "/cancelar", "{\"motivo\":\"Tarde demais\"}", token));
+        conferir ("alterar status de concluida -> 409", 409, post ("/api/atividades/" + id1 + "/status", "{\"status\":\"Pendente\"}", token));
+        conferir ("editar atividade concluida -> 409", 409, requisitar ("PUT", "/api/atividades/" + id1, "{\"nome\":\"Novo nome\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"10 ago\"}", token));
+
+        // Criar atividade 2 para testar cancelamento
+        String jsonAtiv2 = new Document ("nome", "Irrigação por pivô")
+            .append ("tipo", "Irrigação")
+            .append ("talhao", "T-02 Sul")
+            .append ("data", "09 ago")
+            .append ("status", "Pendente")
+            .toJson ();
+        Resp respCria2 = post ("/api/atividades", jsonAtiv2, token);
+        conferir ("criar segunda atividade -> 201", 201, respCria2);
+        String id2 = respCria2.json ().getString ("id");
+
+        // Cancelar atividade 2
+        Resp respCancela2 = post ("/api/atividades/" + id2 + "/cancelar", "{\"motivo\":\"Chuva forte no local\"}", token);
+        conferir ("cancelar atividade com motivo -> 200", 200, respCancela2);
+        conferir ("status atualizado para Cancelada", "Cancelada".equals (respCancela2.json ().getString ("status")));
+
+        // Consultar historico da atividade cancelada
+        Resp respHistCancelada = get ("/api/atividades/" + id2 + "/historico", token);
+        conferir ("historico da cancelada -> 200", 200, respHistCancelada);
+        conferir ("historico contem registro do cancelamento", respHistCancelada.corpo.contains ("Cancelada") && respHistCancelada.corpo.contains ("Chuva forte"));
+
+        // Casos invalidos em atividade cancelada (estado terminal)
+        conferir ("cancelar atividade ja cancelada -> 409", 409, post ("/api/atividades/" + id2 + "/cancelar", "{}", token));
+        conferir ("concluir atividade cancelada -> 409", 409, post ("/api/atividades/" + id2 + "/concluir", "{}", token));
+        conferir ("alterar status de cancelada -> 409", 409, post ("/api/atividades/" + id2 + "/status", "{\"status\":\"Pendente\"}", token));
+
+        // Filtro por status na listagem
+        Resp respFiltroConcluidas = get ("/api/atividades?status=Conclu%C3%ADda", token);
+        conferir ("filtrar concluidas -> 200", 200, respFiltroConcluidas);
+        conferir ("filtro traz apenas a atividade 1", respFiltroConcluidas.corpo.contains (id1) && !respFiltroConcluidas.corpo.contains (id2));
+
+        Resp respFiltroCanceladas = get ("/api/atividades?status=Cancelada", token);
+        conferir ("filtrar canceladas -> 200", 200, respFiltroCanceladas);
+        conferir ("filtro traz apenas a atividade 2", respFiltroCanceladas.corpo.contains (id2) && !respFiltroCanceladas.corpo.contains (id1));
+
+        // Isolamento de dados entre usuarios
+        String outroToken = login ("maria@agro.com", "Nova@1234");
+        conferir ("outro usuario nao lista atividades alheias", !get ("/api/atividades", outroToken).corpo.contains (id1));
+        conferir ("outro usuario nao consulta atividade alheia -> 404", 404, get ("/api/atividades/" + id1, outroToken));
+        conferir ("outro usuario nao consulta historico alheio -> 404", 404, get ("/api/atividades/" + id1 + "/historico", outroToken));
+    }
+
     private static void testarPropriedades () throws Exception
     {
         System.out.println ("\n# propriedades, contexto e autorizacao");
@@ -704,6 +803,7 @@ public class TesteServidor
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
+            TesteServidor.testarAtividadesEHistorico ();
             TesteServidor.testarPropriedades ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();

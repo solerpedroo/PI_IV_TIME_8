@@ -1,12 +1,17 @@
+/* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
+import dados.RepositorioAtividades;
+import dados.RepositorioAtividadesMemoria;
+import dados.RepositorioAtividadesMongo;
 import dados.RepositorioTalhoes;
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioTalhoesMongo;
 import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
+import handlers.AtividadesHandler;
 import handlers.AuthHandler;
 import handlers.EstaticosHandler;
 import handlers.PropriedadesHandler;
@@ -76,6 +81,15 @@ public class Servidor
     public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
+        RepositorioAtividades atividades = conexao == null
+            ? new RepositorioAtividadesMemoria ()
+            : new RepositorioAtividadesMongo (conexao.getBanco ());
+        return Servidor.montarRoteador (usuarios, talhoes, atividades, conexao, raiz);
+    }
+
+    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioAtividades atividades,
+                                           ConexaoMongo conexao, Path raiz) throws Exception
+    {
         Sessoes  sessoes  = new Sessoes ();
         Roteador roteador = new Roteador (sessoes);
 
@@ -83,6 +97,7 @@ public class Servidor
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
+        new AtividadesHandler (atividades, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
@@ -140,7 +155,8 @@ public class Servidor
 
             ConexaoMongo        conexao  = null;
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
-            RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
+            RepositorioTalhoes    talhoes    = new RepositorioTalhoesMemoria  ();
+            RepositorioAtividades atividades = new RepositorioAtividadesMemoria ();
 
             if (!memoria)
             {
@@ -150,7 +166,8 @@ public class Servidor
                 try
                 {
                     usuarios = new RepositorioUsuariosMongo (conexao);
-                    talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
+                    talhoes    = new RepositorioTalhoesMongo  (conexao.getBanco ());
+                    atividades = new RepositorioAtividadesMongo (conexao.getBanco ());
                 }
                 catch (Exception erro)
                 {
