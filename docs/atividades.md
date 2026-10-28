@@ -34,12 +34,15 @@ reabertos. Menu, Lista e arraste passam pela mesma rota de status.
 ## Evidência
 
 `backend/servidor/testar.bat` valida criação, edição, vínculo safra-talhão,
-campos inválidos, três caminhos de status, cancelamento e histórico (319/319 na
-execução de 28/10/2026). O repositório Mongo grava atividade e evento de
-histórico na mesma transação; `TesteMongo` foi ampliado para reabrir a conexão e
-conferir ambos quando houver um Mongo replica set disponível.
+campos inválidos (incluindo data fora do formato do protótipo/ISO), três
+caminhos de status, cancelamento e histórico (335/335 na execução de
+28/10/2026). O repositório Mongo grava atividade e evento de histórico na mesma
+transação; `TesteMongo` foi ampliado para reabrir a conexão e conferir ambos
+quando houver um Mongo replica set disponível.
 `tests/atividades-real.cjs` cobre navegador, filtros, falhas de API e reload;
-requer Playwright disponível no ambiente de execução.
+roda no workflow `atividades-testes.yml` com Playwright. A data de planejamento
+aceita o formato do protótipo (`12 ago`) ou ISO (`2026-08-12`). Com sessão
+autenticada, falha ao consultar o histórico não sintetiza timeline local.
 
 Para a #135, `node tests/atividades-reinicio.cjs` usa o Mongo local do Compose,
 um banco isolado e reinicia o servidor Java. Em 28/10/2026 o teste confirmou
