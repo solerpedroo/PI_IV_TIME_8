@@ -27,6 +27,7 @@ public class AtividadesHandler
 {
     public static final List<String> STATUS_VALIDOS = List.of ("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada");
     public static final List<String> TIPOS_VALIDOS  = List.of ("Aplicação", "Irrigação", "Colheita", "Manutenção", "Manejo");
+    public static final List<String> PRIORIDADES_VALIDAS = List.of ("Baixa", "Média", "Alta");
 
     private final RepositorioAtividades atividades;
     private final RepositorioTalhoes    talhoes;
@@ -81,6 +82,30 @@ public class AtividadesHandler
                 return true;
 
         return false;
+    }
+
+    // Campos de planejamento são opcionais, mas nunca aceitam tipos inesperados
+    // nem texto além do limite que a interface também apresenta ao usuário.
+    private static String textoOpcional (Document corpo, Validacao validacao, String campo, int maximo)
+    {
+        if (!corpo.containsKey (campo))
+            return null;
+
+        Object valor = corpo.get (campo);
+        if (!(valor instanceof String))
+        {
+            validacao.erro (campo, "Valor inválido.");
+            return null;
+        }
+
+        String texto = ((String) valor).trim ();
+        if (texto.length () > maximo)
+        {
+            validacao.erro (campo, "Use no máximo " + maximo + " caracteres.");
+            return null;
+        }
+
+        return texto;
     }
 
     // GET /api/atividades?status=&tipo=&talhao=&q=
@@ -154,9 +179,9 @@ public class AtividadesHandler
         String data   = v.texto ("data",   "Informe a data.",              30);
 
         String status      = corpo.getString ("status");
-        String responsavel = corpo.getString ("responsavel");
-        String prioridade  = corpo.getString ("prioridade");
-        String horario     = corpo.getString ("horario");
+        String responsavel = AtividadesHandler.textoOpcional (corpo, v, "responsavel", 100);
+        String prioridade  = AtividadesHandler.textoOpcional (corpo, v, "prioridade", 20);
+        String horario     = AtividadesHandler.textoOpcional (corpo, v, "horario", 5);
 
         if (status == null || status.isBlank ())
             status = "Pendente";
@@ -165,6 +190,10 @@ public class AtividadesHandler
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
+        if (prioridade != null && !prioridade.isBlank () && !PRIORIDADES_VALIDAS.contains (prioridade))
+            v.erro ("prioridade", "Selecione uma prioridade válida.");
+        if (horario != null && !horario.isBlank () && !horario.matches ("([01]\\d|2[0-3]):[0-5]\\d"))
+            v.erro ("horario", "Informe um horário válido.");
 
         if (talhao != null && !this.talhaoDaPropriedade (requisicao.getSessao ().getPropriedadeId (), talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
@@ -217,9 +246,16 @@ public class AtividadesHandler
         String tipo   = v.texto ("tipo",   "Selecione o tipo.",            50);
         String talhao = v.texto ("talhao", "Selecione o talhão.",          60);
         String data   = v.texto ("data",   "Informe a data.",              30);
+        String responsavel = AtividadesHandler.textoOpcional (corpo, v, "responsavel", 100);
+        String prioridade  = AtividadesHandler.textoOpcional (corpo, v, "prioridade", 20);
+        String horario     = AtividadesHandler.textoOpcional (corpo, v, "horario", 5);
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
+        if (prioridade != null && !prioridade.isBlank () && !PRIORIDADES_VALIDAS.contains (prioridade))
+            v.erro ("prioridade", "Selecione uma prioridade válida.");
+        if (horario != null && !horario.isBlank () && !horario.matches ("([01]\\d|2[0-3]):[0-5]\\d"))
+            v.erro ("horario", "Informe um horário válido.");
         if (talhao != null && !this.talhaoDaPropriedade (propriedadeId, talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 
@@ -232,11 +268,11 @@ public class AtividadesHandler
         campos.put ("talhao", talhao);
         campos.put ("data", data);
         if (corpo.containsKey ("responsavel"))
-            campos.put ("responsavel", corpo.getString ("responsavel"));
+            campos.put ("responsavel", responsavel);
         if (corpo.containsKey ("prioridade"))
-            campos.put ("prioridade", corpo.getString ("prioridade"));
+            campos.put ("prioridade", prioridade);
         if (corpo.containsKey ("horario"))
-            campos.put ("horario", corpo.getString ("horario"));
+            campos.put ("horario", horario);
 
         this.atividades.atualizar (propriedadeId, id, campos);
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);

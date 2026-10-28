@@ -541,6 +541,26 @@
           <input id="activity-data" name="data" placeholder="Ex.: 12 ago" required>
           <p class="field-error" data-error-for="data"></p>
         </div>
+        <div class="input-group">
+          <label for="activity-horario">Horário</label>
+          <input id="activity-horario" name="horario" type="time">
+          <p class="field-error" data-error-for="horario"></p>
+        </div>
+        <div class="input-group">
+          <label for="activity-responsavel">Responsável</label>
+          <input id="activity-responsavel" name="responsavel" maxlength="100" placeholder="Ex.: Equipe de campo">
+          <p class="field-error" data-error-for="responsavel"></p>
+        </div>
+        <div class="input-group">
+          <label for="activity-prioridade">Prioridade</label>
+          <select id="activity-prioridade" name="prioridade">
+            <option value="">Não definida</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+          </select>
+          <p class="field-error" data-error-for="prioridade"></p>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
           <button class="btn btn-primary" type="submit">Salvar atividade</button>

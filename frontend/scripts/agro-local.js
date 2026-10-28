@@ -30,8 +30,13 @@
   const timeline = list(shape({time: text, title: text, desc: string}));
   const schemas = {
     plots: records({plot: text, crop: text, hectares: positive, status: oneOf("Ativo", "Irrigação pendente", "Em preparo")}),
-    activities: records({activity: text, tipo: text, talhao: text, date: text,
-      status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")}),
+    // Aceita o cache anterior sem os campos de planejamento e o formato atual,
+    // para que uma atualização não descarte atividades já gravadas no navegador.
+    activities: (value) => records({activity: text, tipo: text, talhao: text, date: text,
+      status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")})(value)
+      || records({activity: text, tipo: text, talhao: text, date: text, horario: string,
+        responsavel: string, prioridade: string,
+        status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")})(value),
     stock: records({product: text, category: text, qty: number, unit: text, min: positive,
       movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: isoInstant, note: string}))}),
     occurrences: records({occ: text, tipo: text, talhao: text, date: text,

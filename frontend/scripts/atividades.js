@@ -9,8 +9,7 @@
  * Cobre os fluxos de Atividades:
  * - Criação de atividades conectada à API `/api/atividades` e fallback local.
  * - Troca de status por menu, lista e arraste (Kanban Drag and Drop).
- * - Conclusão de atividades via `/api/atividades/{id}/concluir`.
- * - Cancelamento justificado via `/api/atividades/{id}/cancelar`.
+ * - Conclusão e cancelamento pela rota unificada `/api/atividades/{id}/status`.
  * - Estados terminais: atividades "Concluída" ou "Cancelada" não podem ter
  *   seu status alterado nem serem reabertas ou editadas.
  * - Histórico completo e linha do tempo de eventos via `/api/atividades/{id}/historico`.
@@ -30,6 +29,7 @@
   // Todas as mutações aguardam esta consulta para não serem apagadas por uma
   // resposta remota que chegue depois do primeiro clique do usuário.
   let carregamentoRemoto = Promise.resolve();
+  let talhoesCarregados = false;
 
   const filters = {
     query: "",
@@ -66,8 +66,9 @@
     });
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      const err = new Error(errorBody.erro || errorBody.mensagem || "Falha na comunicação com o servidor.");
+      const err = new Error(errorBody.error || errorBody.erro || errorBody.mensagem || "Falha na comunicação com o servidor.");
       err.status = response.status;
+      err.fields = errorBody.fields || {};
       throw err;
     }
     return response.json();
@@ -411,6 +412,9 @@
     card.dataset.talhao = raw.talhao;
     card.dataset.date = raw.data;
     card.dataset.status = raw.status;
+    card.dataset.horario = raw.horario || "";
+    card.dataset.responsavel = raw.responsavel || "";
+    card.dataset.prioridade = raw.prioridade || "";
 
     const badgeTone = {
       Pendente: "badge-warning",
@@ -533,6 +537,9 @@
       <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.tipo)}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.talhao)}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Data</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.date)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Horário</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.horario || "Não definido")}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Responsável</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.responsavel || "Não definido")}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Prioridade</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.prioridade || "Não definida")}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.status)}</span></div>
     `;
 
@@ -730,6 +737,12 @@
     $$("input, select", form).forEach((el) => el.removeAttribute("aria-invalid"));
   }
 
+  // A API informa erros por campo; preservamos essa informação no formulário
+  // em vez de trocar uma validação específica por uma mensagem genérica.
+  function showApiFieldErrors(form, fields) {
+    Object.entries(fields || {}).forEach(([field, message]) => setError(form, field, message));
+  }
+
   function setError(form, field, message) {
     const errorEl = form.querySelector(`[data-error-for="${field}"]`);
     if (errorEl) errorEl.textContent = message;
@@ -743,6 +756,9 @@
     form.talhao.value = values.talhao;
     form.talhao.dispatchEvent(new Event("change"));
     form.data.value = values.data;
+    form.horario.value = values.horario || "";
+    form.responsavel.value = values.responsavel || "";
+    form.prioridade.value = values.prioridade || "";
   }
 
   function openCreateForm() {
@@ -773,6 +789,9 @@
       tipo: card.dataset.tipo,
       talhao: card.dataset.talhao,
       data: card.dataset.date,
+      horario: card.dataset.horario,
+      responsavel: card.dataset.responsavel,
+      prioridade: card.dataset.prioridade,
     });
     $("[data-activity-form-title]", modal).textContent = "Editar atividade";
     openModal(modal);
@@ -789,6 +808,9 @@
       tipo: card.dataset.tipo,
       talhao: card.dataset.talhao,
       data: card.dataset.date,
+      horario: card.dataset.horario,
+      responsavel: card.dataset.responsavel,
+      prioridade: card.dataset.prioridade,
     });
     $("[data-activity-form-title]", modal).textContent = "Nova atividade (cópia)";
     openModal(modal);
@@ -811,6 +833,10 @@
       const tipo = form.tipo.value;
       const talhao = form.talhao.value;
       const data = form.data.value.trim();
+      const horario = form.horario.value;
+      const responsavel = form.responsavel.value.trim();
+      const prioridade = form.prioridade.value;
+      const valores = { nome, tipo, talhao, data, horario, responsavel, prioridade };
 
       let hasError = false;
       if (!nome) { setError(form, "nome", "Informe o nome da atividade."); hasError = true; }
@@ -823,6 +849,11 @@
         return;
       }
 
+      if (getSessionToken() && !talhoesCarregados) {
+        toast("warning", "Talhões sendo carregados", "Aguarde a confirmação dos talhões da propriedade antes de salvar.");
+        return;
+      }
+
       if (formMode === "edit" && activeCard) {
         if (isTerminalStatus(activeCard.dataset.status)) {
           toast("error", "Edição bloqueada", "Atividades concluídas ou canceladas não podem ser alteradas.");
@@ -831,12 +862,13 @@
         }
 
         const cardId = activeCard.dataset.id;
-        if (apiDisponivel && cardId) {
+        if (getSessionToken() && cardId) {
           try {
             await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
-              method: "PUT", body: JSON.stringify({ nome, tipo, talhao, data }),
+              method: "PUT", body: JSON.stringify(valores),
             });
           } catch (err) {
+            showApiFieldErrors(form, err.fields);
             toast("error", "Edição não confirmada", err.message);
             return;
           }
@@ -845,6 +877,9 @@
         activeCard.dataset.tipo = tipo;
         activeCard.dataset.talhao = talhao;
         activeCard.dataset.date = data;
+        activeCard.dataset.horario = horario;
+        activeCard.dataset.responsavel = responsavel;
+        activeCard.dataset.prioridade = prioridade;
         $(".kanban-card-title", activeCard).textContent = nome;
         $(".kanban-card-top .badge", activeCard).textContent = tipo;
         $(".kanban-card-meta", activeCard).lastChild.textContent = talhao;
@@ -856,18 +891,19 @@
         cardSeq += 1;
         const cardId = window.AgroLocal.id();
         let idConfirmado = cardId;
-        if (apiDisponivel) {
+        if (getSessionToken()) {
           try {
             const criada = await apiRequest("/api/atividades", {
-              method: "POST", body: JSON.stringify({ nome, tipo, talhao, data }),
+              method: "POST", body: JSON.stringify(valores),
             });
             idConfirmado = String(criada.id);
           } catch (err) {
+            showApiFieldErrors(form, err.fields);
             toast("error", "Atividade não criada", err.message);
             return;
           }
         }
-        const card = buildCard({ id: idConfirmado, nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
+        const card = buildCard({ id: idConfirmado, ...valores, status: "Pendente" }, cardSeq);
         $("[data-column='Pendente'] [data-column-cards]").appendChild(card);
         if (!persist()) return;
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
@@ -902,6 +938,9 @@
         tipo: record.tipo,
         talhao: record.talhao,
         data: record.date,
+        horario: record.horario || "",
+        responsavel: record.responsavel || "",
+        prioridade: record.prioridade || "",
         status: record.status,
       }, ++cardSeq);
       $(`[data-column="${record.status}"] [data-column-cards]`)?.appendChild(card);
@@ -925,14 +964,18 @@
           tipo: item.tipo,
           talhao: item.talhao,
           date: item.data,
+          horario: item.horario || "",
+          responsavel: item.responsavel || "",
+          prioridade: item.prioridade || "",
           status: item.status,
         }));
         apiDisponivel = true;
         restoreActivities(records);
         window.AgroLocal.save("activities", records);
       }
-    } catch {
+    } catch (err) {
       // Mantém o cache local se o servidor estiver temporariamente indisponível
+      toast("error", "Atividades sem conexão", `${err.message} Exibindo o último cache confirmado desta propriedade.`);
     }
   }
 
@@ -943,6 +986,9 @@
       tipo: row.dataset.tipo,
       talhao: row.dataset.talhao,
       date: row.dataset.date,
+      horario: row.dataset.horario || "",
+      responsavel: row.dataset.responsavel || "",
+      prioridade: row.dataset.prioridade || "",
       status: row.dataset.status,
     })), restoreActivities);
 
@@ -957,6 +1003,8 @@
     initCompleteConfirm();
     initCancelConfirm();
     initDeleteConfirm();
+    // O select passa a conter somente talhões confirmados pela API ou cache.
+    document.addEventListener("agro:plots-loaded", () => { talhoesCarregados = true; }, { once: true });
     applyFilters();
 
     carregamentoRemoto = carregarAtividadesRemotas();

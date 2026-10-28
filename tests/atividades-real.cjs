@@ -2,7 +2,7 @@
 /**
  * Teste End-to-End de Atividades com Servidor Real e Navegador
  * --------------------------------------------------------------------------
- * Valida os critérios de aceite da subissue #140:
+ * Valida os critérios de aceite das subissues #138 e #140:
  * 1. Inicializa o servidor backend real em memória.
  * 2. Autentica e adquire sessão do operador.
  * 3. Cria talhões de suporte na API para a propriedade do operador.
@@ -184,6 +184,38 @@ async function clickCardAction(page, name, action) {
     assert.ok(atividade1Api, "Atividade persistida no banco do servidor");
     const idAtividade1 = atividade1Api.id;
 
+    // O filtro permanece ativo enquanto a edição confirma os campos planejados.
+    await page.selectOption('[data-filter-tipo]', "Aplicação");
+    assert.equal(await page.locator('.kanban-card[data-activity="Adubação Nitrogenada"]').isVisible(), true);
+
+    // Criação, edição e cópia preservam todos os campos de planejamento na API.
+    await clickCardAction(page, "Adubação Nitrogenada", "edit");
+    await submit(page, '[data-activity-form]', {
+      nome: "Adubação Nitrogenada", tipo: "Aplicação", talhao: "T-01 Norte", data: "15 nov",
+      horario: "07:30", responsavel: "Equipe Norte", prioridade: "Alta",
+    });
+    const editadaApi = await api(`/api/atividades/${idAtividade1}`, null, sessionToken);
+    assert.deepEqual(
+      [editadaApi.data.horario, editadaApi.data.responsavel, editadaApi.data.prioridade],
+      ["07:30", "Equipe Norte", "Alta"],
+      "Edição persiste horário, responsável e prioridade",
+    );
+
+    await clickCardAction(page, "Adubação Nitrogenada", "duplicate");
+    await submit(page, '[data-activity-form]', {
+      nome: "Adubação Nitrogenada cópia", tipo: "Aplicação", talhao: "T-02 Sul", data: "16 nov",
+      horario: "08:00", responsavel: "Equipe Sul", prioridade: "Média",
+    });
+    await page.locator('.kanban-card[data-activity="Adubação Nitrogenada cópia"]').waitFor({ state: "visible" });
+    const copiaApi = await api("/api/atividades", null, sessionToken);
+    const copia = copiaApi.data.find((a) => a.nome === "Adubação Nitrogenada cópia");
+    assert.ok(copia && copia.id !== idAtividade1, "Duplicação cria um novo registro real");
+    assert.deepEqual([copia.horario, copia.responsavel, copia.prioridade], ["08:00", "Equipe Sul", "Média"]);
+
+    // A edição não apaga o filtro ativo durante a atualização do card.
+    assert.equal(await page.locator('.kanban-card[data-activity="Adubação Nitrogenada"]').isVisible(), true);
+    await page.selectOption('[data-filter-tipo]', "");
+
     const hist1 = await api(`/api/atividades/${idAtividade1}/historico`, null, sessionToken);
     assert.ok(hist1.ok && hist1.data.length >= 1, "Histórico da atividade possui evento de criação");
     assert.equal(hist1.data[0].ordem, 0);
@@ -316,6 +348,21 @@ async function clickCardAction(page, name, action) {
     assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente");
     await page.unroute("**/api/atividades/*/status");
 
+    // Falha de criação: sem resposta da API não há card nem sucesso fictício.
+    await page.route("**/api/atividades", (route) => {
+      if (route.request().method() === "POST") return route.abort();
+      return route.continue();
+    });
+    await page.locator('[data-open-modal="activity-form"]').first().click();
+    await submit(page, '[data-activity-form]', {
+      nome: "Criação sem confirmação", tipo: "Aplicação", talhao: "T-01 Norte", data: "18 nov",
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.kanban-card[data-activity="Criação sem confirmação"]').count(), 0,
+      "Falha de POST não cria atividade somente no navegador");
+    await page.unroute("**/api/atividades");
+    await page.locator('[data-modal="activity-form"] [data-close-modal]').click();
+
     // 8. Casos inválidos pertinentes (Rejeição de operações sobre estados terminais)
     console.log("Passo 8: Validando casos inválidos e proteção de estados terminais...");
     console.log("Log do servidor até aqui:\n", serverLog);
@@ -346,6 +393,8 @@ async function clickCardAction(page, name, action) {
 
     assert.equal(await card1Reload.getAttribute("data-status"), "Concluída", "Card 1 permanece Concluída após reload");
     assert.equal(await card2Reload.getAttribute("data-status"), "Cancelada", "Card 2 permanece Cancelada após reload");
+    assert.equal(await card1Reload.getAttribute("data-responsavel"), "Equipe Norte",
+      "Campos de planejamento são restaurados da API após reload");
 
     // Confere badge na coluna Cancelada
     const countCancelada = await page.locator('.kanban-column[data-column="Cancelada"] [data-column-count]').innerText();
