@@ -130,13 +130,15 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
     }
 
     @Override
-    public synchronized boolean mudarStatus (String propriedadeId, String id, String novoStatus, String acao, String descricao) throws Exception
+    public synchronized boolean mudarStatus (String propriedadeId, String id, String statusEsperado, String novoStatus, String acao, String descricao) throws Exception
     {
         Document atual = this.buscarPorId (propriedadeId, id);
         if (atual == null)
             return false;
 
         String statusAtual = atual.getString ("status");
+        if (!statusAtual.equals (statusEsperado))
+            throw new IllegalStateException ("Estado alterado por outra operação.");
         if ("Concluída".equalsIgnoreCase (statusAtual) || "Cancelada".equalsIgnoreCase (statusAtual))
             throw new IllegalStateException ("Atividade finalizada (" + statusAtual + ") não permite alteração de status.");
 

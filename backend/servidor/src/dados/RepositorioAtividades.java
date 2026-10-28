@@ -26,7 +26,7 @@ public interface RepositorioAtividades
     public boolean atualizar (String propriedadeId, String id, Document campos) throws Exception;
 
     /** Atualiza o status da atividade e anexa o novo evento na linha do tempo. */
-    public boolean mudarStatus (String propriedadeId, String id, String novoStatus, String acao, String descricao) throws Exception;
+    public boolean mudarStatus (String propriedadeId, String id, String statusEsperado, String novoStatus, String acao, String descricao) throws Exception;
 
     /** Retorna a timeline completa de eventos registrados para a atividade. */
     public List<Document> listarHistorico (String propriedadeId, String atividadeId) throws Exception;

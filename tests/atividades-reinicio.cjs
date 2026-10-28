@@ -8,7 +8,7 @@ const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
 const base = 'http://127.0.0.1:18081';
 const cwd = path.join(__dirname, '../backend/servidor');
 const env = { ...process.env, MONGODB_URI: `mongodb://127.0.0.1:27017/${banco}?replicaSet=rs0`, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '' };
-let processo, log = '';
+let processo, segundo, log = '';
 const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function iniciar() {
   processo = spawn('java', ['-cp', process.platform === 'win32' ? 'bin;lib/*' : 'bin:lib/*', 'Servidor', '18081'], { cwd, env });
@@ -73,6 +73,28 @@ async function api(url, body, token, method) {
     const cancelavel = await api('/api/atividades', {...valores,nome:'Cancelável'}, token);
     assert.equal(cancelavel.status, 201);
     assert.equal((await api('/api/atividades/' + cancelavel.data.id + '/status', {status:'Cancelada',motivo:'Chuva'}, token)).status, 200);
+    // Duas instâncias têm locks independentes e disputam a mesma atividade Mongo.
+    const concorrente = await api('/api/atividades', {...valores,nome:'Concorrente',status:'Agendada'}, token);
+    assert.equal(concorrente.status, 201);
+    assert.equal((await api('/api/atividades/' + concorrente.data.id + '/status', {status:'Em andamento'}, token)).status, 200);
+    segundo = spawn('java', ['-cp', process.platform === 'win32' ? 'bin;lib/*' : 'bin:lib/*', 'Servidor', '18082'], {cwd,env});
+    for (let i = 0; i < 100; i++) {
+      try { if ((await fetch('http://127.0.0.1:18082/ready')).ok) break; } catch {}
+      if (segundo.exitCode !== null || i === 99) throw new Error('Segunda instância não iniciou');
+      await pausa(100);
+    }
+    const loginSegundo = await fetch('http://127.0.0.1:18082/api/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    assert.equal(loginSegundo.status, 200);
+    const tokenSegundo = (await loginSegundo.json()).token;
+    const disputar = (origem, credencial, status) => fetch(origem + '/api/atividades/' + concorrente.data.id + '/status', {
+      method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer ' + credencial}, body:JSON.stringify({status})
+    });
+    const disputas = await Promise.all([disputar(base, token, 'Concluída'), disputar('http://127.0.0.1:18082', tokenSegundo, 'Cancelada')]);
+    assert.deepEqual(disputas.map(r => r.status).sort(), [200,409]);
+    const eventos = await api('/api/atividades/' + concorrente.data.id + '/historico', null, token);
+    assert.equal(eventos.data.length, 3, 'Somente uma transição terminal deve constar no histórico');
+    const segundoTerminou = new Promise(resolve => segundo.once('exit', resolve));
+    segundo.stdin.write('desativar\n'); await segundoTerminou; segundo = null;
     await parar(); log = ''; await iniciar();
     login = await api('/api/auth/login', {email,password}); assert.equal(login.status, 200); token = login.data.token;
     assert.equal((await api('/api/atividades/' + id, null, token)).data.status, 'Concluída');
@@ -81,6 +103,7 @@ async function api(url, body, token, method) {
     assert.equal((await api('/api/safras/' + safra.data.id, null, token, 'DELETE')).status, 409);
     console.log('OK: criação, edição, vínculos, casos inválidos e consulta após reinício do servidor com Mongo.');
   } finally {
+    if (segundo && segundo.exitCode === null) { const terminado = new Promise(resolve => segundo.once('exit', resolve)); segundo.stdin.write('desativar\n'); await terminado; }
     await parar();
     // Somente o banco de nome aleatório criado nesta execução é removido.
     if (criado) execFileSync('docker', ['exec','frontend_pi_iv-mongo-1','mongosh','--quiet',banco,'--eval','db.dropDatabase()'], { stdio:'ignore' });

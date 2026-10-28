@@ -379,7 +379,8 @@ public class AtividadesHandler
         if (desc == null || desc.isBlank ())
             desc = "Atividade concluída com sucesso";
 
-        this.atividades.mudarStatus (propriedadeId, id, "Concluída", "conclusao", desc);
+        try { this.atividades.mudarStatus (propriedadeId, id, statusAtual, "Concluída", "conclusao", desc); }
+        catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));
@@ -409,7 +410,8 @@ public class AtividadesHandler
         if (motivo == null || motivo.isBlank ())
             motivo = "Atividade cancelada operacionalmente";
 
-        this.atividades.mudarStatus (propriedadeId, id, "Cancelada", "cancelamento", motivo);
+        try { this.atividades.mudarStatus (propriedadeId, id, statusAtual, "Cancelada", "cancelamento", motivo); }
+        catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));
@@ -463,7 +465,8 @@ public class AtividadesHandler
         else if (desc == null || desc.isBlank ())
             desc = "Status alterado para " + novoStatus;
 
-        this.atividades.mudarStatus (propriedadeId, id, novoStatus, acao, desc);
+        try { this.atividades.mudarStatus (propriedadeId, id, statusAtual, novoStatus, acao, desc); }
+        catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));

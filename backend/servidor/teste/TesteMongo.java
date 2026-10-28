@@ -91,7 +91,7 @@ public class TesteMongo
                 .append ("talhao", "T-01").append ("data", "2026-08-01").append ("status", "Pendente");
             atividades.criar (atividade);
             String atividadeId = atividade.getString ("id");
-            conferir (atividades.mudarStatus (principal, atividadeId, "Agendada", "mudanca_status", "Agendada para teste"),
+            conferir (atividades.mudarStatus (principal, atividadeId, "Pendente", "Agendada", "mudanca_status", "Agendada para teste"),
                       "atividade Mongo deve registrar a transição");
             conferir (atividades.listarHistorico (principal, atividadeId).size () == 2 &&
                       "Agendada".equals (atividades.buscarPorId (principal, atividadeId).getString ("status")),
