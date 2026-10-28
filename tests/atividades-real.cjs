@@ -139,6 +139,12 @@ async function clickCardAction(page, name, action) {
     }, sessionToken);
     assert.ok(talhao2.ok, "Talhão 2 criado.");
 
+    const safra = await api("/api/safras", {
+      nome: "Safra de validação", cultura: "Soja", dataInicio: "2026-01-01", dataFim: "2026-12-31",
+      talhoes: [talhao1.data.id],
+    }, sessionToken);
+    assert.ok(safra.ok, "Safra vinculável criada.");
+
     // Inicialização do navegador e injeção da sessão
     browser = await launchTestBrowser(chromium);
     const context = await browser.newContext();
@@ -158,6 +164,7 @@ async function clickCardAction(page, name, action) {
 
     // Aguarda o carregamento dos talhões da API nos selects do formulário
     await page.waitForFunction(() => document.querySelector('[name=talhao] option[value="T-01 Norte"]'));
+    await page.waitForFunction((safraId) => document.querySelector(`[name=safraId] option[value="${safraId}"]`), safra.data.id);
 
     // 1. Criar Atividade 1: Adubação Nitrogenada
     console.log("Passo 1: Criando atividade via modal...");
@@ -168,6 +175,7 @@ async function clickCardAction(page, name, action) {
       tipo: "Aplicação",
       talhao: "T-01 Norte",
       data: "15 nov",
+      safraId: safra.data.id,
     });
 
     // Aguarda o card surgir na coluna Pendente
@@ -183,6 +191,7 @@ async function clickCardAction(page, name, action) {
     const atividade1Api = listaAtividades.data.find((a) => a.nome === "Adubação Nitrogenada");
     assert.ok(atividade1Api, "Atividade persistida no banco do servidor");
     const idAtividade1 = atividade1Api.id;
+    assert.equal(atividade1Api.safraId, safra.data.id, "Atividade persiste o vínculo oficial da safra");
 
     // O filtro permanece ativo enquanto a edição confirma os campos planejados.
     await page.selectOption('[data-filter-tipo]', "Aplicação");
@@ -193,6 +202,7 @@ async function clickCardAction(page, name, action) {
     await submit(page, '[data-activity-form]', {
       nome: "Adubação Nitrogenada", tipo: "Aplicação", talhao: "T-01 Norte", data: "15 nov",
       horario: "07:30", responsavel: "Equipe Norte", prioridade: "Alta",
+      safraId: safra.data.id,
     });
     const editadaApi = await api(`/api/atividades/${idAtividade1}`, null, sessionToken);
     assert.deepEqual(
@@ -204,7 +214,7 @@ async function clickCardAction(page, name, action) {
     await clickCardAction(page, "Adubação Nitrogenada", "duplicate");
     await submit(page, '[data-activity-form]', {
       nome: "Adubação Nitrogenada cópia", tipo: "Aplicação", talhao: "T-02 Sul", data: "16 nov",
-      horario: "08:00", responsavel: "Equipe Sul", prioridade: "Média",
+      horario: "08:00", responsavel: "Equipe Sul", prioridade: "Média", safraId: "",
     });
     await page.locator('.kanban-card[data-activity="Adubação Nitrogenada cópia"]').waitFor({ state: "visible" });
     const copiaApi = await api("/api/atividades", null, sessionToken);
@@ -347,6 +357,30 @@ async function clickCardAction(page, name, action) {
     await page.waitForTimeout(150);
     assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente");
     await page.unroute("**/api/atividades/*/status");
+
+    // Mesmo sem a leitura inicial, uma sessão não pode alterar status só no cache.
+    await page.route("**/api/atividades", (route) => {
+      if (route.request().method() === "GET") return route.abort();
+      return route.continue();
+    });
+    await page.route("**/api/atividades/*/status", (route) => route.abort());
+    await page.reload();
+    await page.waitForSelector('.kanban-card[data-activity="Atividade com falha"]');
+    await page.locator('[data-view-option="list"]').click();
+    await page.evaluate(() => {
+      const row = [...document.querySelectorAll('[data-list-body] tr')]
+        .find((item) => item.cells[0].textContent === "Atividade com falha");
+      const select = row.querySelector("select");
+      select.value = "Agendada";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.waitForTimeout(150);
+    assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente",
+      "Falha de leitura e de status não confirma mudança somente no cache");
+    await page.unroute("**/api/atividades");
+    await page.unroute("**/api/atividades/*/status");
+    await page.reload();
+    await page.waitForSelector('.kanban-card[data-activity="Atividade com falha"]');
 
     // Falha de criação: sem resposta da API não há card nem sucesso fictício.
     await page.route("**/api/atividades", (route) => {

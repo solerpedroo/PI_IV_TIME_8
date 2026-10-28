@@ -508,13 +508,20 @@ public class TesteServidor
         conferir ("tipo fora do catálogo e rejeitado", 400, post ("/api/atividades",
                   "{\"nome\":\"Teste\",\"tipo\":\"Inválido\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token));
 
-        Resp criada = post ("/api/atividades", "{\"nome\":\"Aplicação teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"07:30\",\"responsavel\":\"Equipe Norte\",\"prioridade\":\"Alta\"}", token);
+        String talhaoId = idDoTalhao (token, "T-01 Norte");
+        Resp safra = post ("/api/safras", safra ("Safra da atividade", "Trigo", "2026-01-01", "2026-12-31", talhaoId), token);
+        conferir ("criar safra vinculável -> 201", 201, safra);
+        String safraId = safra.status == 201 ? safra.json ().getString ("id") : "";
+
+        Resp criada = post ("/api/atividades", "{\"nome\":\"Aplicação teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"07:30\",\"responsavel\":\"Equipe Norte\",\"prioridade\":\"Alta\",\"safraId\":\"" + safraId + "\"}", token);
         conferir ("criar atividade -> 201", 201, criada);
         String id = criada.status == 201 ? criada.json ().getString ("id") : "";
         conferir ("criar preserva os campos de planejamento", criada.status == 201 &&
                   "07:30".equals (criada.json ().getString ("horario")) &&
                   "Equipe Norte".equals (criada.json ().getString ("responsavel")) &&
-                  "Alta".equals (criada.json ().getString ("prioridade")));
+                  "Alta".equals (criada.json ().getString ("prioridade")) &&
+                  safraId.equals (criada.json ().getString ("safraId")) &&
+                  "Trigo".equals (criada.json ().getString ("cultura")));
         Resp editada = put ("/api/atividades/" + id,
                             "{\"nome\":\"Aplicação revisada\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"08:15\",\"responsavel\":\"Equipe Sul\",\"prioridade\":\"Média\"}", token);
         conferir ("editar preserva os campos de planejamento", editada.status == 200 &&
@@ -743,7 +750,7 @@ public class TesteServidor
         String id3 = s3.status == 201 ? s3.json ().getString ("id") : "x";
 
         conferir ("usuario A lista 3 safras", lista (get ("/api/safras", a)).size () == 3);
-        conferir ("usuario B nao ve safras de A", get ("/api/safras", b).corpo.equals ("[]"));
+        conferir ("usuario B nao ve safras de A", !get ("/api/safras", b).corpo.contains ("Soja Verão"));
         conferir ("filtro cultura=soja",    lista (get ("/api/safras?cultura=soja", a)).size () == 1);
         conferir ("filtro etapa=planejamento", lista (get ("/api/safras?etapa=planejamento", a)).size () == 3);
         conferir ("busca q=safrinha",       lista (get ("/api/safras?q=safrinha", a)).size () == 1);

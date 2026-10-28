@@ -2,6 +2,7 @@
 package handlers;
 
 import dados.RepositorioAtividades;
+import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import util.Json;
@@ -30,20 +32,25 @@ public class AtividadesHandler
     public static final List<String> PRIORIDADES_VALIDAS = List.of ("Baixa", "Média", "Alta");
 
     private final RepositorioAtividades atividades;
+    private final RepositorioSafras      safras;
     private final RepositorioTalhoes    talhoes;
     private final Sessoes               sessoes;
 
-    public AtividadesHandler (RepositorioAtividades atividades, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    public AtividadesHandler (RepositorioAtividades atividades, RepositorioTalhoes talhoes, RepositorioSafras safras,
+                              Sessoes sessoes) throws Exception
     {
         if (atividades == null)
             throw new Exception ("Repositório de atividades ausente");
         if (talhoes == null)
             throw new Exception ("Repositório de talhões ausente");
+        if (safras == null)
+            throw new Exception ("Repositório de safras ausente");
         if (sessoes == null)
             throw new Exception ("Sessões ausentes");
 
         this.atividades = atividades;
         this.talhoes    = talhoes;
+        this.safras     = safras;
         this.sessoes    = sessoes;
     }
 
@@ -82,6 +89,45 @@ public class AtividadesHandler
                 return true;
 
         return false;
+    }
+
+    private Document talhaoDaPropriedadeComNome (String propriedadeId, String nome) throws Exception
+    {
+        for (Document talhao : this.talhoes.listar (propriedadeId))
+            if (nome.equalsIgnoreCase (talhao.getString ("nome")))
+                return talhao;
+
+        return null;
+    }
+
+    private static String idDoDocumento (Document documento)
+    {
+        Object id = documento.get ("_id");
+        return id instanceof ObjectId ? ((ObjectId) id).toHexString () : String.valueOf (id);
+    }
+
+    // Uma safra só pode ser associada se incluir o talhão escolhido na atividade.
+    // Assim, cultura e ciclo são derivados de uma única referência consistente.
+    private Document safraDoTalhao (String propriedadeId, String safraId, String talhao, Validacao validacao) throws Exception
+    {
+        if (safraId == null || safraId.isBlank ())
+            return null;
+
+        Document safra = this.safras.buscarPorId (propriedadeId, safraId);
+        if (safra == null)
+        {
+            validacao.erro ("safraId", "Selecione uma safra da propriedade ativa.");
+            return null;
+        }
+
+        Document registroTalhao = this.talhaoDaPropriedadeComNome (propriedadeId, talhao);
+        if (registroTalhao == null || !safra.getList ("talhoes", String.class).contains (AtividadesHandler.idDoDocumento (registroTalhao)))
+        {
+            validacao.erro ("safraId", "A safra selecionada não contém o talhão informado.");
+            return null;
+        }
+
+        return safra;
     }
 
     // Campos de planejamento são opcionais, mas nunca aceitam tipos inesperados
@@ -182,6 +228,7 @@ public class AtividadesHandler
         String responsavel = AtividadesHandler.textoOpcional (corpo, v, "responsavel", 100);
         String prioridade  = AtividadesHandler.textoOpcional (corpo, v, "prioridade", 20);
         String horario     = AtividadesHandler.textoOpcional (corpo, v, "horario", 5);
+        String safraId     = AtividadesHandler.textoOpcional (corpo, v, "safraId", 60);
 
         if (status == null || status.isBlank ())
             status = "Pendente";
@@ -197,6 +244,8 @@ public class AtividadesHandler
 
         if (talhao != null && !this.talhaoDaPropriedade (requisicao.getSessao ().getPropriedadeId (), talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
+
+        Document safra = talhao == null ? null : this.safraDoTalhao (requisicao.getSessao ().getPropriedadeId (), safraId, talhao, v);
 
         if (v.temErros ())
             return v.resposta ();
@@ -219,6 +268,12 @@ public class AtividadesHandler
             nova.put ("prioridade", prioridade.trim ());
         if (horario != null && !horario.isBlank ())
             nova.put ("horario", horario.trim ());
+        if (safra != null)
+        {
+            nova.put ("safraId", safraId);
+            nova.put ("safra", safra.getString ("nome"));
+            nova.put ("cultura", safra.getString ("cultura"));
+        }
 
         this.atividades.criar (nova);
 
@@ -249,6 +304,7 @@ public class AtividadesHandler
         String responsavel = AtividadesHandler.textoOpcional (corpo, v, "responsavel", 100);
         String prioridade  = AtividadesHandler.textoOpcional (corpo, v, "prioridade", 20);
         String horario     = AtividadesHandler.textoOpcional (corpo, v, "horario", 5);
+        String safraId     = AtividadesHandler.textoOpcional (corpo, v, "safraId", 60);
 
         if (tipo != null && !TIPOS_VALIDOS.contains (tipo))
             v.erro ("tipo", "Selecione um tipo válido.");
@@ -258,6 +314,8 @@ public class AtividadesHandler
             v.erro ("horario", "Informe um horário válido.");
         if (talhao != null && !this.talhaoDaPropriedade (propriedadeId, talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
+
+        Document safra = talhao == null ? null : this.safraDoTalhao (propriedadeId, safraId, talhao, v);
 
         if (v.temErros ())
             return v.resposta ();
@@ -273,6 +331,12 @@ public class AtividadesHandler
             campos.put ("prioridade", prioridade);
         if (corpo.containsKey ("horario"))
             campos.put ("horario", horario);
+        if (corpo.containsKey ("safraId"))
+        {
+            campos.put ("safraId", safra == null ? "" : safraId);
+            campos.put ("safra", safra == null ? "" : safra.getString ("nome"));
+            campos.put ("cultura", safra == null ? "" : safra.getString ("cultura"));
+        }
 
         this.atividades.atualizar (propriedadeId, id, campos);
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);

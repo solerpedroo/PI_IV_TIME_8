@@ -36,6 +36,9 @@
       status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")})(value)
       || records({activity: text, tipo: text, talhao: text, date: text, horario: string,
         responsavel: string, prioridade: string,
+        status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")})(value)
+      || records({activity: text, tipo: text, talhao: text, date: text, horario: string,
+        responsavel: string, prioridade: string, safraId: string, safra: string, cultura: string,
         status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")})(value),
     stock: records({product: text, category: text, qty: number, unit: text, min: positive,
       movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: isoInstant, note: string}))}),

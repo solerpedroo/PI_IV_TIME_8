@@ -119,6 +119,12 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
             atividade.put ("responsavel", campos.getString ("responsavel"));
         if (campos.containsKey ("prioridade"))
             atividade.put ("prioridade", campos.getString ("prioridade"));
+        if (campos.containsKey ("safraId"))
+            atividade.put ("safraId", campos.getString ("safraId"));
+        if (campos.containsKey ("safra"))
+            atividade.put ("safra", campos.getString ("safra"));
+        if (campos.containsKey ("cultura"))
+            atividade.put ("cultura", campos.getString ("cultura"));
 
         return true;
     }

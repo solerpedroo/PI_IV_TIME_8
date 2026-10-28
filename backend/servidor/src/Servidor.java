@@ -123,7 +123,7 @@ public class Servidor
         propriedades.setAtividades (atividades);
         propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
-        new AtividadesHandler (atividades, talhoes, sessoes).registrar (roteador);
+        new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
         new EstoqueHandler (estoque, sessoes).registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
         new SafrasHandler  (safras, talhoes, custos, sessoes).registrar (roteador);

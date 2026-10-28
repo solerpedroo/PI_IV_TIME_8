@@ -141,6 +141,12 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
             updates.add (Updates.set ("responsavel", campos.getString ("responsavel")));
         if (campos.containsKey ("prioridade"))
             updates.add (Updates.set ("prioridade", campos.getString ("prioridade")));
+        if (campos.containsKey ("safraId"))
+            updates.add (Updates.set ("safraId", campos.getString ("safraId")));
+        if (campos.containsKey ("safra"))
+            updates.add (Updates.set ("safra", campos.getString ("safra")));
+        if (campos.containsKey ("cultura"))
+            updates.add (Updates.set ("cultura", campos.getString ("cultura")));
 
         if (updates.isEmpty ())
             return true;

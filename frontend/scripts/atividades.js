@@ -244,7 +244,10 @@
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
 
-    if (apiDisponivel && cardId) {
+    // Uma sessão autenticada não pode confirmar status só no cache: todos os
+    // caminhos (menu, lista, arraste, conclusão e cancelamento) dependem da
+    // mesma confirmação da API, inclusive após uma falha na leitura inicial.
+    if (getSessionToken() && cardId) {
       try {
         await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}/status`, {
           method: "POST", body: JSON.stringify({ status: novoStatus, motivo }),
@@ -415,6 +418,9 @@
     card.dataset.horario = raw.horario || "";
     card.dataset.responsavel = raw.responsavel || "";
     card.dataset.prioridade = raw.prioridade || "";
+    card.dataset.safraId = raw.safraId || "";
+    card.dataset.safra = raw.safra || "";
+    card.dataset.cultura = raw.cultura || "";
 
     const badgeTone = {
       Pendente: "badge-warning",
@@ -536,6 +542,8 @@
     $("[data-detail-meta]", modal).innerHTML = `
       <div class="meta-cell"><span class="meta-cell-label">Tipo</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.tipo)}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Talhão</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.talhao)}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Safra</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.safra || "Não vinculada")}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Cultura</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.cultura || "Não definida")}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Data</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.date)}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Horário</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.horario || "Não definido")}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Responsável</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.responsavel || "Não definido")}</span></div>
@@ -759,6 +767,8 @@
     form.horario.value = values.horario || "";
     form.responsavel.value = values.responsavel || "";
     form.prioridade.value = values.prioridade || "";
+    form.safraId.dataset.safraId = values.safraId || "";
+    form.safraId.value = values.safraId || "";
   }
 
   function openCreateForm() {
@@ -767,6 +777,7 @@
     const modal = $("[data-modal='activity-form']");
     const form = $("[data-activity-form]", modal);
     form.reset();
+    delete form.safraId.dataset.safraId;
     form.tipo.dispatchEvent(new Event("change"));
     form.talhao.dispatchEvent(new Event("change"));
     clearErrors(form);
@@ -792,6 +803,7 @@
       horario: card.dataset.horario,
       responsavel: card.dataset.responsavel,
       prioridade: card.dataset.prioridade,
+      safraId: card.dataset.safraId,
     });
     $("[data-activity-form-title]", modal).textContent = "Editar atividade";
     openModal(modal);
@@ -811,6 +823,7 @@
       horario: card.dataset.horario,
       responsavel: card.dataset.responsavel,
       prioridade: card.dataset.prioridade,
+      safraId: card.dataset.safraId,
     });
     $("[data-activity-form-title]", modal).textContent = "Nova atividade (cópia)";
     openModal(modal);
@@ -836,7 +849,9 @@
       const horario = form.horario.value;
       const responsavel = form.responsavel.value.trim();
       const prioridade = form.prioridade.value;
-      const valores = { nome, tipo, talhao, data, horario, responsavel, prioridade };
+      const safraId = form.safraId.value;
+      form.safraId.dataset.safraId = safraId;
+      const valores = { nome, tipo, talhao, data, horario, responsavel, prioridade, safraId };
 
       let hasError = false;
       if (!nome) { setError(form, "nome", "Informe o nome da atividade."); hasError = true; }
@@ -880,6 +895,10 @@
         activeCard.dataset.horario = horario;
         activeCard.dataset.responsavel = responsavel;
         activeCard.dataset.prioridade = prioridade;
+        activeCard.dataset.safraId = safraId;
+        const safraEscolhida = form.safraId.selectedOptions[0];
+        activeCard.dataset.safra = safraEscolhida?.textContent || "";
+        activeCard.dataset.cultura = safraEscolhida?.dataset.cultura || "";
         $(".kanban-card-title", activeCard).textContent = nome;
         $(".kanban-card-top .badge", activeCard).textContent = tipo;
         $(".kanban-card-meta", activeCard).lastChild.textContent = talhao;
@@ -941,6 +960,9 @@
         horario: record.horario || "",
         responsavel: record.responsavel || "",
         prioridade: record.prioridade || "",
+        safraId: record.safraId || "",
+        safra: record.safra || "",
+        cultura: record.cultura || "",
         status: record.status,
       }, ++cardSeq);
       $(`[data-column="${record.status}"] [data-column-cards]`)?.appendChild(card);
@@ -967,6 +989,9 @@
           horario: item.horario || "",
           responsavel: item.responsavel || "",
           prioridade: item.prioridade || "",
+          safraId: item.safraId || "",
+          safra: item.safra || "",
+          cultura: item.cultura || "",
           status: item.status,
         }));
         apiDisponivel = true;
@@ -976,6 +1001,25 @@
     } catch (err) {
       // Mantém o cache local se o servidor estiver temporariamente indisponível
       toast("error", "Atividades sem conexão", `${err.message} Exibindo o último cache confirmado desta propriedade.`);
+    }
+  }
+
+  // A safra não é obrigatória, mas a seleção sempre vem da propriedade ativa.
+  // O backend confere novamente o vínculo com o talhão antes de persistir.
+  async function carregarSafras() {
+    const select = $("[name='safraId']");
+    if (!select || !getSessionToken()) return;
+    try {
+      const selecionada = select.dataset.safraId || select.value;
+      const safras = await apiRequest("/api/safras");
+      select.replaceChildren(new Option("Sem safra vinculada", ""), ...safras.map((safra) => {
+        const option = new Option(safra.nome, safra.id);
+        option.dataset.cultura = safra.cultura || "";
+        return option;
+      }));
+      select.value = selecionada;
+    } catch (err) {
+      toast("error", "Safras sem conexão", `${err.message} Não selecione uma safra até a conexão ser restabelecida.`);
     }
   }
 
@@ -989,6 +1033,9 @@
       horario: row.dataset.horario || "",
       responsavel: row.dataset.responsavel || "",
       prioridade: row.dataset.prioridade || "",
+      safraId: row.dataset.safraId || "",
+      safra: row.dataset.safra || "",
+      cultura: row.dataset.cultura || "",
       status: row.dataset.status,
     })), restoreActivities);
 
@@ -1008,6 +1055,7 @@
     applyFilters();
 
     carregamentoRemoto = carregarAtividadesRemotas();
+    carregarSafras();
   }
 
   if (document.readyState === "loading") {
