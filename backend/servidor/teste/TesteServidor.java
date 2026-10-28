@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
@@ -495,6 +496,82 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    /* A API única de status preserva os mesmos eventos para Lista, arraste e menu. */
+    private static void testarAtividadesEHistorico () throws Exception
+    {
+        System.out.println ("\n# atividades e historico");
+        String token = login ("joao@agro.com", "Senha@123");
+
+        conferir ("listar atividades sem token -> 401", 401, get ("/api/atividades", null));
+        conferir ("talhao inexistente e rejeitado", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Ausente\",\"data\":\"08 ago\"}", token));
+        conferir ("tipo fora do catálogo e rejeitado", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Inválido\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token));
+
+        String talhaoId = idDoTalhao (token, "T-01 Norte");
+        Resp safra = post ("/api/safras", safra ("Safra da atividade", "Trigo", "2026-01-01", "2026-12-31", talhaoId), token);
+        conferir ("criar safra vinculável -> 201", 201, safra);
+        String safraId = safra.status == 201 ? safra.json ().getString ("id") : "";
+
+        Resp criada = post ("/api/atividades", "{\"nome\":\"Aplicação teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"07:30\",\"responsavel\":\"Equipe Norte\",\"prioridade\":\"Alta\",\"safraId\":\"" + safraId + "\"}", token);
+        conferir ("criar atividade -> 201", 201, criada);
+        String id = criada.status == 201 ? criada.json ().getString ("id") : "";
+        conferir ("criar preserva os campos de planejamento", criada.status == 201 &&
+                  "07:30".equals (criada.json ().getString ("horario")) &&
+                  "Equipe Norte".equals (criada.json ().getString ("responsavel")) &&
+                  "Alta".equals (criada.json ().getString ("prioridade")) &&
+                  safraId.equals (criada.json ().getString ("safraId")) &&
+                  "Trigo".equals (criada.json ().getString ("cultura")));
+        conferir ("safra inexistente rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"safraId\":\"inexistente\"}", token));
+        post ("/api/talhoes", talhao ("Talhão sem safra", "Trigo", 1, null), token);
+        conferir ("edicao nao preserva safra incompatível com novo talhao", 400,
+                  put ("/api/atividades/" + id, "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Talhão sem safra\",\"data\":\"08 ago\"}", token));
+        conferir ("vinculo anterior permanece após edição inválida", safraId.equals (get ("/api/atividades/" + id, token).json ().getString ("safraId")));
+        conferir ("talhao com atividade nao pode ser renomeado", 409,
+                  put ("/api/talhoes/" + talhaoId, talhao ("Talhão renomeado", "Trigo", 40, null), token));
+        conferir ("safra com atividade nao pode ser excluida", 409,
+                  requisitar ("DELETE", "/api/safras/" + safraId, null, token));
+        conferir ("safra com atividade nao pode mudar cultura", 409,
+                  put ("/api/safras/" + safraId, safra ("Safra da atividade", "Milho", "2026-01-01", "2026-12-31", talhaoId), token));
+        Resp editada = put ("/api/atividades/" + id,
+                            "{\"nome\":\"Aplicação revisada\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"08:15\",\"responsavel\":\"Equipe Sul\",\"prioridade\":\"Média\"}", token);
+        conferir ("editar preserva os campos de planejamento", editada.status == 200 &&
+                  "Aplicação revisada".equals (editada.json ().getString ("nome")) &&
+                  "08:15".equals (editada.json ().getString ("horario")) &&
+                  "Equipe Sul".equals (editada.json ().getString ("responsavel")) &&
+                  "Média".equals (editada.json ().getString ("prioridade")));
+        conferir ("horario invalido e rejeitado", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"25:61\"}", token));
+        conferir ("data livre sem calendario e rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"quando der\"}", token));
+        conferir ("data ISO invalida e rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"2026-13-40\"}", token));
+        conferir ("nao conclui atividade pendente", 409, post ("/api/atividades/" + id + "/concluir", "{}", token));
+        conferir ("status ausente aponta erro", 400, post ("/api/atividades/" + id + "/status", "{}", token));
+        conferir ("criacao com status final e rejeitada", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"status\":\"Concluída\"}", token));
+        conferir ("lista altera status pela rota unica", 200,
+                  post ("/api/atividades/" + id + "/status", "{\"status\":\"Agendada\"}", token));
+        conferir ("nao pula de agendada para concluida", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));
+        conferir ("arraste altera status pela rota unica", 200,
+                  post ("/api/atividades/" + id + "/status", "{\"status\":\"Em andamento\"}", token));
+        conferir ("conclusao rejeita JSON malformado", 400, post ("/api/atividades/" + id + "/concluir", "{", token));
+        conferir ("cancelamento rejeita motivo numerico", 400, post ("/api/atividades/" + id + "/cancelar", "{\"motivo\":42}", token));
+        conferir ("falhas nao alteram estado", "Em andamento".equals (get ("/api/atividades/" + id, token).json ().getString ("status")));
+        conferir ("nao retrocede em andamento", 409, post ("/api/atividades/" + id + "/status", "{\"status\":\"Agendada\"}", token));
+        conferir ("menu conclui pela rota unica", 200,
+                  post ("/api/atividades/" + id + "/status", "{\"status\":\"Concluída\"}", token));
+        conferir ("estado terminal rejeita nova transicao", 409,
+                  post ("/api/atividades/" + id + "/status", "{\"status\":\"Pendente\"}", token));
+        conferir ("historico registra conclusao", get ("/api/atividades/" + id + "/historico", token).corpo.contains ("conclusao"));
+
+        Resp cancelada = post ("/api/atividades", "{\"nome\":\"Irrigação teste\",\"tipo\":\"Irrigação\",\"talhao\":\"T-01 Norte\",\"data\":\"09 ago\"}", token);
+        String idCancelada = cancelada.status == 201 ? cancelada.json ().getString ("id") : "";
+        conferir ("cancelamento com motivo pela rota unica", 200,
+                  post ("/api/atividades/" + idCancelada + "/status", "{\"status\":\"Cancelada\",\"motivo\":\"Chuva forte\"}", token));
+        conferir ("historico preserva motivo", get ("/api/atividades/" + idCancelada + "/historico", token).corpo.contains ("Chuva forte"));
+    }
+
     /* Exercita o contrato do estoque, inclusive a saída concorrente que não pode negativar saldo. */
     private static void testarEstoque () throws Exception
     {
@@ -697,7 +774,7 @@ public class TesteServidor
         String id3 = s3.status == 201 ? s3.json ().getString ("id") : "x";
 
         conferir ("usuario A lista 3 safras", lista (get ("/api/safras", a)).size () == 3);
-        conferir ("usuario B nao ve safras de A", get ("/api/safras", b).corpo.equals ("[]"));
+        conferir ("usuario B nao ve safras de A", !get ("/api/safras", b).corpo.contains ("Soja Verão"));
         conferir ("filtro cultura=soja",    lista (get ("/api/safras?cultura=soja", a)).size () == 1);
         conferir ("filtro etapa=planejamento", lista (get ("/api/safras?etapa=planejamento", a)).size () == 3);
         conferir ("busca q=safrinha",       lista (get ("/api/safras?q=safrinha", a)).size () == 1);
@@ -962,7 +1039,7 @@ public class TesteServidor
                 certos++;
         conferir ("50 requisicoes paralelas respondidas corretamente", certos == 50);
         conferir ("os 25 talhoes paralelos foram gravados",
-                  get ("/api/talhoes/resumo", token).json ().getInteger ("quantidadeTotal") == 26);
+                  get ("/api/talhoes/resumo", token).json ().getInteger ("quantidadeTotal") == 27);
 
         // 20 cadastros simultaneos com o mesmo e-mail: so um pode passar
         CountDownLatch        largada2 = new CountDownLatch (1);
@@ -1108,6 +1185,7 @@ public class TesteServidor
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
+            TesteServidor.testarAtividadesEHistorico ();
             TesteServidor.testarEstoque ();
             TesteServidor.testarPropriedades ();
             TesteServidor.testarSafras ();

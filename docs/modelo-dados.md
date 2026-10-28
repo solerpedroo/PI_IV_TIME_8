@@ -41,6 +41,12 @@ O teste Atlas usa dois produtores fictícios e uma terceira propriedade do mesmo
 
 ## #102 — Atividades e histórico
 
+> Este trecho descreve o modelo de domínio `core`. O contrato HTTP em uso pela
+> interface está em [atividades.md](atividades.md): ele mantém o nome do talhão
+> para apresentação e valida `safraId` contra esse talhão, retornando também os
+> nomes de safra e cultura. As duas representações não devem ser confundidas ao
+> auditar a UI.
+
 `atividades`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, título, tipo, responsável, data, horário, prioridade, `criadaEm` e `statusInicial=AGENDADA`. A safra exige um talhão que pertença a ela. A cultura é obtida pelo vínculo da safra, evitando duas referências divergentes.
 
 `atividades_historico`: titularidade, `atividadeId`, `ordem`, `registradoEm`, `status`, `descricao`. Eventos ficam separados para o histórico crescer sem aumentar o documento principal. A criação é o evento 0, derivado do documento principal; os eventos posteriores são inseridos sem substituir os anteriores. O estado atual é o último evento, sem uma segunda cópia mutável de status que poderia ficar inconsistente.

@@ -1,6 +1,10 @@
+/* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
+import dados.RepositorioAtividades;
+import dados.RepositorioAtividadesMemoria;
+import dados.RepositorioAtividadesMongo;
 import dados.RepositorioOcorrencias;
 import dados.RepositorioOcorrenciasMemoria;
 import dados.RepositorioOcorrenciasMongo;
@@ -20,6 +24,7 @@ import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
+import handlers.AtividadesHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
@@ -94,6 +99,18 @@ public class Servidor
                                            RepositorioSafras safras, RepositorioCustos custos,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
+        RepositorioAtividades atividades = conexao == null
+            ? new RepositorioAtividadesMemoria ()
+            : new RepositorioAtividadesMongo (conexao);
+        return Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
+    }
+
+    // A sobrecarga permite que a execução principal reutilize o mesmo repositório
+    // de atividades durante toda a vida do servidor.
+    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioAtividades atividades,
+                                           RepositorioEstoque estoque, RepositorioSafras safras, RepositorioCustos custos,
+                                           ConexaoMongo conexao, Path raiz) throws Exception
+    {
         RepositorioOcorrencias ocorrencias = conexao == null ? new RepositorioOcorrenciasMemoria () : new RepositorioOcorrenciasMongo (conexao);
         Sessoes  sessoes  = new Sessoes ();
         Roteador roteador = new Roteador (sessoes);
@@ -103,11 +120,15 @@ public class Servidor
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
+        propriedades.setAtividades (atividades);
         propriedades.registrar (roteador);
-        new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
+        TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, sessoes);
+        handlerTalhoes.registrar (roteador);
+        new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
         new EstoqueHandler (estoque, sessoes).registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
-        new SafrasHandler  (safras, talhoes, custos, sessoes).registrar (roteador);
+        SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
+        handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
@@ -167,6 +188,7 @@ public class Servidor
             ConexaoMongo        conexao  = null;
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
             RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
+            RepositorioAtividades atividades = new RepositorioAtividadesMemoria ();
             RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  ();
             RepositorioSafras   safras   = new RepositorioSafrasMemoria   ();
             RepositorioCustos   custos   = new RepositorioCustosMemoria   ();
@@ -180,6 +202,7 @@ public class Servidor
                 {
                     usuarios = new RepositorioUsuariosMongo (conexao);
                     talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
+                    atividades = new RepositorioAtividadesMongo (conexao);
                     estoque  = new RepositorioEstoqueMongo  (conexao);
                     safras   = new RepositorioSafrasMongo   (conexao.getBanco ());
                     custos   = new RepositorioCustosMongo   (conexao.getBanco ());
@@ -191,7 +214,8 @@ public class Servidor
                 }
             }
 
-            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, estoque, safras, custos, conexao, raiz);
+            // A sobrecarga abaixo usa o repositório de atividades da execução.
+            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +

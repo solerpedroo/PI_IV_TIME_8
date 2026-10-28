@@ -533,7 +533,7 @@
 .kanban-board {
   display: grid;
   /* Preserva a leitura dos cards; a rolagem fica dentro do quadro. */
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
@@ -577,6 +577,7 @@
 .kanban-dot.tone-info { background: var(--info); }
 .kanban-dot.tone-secondary { background: var(--secondary); }
 .kanban-dot.tone-success { background: var(--success); }
+.kanban-dot.tone-neutral { background: var(--text-muted); }
 
 .kanban-count {
   min-width: 22px;
@@ -593,6 +594,7 @@
 .kanban-count.tone-info { background: var(--info-bg); color: var(--info); }
 .kanban-count.tone-secondary { background: var(--secondary-subtle); color: var(--secondary); }
 .kanban-count.tone-success { background: var(--success-bg); color: var(--success); }
+.kanban-count.tone-neutral { background: var(--bg-subtle); color: var(--text-muted); }
 
 .kanban-cards {
   display: grid;

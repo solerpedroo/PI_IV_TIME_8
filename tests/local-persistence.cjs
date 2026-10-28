@@ -153,12 +153,12 @@ async function test(name, run) {
         const ctx = await context(browser);
         try {
           const page = await ctx.newPage();
-          await page.goto(origin + "/ocorrencias.html");
-          await page.evaluate(([key, raw]) => localStorage.setItem(key, raw), [prefix + "occurrences", value]);
+          await page.goto(origin + "/atividades.html");
+          await page.evaluate(([key, raw]) => localStorage.setItem(key, raw), [prefix + "activities", value]);
           await page.reload();
-          assert.equal(await page.locator("[data-occ-table] tbody tr").count(), 0);
+          assert.equal(await page.locator(".kanban-card").count(), 0);
           assert.equal(await page.locator("[data-storage-error]").count(), 1);
-          assert.equal(await page.evaluate((key) => localStorage.getItem(key), prefix + "occurrences"), value);
+          assert.equal(await page.evaluate((key) => localStorage.getItem(key), prefix + "activities"), value);
         } finally { await ctx.close(); }
       });
     }
@@ -166,8 +166,8 @@ async function test(name, run) {
     await test("abas locais concorrentes preservam a gravação mais recente", async () => {
       const ctx = await context(browser);
       try {
-        const fresh = await open(ctx, "ocorrencias");
-        const stale = await open(ctx, "ocorrencias");
+        const fresh = await open(ctx, "atividades");
+        const stale = await open(ctx, "atividades");
         for (const page of [fresh, stale]) await page.evaluate(() => window.AgroLocal.read("notifications", []));
         assert.equal(await fresh.evaluate(() => window.AgroLocal.save("notifications", ["Atualização da primeira aba"])), true);
         assert.equal(await stale.evaluate(() => window.AgroLocal.save("notifications", ["Alteração desatualizada"])), false);
@@ -179,7 +179,7 @@ async function test(name, run) {
     await test("falha de escrita local não confirma gravação", async () => {
       const ctx = await context(browser, "write");
       try {
-        const page = await open(ctx, "ocorrencias");
+        const page = await open(ctx, "atividades");
         assert.equal(await page.evaluate(() => window.AgroLocal.save("notifications", ["Não salvo"])), false);
         assert.equal(await page.locator("[data-storage-error]").count(), 1);
         assert.equal(await stored(page, "notifications"), null);
@@ -192,8 +192,8 @@ async function test(name, run) {
     await test("falha de leitura não inventa dados recuperados", async () => {
       const ctx = await context(browser, "read");
       try {
-        const page = await open(ctx, "insumos");
-        assert.equal(await page.locator("[data-stock-table] tbody tr").count(), 0);
+        const page = await open(ctx, "atividades");
+        assert.equal(await page.locator(".kanban-card").count(), 0);
         assert.equal(await page.locator("[data-storage-error]").count(), 1);
       } finally { await ctx.close(); }
     });

@@ -1,9 +1,11 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 package handlers;
 
 import dados.RepositorioCustos;
+import dados.RepositorioAtividades;
 import dados.RepositorioTalhoes;
 import dados.RepositorioOcorrencias;
 import dados.RepositorioUsuarios;
@@ -31,12 +33,19 @@ public class PropriedadesHandler
     private final RepositorioCustos   custos;
     private final Sessoes             sessoes;
     private dados.RepositorioEstoque estoque;
+    private RepositorioAtividades atividades;
     private final RepositorioOcorrencias ocorrencias;
 
     // O servidor injeta o estoque para impedir exclusão de propriedade com histórico.
     public void setEstoque (dados.RepositorioEstoque estoque)
     {
         this.estoque = estoque;
+    }
+
+    // Atividades e sua timeline também dependem da propriedade selecionada.
+    public void setAtividades (RepositorioAtividades atividades)
+    {
+        this.atividades = atividades;
     }
 
     public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
@@ -205,6 +214,8 @@ public class PropriedadesHandler
         // custos sem talhao tambem pertencem a propriedade e ficariam orfaos
         if (this.custos != null && !this.custos.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua os custos antes de excluir a propriedade."));
+        if (this.atividades != null && !this.atividades.listar (id).isEmpty ())
+            return Resposta.json (409, new Document ("error", "Exclua as atividades antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();

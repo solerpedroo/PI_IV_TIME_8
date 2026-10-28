@@ -3,6 +3,11 @@
 Miguel — RA: 25003110
 Autor secundário: Pedro Henrique Contardi Soler - 25005592
 
+Atualização de atividades em 28/10/2026: `atividades.html` passou a consultar a
+API Java para criação, edição, status, cancelamento e histórico. O cache
+`activities` é apenas uma cópia de leitura por usuário/propriedade e não confirma
+nenhuma mutação quando há sessão autenticada.
+
 Atualização de estoque em 24/10/2026: `insumos.html` passou a consultar a API
 Java e o MongoDB, conforme [estoque.md](estoque.md). Esta documentação de
 armazenamento local descreve os demais módulos. A chave `stock` legada fica
@@ -39,7 +44,7 @@ Cada chave começa com `agro.operational.v1.`. O conteúdo tem o formato `{ "ver
 | Chave | Dados |
 | --- | --- |
 | `plots` | Identificador, nome, cultura, hectares e status dos talhões. |
-| `activities` | Identificador, nome, tipo, talhão, data e status das atividades. Painel, Kanban e Lista compartilham os mesmos registros. |
+| `activities` | Cache de leitura da API, separado por usuário/propriedade. Inclui planejamento, vínculos e status, mas não confirma gravações autenticadas. |
 | `stock` | Legado preservado; não é mais lido nem escrito pela tela de insumos. |
 | `occurrences` | Legado preservado; não é mais lido nem escrito pela tela de ocorrências. |
 | `costs` | Lançamentos, orçamento e período selecionado. |
@@ -65,7 +70,7 @@ O controle entre abas compara o conteúdo lido com o conteúdo existente antes d
 - Estoque usa indicadores e regras do servidor documentados em `estoque.md`, sem a regra mock 0,6.
 - Ocorrências usam o resumo da API, com mês/ano da resolução e contexto da consulta, conforme `ocorrencias.md`.
 - Custos e gráficos somam os lançamentos, sem totais históricos fictícios ocultos. O custo por hectare usa a área da propriedade nas configurações. O período selecionado é preservado; não foi criado um novo mecanismo de fechamento ou filtro contábil por safra.
-- Concluir atividades ou movimentar estoque não cria automaticamente registros em outros módulos: as mensagens que afirmavam integrações simuladas foram corrigidas. Isso exigiria regras e vínculos adicionais fora desta task.
+- Concluir atividades não cria automaticamente consumo de estoque ou custo: essa integração pertence à I20/#24 e não é simulada pela interface.
 
 Os dados dos módulos locais são limitados a este navegador e à mesma origem
 (protocolo, domínio e porta). Estas limitações não descrevem o estoque atual,

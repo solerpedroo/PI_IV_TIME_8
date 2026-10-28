@@ -1,3 +1,4 @@
+# Miguel — RA: 25003110
 # Autor Principal: Pedro Henrique Contardi Soler - 25005592
 name: Estoque Java e MongoDB
 
@@ -16,7 +17,8 @@ permissions:
 
 jobs:
   estoque:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0.32 não inicia no kernel 6.19 do runner mais recente.
+    runs-on: ubuntu-22.04
     env:
       MONGODB_URI: 'mongodb://127.0.0.1:27017/agro_estoque_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
     steps:
@@ -39,6 +41,7 @@ jobs:
             fi
             sleep 1
           done
+          docker logs mongo-estoque
           exit 1
       - name: Persistência e concorrência com clientes Mongo independentes
         run: sh backend/servidor/testar-estoque-mongo.sh

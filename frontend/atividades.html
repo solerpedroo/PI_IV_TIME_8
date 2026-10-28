@@ -1,3 +1,4 @@
+<!-- Miguel — RA: 25003110 -->
 <!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
@@ -220,6 +221,7 @@
           <option value="Agendada">Agendada</option>
           <option value="Em andamento">Em andamento</option>
           <option value="Concluída">Concluída</option>
+          <option value="Cancelada">Cancelada</option>
         </select>
         <select data-filter-tipo data-enhance-select data-placeholder="Tipo: Todos os tipos" class="filter-select">
           <option value="">Tipo: Todos os tipos</option>
@@ -469,6 +471,13 @@
               </article>
             </div>
           </div>
+                  <div class="kanban-column" data-column="Cancelada">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title"><span class="kanban-dot tone-neutral" aria-hidden="true"></span>Cancelada</span>
+              <span class="kanban-count tone-neutral" data-column-count>0</span>
+            </div>
+            <div class="kanban-cards" data-column-cards></div>
+          </div>
         </section>
 
         <!-- Empty state do quadro (todos os cards filtrados) -->
@@ -532,9 +541,36 @@
           <p class="field-error" data-error-for="talhao"></p>
         </div>
         <div class="input-group">
+          <label for="activity-safra">Safra</label>
+          <select id="activity-safra" name="safraId">
+            <option value="">Sem safra vinculada</option>
+          </select>
+          <p class="field-error" data-error-for="safraId"></p>
+        </div>
+        <div class="input-group">
           <label for="activity-data">Data *</label>
-          <input id="activity-data" name="data" placeholder="Ex.: 12 ago" required>
+          <input id="activity-data" name="data" placeholder="Ex.: 12 ago ou 2026-08-12" required>
           <p class="field-error" data-error-for="data"></p>
+        </div>
+        <div class="input-group">
+          <label for="activity-horario">Horário</label>
+          <input id="activity-horario" name="horario" type="time">
+          <p class="field-error" data-error-for="horario"></p>
+        </div>
+        <div class="input-group">
+          <label for="activity-responsavel">Responsável</label>
+          <input id="activity-responsavel" name="responsavel" maxlength="100" placeholder="Ex.: Equipe de campo">
+          <p class="field-error" data-error-for="responsavel"></p>
+        </div>
+        <div class="input-group">
+          <label for="activity-prioridade">Prioridade</label>
+          <select id="activity-prioridade" name="prioridade">
+            <option value="">Não definida</option>
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+          </select>
+          <p class="field-error" data-error-for="prioridade"></p>
         </div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
@@ -550,6 +586,10 @@
       <h2 id="activity-detail-title" data-detail-title>Atividade</h2>
       <p data-detail-subtitle>Talhão · Data</p>
       <div class="meta-grid" data-detail-meta></div>
+      <div class="detail-section" style="margin-top: 20px;">
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Histórico e Linha do Tempo</h3>
+        <div class="timeline" data-detail-timeline></div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
       </div>
@@ -557,6 +597,22 @@
   </div>
 
   <!-- Modal: Concluir atividade (confirmação — Flow 3) -->
+    <!-- Modal: Cancelar atividade (confirmação e justificativa) -->
+  <div class="modal-backdrop" data-modal="activity-cancel" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activity-cancel-title">
+      <h2 id="activity-cancel-title">Cancelar atividade?</h2>
+      <p data-cancel-desc>Esta atividade será marcada como cancelada e não poderá ser reaberta.</p>
+      <div class="input-group" style="margin-top: 14px;">
+        <label for="activity-cancel-reason">Motivo do cancelamento (opcional)</label>
+        <input id="activity-cancel-reason" data-cancel-reason placeholder="Ex.: Chuva excessiva, indisponibilidade">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Voltar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-cancel>Confirmar cancelamento</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" data-modal="activity-complete" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activity-complete-title">
       <h2 id="activity-complete-title">Concluir atividade?</h2>

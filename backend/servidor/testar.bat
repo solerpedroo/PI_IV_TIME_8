@@ -1,4 +1,5 @@
 @echo off
+rem Miguel — RA: 25003110
 rem Autor principal: Pedro Henrique Contardi Soler - RA: 25005592
 rem Autor secundário: Pedro Henrique Contardi Soler - 25005592
 cd /d "%~dp0"

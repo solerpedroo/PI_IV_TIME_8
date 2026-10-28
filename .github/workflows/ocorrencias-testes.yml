@@ -1,3 +1,4 @@
+# Miguel — RA: 25003110
 # Autor Principal: Pedro Henrique Contardi Soler - 25005592
 name: Ocorrências Java e navegador
 on:
@@ -14,7 +15,8 @@ permissions:
   contents: read
 jobs:
   ocorrencias:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0.32 não inicia no kernel 6.19 do runner mais recente.
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +37,9 @@ jobs:
         run: node tests/ocorrencias-real.cjs
       - name: Iniciar MongoDB como replica set
         run: docker compose up -d --wait mongo
+      - name: Diagnóstico do MongoDB
+        if: failure()
+        run: docker compose logs mongo
       - name: Testar MongoDB, transações e reinício
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017/agro_ocorrencias_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000

@@ -1,7 +1,9 @@
+/* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import dados.ConexaoMongo;
 import dados.RepositorioCustosMongo;
+import dados.RepositorioAtividadesMongo;
 import dados.RepositorioSafrasMongo;
 import dados.RepositorioUsuariosMongo;
 import com.mongodb.ConnectionString;
@@ -83,6 +85,30 @@ public class TesteMongo
             conferir (!safras.excluir ("outra", sid) && safras.excluir (principal, sid) && safras.listar (principal).isEmpty (),
                       "excluir safra respeita a propriedade");
             System.out.println ("MongoDB: safras ok");
+            RepositorioAtividadesMongo atividades = new RepositorioAtividadesMongo (conexao);
+            Document atividade = new Document ("propriedadeId", principal).append ("usuarioId", uid)
+                .append ("nome", "Atividade Mongo").append ("tipo", "Aplicação")
+                .append ("talhao", "T-01").append ("data", "2026-08-01").append ("status", "Pendente");
+            atividades.criar (atividade);
+            String atividadeId = atividade.getString ("id");
+            conferir (atividades.mudarStatus (principal, atividadeId, "Pendente", "Agendada", "mudanca_status", "Agendada para teste"),
+                      "atividade Mongo deve registrar a transição");
+            conferir (atividades.listarHistorico (principal, atividadeId).size () == 2 &&
+                      "Agendada".equals (atividades.buscarPorId (principal, atividadeId).getString ("status")),
+                      "atividade e histórico devem ser gravados juntos");
+            ConexaoMongo reconexao = new ConexaoMongo (uri);
+            try
+            {
+                RepositorioAtividadesMongo relidas = new RepositorioAtividadesMongo (reconexao);
+                conferir (relidas.buscarPorId (principal, atividadeId) != null &&
+                          relidas.listarHistorico (principal, atividadeId).size () == 2,
+                          "atividade e histórico persistem após reconexão Mongo");
+            }
+            finally
+            {
+                reconexao.fechar ();
+            }
+            System.out.println ("MongoDB: atividades, histórico e reconexão ok");
             RepositorioCustosMongo custos = new RepositorioCustosMongo (conexao.getBanco ());
             Document custo = new Document ("description", "Diesel").append ("category", "Outros").append ("value", 10.5)
                 .append ("date", "2026-08-01").append ("talhaoId", null).append ("propriedadeId", principal);

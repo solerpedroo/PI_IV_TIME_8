@@ -117,6 +117,7 @@ roteador client-side.
 
 Estoque usa catálogo e movimentações persistidos pela API Java, sem linhas ou
 indicadores mock e sem cache operacional local. As regras e os testes de
-reload/reinício estão em [docs/estoque.md](docs/estoque.md). Atividades,
-ocorrências e custos ainda usam o armazenamento local documentado em
+reload/reinício estão em [docs/estoque.md](docs/estoque.md). Atividades usam a
+API Java para planejamento, status e histórico; o cache local serve somente como
+cópia de leitura. Ocorrências e custos têm documentação em
 [docs/persistencia-local.md](docs/persistencia-local.md).
