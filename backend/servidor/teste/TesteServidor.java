@@ -522,6 +522,8 @@ public class TesteServidor
                   "Alta".equals (criada.json ().getString ("prioridade")) &&
                   safraId.equals (criada.json ().getString ("safraId")) &&
                   "Trigo".equals (criada.json ().getString ("cultura")));
+        conferir ("safra inexistente rejeitada", 400, post ("/api/atividades",
+                  "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"safraId\":\"inexistente\"}", token));
         Resp editada = put ("/api/atividades/" + id,
                             "{\"nome\":\"Aplicação revisada\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"horario\":\"08:15\",\"responsavel\":\"Equipe Sul\",\"prioridade\":\"Média\"}", token);
         conferir ("editar preserva os campos de planejamento", editada.status == 200 &&

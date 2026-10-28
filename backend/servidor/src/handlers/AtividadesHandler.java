@@ -315,6 +315,10 @@ public class AtividadesHandler
         if (talhao != null && !this.talhaoDaPropriedade (propriedadeId, talhao))
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 
+        // Ao omitir a safra na edição, preservamos e validamos o vínculo já
+        // existente contra o talhão novo, sem permitir uma referência inválida.
+        if (!corpo.containsKey ("safraId"))
+            safraId = atual.getString ("safraId");
         Document safra = talhao == null ? null : this.safraDoTalhao (propriedadeId, safraId, talhao, v);
 
         if (v.temErros ())
