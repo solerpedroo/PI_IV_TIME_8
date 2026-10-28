@@ -40,3 +40,9 @@ histórico na mesma transação; `TesteMongo` foi ampliado para reabrir a conex�
 conferir ambos quando houver um Mongo replica set disponível.
 `tests/atividades-real.cjs` cobre navegador, filtros, falhas de API e reload;
 requer Playwright disponível no ambiente de execução.
+
+Para a #135, `node tests/atividades-reinicio.cjs` usa o Mongo local do Compose,
+um banco isolado e reinicia o servidor Java. Em 28/10/2026 o teste confirmou
+criação, edição, campos, vínculos, rejeições e consulta após reinício; o banco
+temporário da execução foi removido ao final. A sincronização entre instâncias
+distintas continua sendo um limite descrito acima.
