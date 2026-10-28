@@ -24,9 +24,9 @@ aos módulos que continuam usando `AgroLocal`.
 
 O `localStorage` pertence ao navegador. Por isso, o acesso foi implementado em JavaScript nos scripts estáticos existentes:
 
-- `scripts/data/operational-defaults.js` — dados de demonstração (carregados só nas telas operacionais).
-- `scripts/agro-local.js` — API `AgroLocal` (leitura, gravação, validação, `connect`).
-- `scripts/shell.js` — chrome do app (notificações, popovers, logout).
+- `frontend/scripts/data/operational-defaults.js` — dados de demonstração (carregados só nas telas operacionais).
+- `frontend/scripts/agro-local.js` — API `AgroLocal` (leitura, gravação, validação, `connect`).
+- `frontend/scripts/shell.js` — chrome do app (notificações, popovers, logout).
 
 Nos módulos que ainda usam `AgroLocal`, a recuperação é feita no navegador.
 Propriedades, talhões e ocorrências também possuem APIs, com regras próprias

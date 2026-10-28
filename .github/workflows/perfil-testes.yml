@@ -5,11 +5,11 @@ on:
   pull_request:
     paths:
       - 'backend/servidor/**'
-      - 'scripts/perfil-api.js'
-      - 'scripts/configuracoes.js'
-      - 'scripts/propriedades-api.js'
-      - 'scripts/shell.js'
-      - 'configuracoes.html'
+      - 'frontend/scripts/perfil-api.js'
+      - 'frontend/scripts/configuracoes.js'
+      - 'frontend/scripts/propriedades-api.js'
+      - 'frontend/scripts/shell.js'
+      - 'frontend/configuracoes.html'
       - 'tests/perfil-real.cjs'
       - '.github/workflows/perfil-testes.yml'
 

@@ -3,19 +3,19 @@ name: Polish de interface
 on:
   pull_request:
     paths:
-      - "styles/**"
-      - "scripts/**"
+      - "frontend/styles/**"
+      - "frontend/scripts/**"
       - "tests/ui-polish.cjs"
-      - "*.html"
+      - "frontend/*.html"
       - "docs/polish-ui.md"
       - ".github/workflows/ui-polish.yml"
   push:
     branches: [main, dev]
     paths:
-      - "styles/**"
-      - "scripts/**"
+      - "frontend/styles/**"
+      - "frontend/scripts/**"
       - "tests/ui-polish.cjs"
-      - "*.html"
+      - "frontend/*.html"
       - "docs/polish-ui.md"
       - ".github/workflows/ui-polish.yml"
 

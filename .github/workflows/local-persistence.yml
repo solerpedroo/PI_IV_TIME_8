@@ -3,17 +3,17 @@ name: Persistência local (Playwright)
 on:
   pull_request:
     paths:
-      - "scripts/**"
+      - "frontend/scripts/**"
       - "tests/local-*.cjs"
       - "tests/browser-launch.cjs"
-      - "*.html"
+      - "frontend/*.html"
   push:
     branches: [main]
     paths:
-      - "scripts/**"
+      - "frontend/scripts/**"
       - "tests/local-*.cjs"
       - "tests/browser-launch.cjs"
-      - "*.html"
+      - "frontend/*.html"
 
 jobs:
   e2e-local-storage:

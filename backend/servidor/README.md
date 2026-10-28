@@ -100,7 +100,7 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_PORT` | `8080` | Porta. O argumento da linha de comando tem prioridade. |
 | `SERVIDOR_HOST` | `127.0.0.1` | Interface onde o servidor escuta. |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
-| `SERVIDOR_RAIZ` | `../..` | Pasta do front, relativa a `backend/servidor/`. |
+| `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/servidor/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
@@ -256,7 +256,7 @@ Regras do cadastro:
 
 - e-mail válido e único (sem diferenciar maiúsculas);
 - telefone `(DD) 9XXXX-XXXX`;
-- senha com 8+ caracteres, 1 maiúscula, 1 número e 1 símbolo (as mesmas regras de `scripts/auth.js`);
+- senha com 8+ caracteres, 1 maiúscula, 1 número e 1 símbolo (as mesmas regras de `frontend/scripts/auth.js`);
 - confirmação igual à senha;
 - `terms` igual a `true`;
 - o cadastro cria o usuário (`emailConfirmado=false`) e a propriedade (`farm`, `area`).
