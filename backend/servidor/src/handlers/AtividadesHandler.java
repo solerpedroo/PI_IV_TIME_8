@@ -72,6 +72,17 @@ public class AtividadesHandler
         return n1.equals (n2);
     }
 
+    // O formulário trabalha com o nome do talhão, mas o vínculo só é válido
+    // quando o talhão pertence ao contexto de propriedade da sessão atual.
+    private boolean talhaoDaPropriedade (String propriedadeId, String nome) throws Exception
+    {
+        for (Document talhao : this.talhoes.listar (propriedadeId))
+            if (nome.equalsIgnoreCase (talhao.getString ("nome")))
+                return true;
+
+        return false;
+    }
+
     // GET /api/atividades?status=&tipo=&talhao=&q=
     private Resposta listar (Requisicao requisicao) throws Exception
     {
@@ -152,6 +163,9 @@ public class AtividadesHandler
         else if (!STATUS_VALIDOS.contains (status))
             v.erro ("status", "Status inválido.");
 
+        if (talhao != null && !this.talhaoDaPropriedade (requisicao.getSessao ().getPropriedadeId (), talhao))
+            v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
+
         if (v.temErros ())
             return v.resposta ();
 
@@ -200,6 +214,9 @@ public class AtividadesHandler
         String tipo   = v.texto ("tipo",   "Selecione o tipo.",            50);
         String talhao = v.texto ("talhao", "Selecione o talhão.",          60);
         String data   = v.texto ("data",   "Informe a data.",              30);
+
+        if (talhao != null && !this.talhaoDaPropriedade (propriedadeId, talhao))
+            v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 
         if (v.temErros ())
             return v.resposta ();

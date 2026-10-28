@@ -502,6 +502,7 @@ public class TesteServidor
         conferir ("criar atividade com corpo vazio -> 400", 400, post ("/api/atividades", "{}", token));
         conferir ("criar atividade sem nome -> 400", 400, post ("/api/atividades", "{\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\"}", token));
         conferir ("criar atividade com status invalido -> 400", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"08 ago\",\"status\":\"Inexistente\"}", token));
+        conferir ("criar atividade com talhao inexistente -> 400", 400, post ("/api/atividades", "{\"nome\":\"Teste\",\"tipo\":\"Aplicação\",\"talhao\":\"Talhão inexistente\",\"data\":\"08 ago\"}", token));
 
         // Criar atividade valida 1
         String jsonAtiv1 = new Document ("nome", "Aplicação de fungicida")
