@@ -22,20 +22,23 @@ public final class DadosCultivoTest {
         talhoes.clear();
         verificar(safra.talhaoIds().size() == 1, "lista original não pode alterar uma safra já validada");
         verificar(Safra.doDocumento(safra.paraDocumento()).equals(safra), "período e vínculos devem sobreviver ao BSON");
-        Safra ciclo = new Safra(new ObjectId(), escopo, "Soja ciclo", culturaId, List.of(talhaoId),
-                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), new BigDecimal("12.75"), Safra.Status.PLANEJAMENTO);
+        Safra ciclo = Safra.nova(new ObjectId(), escopo, "Soja ciclo", culturaId, List.of(talhaoId),
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), new BigDecimal("12.75"));
         for (Safra.Status etapa : new Safra.Status[] { Safra.Status.PREPARACAO, Safra.Status.PLANTIO,
                 Safra.Status.MANEJO, Safra.Status.COLHEITA, Safra.Status.FINALIZADA }) ciclo = ciclo.avancar(etapa);
         Safra finalizada = ciclo;
         verificar(finalizada.status() == Safra.Status.FINALIZADA, "finalização deve permanecer no ciclo consultável");
+        verificar(finalizada.historicoEtapas().size() == 6, "trilha deve registrar as seis etapas oficiais");
+        verificar(finalizada.historicoEtapas().getLast().etapa() == Safra.Status.FINALIZADA,
+                "última marca do histórico deve ser a finalização");
         invalido(() -> new EscopoPropriedade(null, new ObjectId()));
         invalido(() -> new Talhao(null, escopo, "A", BigDecimal.ZERO, Talhao.Status.ATIVO));
         invalido(() -> new Talhao(null, escopo, " ", BigDecimal.ONE, Talhao.Status.ATIVO));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)));
         invalido(() -> safra(escopo, culturaId, List.of(), LocalDate.now(), LocalDate.now()));
         invalido(() -> safra(escopo, culturaId, List.of(talhaoId, talhaoId), LocalDate.now(), LocalDate.now()));
-        invalido(() -> new Safra(new ObjectId(), escopo, "Salto", culturaId, List.of(talhaoId),
-                LocalDate.now(), LocalDate.now(), BigDecimal.ONE, Safra.Status.PLANEJAMENTO).avancar(Safra.Status.PLANTIO));
+        invalido(() -> Safra.nova(new ObjectId(), escopo, "Salto", culturaId, List.of(talhaoId),
+                LocalDate.now(), LocalDate.now(), BigDecimal.ONE).avancar(Safra.Status.PLANTIO));
         invalido(() -> finalizada.avancar(Safra.Status.FINALIZADA));
         System.out.println("DadosCultivoTest: OK");
     }
@@ -43,7 +46,7 @@ public final class DadosCultivoTest {
     private static Safra safra(EscopoPropriedade escopo, ObjectId culturaId, List<ObjectId> talhoes,
             LocalDate inicio, LocalDate fim) {
         return new Safra(new ObjectId(), escopo, "Soja 2026", culturaId, talhoes, inicio, fim,
-                new BigDecimal("12.75"), Safra.Status.MANEJO);
+                new BigDecimal("12.75"), Safra.Status.MANEJO, List.of());
     }
 
     public static void verificar(boolean condicao, String mensagem) {
@@ -54,6 +57,8 @@ public final class DadosCultivoTest {
         try {
             acao.run();
             throw new AssertionError("a operação inválida deveria ter sido rejeitada");
-        } catch (IllegalArgumentException esperado) { }
+        } catch (IllegalArgumentException | RecursoNaoEncontradoException esperado) {
+            // validação (400) ou recurso ausente (404) — ambos rejeitam a operação
+        }
     }
 }
