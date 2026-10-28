@@ -9,8 +9,8 @@ O diretório `core/` concentra o modelo de dados (#100–#105) com o driver
 oficial do MongoDB (Atlas Free): usuários/propriedades, talhões, culturas/safras,
 atividades/histórico, insumos/movimentações, ocorrências/timeline e custos.
 As relações, índices e consultas estão em [modelo de dados](../docs/modelo-dados.md).
-Os endpoints HTTP de domínio e a autenticação seguem nas issues correspondentes;
-no `core` os endpoints atuais são `/health` e `/ready`.
+No `core` os endpoints HTTP são só `/health` e `/ready`. O CRUD autenticado de
+safras e a tela `frontend/safras.html` usam o `servidor` (`SafrasHandler` + Bearer).
 
 ## Executar o servidor
 
