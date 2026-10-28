@@ -44,7 +44,9 @@
       movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: isoInstant, note: string}))}),
     occurrences: records({occ: text, tipo: text, talhao: text, date: text,
       severity: oneOf("Alta", "Média", "Baixa"), status: oneOf("Aberta", "Em análise", "Resolvida"), timeline}),
-    costs: shape({budget: positive, period: oneOf("Jan — Ago 2026", "Safra 2025/26"),
+    // Custos vêm da API; aqui ficam só o orçamento e o período escolhido.
+    // entries permanece para aceitar o cache anterior sem descartá-lo.
+    costs: shape({budget: positive, period: text,
       entries: (value) => list(shape({id: positive, description: text,
         category: oneOf("Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"),
         plot: string, date: isoDay, value: positive}))(value)
