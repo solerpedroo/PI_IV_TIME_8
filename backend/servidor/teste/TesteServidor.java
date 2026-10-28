@@ -549,7 +549,7 @@ public class TesteServidor
         // Criar atividade 2 para testar cancelamento
         String jsonAtiv2 = new Document ("nome", "Irrigação por pivô")
             .append ("tipo", "Irrigação")
-            .append ("talhao", "T-02 Sul")
+            .append ("talhao", "T-01 Norte")
             .append ("data", "09 ago")
             .append ("status", "Pendente")
             .toJson ();
