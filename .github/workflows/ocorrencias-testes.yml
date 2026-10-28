@@ -1,0 +1,48 @@
+# Autor Principal: Pedro Henrique Contardi Soler - 25005592
+name: Ocorrências Java e navegador
+on:
+  pull_request:
+    paths:
+      - 'backend/servidor/**'
+      - 'frontend/scripts/ocorrencias.js'
+      - 'frontend/scripts/dashboard.js'
+      - 'frontend/ocorrencias.html'
+      - 'frontend/styles/ocorrencias.css'
+      - 'tests/ocorrencias-real.cjs'
+      - '.github/workflows/ocorrencias-testes.yml'
+permissions:
+  contents: read
+jobs:
+  ocorrencias:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Testes Java em memória
+        run: sh backend/servidor/testar.sh
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install chromium --with-deps
+      - name: Testar navegador e servidor em memória
+        run: node tests/ocorrencias-real.cjs
+      - name: Iniciar MongoDB como replica set
+        run: docker compose up -d --wait mongo
+      - name: Testar MongoDB, transações e reinício
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/agro_ocorrencias_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000
+        run: |
+          cd backend/servidor
+          java -cp 'bin:lib/*' TesteOcorrencias --mongo
+          cd ../..
+          node tests/ocorrencias-real.cjs --mongo
+      - name: Encerrar banco de testes
+        if: always()
+        run: docker compose down

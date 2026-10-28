@@ -1,4 +1,11 @@
+<!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Conformidade de `dev` com o GitHub Project — 23/10/2026
+
+Atualização de 24/10/2026, somente na branch `feat/ocorrencias`: as frentes #33,
+#20/#148–#150 e #21/#151–#153 têm implementação e validação descritas em
+[ocorrencias.md](ocorrencias.md). Os cards foram atribuídos a `solerpedroo`.
+O snapshot de `dev` abaixo é histórico e permanece distinto desta entrega em
+branch. O estado de conclusão no Project depende da revisão e publicação do PR.
 
 ## Objetivo e recorte
 
@@ -10,11 +17,11 @@ Antes das alterações desta auditoria, o quadro mostrava **82 itens em Backlog,
 
 | Frente | Evidência no commit auditado | Limite da conclusão |
 | --- | --- | --- |
-| Interface e operação local | Telas HTML, `scripts/agro-local.js`, scripts de dashboard, atividades, estoque, ocorrências e custos; testes em `tests/local-persistence.cjs` e workflow `local-persistence.yml`. | As operações desses módulos usam armazenamento do navegador. `docs/persistencia-local.md` documenta que não há sincronização com o servidor nem ciclo de consumo → custo automático. Não equivale às APIs reais das issues #14–#24. |
-| Autenticação e propriedades | `backend/servidor/src/handlers/AuthHandler.java`, `PropriedadesHandler.java`, `scripts/auth.js` e `scripts/propriedades-api.js`. O PR [#199](https://github.com/solerpedroo/PI_IV_TIME_8/pull/199) está incorporado no HEAD de `dev`. | A presença dos arquivos e o merge sustentam a implementação; a validação integral de fluxos de conta, isolamento e persistência em ambiente alvo continua dependendo dos critérios específicos das issues. |
-| Talhões | `TalhoesHandler.java`, `RepositorioTalhoesMongo.java`, `scripts/talhoes-api.js` e `tests/talhoes-real.cjs`; PR [#196](https://github.com/solerpedroo/PI_IV_TIME_8/pull/196) incorporado. | O frontend mantém cache local para leitura quando a API falha; isso não substitui prova de todos os vínculos/históricos definidos em #12–#13. |
+| Interface e operação local | Telas HTML, `frontend/scripts/agro-local.js`, scripts de dashboard, atividades, estoque, ocorrências e custos; testes em `tests/local-persistence.cjs` e workflow `local-persistence.yml`. | As operações desses módulos usam armazenamento do navegador. `docs/persistencia-local.md` documenta que não há sincronização com o servidor nem ciclo de consumo → custo automático. Não equivale às APIs reais das issues #14–#24. |
+| Autenticação e propriedades | `backend/servidor/src/handlers/AuthHandler.java`, `PropriedadesHandler.java`, `frontend/scripts/auth.js` e `frontend/scripts/propriedades-api.js`. O PR [#199](https://github.com/solerpedroo/PI_IV_TIME_8/pull/199) está incorporado no HEAD de `dev`. | A presença dos arquivos e o merge sustentam a implementação; a validação integral de fluxos de conta, isolamento e persistência em ambiente alvo continua dependendo dos critérios específicos das issues. |
+| Talhões | `TalhoesHandler.java`, `RepositorioTalhoesMongo.java`, `frontend/scripts/talhoes-api.js` e `tests/talhoes-real.cjs`; PR [#196](https://github.com/solerpedroo/PI_IV_TIME_8/pull/196) incorporado. | O frontend mantém cache local para leitura quando a API falha; isso não substitui prova de todos os vínculos/históricos definidos em #12–#13. |
 | Gateway | `backend/gateway/src/handlers/RotasHandler.java` encaminha `/api/**` e mantém `/health` e `/ready`; há testes em `backend/gateway/teste/` e workflow `gateway-testes.yml`. | O README de `backend/` descreve o gateway Java como opcional e o servidor Java principal como ponto de entrada; o README raiz ainda descreve uma fundação Spring/Node e mocks de maneira desatualizada. |
-| Dashboard | `scripts/dashboard.js` e testes locais; PR [#197](https://github.com/solerpedroo/PI_IV_TIME_8/pull/197) incorporado em `dev`. | Conferir os indicadores contra dados conhecidos em execução integrada antes de declarar cada critério encerrado. |
+| Dashboard | `frontend/scripts/dashboard.js` e testes locais; PR [#197](https://github.com/solerpedroo/PI_IV_TIME_8/pull/197) incorporado em `dev`. | Conferir os indicadores contra dados conhecidos em execução integrada antes de declarar cada critério encerrado. |
 | Gestão e entregáveis anteriores | Templates `.github/ISSUE_TEMPLATE/`, workflows, deck e documentação em `slides/` e `docs/`. | A existência de um arquivo não prova que a automação atual aponta para o Project correto nem que uma issue histórica aberta deve continuar em `Done`. |
 
 ## O que ainda não está em `dev`

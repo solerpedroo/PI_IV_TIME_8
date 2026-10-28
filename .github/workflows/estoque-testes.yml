@@ -1,0 +1,50 @@
+# Autor Principal: Pedro Henrique Contardi Soler - 25005592
+name: Estoque Java e MongoDB
+
+on:
+  pull_request:
+    paths:
+      - 'backend/servidor/**'
+      - 'frontend/scripts/insumos.js'
+      - 'frontend/insumos.html'
+      - 'compose.yaml'
+      - 'tests/estoque-real.cjs'
+      - '.github/workflows/estoque-testes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  estoque:
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: 'mongodb://127.0.0.1:27017/agro_estoque_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compilar e testar em memória
+        run: sh backend/servidor/testar.sh
+      - name: Iniciar MongoDB com transações
+        run: |
+          docker run -d --name mongo-estoque -p 127.0.0.1:27017:27017 mongo:8.0.32 --replSet rs0 --bind_ip_all
+          for tentativa in $(seq 1 30); do
+            if docker exec mongo-estoque mongosh --quiet --eval "try { rs.status(); } catch(e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'127.0.0.1:27017'}]}); } db.hello().isWritablePrimary ? quit(0) : quit(1)"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Persistência e concorrência com clientes Mongo independentes
+        run: sh backend/servidor/testar-estoque-mongo.sh
+      - name: Instalar navegador de teste
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install chromium --with-deps
+      - name: Fluxo real de estoque e reinício do servidor
+        run: node tests/estoque-real.cjs

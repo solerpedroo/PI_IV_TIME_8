@@ -5,18 +5,35 @@ import dados.ConexaoMongo;
 import dados.RepositorioAtividades;
 import dados.RepositorioAtividadesMemoria;
 import dados.RepositorioAtividadesMongo;
+import dados.RepositorioOcorrencias;
+import dados.RepositorioOcorrenciasMemoria;
+import dados.RepositorioOcorrenciasMongo;
+import dados.RepositorioCustos;
+import dados.RepositorioCustosMemoria;
+import dados.RepositorioCustosMongo;
+import dados.RepositorioSafras;
+import dados.RepositorioSafrasMemoria;
+import dados.RepositorioSafrasMongo;
 import dados.RepositorioTalhoes;
 import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioTalhoesMongo;
+import dados.RepositorioEstoque;
+import dados.RepositorioEstoqueMemoria;
+import dados.RepositorioEstoqueMongo;
 import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
-import handlers.AtividadesHandler;
 import handlers.AuthHandler;
+import handlers.AtividadesHandler;
+import handlers.CustosHandler;
 import handlers.EstaticosHandler;
+import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
+import handlers.PerfilHandler;
+import handlers.SafrasHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
+import handlers.OcorrenciasHandler;
 import http.Roteador;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -34,7 +51,7 @@ import servicos.ServicoEmail;
     SERVIDOR_HOST  127.0.0.1
     SERVIDOR_PORT  8080        (o argumento da linha de comando tem prioridade)
     MONGODB_URI    obrigatoria (ou use o argumento --memoria, sem banco)
-    SERVIDOR_RAIZ  ../..       (pasta do front)
+    SERVIDOR_RAIZ  ../../frontend       (pasta do front)
 
     Digite "desativar" no terminal para encerrar.
 */
@@ -78,26 +95,38 @@ public class Servidor
     }
 
     // conexao pode ser null (modo memoria / testes)
-    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes,
+    public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioEstoque estoque,
+                                           RepositorioSafras safras, RepositorioCustos custos,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
         RepositorioAtividades atividades = conexao == null
             ? new RepositorioAtividadesMemoria ()
             : new RepositorioAtividadesMongo (conexao.getBanco ());
-        return Servidor.montarRoteador (usuarios, talhoes, atividades, conexao, raiz);
+        return Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
     }
 
+    // A sobrecarga permite que a execução principal reutilize o mesmo repositório
+    // de atividades durante toda a vida do servidor.
     public static Roteador montarRoteador (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioAtividades atividades,
+                                           RepositorioEstoque estoque, RepositorioSafras safras, RepositorioCustos custos,
                                            ConexaoMongo conexao, Path raiz) throws Exception
     {
+        RepositorioOcorrencias ocorrencias = conexao == null ? new RepositorioOcorrenciasMemoria () : new RepositorioOcorrenciasMongo (conexao);
         Sessoes  sessoes  = new Sessoes ();
         Roteador roteador = new Roteador (sessoes);
 
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
-        new PropriedadesHandler (usuarios, talhoes, sessoes).registrar (roteador);
+        new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
+        PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
+        propriedades.setEstoque (estoque);
+        propriedades.registrar (roteador);
         new TalhoesHandler (talhoes, sessoes).registrar  (roteador);
         new AtividadesHandler (atividades, talhoes, sessoes).registrar (roteador);
+        new EstoqueHandler (estoque, sessoes).registrar (roteador);
+        new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
+        new SafrasHandler  (safras, talhoes, custos, sessoes).registrar (roteador);
+        new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
@@ -151,12 +180,15 @@ public class Servidor
             }
 
             String host = Servidor.variavel ("SERVIDOR_HOST", "127.0.0.1");
-            Path   raiz = Path.of (Servidor.variavel ("SERVIDOR_RAIZ", "../.."));
+            Path   raiz = Path.of (Servidor.variavel ("SERVIDOR_RAIZ", "../../frontend"));
 
             ConexaoMongo        conexao  = null;
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
-            RepositorioTalhoes    talhoes    = new RepositorioTalhoesMemoria  ();
+            RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
             RepositorioAtividades atividades = new RepositorioAtividadesMemoria ();
+            RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  ();
+            RepositorioSafras   safras   = new RepositorioSafrasMemoria   ();
+            RepositorioCustos   custos   = new RepositorioCustosMemoria   ();
 
             if (!memoria)
             {
@@ -166,8 +198,11 @@ public class Servidor
                 try
                 {
                     usuarios = new RepositorioUsuariosMongo (conexao);
-                    talhoes    = new RepositorioTalhoesMongo  (conexao.getBanco ());
+                    talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
                     atividades = new RepositorioAtividadesMongo (conexao.getBanco ());
+                    estoque  = new RepositorioEstoqueMongo  (conexao);
+                    safras   = new RepositorioSafrasMongo   (conexao.getBanco ());
+                    custos   = new RepositorioCustosMongo   (conexao.getBanco ());
                 }
                 catch (Exception erro)
                 {
@@ -176,7 +211,8 @@ public class Servidor
                 }
             }
 
-            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, conexao, raiz);
+            // A sobrecarga abaixo usa o repositório de atividades da execução.
+            Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +

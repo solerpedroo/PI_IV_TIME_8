@@ -1,57 +1,38 @@
+<!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Agro — frontend estático
 
-> Esta branch também contém a fundação separada do backend (gateway em Java puro, core em Java com Spring Boot e MongoDB). Consulte [backend/README.md](backend/README.md) para instalação, execução e limites. O frontend abaixo ainda não consome essa camada.
+> O servidor principal está em `backend/servidor`: Java 21 puro com HTTP manual
+> e MongoDB. O frontend consome suas APIs de autenticação, propriedades, talhões
+> estoque e ocorrências. Consulte [backend/README.md](backend/README.md) para execução.
 
-Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`designSystemProjetoAgro`).
+Perfil em Configurações está integrado ao servidor Java puro: dados pessoais,
+preferências, propriedade padrão, confirmação de novo e-mail, senha e logout.
+Contrato, limites de foto/equipe/plano e validação: [docs/perfil.md](docs/perfil.md).
+
+O módulo de ocorrências e sua validação estão descritos em
+[docs/ocorrencias.md](docs/ocorrencias.md).
+
+Implementação das telas de **autenticação**, do **Painel Geral (Dashboard)** e dos módulos operacionais **Áreas de Cultivo**, **Atividades**, **Insumos**, **Ocorrências**, **Custos** e **Configurações**, alinhada ao design system **Forest Sage** do pen.dev (`docs/design/designSystemProjetoAgro`).
 
 ## Estrutura
 
 ```text
 frontend_pi_iv/
-├── login.html
-├── criar-conta.html
-├── recuperar-senha.html
-├── redefinir-senha.html
-├── confirmar-email.html
-├── dashboard.html          # Painel Geral (frame ajDH7)
-├── areas-cultivo.html      # Áreas de Cultivo — talhões (frame TaqqK)
-├── atividades.html         # Atividades — Kanban + Lista (frame U6jZ05)
-├── insumos.html            # Insumos — controle de estoque (frame QpBVa)
-├── ocorrencias.html        # Ocorrências — registro + timeline (frame UX9SC)
-├── custos.html              # Custos — orçamento, gráficos e lançamentos
-├── configuracoes.html       # Configurações — perfil e preferências
-├── styles/
-│   ├── base.css            # tokens + componentes compartilhados
-│   ├── auth.css            # layout das telas de autenticação
-│   ├── shell.css           # sidebar, header, popovers, chrome
-│   ├── dashboard.css       # métricas, tabela, alertas, culturas (Painel)
-│   ├── modules.css         # padrões compartilhados dos 4 módulos novos:
-│   │                       # filtros, menu de ações "⋮", meta-grid, timeline,
-│   │                       # kanban, segmented control, textarea group
-│   ├── areas-cultivo.css   # mapa esquemático + tabela de talhões
-│   ├── atividades.css      # calendário da semana + toggle kanban/lista
-│   ├── insumos.css         # tabela de estoque + rastreio operacional
-│   ├── ocorrencias.css     # ficha de detalhe + timeline
-│   ├── feedback.css        # toasts, empty, skeleton, modal
-│   └── motion.css          # animações / prefers-reduced-motion
-└── scripts/
-    ├── auth.js             # validação e fluxos de auth
-    ├── toast.js            # API AgroToast (4 variantes do pen)
-    ├── select.js           # Dropdown Forest Sage (substitui select nativo)
-    ├── shell.js            # notificações, perfil, logout, popovers genéricos
-    ├── dashboard.js        # mock G4, busca, nova atividade (Painel)
-    ├── areas-cultivo.js    # CRUD mock de talhão, filtro por cultura
-    ├── atividades.js       # Kanban/Lista, concluir/duplicar/excluir
-    ├── insumos.js          # entrada/saída, status automático, exclusão condicional
-    ├── ocorrencias.js      # registrar, timeline, resolver/excluir
-    ├── custos.js           # filtros, lançamentos, orçamento e exportação
-    └── configuracoes.js    # abas, formulários e preferências
+├── frontend/              # páginas HTML, recursos e código da interface
+│   ├── Assets/            # imagens
+│   ├── scripts/           # lógica da interface e dados locais
+│   └── styles/            # estilos compartilhados e por tela
+├── backend/               # servidor, gateway e núcleo Java
+├── docs/                  # documentação e design system
+├── slides/                # apresentação do projeto
+├── tests/                 # testes de navegador e integração
+└── compose.yaml           # serviços locais
 ```
 
 ## Como executar
 
 ```bash
-python -m http.server 5500
+python -m http.server 5500 --directory frontend
 ```
 
 Acesse `http://localhost:5500/login.html` (login redireciona ao painel) ou diretamente qualquer tela, ex.: `http://localhost:5500/dashboard.html`.
@@ -112,7 +93,7 @@ Ocorrências:
 
 API: `AgroToast.show({ type, title, description, duration })`.
 
-## Padrões reaproveitados entre os módulos (`styles/modules.css`)
+## Padrões reaproveitados entre os módulos (`frontend/styles/modules.css`)
 
 - **Barra de filtros**: chips (`.filter-chip`) para categoria/cultura e
   selects Forest Sage para status/tipo.
@@ -134,8 +115,8 @@ roteador client-side.
 
 ## Dados
 
-Mocks locais híbridos em cada `*.js` / HTML. Toda mutação (criar,
-editar, concluir, resolver, excluir, entrada/saída de estoque)
-acontece em memória/DOM — nada é persistido entre reloads. Estrutura
-pronta para trocar por `fetch` quando a API existir; a anatomia de
-métricas, toasts e menus de ação já está desacoplada dos dados.
+Estoque usa catálogo e movimentações persistidos pela API Java, sem linhas ou
+indicadores mock e sem cache operacional local. As regras e os testes de
+reload/reinício estão em [docs/estoque.md](docs/estoque.md). Atividades,
+ocorrências e custos ainda usam o armazenamento local documentado em
+[docs/persistencia-local.md](docs/persistencia-local.md).

@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 /* Fluxos operacionais no Edge, com arquivos servidos pela rota local do teste. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -7,7 +8,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { launchTestBrowser } = require('./browser-launch.cjs');
 const { mockApi } = require('./mock-api.cjs');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../frontend');
 const origin = 'http://agro.local/';
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 
@@ -160,7 +161,9 @@ let failures = 0;
   await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page, context, api) => {
     await go(page, 'configuracoes.html');
     await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
-    await submit(page, '[data-settings-form="profile"]', { name: 'Maria Teste', email: 'maria@example.test', phone: '1234' });
+    await page.waitForFunction(() => document.querySelector('[data-profile-message]')?.textContent === 'Perfil carregado do servidor.');
+    await submit(page, '[data-settings-form="profile"]', { name: 'Maria Teste', email: 'joao@fazendasantarita.com', phone: '(19) 99999-1234' });
+    await page.waitForFunction(() => document.querySelector('#profile-form').getAttribute('aria-busy') === 'false');
     await submit(page, '[data-settings-form="property"]', { farm: 'Fazenda Teste', area: '1500', location: 'Rodovia teste', city: 'Campinas', harvest: '2025/26' });
     await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.locator('[data-settings-tab="notifications"]').filter({ hasText: 'Notificações' }).click();
@@ -174,12 +177,15 @@ let failures = 0;
     await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.reload();
     await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
+    await page.waitForFunction(() => document.querySelector('[data-profile-message]')?.textContent === 'Perfil carregado do servidor.');
     assert.equal(await page.locator('[name="name"]').inputValue(), 'Maria Teste');
     assert.equal(await page.locator('[name="area"]').inputValue(), '1500');
     assert.equal(await page.locator('[data-preference="weather"]').isChecked(), false);
     assert.equal(api.properties[0].safraAtual, '2026/27');
     assert.equal(await page.locator('[name=harvest]').inputValue(), '2026/27');
-    assert.doesNotMatch(JSON.stringify(await data(page, 'settings')), /password|current|token/i);
+    assert.equal(await data(page, 'settings'), undefined, 'perfil/preferências não são persistidos no navegador');
+    assert.equal(api.user.name, 'Maria Teste');
+    assert.equal(api.preferences.weather, false);
   });
 
   await run('dashboard: criar, concluir e compartilhar atividade', async (page) => {

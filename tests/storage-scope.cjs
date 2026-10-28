@@ -14,7 +14,7 @@ test('dados locais separados por conta e propriedade, inclusive após logout', (
     }};
     const context = vm.createContext({window, sessionStorage: {getItem: key => session.get(key) ?? null},
       document: {readyState: 'loading', addEventListener() {}}});
-    for (const file of ['scripts/data/operational-defaults.js', 'scripts/agro-local.js']) {
+    for (const file of ['frontend/scripts/data/operational-defaults.js', 'frontend/scripts/agro-local.js']) {
       vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
     }
     return {api: window.AgroLocal, session};

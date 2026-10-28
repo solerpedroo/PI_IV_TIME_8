@@ -3,6 +3,7 @@
 package util;
 
 import http.Resposta;
+import java.time.LocalDate;
 import org.bson.Document;
 
 /*
@@ -67,6 +68,32 @@ public class Validacao
         return ret;
     }
 
+    // data obrigatoria no formato AAAA-MM-DD (o mesmo do input type="date"); null se invalida
+    public String data (String campo, String mensagemAusente)
+    {
+        String ret = this.texto (campo, mensagemAusente, 40);
+
+        if (ret == null)
+            return null;
+
+        try
+        {
+            if (!ret.matches ("\\d{4}-\\d{2}-\\d{2}"))
+                throw new Exception ("Formato de data invalido");
+
+            int ano = LocalDate.parse (ret).getYear (); // recusa 2026-02-30
+            if (ano < 2000 || ano > 2100)
+                throw new Exception ("Ano fora do intervalo");
+        }
+        catch (Exception erro)
+        {
+            this.erro (campo, "Informe uma data v\u00e1lida.");
+            ret = null;
+        }
+
+        return ret;
+    }
+
     // e-mail obrigatorio, em minusculas
     public String email (String campo)
     {
@@ -84,7 +111,7 @@ public class Validacao
         return ret.toLowerCase ();
     }
 
-    // mesmas regras do medidor de forca do front (scripts/auth.js, getPasswordChecks)
+    // mesmas regras do medidor de forca do front (frontend/scripts/auth.js, getPasswordChecks)
     public static boolean senhaForte (String senha)
     {
         return senha.length () >= 8 &&

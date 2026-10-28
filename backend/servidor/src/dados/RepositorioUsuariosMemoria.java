@@ -76,6 +76,27 @@ public class RepositorioUsuariosMemoria implements RepositorioUsuarios
         return ret == null ? null : new Document (ret);
     }
 
+    public synchronized boolean atualizarCondicional (String id, Document esperado, Document campos)
+    {
+        Document usuario = this.usuarios.get (id);
+        if (usuario == null) return false;
+        for (String campo : esperado.keySet ())
+            if (!Objects.equals (usuario.get (campo), esperado.get (campo))) return false;
+        if (campos.containsKey ("email"))
+            for (Document outro : this.usuarios.values ())
+                if (!outro.getObjectId ("_id").toHexString ().equals (id) && campos.get ("email").equals (outro.get ("email"))) return false;
+        usuario.putAll (campos);
+        return true;
+    }
+
+    public synchronized boolean definirPropriedadePadrao (String usuarioId, String propriedadeId)
+    {
+        Document usuario = this.usuarios.get (usuarioId), propriedade = this.propriedades.get (propriedadeId);
+        if (usuario == null || propriedade == null || !usuarioId.equals (propriedade.getString ("usuarioId"))) return false;
+        usuario.put ("propriedadeId", propriedadeId);
+        return true;
+    }
+
     public synchronized ArrayList<Document> listarPropriedades (String usuarioId) throws Exception
     {
         ArrayList<Document> ret = new ArrayList<Document> ();
