@@ -19,7 +19,8 @@ permissions:
 
 jobs:
   perfil:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0.32 não inicia no kernel 6.19 do runner mais recente.
+    runs-on: ubuntu-22.04
     env:
       MONGODB_URI: 'mongodb://127.0.0.1:27017/agro_perfil_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
     steps:

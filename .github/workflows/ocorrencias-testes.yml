@@ -15,7 +15,8 @@ permissions:
   contents: read
 jobs:
   ocorrencias:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0.32 não inicia no kernel 6.19 do runner mais recente.
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
