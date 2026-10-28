@@ -31,7 +31,7 @@
   const schemas = {
     plots: records({plot: text, crop: text, hectares: positive, status: oneOf("Ativo", "Irrigação pendente", "Em preparo")}),
     activities: records({activity: text, tipo: text, talhao: text, date: text,
-      status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída")}),
+      status: oneOf("Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada")}),
     stock: records({product: text, category: text, qty: number, unit: text, min: positive,
       movements: list(shape({id: text, type: oneOf("entrada", "saida"), qty: positive, date: isoInstant, note: string}))}),
     occurrences: records({occ: text, tipo: text, talhao: text, date: text,

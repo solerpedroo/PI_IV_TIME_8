@@ -1,3 +1,4 @@
+<!-- Miguel — RA: 25003110 -->
 <!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
@@ -216,6 +217,7 @@
           <option value="Agendada">Agendada</option>
           <option value="Em andamento">Em andamento</option>
           <option value="Concluída">Concluída</option>
+          <option value="Cancelada">Cancelada</option>
         </select>
         <select data-filter-tipo data-enhance-select data-placeholder="Tipo: Todos os tipos" class="filter-select">
           <option value="">Tipo: Todos os tipos</option>
@@ -465,6 +467,13 @@
               </article>
             </div>
           </div>
+                  <div class="kanban-column" data-column="Cancelada">
+            <div class="kanban-column-header">
+              <span class="kanban-column-title"><span class="kanban-dot tone-neutral" aria-hidden="true"></span>Cancelada</span>
+              <span class="kanban-count tone-neutral" data-column-count>0</span>
+            </div>
+            <div class="kanban-cards" data-column-cards></div>
+          </div>
         </section>
 
         <!-- Empty state do quadro (todos os cards filtrados) -->
@@ -546,6 +555,10 @@
       <h2 id="activity-detail-title" data-detail-title>Atividade</h2>
       <p data-detail-subtitle>Talhão · Data</p>
       <div class="meta-grid" data-detail-meta></div>
+      <div class="detail-section" style="margin-top: 20px;">
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Histórico e Linha do Tempo</h3>
+        <div class="timeline" data-detail-timeline></div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-outline" type="button" data-close-modal>Fechar</button>
       </div>
@@ -553,6 +566,22 @@
   </div>
 
   <!-- Modal: Concluir atividade (confirmação — Flow 3) -->
+    <!-- Modal: Cancelar atividade (confirmação e justificativa) -->
+  <div class="modal-backdrop" data-modal="activity-cancel" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activity-cancel-title">
+      <h2 id="activity-cancel-title">Cancelar atividade?</h2>
+      <p data-cancel-desc>Esta atividade será marcada como cancelada e não poderá ser reaberta.</p>
+      <div class="input-group" style="margin-top: 14px;">
+        <label for="activity-cancel-reason">Motivo do cancelamento (opcional)</label>
+        <input id="activity-cancel-reason" data-cancel-reason placeholder="Ex.: Chuva excessiva, indisponibilidade">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" type="button" data-close-modal>Voltar</button>
+        <button class="btn btn-destructive" type="button" data-confirm-cancel>Confirmar cancelamento</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" data-modal="activity-complete" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activity-complete-title">
       <h2 id="activity-complete-title">Concluir atividade?</h2>

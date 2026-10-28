@@ -1,33 +1,29 @@
 /* Miguel — RA: 25003110 */
 /**
- * Agro — interações da tela Atividades (dados mock híbridos)
+ * Agro — interações da tela Atividades (híbrido com API e persistência local)
  * --------------------------------------------------------------------------
  * Fonte única de dados: os cards do Kanban (`.kanban-card`). A visualização
  * em Lista é derivada deles a cada mudança — não existe um segundo estado
  * para manter sincronizado manualmente.
  *
- * Cobre os fluxos "C — Atividades e Estoque" do board Fluxos de Interação:
- * - Flow 1: Nova atividade (form validado → card em "Pendente" → toast)
- * - Flow 2/2b: Ações do card "⋮" → Ver detalhes / Editar
- * - Flow 3: Concluir (confirmação → card muda de coluna → toast + baixa
- *   simulada de insumo, citando a cadeia Insumo → Atividade → Talhão → Custo)
- * - Flow 4: Excluir (confirmação destrutiva) e Duplicar (reabre o formulário
- *   pré-preenchido com "(cópia)")
- * - `?talhao=` na URL (vindo de Áreas de Cultivo): filtra e mostra chip
- *   removível, replicando a tela "Atividades filtradas" do pen.dev.
- *
- * Mover o status de uma atividade tem dois caminhos, ambos passando pela
- * mesma função (`moveCardToStatus`) para não duplicar lógica:
- * - Kanban: arrastar o card para outra coluna (Drag and Drop nativo).
- * - Lista: trocar o valor do select de status na própria linha.
- * Diferente do "Concluir" do menu "⋮" (que pede confirmação e narra a
- * baixa de insumo), essas duas trocas são diretas — só um toast confirma.
+ * Cobre os fluxos de Atividades:
+ * - Criação de atividades conectada à API `/api/atividades` e fallback local.
+ * - Troca de status por menu, lista e arraste (Kanban Drag and Drop).
+ * - Conclusão de atividades via `/api/atividades/{id}/concluir`.
+ * - Cancelamento justificado via `/api/atividades/{id}/cancelar`.
+ * - Estados terminais: atividades "Concluída" ou "Cancelada" não podem ter
+ *   seu status alterado nem serem reabertas ou editadas.
+ * - Histórico completo e linha do tempo de eventos via `/api/atividades/{id}/historico`.
+ * - Persistência garantida após reload consultando a API ou cache seguro.
  */
 (() => {
   "use strict";
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+  const apiBase = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const getSessionToken = () => sessionStorage.getItem("agro.sessionToken");
 
   const filters = {
     query: "",
@@ -37,17 +33,51 @@
     talhao: new URLSearchParams(window.location.search).get("talhao") || "",
   };
 
-  /** Card em edição/conclusão/exclusão no momento (contexto dos modais). */
+  /** Card em edição/conclusão/cancelamento/exclusão no momento (contexto dos modais). */
   let activeCard = null;
   let formMode = "create"; // "create" | "edit"
+  let cardSeq = 100;
 
   let persist = () => true;
   function toast(type, title, description) {
     if (window.AgroToast) window.AgroToast.show({ type, title, description });
   }
 
+  /**
+   * Comunicação centralizada com a API REST do backend.
+   * Envia o token de autenticação se disponível e trata respostas JSON e erros amigáveis.
+   */
+  async function apiRequest(path, options = {}) {
+    const token = getSessionToken();
+    if (!token) return null;
+    const response = await fetch(apiBase + path, {
+      ...options,
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const err = new Error(errorBody.erro || errorBody.mensagem || "Falha na comunicação com o servidor.");
+      err.status = response.status;
+      throw err;
+    }
+    return response.json();
+  }
+
+  /**
+   * Verifica se o status informado é terminal.
+   * Conforme modelo de dados e regras de negócio, atividades Concluídas ou Canceladas
+   * encerram seu ciclo de vida operacional e não permitem novas alterações de status.
+   */
+  function isTerminalStatus(status) {
+    return status === "Concluída" || status === "Cancelada";
+  }
+
   /* ---------------------------------------------------------------------- */
-  /* Modal helpers (genérico — reaproveitado pelos 4 modais desta tela)     */
+  /* Modal helpers (genérico — reaproveitado pelos modais desta tela)       */
   /* ---------------------------------------------------------------------- */
   function openModal(modal) {
     if (!modal) return;
@@ -115,17 +145,12 @@
     return true;
   }
 
-  const STATUS_ORDER = ["Pendente", "Agendada", "Em andamento", "Concluída"];
+  const STATUS_ORDER = ["Pendente", "Agendada", "Em andamento", "Concluída", "Cancelada"];
 
   /**
-   * A Lista também precisa permitir trocar o status (não só o Kanban) — em
-   * vez de um badge estático, a célula de status é um <select> nativo com
-   * o valor atual já selecionado (classe .status-select, estilizada em
-   * modules.css). Deliberadamente NÃO usa o dropdown customizado
-   * (AgroSelect): o popup de um <select> nativo é desenhado pelo navegador
-   * num layer próprio, imune ao `overflow: auto` da tabela — o dropdown
-   * customizado, testado aqui, abria cortado/atrás do cabeçalho fixo da
-   * tabela pelo mesmo motivo que os menus "⋮" tinham (ver shell.js).
+   * Monta a linha da tabela na visualização em Lista.
+   * Se a atividade estiver em estado terminal (Concluída ou Cancelada),
+   * o select de status fica desabilitado para evitar transições inválidas.
    */
   function buildListRow(card) {
     const tr = document.createElement("tr");
@@ -144,6 +169,9 @@
     const select = document.createElement("select");
     select.className = "status-select";
     select.setAttribute("aria-label", `Status de ${card.dataset.activity}`);
+
+    const isTerminal = isTerminalStatus(card.dataset.status);
+
     STATUS_ORDER.forEach((status) => {
       const opt = document.createElement("option");
       opt.value = status;
@@ -151,40 +179,85 @@
       if (status === card.dataset.status) opt.selected = true;
       select.appendChild(opt);
     });
+
+    if (isTerminal) {
+      select.disabled = true;
+      select.title = "Atividades concluídas ou canceladas estão em estado terminal.";
+    }
+
     select.addEventListener("change", () => {
       const novoStatus = select.value;
-      const nomeAtividade = card.dataset.activity;
-      moveCardToStatus(card, novoStatus);
-      if (!persist()) return;
-      recomputeMetrics();
-      toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
-      applyFilters();
-    });
-    statusTd.appendChild(select);
+      if (isTerminalStatus(card.dataset.status)) {
+        toast("warning", "Operação bloqueada", "Atividades concluídas ou canceladas não podem mudar de status.");
+        select.value = card.dataset.status;
+        return;
+      }
 
+      if (novoStatus === "Concluída") {
+        select.value = card.dataset.status;
+        openCompleteConfirm(card);
+        return;
+      }
+
+      if (novoStatus === "Cancelada") {
+        select.value = card.dataset.status;
+        openCancelConfirm(card);
+        return;
+      }
+
+      atualizarStatusAtividade(card, novoStatus);
+    });
+
+    statusTd.appendChild(select);
     tr.append(nameTd, tipoTd, talhaoTd, dateTd, statusTd);
     return tr;
   }
 
   /**
-   * Move um card para outra coluna do Kanban (arraste ou troca de status
-   * pela Lista compartilham esta função — fonte única de verdade, sem
-   * duplicar a lógica de "o que muda quando o status muda").
+   * Move um card para outra coluna do Kanban e atualiza o badge e menu contextual.
    */
   function moveCardToStatus(card, newStatus) {
     if (card.dataset.status === newStatus) return;
     card.dataset.status = newStatus;
 
     const menuId = $("[data-popover]", card)?.id || `card-menu-${++cardSeq}`;
-    $(".action-menu-wrap", card).innerHTML = actionMenuMarkup(menuId, newStatus);
+    const wrap = $(".action-menu-wrap", card);
+    if (wrap) wrap.innerHTML = actionMenuMarkup(menuId, newStatus);
 
     const targetColumn = $(`.kanban-column[data-column="${newStatus}"] [data-column-cards]`);
     targetColumn?.appendChild(card);
   }
 
+  /**
+   * Atualiza o status de uma atividade intermediária (Pendente, Agendada, Em andamento)
+   * sincronizando com a API do servidor e mantendo a consistência dos dados locais.
+   */
+  function atualizarStatusAtividade(card, novoStatus) {
+    const nomeAtividade = card.dataset.activity;
+    const cardId = card.dataset.id;
+
+    moveCardToStatus(card, novoStatus);
+    if (!persist()) return;
+    recomputeMetrics();
+    applyFilters();
+    toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
+
+    if (getSessionToken() && cardId) {
+      apiRequest(`/api/atividades/${encodeURIComponent(cardId)}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status: novoStatus }),
+      }).catch((err) => {
+        toast("error", "Não foi possível sincronizar status", err.message);
+      });
+    }
+  }
+
+  /**
+   * Recalcula os contadores de cabeçalho e os badges de contagem de cada coluna.
+   */
   function recomputeMetrics() {
     const all = $$(".kanban-card");
-    const counts = { Pendente: 0, Agendada: 0, "Em andamento": 0, Concluída: 0 };
+    const counts = { Pendente: 0, Agendada: 0, "Em andamento": 0, Concluída: 0, Cancelada: 0 };
     all.forEach((card) => {
       counts[card.dataset.status] = (counts[card.dataset.status] || 0) + 1;
     });
@@ -263,13 +336,8 @@
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Alternância Kanban / Lista (com transição suave entre as duas)         */
-  /* --------------------------------------------------------------------
-   * Trocar `hidden` direto (display:none ⇄ flex) é instantâneo — não dá
-   * pra animar `display`. Em vez disso: esmaece a view atual, só então
-   * troca `hidden` e a nova view surge já com opacidade 0, e no frame
-   * seguinte volta a 1 — o navegador anima essa transição de opacidade.
-   */
+  /* Alternância Kanban / Lista                                             */
+  /* ---------------------------------------------------------------------- */
   function initViewToggle() {
     const options = $$("[data-view-option]");
     const kanbanRow = $("[data-view-kanban]");
@@ -292,9 +360,6 @@
           hideEl.hidden = true;
           showEl.hidden = false;
           showEl.classList.add("is-view-fading");
-          // Força o navegador a aplicar opacity:0 antes de tirar a classe —
-          // sem isso as duas mudanças cairiam no mesmo frame e não haveria
-          // transição visível de entrada.
           void showEl.offsetWidth;
           requestAnimationFrame(() => showEl.classList.remove("is-view-fading"));
         }, FADE_MS);
@@ -303,18 +368,19 @@
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Ações do card "⋮" (Flow 2/3/4)                                         */
+  /* Ações contextuais do card "⋮"                                          */
   /* ---------------------------------------------------------------------- */
   function actionMenuMarkup(id, status) {
-    const isDone = status === "Concluída";
+    const isTerminal = isTerminalStatus(status);
     return `
       <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${id}" aria-expanded="false" aria-label="Mais ações">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
       </button>
       <div class="action-menu" id="${id}" data-popover role="menu">
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-        ${!isDone ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>` : ""}
-        ${!isDone ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
+        ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>` : ""}
+        ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
+        ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="cancel"><span class="action-menu-icon tone-neutral" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span><span class="action-menu-label">Cancelar</span></button>` : ""}
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
         <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
       </div>
@@ -336,7 +402,13 @@
     card.dataset.date = raw.data;
     card.dataset.status = raw.status;
 
-    const badgeTone = { Pendente: "badge-warning", Agendada: "badge-info", "Em andamento": "badge-warning", Concluída: "badge-success" }[values.status] || "badge-neutral";
+    const badgeTone = {
+      Pendente: "badge-warning",
+      Agendada: "badge-info",
+      "Em andamento": "badge-warning",
+      Concluída: "badge-success",
+      Cancelada: "badge-neutral",
+    }[raw.status] || "badge-neutral";
 
     card.innerHTML = `
       <div class="kanban-card-top">
@@ -346,22 +418,15 @@
       <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>${values.talhao}</span>
       <div class="kanban-card-footer">
         <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>${values.data}</span>
-        <div class="action-menu-wrap">${actionMenuMarkup(menuId, values.status)}</div>
+        <div class="action-menu-wrap">${actionMenuMarkup(menuId, raw.status)}</div>
       </div>
     `;
     return card;
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Arrastar card entre colunas (mover o status pelo Kanban)               */
-  /* --------------------------------------------------------------------
-   * Drag and Drop nativo (HTML5), delegado no board: cada `.kanban-card`
-   * tem `draggable="true"` (nos cards estáticos do HTML e nos criados via
-   * buildCard). Diferente do fluxo "Concluir" do menu "⋮" — que pede
-   * confirmação e narra a baixa de insumo simulada — soltar um card numa
-   * coluna é uma ação rápida (padrão Trello): muda o status na hora, sem
-   * modal, só um toast confirmando.
-   */
+  /* Arrastar card entre colunas (mover status pelo Kanban)                 */
+  /* ---------------------------------------------------------------------- */
   let draggedCard = null;
 
   function initDragAndDrop() {
@@ -374,7 +439,6 @@
       draggedCard = card;
       card.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
-      // Alguns navegadores exigem dados setados para o drag funcionar.
       event.dataTransfer.setData("text/plain", card.dataset.activity || "");
     });
 
@@ -387,14 +451,12 @@
     $$(".kanban-column", board).forEach((column) => {
       column.addEventListener("dragover", (event) => {
         if (!draggedCard) return;
-        event.preventDefault(); // necessário para o navegador permitir o drop
+        event.preventDefault();
         event.dataTransfer.dropEffect = "move";
         column.classList.add("is-drop-target");
       });
 
       column.addEventListener("dragleave", (event) => {
-        // dragleave dispara também ao passar por filhos internos — só
-        // remove o destaque quando realmente saiu da coluna.
         if (!column.contains(event.relatedTarget)) column.classList.remove("is-drop-target");
       });
 
@@ -404,15 +466,27 @@
         if (!draggedCard) return;
 
         const newStatus = column.dataset.column;
-        const nomeAtividade = draggedCard.dataset.activity;
         const statusAnterior = draggedCard.dataset.status;
         if (statusAnterior === newStatus) return;
 
-        moveCardToStatus(draggedCard, newStatus);
-        if (!persist()) return;
-        recomputeMetrics();
-        applyFilters();
-        toast("success", "Status atualizado", `${nomeAtividade} movida para "${newStatus}".`);
+        if (isTerminalStatus(statusAnterior)) {
+          toast("warning", "Operação bloqueada", "Atividades concluídas ou canceladas não podem mudar de status.");
+          return;
+        }
+
+        if (newStatus === "Concluída") {
+          activeCard = draggedCard;
+          openCompleteConfirm(draggedCard);
+          return;
+        }
+
+        if (newStatus === "Cancelada") {
+          activeCard = draggedCard;
+          openCancelConfirm(draggedCard);
+          return;
+        }
+
+        atualizarStatusAtividade(draggedCard, newStatus);
       });
     });
   }
@@ -432,12 +506,16 @@
       if (action === "detail") openDetail(card);
       else if (action === "edit") openEditForm(card);
       else if (action === "complete") openCompleteConfirm(card);
+      else if (action === "cancel") openCancelConfirm(card);
       else if (action === "duplicate") openDuplicateForm(card);
       else if (action === "delete") openDeleteConfirm(card);
     });
   }
 
-  function openDetail(card) {
+  /* ---------------------------------------------------------------------- */
+  /* Detalhes e Linha do Tempo de Eventos (Histórico)                       */
+  /* ---------------------------------------------------------------------- */
+  async function openDetail(card) {
     const modal = $("[data-modal='activity-detail']");
     $("[data-detail-title]", modal).textContent = card.dataset.activity;
     $("[data-detail-subtitle]", modal).textContent = `${card.dataset.talhao} · ${card.dataset.date}`;
@@ -447,21 +525,215 @@
       <div class="meta-cell"><span class="meta-cell-label">Data</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.date)}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.status)}</span></div>
     `;
+
+    const timelineContainer = $("[data-detail-timeline]", modal);
+    if (timelineContainer) {
+      timelineContainer.innerHTML = `<p style="font-size: 12px; color: var(--text-muted); padding: 8px 0;">Consultando histórico da atividade...</p>`;
+      await renderActivityTimeline(card, timelineContainer);
+    }
+
     openModal(modal);
   }
 
-  function openCompleteConfirm(card) {
-    const modal = $("[data-modal='activity-complete']");
-    $("[data-complete-desc]", modal).textContent = `${card.dataset.activity} será marcada como concluída.`;
-    openModal(modal);
-  }
+  /**
+   * Consulta a API `/api/atividades/{id}/historico` e renderiza a linha do tempo.
+   * Se a chamada falhar ou estiver em modo puramente local, sintetiza os eventos
+   * registrados no ciclo de vida da atividade.
+   */
+  async function renderActivityTimeline(card, container) {
+    const id = card.dataset.id;
+    let eventos = [];
 
-  function openDeleteConfirm(card) {
-    openModal($("[data-modal='activity-delete']"));
+    if (getSessionToken() && id) {
+      try {
+        eventos = await apiRequest(`/api/atividades/${encodeURIComponent(id)}/historico`);
+      } catch {
+        eventos = [];
+      }
+    }
+
+    if (!Array.isArray(eventos) || eventos.length === 0) {
+      eventos = [
+        {
+          versao: 0,
+          dataHora: card.dataset.date || "Data inicial",
+          autor: "Sistema",
+          statusAnterior: "",
+          statusNovo: "Pendente",
+          descricao: `Atividade "${card.dataset.activity}" planejada para o talhão ${card.dataset.talhao}.`,
+        },
+      ];
+      if (card.dataset.status !== "Pendente") {
+        eventos.push({
+          versao: 1,
+          dataHora: new Date().toISOString().replace("T", " ").substring(0, 16),
+          autor: "Operador",
+          statusAnterior: "Pendente",
+          statusNovo: card.dataset.status,
+          descricao: `Status atualizado para ${card.dataset.status}.`,
+        });
+      }
+    }
+
+    // Ordenação do mais recente para o mais antigo para leitura imediata do estado atual
+    const eventosOrdenados = [...eventos].reverse();
+
+    container.innerHTML = "";
+    eventosOrdenados.forEach((ev, index) => {
+      const isLatest = index === 0;
+      const entry = document.createElement("div");
+      entry.className = `timeline-entry${isLatest ? " is-latest" : ""}`;
+
+      const rail = document.createElement("div");
+      rail.className = "timeline-rail";
+      const dot = document.createElement("div");
+      dot.className = "timeline-dot";
+      const line = document.createElement("div");
+      line.className = "timeline-line";
+      rail.append(dot, line);
+
+      const body = document.createElement("div");
+      body.className = "timeline-body";
+
+      const time = document.createElement("span");
+      time.className = "timeline-time";
+      const dataHoraStr = ev.registradoEm || ev.dataHora || "";
+      time.textContent = dataHoraStr ? dataHoraStr.replace("T", " ").substring(0, 16) : "Data/hora não registrada";
+
+      const title = document.createElement("h4");
+      title.className = "timeline-title";
+      const statusFinal = ev.status || ev.statusNovo || "";
+      const acao = ev.acao || "";
+      let tituloTexto = "Atualização de status";
+      if (ev.ordem === 0 || ev.versao === 0 || acao === "criacao") tituloTexto = "Atividade criada";
+      else if (statusFinal === "Concluída" || acao === "conclusao") tituloTexto = "Atividade concluída";
+      else if (statusFinal === "Cancelada" || acao === "cancelamento") tituloTexto = "Atividade cancelada";
+      else if (statusFinal) tituloTexto = `Status: ${statusFinal}`;
+      title.textContent = tituloTexto;
+
+      const desc = document.createElement("p");
+      desc.className = "timeline-desc";
+      let descTexto = ev.descricao || "";
+      if (ev.motivo) {
+        descTexto += ` (Motivo informado: "${ev.motivo}")`;
+      }
+      if (ev.autor) {
+        descTexto += ` · Por ${ev.autor}`;
+      }
+      desc.textContent = descTexto;
+
+      body.append(time, title, desc);
+      entry.append(rail, body);
+      container.appendChild(entry);
+    });
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Formulário (criar / editar / duplicar)                                 */
+  /* Confirmações de Conclusão e Cancelamento                               */
+  /* ---------------------------------------------------------------------- */
+  function openCompleteConfirm(card) {
+    activeCard = card;
+    const modal = $("[data-modal='activity-complete']");
+    $("[data-complete-desc]", modal).textContent = `${card.dataset.activity} será marcada como concluída e não poderá ser reaberta.`;
+    openModal(modal);
+  }
+
+  function initCompleteConfirm() {
+    const modal = $("[data-modal='activity-complete']");
+    $("[data-confirm-complete]", modal)?.addEventListener("click", () => {
+      if (!activeCard) return;
+      const card = activeCard;
+      const id = card.dataset.id;
+      const name = card.dataset.activity;
+      const talhao = card.dataset.talhao;
+
+      $(".kanban-card-top .badge", card).className = "badge badge-success";
+      moveCardToStatus(card, "Concluída");
+      if (!persist()) return;
+
+      closeModal(modal);
+      toast("success", "Atividade concluída", `${name} marcada como concluída em ${talhao}.`);
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {
+        detail: { tipo: "atividade", descricao: `Conclusão: ${name}`, talhao },
+      }));
+      applyFilters();
+      activeCard = null;
+
+      if (getSessionToken() && id) {
+        apiRequest(`/api/atividades/${encodeURIComponent(id)}/concluir`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        }).catch((err) => {
+          toast("error", "Falha ao sincronizar conclusão", err.message);
+        });
+      }
+    });
+  }
+
+  function openCancelConfirm(card) {
+    activeCard = card;
+    const modal = $("[data-modal='activity-cancel']");
+    const reasonInput = $("[data-cancel-reason]", modal);
+    if (reasonInput) reasonInput.value = "";
+    $("[data-cancel-desc]", modal).textContent = `${card.dataset.activity} será cancelada e não poderá mais ser reaberta ou alterada.`;
+    openModal(modal);
+  }
+
+  function initCancelConfirm() {
+    const modal = $("[data-modal='activity-cancel']");
+    $("[data-confirm-cancel]", modal)?.addEventListener("click", () => {
+      if (!activeCard) return;
+      const card = activeCard;
+      const id = card.dataset.id;
+      const name = card.dataset.activity;
+      const talhao = card.dataset.talhao;
+      const reasonInput = $("[data-cancel-reason]", modal);
+      const motivo = reasonInput ? reasonInput.value.trim() : "";
+
+      $(".kanban-card-top .badge", card).className = "badge badge-neutral";
+      moveCardToStatus(card, "Cancelada");
+      if (!persist()) return;
+
+      closeModal(modal);
+      toast("info", "Atividade cancelada", `${name} foi cancelada.${motivo ? ` Motivo: ${motivo}` : ""}`);
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", {
+        detail: { tipo: "atividade", descricao: `Cancelamento: ${name}${motivo ? ` (${motivo})` : ""}`, talhao },
+      }));
+      applyFilters();
+      activeCard = null;
+
+      if (getSessionToken() && id) {
+        apiRequest(`/api/atividades/${encodeURIComponent(id)}/cancelar`, {
+          method: "POST",
+          body: JSON.stringify({ motivo }),
+        }).catch((err) => {
+          toast("error", "Falha ao sincronizar cancelamento", err.message);
+        });
+      }
+    });
+  }
+
+  function openDeleteConfirm(card) {
+    activeCard = card;
+    openModal($("[data-modal='activity-delete']"));
+  }
+
+  function initDeleteConfirm() {
+    const modal = $("[data-modal='activity-delete']");
+    $("[data-confirm-delete]", modal)?.addEventListener("click", () => {
+      if (!activeCard) return;
+      const name = activeCard.dataset.activity;
+      activeCard.remove();
+      if (!persist()) return;
+      closeModal(modal);
+      toast("info", "Atividade excluída", `${name} foi removida.`);
+      applyFilters();
+      activeCard = null;
+    });
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Formulário de Criação / Edição / Duplicação                            */
   /* ---------------------------------------------------------------------- */
   function clearErrors(form) {
     $$(".field-error", form).forEach((el) => (el.textContent = ""));
@@ -497,6 +769,10 @@
   }
 
   function openEditForm(card) {
+    if (isTerminalStatus(card.dataset.status)) {
+      toast("warning", "Edição não permitida", "Atividades concluídas ou canceladas não podem ser alteradas.");
+      return;
+    }
     formMode = "edit";
     activeCard = card;
     const modal = $("[data-modal='activity-form']");
@@ -529,8 +805,6 @@
     toast("info", "Cópia editável criada", "Ajuste talhão e data antes de salvar.");
   }
 
-  let cardSeq = 100;
-
   function initActivityForm() {
     const modal = $("[data-modal='activity-form']");
     const form = $("[data-activity-form]", modal);
@@ -559,6 +833,13 @@
       }
 
       if (formMode === "edit" && activeCard) {
+        if (isTerminalStatus(activeCard.dataset.status)) {
+          toast("error", "Edição bloqueada", "Atividades concluídas ou canceladas não podem ser alteradas.");
+          closeModal(modal);
+          return;
+        }
+
+        const cardId = activeCard.dataset.id;
         activeCard.dataset.activity = nome;
         activeCard.dataset.tipo = tipo;
         activeCard.dataset.talhao = talhao;
@@ -569,58 +850,43 @@
         $(".kanban-card-date", activeCard).lastChild.textContent = data;
         if (!persist()) return;
         toast("success", "Atividade atualizada", `${nome} foi salva com sucesso.`);
+
+        if (getSessionToken() && cardId) {
+          apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
+            method: "PUT",
+            body: JSON.stringify({ nome, tipo, talhao, data }),
+          }).catch((err) => {
+            toast("error", "Falha ao sincronizar edição", err.message);
+          });
+        }
       } else {
         cardSeq += 1;
-        const card = buildCard({ nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
+        const cardId = window.AgroLocal.id();
+        const card = buildCard({ id: cardId, nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
         $("[data-column='Pendente'] [data-column-cards]").appendChild(card);
         if (!persist()) return;
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
+
+        if (getSessionToken()) {
+          apiRequest("/api/atividades", {
+            method: "POST",
+            body: JSON.stringify({ id: cardId, nome, tipo, talhao, data }),
+          }).then((criada) => {
+            if (criada && criada.id) {
+              card.dataset.id = String(criada.id);
+              persist();
+            }
+          }).catch(() => {});
+        }
       }
 
-      document.dispatchEvent(new CustomEvent("agro:operation-saved", {detail: {tipo: "atividade", descricao: nome, talhao}}));
+      document.dispatchEvent(new CustomEvent("agro:operation-saved", { detail: { tipo: "atividade", descricao: nome, talhao } }));
       closeModal(modal);
       form.reset();
       applyFilters();
     });
   }
 
-  function initCompleteConfirm() {
-    const modal = $("[data-modal='activity-complete']");
-    $("[data-confirm-complete]", modal)?.addEventListener("click", () => {
-      if (!activeCard) return;
-      const name = activeCard.dataset.activity;
-      const talhao = activeCard.dataset.talhao;
-
-      $(".kanban-card-top .badge", activeCard).className = "badge badge-success";
-      moveCardToStatus(activeCard, "Concluída");
-      if (!persist()) return;
-
-      closeModal(modal);
-      toast(
-        "success",
-        "Atividade concluída",
-        `${name} marcada como concluída em ${talhao}.`
-      );
-      applyFilters();
-      activeCard = null;
-    });
-  }
-
-  function initDeleteConfirm() {
-    const modal = $("[data-modal='activity-delete']");
-    $("[data-confirm-delete]", modal)?.addEventListener("click", () => {
-      if (!activeCard) return;
-      const name = activeCard.dataset.activity;
-      activeCard.remove();
-      if (!persist()) return;
-      closeModal(modal);
-      toast("info", "Atividade excluída", `${name} foi removida da lista.`);
-      applyFilters();
-      activeCard = null;
-    });
-  }
-
-  /** Botões de módulo/ação fora do escopo desta entrega (ex.: Exportar). */
   function initPrepToasts() {
     $$("[data-prep-toast]").forEach((el) => {
       el.addEventListener("click", () => {
@@ -629,23 +895,62 @@
     });
   }
 
-  // Kanban e Lista continuam usando os mesmos cards. Ao recuperar os dados,
-  // recriamos os cards e recalculamos contagens e filtros a partir deles.
+  /**
+   * Recria os cards do Kanban e da Lista a partir dos registros recuperados.
+   */
   function restoreActivities(records) {
-    // Mantemos a referência lógica ao card para permitir tentar novamente após falha.
     const activeId = activeCard?.dataset.id;
     $$("[data-column-cards]").forEach((column) => column.replaceChildren());
     records.forEach((record) => {
-      const card = buildCard({id: record.id, nome: record.activity, tipo: record.tipo,
-        talhao: record.talhao, data: record.date, status: record.status}, ++cardSeq);
-      $(`[data-column="${record.status}"] [data-column-cards]`).appendChild(card);
+      const card = buildCard({
+        id: record.id,
+        nome: record.activity,
+        tipo: record.tipo,
+        talhao: record.talhao,
+        data: record.date,
+        status: record.status,
+      }, ++cardSeq);
+      $(`[data-column="${record.status}"] [data-column-cards]`)?.appendChild(card);
     });
     activeCard = $$(".kanban-card").find((card) => card.dataset.id === activeId) || null;
     applyFilters();
   }
 
+  /**
+   * Consulta a API do backend para sincronizar as atividades persistidas do usuário autenticado.
+   * Se a consulta responder com dados, restaura o board com os estados reais.
+   */
+  async function carregarAtividadesRemotas() {
+    if (!getSessionToken()) return;
+    try {
+      const lista = await apiRequest("/api/atividades");
+      if (Array.isArray(lista) && lista.length > 0) {
+        const records = lista.map((item) => ({
+          id: String(item.id),
+          activity: item.nome,
+          tipo: item.tipo,
+          talhao: item.talhao,
+          date: item.data,
+          status: item.status,
+        }));
+        restoreActivities(records);
+        window.AgroLocal.save("activities", records);
+      }
+    } catch {
+      // Mantém o cache local se o servidor estiver temporariamente indisponível
+    }
+  }
+
   function init() {
-    persist = window.AgroLocal.connect("activities", () => $$(".kanban-card").map((row) => ({id: row.dataset.id, activity: row.dataset.activity, tipo: row.dataset.tipo, talhao: row.dataset.talhao, date: row.dataset.date, status: row.dataset.status})), restoreActivities);
+    persist = window.AgroLocal.connect("activities", () => $$(".kanban-card").map((row) => ({
+      id: row.dataset.id,
+      activity: row.dataset.activity,
+      tipo: row.dataset.tipo,
+      talhao: row.dataset.talhao,
+      date: row.dataset.date,
+      status: row.dataset.status,
+    })), restoreActivities);
+
     initGenericModals();
     initPrepToasts();
     initTalhaoFilterChip();
@@ -655,8 +960,11 @@
     initCardActions();
     initActivityForm();
     initCompleteConfirm();
+    initCancelConfirm();
     initDeleteConfirm();
     applyFilters();
+
+    carregarAtividadesRemotas();
   }
 
   if (document.readyState === "loading") {
