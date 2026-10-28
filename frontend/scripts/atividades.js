@@ -83,6 +83,26 @@
     return status === "Concluída" || status === "Cancelada";
   }
 
+  // Espelha a máquina de estados do servidor (AtividadesHandler.transicaoPermitida).
+  function transicaoPermitida(atual, destino) {
+    return (atual === "Pendente" && (destino === "Agendada" || destino === "Cancelada"))
+      || (atual === "Agendada" && (destino === "Em andamento" || destino === "Cancelada"))
+      || (atual === "Em andamento" && (destino === "Concluída" || destino === "Cancelada"));
+  }
+
+  // Aceita o formato do protótipo ("12 ago") e o ISO usado nos testes de API.
+  function dataPlanejamentoValida(valor) {
+    const data = String(valor || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      const parsed = Date.parse(data + "T12:00:00Z");
+      return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === data;
+    }
+    const match = data.match(/^(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)$/i);
+    if (!match) return false;
+    const dia = Number(match[1]);
+    return dia >= 1 && dia <= 31;
+  }
+
   /* ---------------------------------------------------------------------- */
   /* Modal helpers (genérico — reaproveitado pelos modais desta tela)       */
   /* ---------------------------------------------------------------------- */
@@ -177,13 +197,16 @@
     select.className = "status-select";
     select.setAttribute("aria-label", `Status de ${card.dataset.activity}`);
 
-    const isTerminal = isTerminalStatus(card.dataset.status);
+    const statusAtual = card.dataset.status;
+    const isTerminal = isTerminalStatus(statusAtual);
 
     STATUS_ORDER.forEach((status) => {
       const opt = document.createElement("option");
       opt.value = status;
       opt.textContent = status;
-      if (status === card.dataset.status) opt.selected = true;
+      if (status === statusAtual) opt.selected = true;
+      // Só o status atual e as transições permitidas pelo servidor ficam selecionáveis.
+      else if (!transicaoPermitida(statusAtual, status)) opt.disabled = true;
       select.appendChild(opt);
     });
 
@@ -192,27 +215,37 @@
       select.title = "Atividades concluídas ou canceladas estão em estado terminal.";
     }
 
-    select.addEventListener("change", () => {
+    select.addEventListener("change", async () => {
+      const statusConfirmado = card.dataset.status;
       const novoStatus = select.value;
-      if (isTerminalStatus(card.dataset.status)) {
+      if (isTerminalStatus(statusConfirmado)) {
         toast("warning", "Operação bloqueada", "Atividades concluídas ou canceladas não podem mudar de status.");
-        select.value = card.dataset.status;
+        select.value = statusConfirmado;
+        return;
+      }
+
+      if (!transicaoPermitida(statusConfirmado, novoStatus)) {
+        toast("warning", "Transição inválida", `Não é possível ir de "${statusConfirmado}" para "${novoStatus}".`);
+        select.value = statusConfirmado;
         return;
       }
 
       if (novoStatus === "Concluída") {
-        select.value = card.dataset.status;
+        select.value = statusConfirmado;
         openCompleteConfirm(card);
         return;
       }
 
       if (novoStatus === "Cancelada") {
-        select.value = card.dataset.status;
+        select.value = statusConfirmado;
         openCancelConfirm(card);
         return;
       }
 
-      atualizarStatusAtividade(card, novoStatus);
+      select.disabled = true;
+      const ok = await atualizarStatusAtividade(card, novoStatus);
+      if (!ok) select.value = card.dataset.status;
+      select.disabled = isTerminalStatus(card.dataset.status);
     });
 
     statusTd.appendChild(select);
@@ -239,10 +272,15 @@
    * Atualiza o status de uma atividade intermediária (Pendente, Agendada, Em andamento)
    * sincronizando com a API do servidor e mantendo a consistência dos dados locais.
    */
-  async function atualizarStatusAtividade(card, novoStatus, motivo = "") {
+  async function atualizarStatusAtividade(card, novoStatus, motivo = "", { silentSuccess = false } = {}) {
     await carregamentoRemoto;
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
+
+    if (!transicaoPermitida(card.dataset.status, novoStatus)) {
+      toast("warning", "Transição inválida", `Não é possível ir de "${card.dataset.status}" para "${novoStatus}".`);
+      return false;
+    }
 
     // Uma sessão autenticada não pode confirmar status só no cache: todos os
     // caminhos (menu, lista, arraste, conclusão e cancelamento) dependem da
@@ -259,10 +297,12 @@
     }
 
     moveCardToStatus(card, novoStatus);
-    if (!persist()) return;
+    if (!persist()) return false;
     recomputeMetrics();
     applyFilters();
-    toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
+    if (!silentSuccess) {
+      toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
+    }
     return true;
   }
 
@@ -386,6 +426,8 @@
   /* ---------------------------------------------------------------------- */
   function actionMenuMarkup(id, status) {
     const isTerminal = isTerminalStatus(status);
+    const podeConcluir = transicaoPermitida(status, "Concluída");
+    const podeCancelar = transicaoPermitida(status, "Cancelada");
     return `
       <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="${id}" aria-expanded="false" aria-label="Mais ações">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
@@ -393,8 +435,8 @@
       <div class="action-menu" id="${id}" data-popover role="menu">
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
         ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>` : ""}
-        ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
-        ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="cancel"><span class="action-menu-icon tone-neutral" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span><span class="action-menu-label">Cancelar</span></button>` : ""}
+        ${podeConcluir ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
+        ${podeCancelar ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="cancel"><span class="action-menu-icon tone-neutral" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span><span class="action-menu-label">Cancelar</span></button>` : ""}
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
         ${!apiDisponivel ? `<button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>` : ""}
       </div>
@@ -494,6 +536,11 @@
           return;
         }
 
+        if (!transicaoPermitida(statusAnterior, newStatus)) {
+          toast("warning", "Transição inválida", `Não é possível arrastar de "${statusAnterior}" para "${newStatus}".`);
+          return;
+        }
+
         if (newStatus === "Concluída") {
           activeCard = draggedCard;
           openCompleteConfirm(draggedCard);
@@ -569,15 +616,31 @@
     const id = card.dataset.id;
     let eventos = [];
 
+    // Com sessão autenticada só exibimos o histórico persistido; falha não
+    // inventa timeline local para não parecer dado real após reload.
     if (getSessionToken() && id) {
       try {
         eventos = await apiRequest(`/api/atividades/${encodeURIComponent(id)}/historico`);
-      } catch {
-        eventos = [];
+      } catch (err) {
+        container.replaceChildren();
+        const aviso = document.createElement("p");
+        aviso.className = "timeline-unavailable";
+        aviso.style.cssText = "font-size: 12px; color: var(--text-muted); padding: 8px 0;";
+        aviso.textContent = `Histórico indisponível: ${err.message}`;
+        container.appendChild(aviso);
+        toast("error", "Histórico indisponível", err.message);
+        return;
       }
-    }
-
-    if (!Array.isArray(eventos) || eventos.length === 0) {
+      if (!Array.isArray(eventos) || eventos.length === 0) {
+        container.replaceChildren();
+        const vazio = document.createElement("p");
+        vazio.className = "timeline-empty";
+        vazio.style.cssText = "font-size: 12px; color: var(--text-muted); padding: 8px 0;";
+        vazio.textContent = "Nenhum evento de histórico registrado para esta atividade.";
+        container.appendChild(vazio);
+        return;
+      }
+    } else if (!Array.isArray(eventos) || eventos.length === 0) {
       eventos = [
         {
           versao: 0,
@@ -657,6 +720,10 @@
   /* Confirmações de Conclusão e Cancelamento                               */
   /* ---------------------------------------------------------------------- */
   function openCompleteConfirm(card) {
+    if (!transicaoPermitida(card.dataset.status, "Concluída")) {
+      toast("warning", "Conclusão bloqueada", "Inicie a atividade (Em andamento) antes de concluí-la.");
+      return;
+    }
     activeCard = card;
     const modal = $("[data-modal='activity-complete']");
     $("[data-complete-desc]", modal).textContent = `${card.dataset.activity} será marcada como concluída e não poderá ser reaberta.`;
@@ -671,7 +738,7 @@
       const name = card.dataset.activity;
       const talhao = card.dataset.talhao;
 
-      if (!await atualizarStatusAtividade(card, "Concluída")) return;
+      if (!await atualizarStatusAtividade(card, "Concluída", "", { silentSuccess: true })) return;
       $(".kanban-card-top .badge", card).className = "badge badge-success";
 
       closeModal(modal);
@@ -686,6 +753,10 @@
   }
 
   function openCancelConfirm(card) {
+    if (!transicaoPermitida(card.dataset.status, "Cancelada")) {
+      toast("warning", "Cancelamento bloqueado", "Atividades concluídas ou canceladas não podem ser alteradas.");
+      return;
+    }
     activeCard = card;
     const modal = $("[data-modal='activity-cancel']");
     const reasonInput = $("[data-cancel-reason]", modal);
@@ -704,7 +775,7 @@
       const reasonInput = $("[data-cancel-reason]", modal);
       const motivo = reasonInput ? reasonInput.value.trim() : "";
 
-      if (!await atualizarStatusAtividade(card, "Cancelada", motivo)) return;
+      if (!await atualizarStatusAtividade(card, "Cancelada", motivo, { silentSuccess: true })) return;
       $(".kanban-card-top .badge", card).className = "badge badge-neutral";
 
       closeModal(modal);
@@ -858,6 +929,10 @@
       if (!tipo) { setError(form, "tipo", "Selecione o tipo."); hasError = true; }
       if (!talhao) { setError(form, "talhao", "Selecione o talhão."); hasError = true; }
       if (!data) { setError(form, "data", "Informe a data."); hasError = true; }
+      else if (!dataPlanejamentoValida(data)) {
+        setError(form, "data", "Use o formato do protótipo (12 ago) ou ISO (2026-08-12).");
+        hasError = true;
+      }
 
       if (hasError) {
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
