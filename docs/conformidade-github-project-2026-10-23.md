@@ -6,6 +6,11 @@
 > unificado, cancelamento e histórico usam a API Java e possuem evidência na
 > suíte do servidor. A baixa integrada de estoque/custo continua delimitada em
 > I20/#24; não deve ser inferida como concluída por esta frente.
+>
+> Atualização de 28/10/2026 — I12/#16 tem persistência de atividade e histórico
+> transacionada no Mongo, com teste de reconexão. A definição do grafo entre
+> estados não terminais permanece dependente de I01/#5; portanto o item não deve
+> ser marcado como concluído apenas pelos testes atuais.
 
 Atualização de 24/10/2026, somente na branch `feat/ocorrencias`: as frentes #33,
 #20/#148–#150 e #21/#151–#153 têm implementação e validação descritas em

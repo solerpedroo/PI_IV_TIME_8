@@ -101,7 +101,7 @@ public class Servidor
     {
         RepositorioAtividades atividades = conexao == null
             ? new RepositorioAtividadesMemoria ()
-            : new RepositorioAtividadesMongo (conexao.getBanco ());
+            : new RepositorioAtividadesMongo (conexao);
         return Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
     }
 
@@ -200,7 +200,7 @@ public class Servidor
                 {
                     usuarios = new RepositorioUsuariosMongo (conexao);
                     talhoes  = new RepositorioTalhoesMongo  (conexao.getBanco ());
-                    atividades = new RepositorioAtividadesMongo (conexao.getBanco ());
+                    atividades = new RepositorioAtividadesMongo (conexao);
                     estoque  = new RepositorioEstoqueMongo  (conexao);
                     safras   = new RepositorioSafrasMongo   (conexao.getBanco ());
                     custos   = new RepositorioCustosMongo   (conexao.getBanco ());

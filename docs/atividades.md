@@ -18,9 +18,19 @@ Concluir uma atividade ainda não gera consumo de estoque ou custo automaticamen
 esse ciclo transacional é da I20/#24. A tela não anuncia essa integração como se
 ela existisse.
 
+## Transições e decisão pendente
+
+O servidor impede reabertura e qualquer alteração depois de conclusão ou
+cancelamento. A definição formal do grafo entre estados não terminais permanece
+em I01/#5; por isso esta entrega não promove uma sequência presumida a regra
+aprovada. Menu, Lista, arraste e API passam pela mesma rota de status.
+
 ## Evidência
 
 `backend/servidor/testar.bat` valida criação, edição, vínculo safra-talhão,
 campos inválidos, três caminhos de status, cancelamento e histórico (319/319 na
-execução de 28/10/2026). `tests/atividades-real.cjs` cobre navegador, filtros,
-falhas de API e reload; requer Playwright disponível no ambiente de execução.
+execução de 28/10/2026). O repositório Mongo grava atividade e evento de
+histórico na mesma transação; `TesteMongo` foi ampliado para reabrir a conexão e
+conferir ambos quando houver um Mongo replica set disponível.
+`tests/atividades-real.cjs` cobre navegador, filtros, falhas de API e reload;
+requer Playwright disponível no ambiente de execução.

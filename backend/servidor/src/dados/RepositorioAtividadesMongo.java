@@ -2,6 +2,8 @@
 package dados;
 
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
@@ -26,14 +28,28 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
 {
     private final MongoCollection<Document> atividades;
     private final MongoCollection<Document> historicos;
+    private final MongoClient cliente;
 
     public RepositorioAtividadesMongo (MongoDatabase banco) throws Exception
+    {
+        this (banco, null);
+    }
+
+    // A conexão completa permite transacionar a atividade e seu evento de
+    // histórico; o construtor legado permanece apenas para compatibilidade.
+    public RepositorioAtividadesMongo (ConexaoMongo conexao) throws Exception
+    {
+        this (conexao == null ? null : conexao.getBanco (), conexao == null ? null : conexao.getCliente ());
+    }
+
+    private RepositorioAtividadesMongo (MongoDatabase banco, MongoClient cliente) throws Exception
     {
         if (banco == null)
             throw new Exception ("Banco ausente");
 
         this.atividades = banco.getCollection ("atividades");
         this.historicos = banco.getCollection ("atividades_historico");
+        this.cliente = cliente;
 
         this.atividades.createIndex (Indexes.ascending ("propriedadeId", "data"));
         this.historicos.createIndex (Indexes.ascending ("propriedadeId", "atividadeId", "ordem"),
@@ -100,8 +116,6 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         Instant agora = Instant.now ();
         atividade.put ("criadaEm", agora.toString ());
 
-        this.atividades.insertOne (atividade);
-
         Document eventoZero = new Document ();
         eventoZero.put ("atividadeId", idStr);
         eventoZero.put ("propriedadeId", propriedadeId);
@@ -111,7 +125,29 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         eventoZero.put ("acao", "criacao");
         eventoZero.put ("descricao", "Registro inicial da atividade");
 
-        this.historicos.insertOne (eventoZero);
+        if (this.cliente != null)
+        {
+            try (ClientSession sessao = this.cliente.startSession ())
+            {
+                sessao.withTransaction (() -> {
+                    this.atividades.insertOne (sessao, atividade);
+                    this.historicos.insertOne (sessao, eventoZero);
+                    return null;
+                });
+            }
+        }
+        else
+        {
+            // Compatibilidade para uso direto do repositório fora do servidor:
+            // se o evento inicial falhar, removemos a atividade recém-inserida.
+            this.atividades.insertOne (atividade);
+            try { this.historicos.insertOne (eventoZero); }
+            catch (Exception erro)
+            {
+                this.atividades.deleteOne (Filters.eq ("_id", id));
+                throw erro;
+            }
+        }
         return true;
     }
 
@@ -169,15 +205,11 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (statusAtual.equalsIgnoreCase (novoStatus))
             return true;
 
-        this.atividades.updateOne (filtro (propriedadeId, id), Updates.set ("status", novoStatus));
-
-        long contagem = this.historicos.countDocuments (Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("atividadeId", id)));
         Instant agora = Instant.now ();
 
         Document evento = new Document ();
         evento.put ("atividadeId", id);
         evento.put ("propriedadeId", propriedadeId);
-        evento.put ("ordem", (int) contagem);
         evento.put ("registradoEm", agora.toString ());
         evento.put ("status", novoStatus);
         evento.put ("acao", acao != null && !acao.isBlank () ? acao : "mudanca_status");
@@ -185,7 +217,32 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if ("cancelamento".equalsIgnoreCase (acao) || "Cancelada".equalsIgnoreCase (novoStatus))
             evento.put ("motivo", descricao != null ? descricao : "");
 
-        this.historicos.insertOne (evento);
+        Bson filtroHistorico = Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("atividadeId", id));
+        if (this.cliente != null)
+        {
+            try (ClientSession sessao = this.cliente.startSession ())
+            {
+                sessao.withTransaction (() -> {
+                    long contagem = this.historicos.countDocuments (sessao, filtroHistorico);
+                    evento.put ("ordem", (int) contagem);
+                    this.atividades.updateOne (sessao, filtro (propriedadeId, id), Updates.set ("status", novoStatus));
+                    this.historicos.insertOne (sessao, evento);
+                    return null;
+                });
+            }
+        }
+        else
+        {
+            long contagem = this.historicos.countDocuments (filtroHistorico);
+            evento.put ("ordem", (int) contagem);
+            this.atividades.updateOne (filtro (propriedadeId, id), Updates.set ("status", novoStatus));
+            try { this.historicos.insertOne (evento); }
+            catch (Exception erro)
+            {
+                this.atividades.updateOne (filtro (propriedadeId, id), Updates.set ("status", statusAtual));
+                throw erro;
+            }
+        }
         return true;
     }
 
