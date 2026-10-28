@@ -24,6 +24,9 @@
 
   const apiBase = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
   const getSessionToken = () => sessionStorage.getItem("agro.sessionToken");
+  // Depois de uma leitura bem-sucedida, a API é a fonte de verdade. Antes
+  // disso, o modo local continua atendendo a abertura isolada da interface.
+  let apiDisponivel = false;
 
   const filters = {
     query: "",
@@ -232,9 +235,20 @@
    * Atualiza o status de uma atividade intermediária (Pendente, Agendada, Em andamento)
    * sincronizando com a API do servidor e mantendo a consistência dos dados locais.
    */
-  function atualizarStatusAtividade(card, novoStatus) {
+  async function atualizarStatusAtividade(card, novoStatus) {
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
+
+    if (apiDisponivel && cardId) {
+      try {
+        await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}/status`, {
+          method: "POST", body: JSON.stringify({ status: novoStatus }),
+        });
+      } catch (err) {
+        toast("error", "Status não alterado", err.message);
+        return;
+      }
+    }
 
     moveCardToStatus(card, novoStatus);
     if (!persist()) return;
@@ -242,14 +256,6 @@
     applyFilters();
     toast("success", "Status atualizado", `${nomeAtividade} agora está em "${novoStatus}".`);
 
-    if (getSessionToken() && cardId) {
-      apiRequest(`/api/atividades/${encodeURIComponent(cardId)}/status`, {
-        method: "POST",
-        body: JSON.stringify({ status: novoStatus }),
-      }).catch((err) => {
-        toast("error", "Não foi possível sincronizar status", err.message);
-      });
-    }
   }
 
   /**
@@ -382,7 +388,7 @@
         ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
         ${!isTerminal ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="cancel"><span class="action-menu-icon tone-neutral" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span><span class="action-menu-label">Cancelar</span></button>` : ""}
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-        <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
+        ${!apiDisponivel ? `<button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>` : ""}
       </div>
     `;
   }
@@ -640,12 +646,23 @@
 
   function initCompleteConfirm() {
     const modal = $("[data-modal='activity-complete']");
-    $("[data-confirm-complete]", modal)?.addEventListener("click", () => {
+    $("[data-confirm-complete]", modal)?.addEventListener("click", async () => {
       if (!activeCard) return;
       const card = activeCard;
       const id = card.dataset.id;
       const name = card.dataset.activity;
       const talhao = card.dataset.talhao;
+
+      if (apiDisponivel && id) {
+        try {
+          await apiRequest(`/api/atividades/${encodeURIComponent(id)}/concluir`, {
+            method: "POST", body: JSON.stringify({}),
+          });
+        } catch (err) {
+          toast("error", "Conclusão não confirmada", err.message);
+          return;
+        }
+      }
 
       $(".kanban-card-top .badge", card).className = "badge badge-success";
       moveCardToStatus(card, "Concluída");
@@ -659,14 +676,6 @@
       applyFilters();
       activeCard = null;
 
-      if (getSessionToken() && id) {
-        apiRequest(`/api/atividades/${encodeURIComponent(id)}/concluir`, {
-          method: "POST",
-          body: JSON.stringify({}),
-        }).catch((err) => {
-          toast("error", "Falha ao sincronizar conclusão", err.message);
-        });
-      }
     });
   }
 
@@ -681,7 +690,7 @@
 
   function initCancelConfirm() {
     const modal = $("[data-modal='activity-cancel']");
-    $("[data-confirm-cancel]", modal)?.addEventListener("click", () => {
+    $("[data-confirm-cancel]", modal)?.addEventListener("click", async () => {
       if (!activeCard) return;
       const card = activeCard;
       const id = card.dataset.id;
@@ -689,6 +698,17 @@
       const talhao = card.dataset.talhao;
       const reasonInput = $("[data-cancel-reason]", modal);
       const motivo = reasonInput ? reasonInput.value.trim() : "";
+
+      if (apiDisponivel && id) {
+        try {
+          await apiRequest(`/api/atividades/${encodeURIComponent(id)}/cancelar`, {
+            method: "POST", body: JSON.stringify({ motivo }),
+          });
+        } catch (err) {
+          toast("error", "Cancelamento não confirmado", err.message);
+          return;
+        }
+      }
 
       $(".kanban-card-top .badge", card).className = "badge badge-neutral";
       moveCardToStatus(card, "Cancelada");
@@ -702,14 +722,6 @@
       applyFilters();
       activeCard = null;
 
-      if (getSessionToken() && id) {
-        apiRequest(`/api/atividades/${encodeURIComponent(id)}/cancelar`, {
-          method: "POST",
-          body: JSON.stringify({ motivo }),
-        }).catch((err) => {
-          toast("error", "Falha ao sincronizar cancelamento", err.message);
-        });
-      }
     });
   }
 
@@ -812,7 +824,7 @@
 
     $$("[data-open-modal='activity-form']").forEach((btn) => btn.addEventListener("click", openCreateForm));
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       clearErrors(form);
 
@@ -840,6 +852,16 @@
         }
 
         const cardId = activeCard.dataset.id;
+        if (apiDisponivel && cardId) {
+          try {
+            await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
+              method: "PUT", body: JSON.stringify({ nome, tipo, talhao, data }),
+            });
+          } catch (err) {
+            toast("error", "Edição não confirmada", err.message);
+            return;
+          }
+        }
         activeCard.dataset.activity = nome;
         activeCard.dataset.tipo = tipo;
         activeCard.dataset.talhao = talhao;
@@ -851,33 +873,26 @@
         if (!persist()) return;
         toast("success", "Atividade atualizada", `${nome} foi salva com sucesso.`);
 
-        if (getSessionToken() && cardId) {
-          apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
-            method: "PUT",
-            body: JSON.stringify({ nome, tipo, talhao, data }),
-          }).catch((err) => {
-            toast("error", "Falha ao sincronizar edição", err.message);
-          });
-        }
       } else {
         cardSeq += 1;
         const cardId = window.AgroLocal.id();
-        const card = buildCard({ id: cardId, nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
+        let idConfirmado = cardId;
+        if (apiDisponivel) {
+          try {
+            const criada = await apiRequest("/api/atividades", {
+              method: "POST", body: JSON.stringify({ nome, tipo, talhao, data }),
+            });
+            idConfirmado = String(criada.id);
+          } catch (err) {
+            toast("error", "Atividade não criada", err.message);
+            return;
+          }
+        }
+        const card = buildCard({ id: idConfirmado, nome, tipo, talhao, data, status: "Pendente" }, cardSeq);
         $("[data-column='Pendente'] [data-column-cards]").appendChild(card);
         if (!persist()) return;
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
 
-        if (getSessionToken()) {
-          apiRequest("/api/atividades", {
-            method: "POST",
-            body: JSON.stringify({ id: cardId, nome, tipo, talhao, data }),
-          }).then((criada) => {
-            if (criada && criada.id) {
-              card.dataset.id = String(criada.id);
-              persist();
-            }
-          }).catch(() => {});
-        }
       }
 
       document.dispatchEvent(new CustomEvent("agro:operation-saved", { detail: { tipo: "atividade", descricao: nome, talhao } }));
@@ -924,7 +939,7 @@
     if (!getSessionToken()) return;
     try {
       const lista = await apiRequest("/api/atividades");
-      if (Array.isArray(lista) && lista.length > 0) {
+      if (Array.isArray(lista)) {
         const records = lista.map((item) => ({
           id: String(item.id),
           activity: item.nome,
@@ -933,6 +948,7 @@
           date: item.data,
           status: item.status,
         }));
+        apiDisponivel = true;
         restoreActivities(records);
         window.AgroLocal.save("activities", records);
       }

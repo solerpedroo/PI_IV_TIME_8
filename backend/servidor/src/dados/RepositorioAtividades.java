@@ -6,7 +6,7 @@ import org.bson.Document;
 
 /**
  * Contrato de repositório para persistência de atividades e seu histórico.
- * 
+ *
  * Cada atividade pertence exclusivamente a uma propriedade e ao usuário dono da sessão.
  * O histórico registra a evolução cronológica dos estados (criação, início, conclusão
  * e cancelamento), servindo como auditoria confiável e fonte do estado real.

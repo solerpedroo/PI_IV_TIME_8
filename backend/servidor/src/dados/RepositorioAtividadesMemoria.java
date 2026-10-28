@@ -10,7 +10,7 @@ import org.bson.types.ObjectId;
 
 /**
  * Implementação em memória do repositório de atividades para testes e execução sem banco.
- * 
+ *
  * Mantém atividades e seus respectivos históricos isolados por propriedade.
  * Todos os métodos são sincronizados para proteger a concorrência e trabalham
  * com cópias defensivas de documentos BSON.

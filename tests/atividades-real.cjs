@@ -316,9 +316,11 @@ async function clickCardAction(page, name, action) {
     console.log("OK - Histórico e estados reais completamente persistidos e confirmados após reload.");
 
     console.log("=== TODOS OS CRITÉRIOS DE ACEITE DA SUBISSUE #140 FORAM VALIDADOS COM SUCESSO! ===");
-    process.exit(0);
   } finally {
     if (browser) await browser.close();
-    server.kill();
+    if (server.exitCode === null) {
+      server.stdin.write("desativar\n");
+      await new Promise((resolve) => server.once("exit", resolve));
+    }
   }
 })();

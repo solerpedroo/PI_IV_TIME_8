@@ -17,7 +17,7 @@ import util.Validacao;
 
 /**
  * Manipulador HTTP das rotas de Atividades operacionais e linha do tempo de histórico.
- * 
+ *
  * Permite planejar, consultar, editar, concluir, cancelar e auditar a timeline
  * de eventos de cada atividade. Apenas atividades não terminais (Pendente, Agendada,
  * Em andamento) podem ter status alterado; atividades concluídas ou canceladas

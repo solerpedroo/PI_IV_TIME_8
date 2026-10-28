@@ -17,7 +17,7 @@ import org.bson.types.ObjectId;
 
 /**
  * Persistência real de atividades e histórico de eventos no MongoDB.
- * 
+ *
  * As coleções 'atividades' e 'atividades_historico' são isoladas por propriedade.
  * Índices garantem velocidade nas consultas por propriedade e unicidade na ordem
  * cronológica dos eventos de cada atividade.
