@@ -4,7 +4,10 @@ on:
   pull_request:
     paths:
       - 'backend/servidor/**'
+      - 'frontend/scripts/atividades.js'
+      - 'frontend/atividades.html'
       - 'tests/atividades-reinicio.cjs'
+      - 'tests/atividades-real.cjs'
       - 'compose.yaml'
       - '.github/workflows/atividades-testes.yml'
 permissions:
@@ -13,7 +16,7 @@ jobs:
   atividades:
     # O MongoDB do projeto não inicia com o kernel 6.19 do ubuntu-latest.
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -25,6 +28,14 @@ jobs:
           node-version: '22'
       - name: Compilar e testar servidor
         run: sh backend/servidor/testar.sh
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install chromium --with-deps
+      - name: Validar navegador com servidor em memória
+        env:
+          PLAYWRIGHT_MODULE: playwright
+        run: node tests/atividades-real.cjs
       - name: Iniciar MongoDB de teste
         run: docker compose up -d --wait mongo
       - name: Validar histórico após reinício e concorrência
