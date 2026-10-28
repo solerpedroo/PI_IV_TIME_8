@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.infra.mongo;
 
 import java.util.ArrayList;
@@ -68,6 +69,12 @@ public final class CustoRepositorioMongo {
     public List<Custo> listarDoContexto(ContextoOperacao contexto) {
         vinculos.exigirContexto(contexto);
         return consultar(contexto.documento());
+    }
+
+    /** Custos do período são consultados por safra, mesmo quando distribuídos em vários talhões. */
+    public List<Custo> listarDaSafra(EscopoPropriedade escopo, ObjectId safraId) {
+        vinculos.exigir("safras", escopo, safraId);
+        return consultar(escopo.documento().append("safraId", safraId));
     }
 
     public List<Custo> listarDaCultura(EscopoPropriedade escopo, ObjectId culturaId) {

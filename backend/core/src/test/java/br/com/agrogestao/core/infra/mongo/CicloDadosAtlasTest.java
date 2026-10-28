@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package br.com.agrogestao.core.infra.mongo;
 
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ public final class CicloDadosAtlasTest {
             validarInsumos(c);
             validarOcorrencias(c);
             validarCustos(c);
+            validarVinculosDaSafra(c);
             if (opcoes.contains("--demonstrar")) demonstrarEmOutroProcesso(c);
             if (opcoes.contains("--pausar")) {
                 System.out.println("Dados fictícios disponíveis para inspeção no Atlas. Filtro:");
@@ -256,5 +258,43 @@ public final class CicloDadosAtlasTest {
         verificar(persistido.buscarSafra(c.b, c.safraA).isEmpty(), "safra não pode vazar entre produtores");
         verificar(persistido.buscarTalhao(c.extra, c.talhaoA).isEmpty(), "talhão não pode vazar entre propriedades");
         verificar(persistido.buscarCultura(c.b, c.culturaA).isEmpty(), "cultura não pode vazar entre produtores");
+    }
+
+    private static void validarVinculosDaSafra(CenarioDadosAtlas c) {
+        CultivoRepositorioMongo persistido = new CultivoRepositorioMongo(c.conexao.banco());
+        Safra ciclo = persistido.buscarSafra(c.a, c.safraA).orElseThrow();
+        for (Safra.Status etapa : new Safra.Status[] { Safra.Status.PREPARACAO, Safra.Status.PLANTIO,
+                Safra.Status.MANEJO, Safra.Status.COLHEITA, Safra.Status.FINALIZADA }) {
+            ciclo = persistido.avancarSafra(c.a, c.safraA, etapa);
+        }
+        Safra finalizada = ciclo;
+        verificar(finalizada.status() == Safra.Status.FINALIZADA,
+                "fases devem avançar em ordem até a finalização");
+        verificar(finalizada.historicoEtapas().size() == 6,
+                "histórico de etapas permanece no documento finalizado");
+        invalido(() -> persistido.avancarSafra(c.a, c.safraA, Safra.Status.FINALIZADA));
+        invalido(() -> persistido.atualizarSafra(finalizada));
+        invalido(() -> persistido.excluirSafra(c.a, c.safraA));
+        invalido(() -> persistido.excluirCultura(c.a, c.culturaA));
+        // Mesmo talhão + período cruzado deve ser rejeitado (regra alinhada ao servidor HTTP).
+        invalido(() -> persistido.inserir(Safra.nova(null, c.a, "Conflito período", c.culturaA,
+                List.of(c.talhaoA), LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31),
+                new BigDecimal("1.0"))));
+        c.reabrir();
+        CultivoRepositorioMongo reaberto = new CultivoRepositorioMongo(c.conexao.banco());
+        Safra lida = reaberto.buscarSafra(c.a, c.safraA).orElseThrow();
+        verificar(lida.status() == Safra.Status.FINALIZADA,
+                "finalização permanece consultável após reconectar");
+        verificar(lida.historicoEtapas().size() == 6,
+                "trilha de etapas sobrevive à reconexão");
+        verificar(reaberto.listarSafras(c.a).stream().anyMatch(s -> s.id().equals(c.safraA)),
+                "consulta da propriedade inclui histórico finalizado");
+        verificar(new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 2,
+                "atividades continuam consultáveis pela safra finalizada");
+        verificar(new OcorrenciaRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+                "ocorrências continuam consultáveis pela safra finalizada");
+        verificar(new CustoRepositorioMongo(c.conexao.banco()).listarDaSafra(c.a, c.safraA).size() == 1,
+                "custos continuam consultáveis pela safra finalizada");
+        invalido(() -> new AtividadeRepositorioMongo(c.conexao.banco()).listarDaSafra(c.b, c.safraA));
     }
 }
