@@ -1,0 +1,58 @@
+# Miguel — RA: 25003110
+# Autor Principal: Pedro Henrique Contardi Soler - 25005592
+name: Perfil Java e persistência
+
+on:
+  pull_request:
+    paths:
+      - 'backend/servidor/**'
+      - 'frontend/scripts/perfil-api.js'
+      - 'frontend/scripts/configuracoes.js'
+      - 'frontend/scripts/propriedades-api.js'
+      - 'frontend/scripts/shell.js'
+      - 'frontend/configuracoes.html'
+      - 'tests/perfil-real.cjs'
+      - '.github/workflows/perfil-testes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  perfil:
+    # MongoDB 8.0.32 não inicia no kernel 6.19 do runner mais recente.
+    runs-on: ubuntu-22.04
+    env:
+      MONGODB_URI: 'mongodb://127.0.0.1:27017/agro_perfil_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regressão do servidor e contratos de perfil
+        run: sh backend/servidor/testar.sh
+      - name: Preparar MongoDB com transações
+        run: |
+          docker run -d --name mongo-perfil -p 127.0.0.1:27017:27017 mongo:8.0.32 --replSet rs0 --bind_ip_all
+          for tentativa in $(seq 1 30); do
+            if docker exec mongo-perfil mongosh --quiet --eval "try { rs.status(); } catch(e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'127.0.0.1:27017'}]}); } db.hello().isWritablePrimary ? quit(0) : quit(1)"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mongo-perfil
+          exit 1
+      - name: Perfil com Mongo e reinício
+        working-directory: backend/servidor
+        run: java -cp 'bin:lib/*' TestePerfil --mongo
+      - name: Instalar navegador de testes
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install chromium --with-deps
+      - name: Formulários reais com MongoDB
+        env:
+          PROFILE_MONGO: '1'
+        run: node tests/perfil-real.cjs

@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 /* Fluxos operacionais no Edge, com arquivos servidos pela rota local do teste. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -7,7 +8,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { launchTestBrowser } = require('./browser-launch.cjs');
 const { mockApi } = require('./mock-api.cjs');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../frontend');
 const origin = 'http://agro.local/';
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 
@@ -30,7 +31,7 @@ async function run(name, callback) {
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
-  const api = await mockApi(context, origin);
+  const api = await mockApi(context, origin, {activities: name.startsWith('atividades:')});
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -95,14 +96,17 @@ let failures = 0;
     assert.equal(await page.locator('[data-metric="hectares"]').textContent(), '585 ha');
   });
 
-  await run('atividades: criar, editar, lista, arraste, concluir, duplicar e excluir', async (page) => {
+  await run('atividades: criar, editar, lista, arraste, concluir e duplicar', async (page) => {
     await go(page, 'atividades.html');
     await page.locator('[data-open-modal="activity-form"]').first().click();
     await page.waitForFunction(() => document.querySelector('[name=talhao] option[value="T-01 Norte"]'));
     await submit(page, '[data-activity-form]', { nome: 'Teste campo', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '14 out' });
+    await page.locator('.kanban-card[data-activity="Teste campo"]').waitFor();
     await clickCardAction(page, 'Teste campo', 'edit');
     await submit(page, '[data-activity-form]', { nome: 'Teste editado', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '15 out' });
+    await page.locator('.kanban-card[data-activity="Teste editado"]').waitFor();
     await page.reload();
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]'));
     assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste editado'), true);
     await page.locator('[data-view-option="lista"]').count().then(async (count) => {
       if (count) await page.locator('[data-view-option="lista"]').click();
@@ -112,7 +116,7 @@ let failures = 0;
       const row = [...document.querySelectorAll('[data-list-body] tr')].find((item) => item.cells[0].textContent === 'Teste editado');
       const select = row.querySelector('select'); select.value = 'Agendada'; select.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Agendada');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Agendada');
     await page.evaluate(() => {
       const card = [...document.querySelectorAll('.kanban-card')].find((item) => item.dataset.activity === 'Teste editado');
       const column = document.querySelector('[data-column="Em andamento"]');
@@ -121,16 +125,16 @@ let failures = 0;
       column.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
       card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer }));
     });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Em andamento');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Em andamento');
     await clickCardAction(page, 'Teste editado', 'complete');
     await page.locator('[data-confirm-complete]').click();
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Concluída');
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Concluída');
     await clickCardAction(page, 'Teste editado', 'duplicate');
     await submit(page, '[data-activity-form]', { nome: 'Teste cópia', tipo: 'Manutenção', talhao: 'T-01 Norte', data: '16 out' });
-    await clickCardAction(page, 'Teste cópia', 'delete');
-    await page.locator('[data-confirm-delete]').click();
+    await page.locator('.kanban-card[data-activity="Teste cópia"]').waitFor({state: 'attached'});
     await page.reload();
-    assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste cópia'), false);
+    await page.waitForFunction(() => document.querySelector('.kanban-card[data-activity="Teste cópia"]') && document.querySelector('.kanban-card[data-activity="Teste editado"]')?.dataset.status === 'Concluída');
+    assert.equal((await data(page, 'activities')).some((item) => item.activity === 'Teste cópia'), true);
     assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Concluída');
   });
 
@@ -160,7 +164,9 @@ let failures = 0;
   await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page, context, api) => {
     await go(page, 'configuracoes.html');
     await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
-    await submit(page, '[data-settings-form="profile"]', { name: 'Maria Teste', email: 'maria@example.test', phone: '1234' });
+    await page.waitForFunction(() => document.querySelector('[data-profile-message]')?.textContent === 'Perfil carregado do servidor.');
+    await submit(page, '[data-settings-form="profile"]', { name: 'Maria Teste', email: 'joao@fazendasantarita.com', phone: '(19) 99999-1234' });
+    await page.waitForFunction(() => document.querySelector('#profile-form').getAttribute('aria-busy') === 'false');
     await submit(page, '[data-settings-form="property"]', { farm: 'Fazenda Teste', area: '1500', location: 'Rodovia teste', city: 'Campinas', harvest: '2025/26' });
     await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.locator('[data-settings-tab="notifications"]').filter({ hasText: 'Notificações' }).click();
@@ -174,12 +180,15 @@ let failures = 0;
     await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.reload();
     await page.locator('.property-context-select option').first().waitFor({state: 'attached'});
+    await page.waitForFunction(() => document.querySelector('[data-profile-message]')?.textContent === 'Perfil carregado do servidor.');
     assert.equal(await page.locator('[name="name"]').inputValue(), 'Maria Teste');
     assert.equal(await page.locator('[name="area"]').inputValue(), '1500');
     assert.equal(await page.locator('[data-preference="weather"]').isChecked(), false);
     assert.equal(api.properties[0].safraAtual, '2026/27');
     assert.equal(await page.locator('[name=harvest]').inputValue(), '2026/27');
-    assert.doesNotMatch(JSON.stringify(await data(page, 'settings')), /password|current|token/i);
+    assert.equal(await data(page, 'settings'), undefined, 'perfil/preferências não são persistidos no navegador');
+    assert.equal(api.user.name, 'Maria Teste');
+    assert.equal(api.preferences.weather, false);
   });
 
   await run('dashboard: criar, concluir e compartilhar atividade', async (page) => {

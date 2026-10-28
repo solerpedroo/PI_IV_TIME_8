@@ -1,8 +1,13 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
 package handlers;
 
+import dados.RepositorioCustos;
+import dados.RepositorioAtividades;
 import dados.RepositorioTalhoes;
+import dados.RepositorioOcorrencias;
 import dados.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
@@ -25,15 +30,46 @@ public class PropriedadesHandler
 {
     private final RepositorioUsuarios usuarios;
     private final RepositorioTalhoes  talhoes;
+    private final RepositorioCustos   custos;
     private final Sessoes             sessoes;
+    private dados.RepositorioEstoque estoque;
+    private RepositorioAtividades atividades;
+    private final RepositorioOcorrencias ocorrencias;
 
-    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes) throws Exception
+    // O servidor injeta o estoque para impedir exclusão de propriedade com histórico.
+    public void setEstoque (dados.RepositorioEstoque estoque)
+    {
+        this.estoque = estoque;
+    }
+
+    // Atividades e sua timeline também dependem da propriedade selecionada.
+    public void setAtividades (RepositorioAtividades atividades)
+    {
+        this.atividades = atividades;
+    }
+
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                                Sessoes sessoes) throws Exception
+    {
+        this (usuarios, talhoes, custos, sessoes, null);
+    }
+
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, Sessoes sessoes,
+                                RepositorioOcorrencias ocorrencias) throws Exception
+    {
+        this (usuarios, talhoes, null, sessoes, ocorrencias);
+    }
+
+    public PropriedadesHandler (RepositorioUsuarios usuarios, RepositorioTalhoes talhoes, RepositorioCustos custos,
+                                Sessoes sessoes, RepositorioOcorrencias ocorrencias) throws Exception
     {
         if (usuarios == null || talhoes == null || sessoes == null)
             throw new Exception ("Dependencia de propriedades ausente");
         this.usuarios = usuarios;
         this.talhoes  = talhoes;
+        this.custos   = custos;
         this.sessoes  = sessoes;
+        this.ocorrencias = ocorrencias;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -170,6 +206,16 @@ public class PropriedadesHandler
             return Resposta.json (409, new Document ("error", "A propriedade está em uso em outra sessão. Encerre ou troque esse contexto antes de excluir."));
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
+        if (this.estoque != null && (!this.estoque.listar (id).isEmpty () || !this.estoque.listarMovimentacoes (id, null).isEmpty ()))
+            return Resposta.erro (409, "A propriedade possui catálogo ou histórico de estoque e não pode ser excluída.");
+        // Uma ocorrência geral também depende da propriedade, mesmo depois de excluída da lista.
+        if (this.ocorrencias != null && this.ocorrencias.temRegistros (id))
+            return Resposta.erro (409, "A propriedade possui ocorrências ou histórico preservado e não pode ser excluída.");
+        // custos sem talhao tambem pertencem a propriedade e ficariam orfaos
+        if (this.custos != null && !this.custos.listar (id).isEmpty ())
+            return Resposta.json (409, new Document ("error", "Exclua os custos antes de excluir a propriedade."));
+        if (this.atividades != null && !this.atividades.listar (id).isEmpty ())
+            return Resposta.json (409, new Document ("error", "Exclua as atividades antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();

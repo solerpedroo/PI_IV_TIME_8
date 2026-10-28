@@ -1,8 +1,10 @@
+/* Miguel — RA: 25003110 */
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 package handlers;
 
 import dados.RepositorioTalhoes;
+import dados.RepositorioAtividades;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -27,13 +29,16 @@ public class TalhoesHandler
 
     private final RepositorioTalhoes talhoes;
     private final seguranca.Sessoes sessoes;
+    private final RepositorioAtividades atividades;
 
-    public TalhoesHandler (RepositorioTalhoes talhoes, seguranca.Sessoes sessoes) throws Exception
+    public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades, seguranca.Sessoes sessoes) throws Exception
     {
         if (talhoes == null)
             throw new Exception ("Repositorio de talhoes ausente");
 
         this.talhoes = talhoes;
+        if (atividades == null) throw new Exception ("Repositorio de atividades ausente");
+        this.atividades = atividades;
         if (sessoes == null) throw new Exception ("Sessoes ausentes");
         this.sessoes = sessoes;
     }
@@ -187,10 +192,13 @@ public class TalhoesHandler
     // PUT /api/talhoes/{id}  (troca nome, cultura, hectares e status)
     private Resposta atualizar (Requisicao requisicao) throws Exception
     {
+        synchronized (this.sessoes)
+        {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
         String id            = requisicao.getParametro ("id");
 
-        if (this.talhoes.buscarPorId (propriedadeId, id) == null)
+        Document anterior = this.talhoes.buscarPorId (propriedadeId, id);
+        if (anterior == null)
             return Resposta.erro (404, "Not found");
 
         Document  corpo     = requisicao.getCorpoJson ();
@@ -200,10 +208,18 @@ public class TalhoesHandler
         if (campos == null)
             return validacao.resposta ();
 
+        // Atividades antigas guardam o nome do talhão; impedir a troca mantém
+        // a referência legível e válida também no histórico existente.
+        if (!anterior.getString ("nome").equals (campos.getString ("nome")))
+            for (Document atividade : this.atividades.listar (propriedadeId))
+                if (anterior.getString ("nome").equalsIgnoreCase (atividade.getString ("talhao")))
+                    return Resposta.json (409, new Document ("error", "Talhão possui atividades vinculadas e não pode ser renomeado."));
+
         if (!this.talhoes.atualizar (propriedadeId, id, campos))
             return TalhoesHandler.nomeRepetido ();
 
         return Resposta.json (200, TalhoesHandler.publico (this.talhoes.buscarPorId (propriedadeId, id)));
+        }
     }
 
     // GET retorna somente eventos da propriedade do usuario autenticado.

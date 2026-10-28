@@ -1,0 +1,58 @@
+<!-- Miguel — RA: 25003110 -->
+# Atividades — I13/#17
+
+O planejamento e a execução de atividades usam a API Java autenticada. O cartão
+da interface só muda depois da confirmação do servidor; isso vale igualmente
+para menu, Lista, arraste, conclusão e cancelamento.
+
+## Campos e vínculos
+
+Uma atividade armazena nome, tipo, talhão, safra opcional, cultura derivada da
+safra, data, horário, responsável, prioridade e status. A API aceita uma safra
+somente se ela pertence à propriedade ativa e contém o talhão informado. O
+histórico mantém o evento inicial e as mudanças de status.
+
+Para preservar referências existentes, o servidor recusa renomear talhão com
+atividades e recusa excluir safra vinculada ou alterar seu nome, cultura ou
+remover talhões existentes. As validações compartilham sincronização dentro de
+uma instância do servidor; concorrência entre várias instâncias ainda não tem
+garantia transacional para esses vínculos.
+
+## Limite deliberado
+
+Concluir uma atividade ainda não gera consumo de estoque ou custo automaticamente:
+esse ciclo transacional é da I20/#24. A tela não anuncia essa integração como se
+ela existisse.
+
+## Transições e decisão pendente
+
+O servidor aplica a sequência do projeto e do modelo de domínio: Agendada →
+Em andamento → Concluída, com cancelamento antes da conclusão. O estado legado
+Pendente precisa ser agendado antes de iniciar. Estados terminais não podem ser
+reabertos. Menu, Lista e arraste passam pela mesma rota de status.
+
+## Evidência
+
+`backend/servidor/testar.bat` valida criação, edição, vínculo safra-talhão,
+campos inválidos (incluindo data fora do formato do protótipo/ISO), três
+caminhos de status, cancelamento e histórico (335/335 na execução de
+28/10/2026). O repositório Mongo grava atividade e evento de histórico na mesma
+transação; `TesteMongo` foi ampliado para reabrir a conexão e conferir ambos
+quando houver um Mongo replica set disponível.
+`tests/atividades-real.cjs` cobre navegador, filtros, falhas de API e reload;
+roda no workflow `atividades-testes.yml` com Playwright. A data de planejamento
+aceita o formato do protótipo (`12 ago`) ou ISO (`2026-08-12`). Com sessão
+autenticada, falha ao consultar o histórico não sintetiza timeline local.
+
+Para a #135, `node tests/atividades-reinicio.cjs` usa o Mongo local do Compose,
+um banco isolado e reinicia o servidor Java. Em 28/10/2026 o teste confirmou
+criação, edição, campos, vínculos, rejeições e consulta após reinício; o banco
+temporário da execução foi removido ao final. A sincronização entre instâncias
+distintas continua sendo um limite descrito acima.
+
+Na #137, o mesmo teste consulta o histórico depois de reiniciar o servidor e
+confere ordem, estado, ação, identificação da atividade, data do registro,
+descrição de conclusão e motivo de cancelamento. Verifica também que uma
+transição inválida não acrescenta evento e que outra propriedade não consegue
+acessar o histórico. Os eventos de edição do planejamento não são registrados
+por esta API; o histórico cobre criação e transições da execução.

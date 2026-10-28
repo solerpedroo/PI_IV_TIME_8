@@ -1,6 +1,26 @@
 <!-- Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 -->
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 
 # Servidor AgroGestão (Java, HTTP feito à mão)
+
+## Perfil e segurança
+
+Configurações consome `GET/PUT /api/perfil`, `PUT /api/perfil/preferencias`,
+`PUT /api/perfil/propriedade-padrao` e `PUT /api/perfil/senha`. A troca de e-mail
+é confirmada por código em `POST /api/perfil/email/confirmar`; reenvio em
+`POST /api/perfil/email/reenviar`. As rotas usam exclusivamente o dono da sessão.
+Senha/e-mail confirmados novamente encerram os logins ativos. A propriedade
+padrão vale no próximo login; a seleção da sessão atual permanece independente.
+Contrato, limites de foto/equipe/plano e testes: [docs/perfil.md](../../docs/perfil.md).
+
+## Ocorrências
+
+O módulo usa API autenticada, registros e timeline em MongoDB, CRUD com versão,
+acompanhamento e resolução, exclusão lógica e resumo mensal pela data real de
+resolução. Detalhes do contrato, decisões e testes em [docs/ocorrencias.md](../../docs/ocorrencias.md).
+`testar.sh`/`testar.bat` executam também `TesteOcorrencias` em memória. Para validar
+MongoDB: `java -cp 'bin:lib/*' TesteOcorrencias --mongo`, com banco dedicado `_teste`.
+Uma propriedade com histórico de ocorrências é preservada contra exclusão.
 
 ## Propriedades e contexto autenticado
 
@@ -13,8 +33,8 @@ a safra escolhida no modal só é confirmada pelo botão **Salvar propriedade**.
 A seleção vale para o token atual; `/api/me` devolve esse contexto ativo.
 O navegador recarrega após selecionar e passa a usar o cache local separado
 por usuário/propriedade. Talhões sempre são filtrados pelo contexto do servidor.
-Não se exclui a última propriedade, uma propriedade com talhões ou em uso em
-qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
+Não se exclui a última propriedade, uma propriedade com talhões ou custos, ou
+em uso em qualquer sessão ativa. Se a propriedade padrão for excluída, o vínculo padrão
 do usuário muda para uma das restantes na mesma operação de persistência.
 
 No MongoDB, propriedades antigas sem `usuarioId` são vinculadas somente quando
@@ -35,7 +55,7 @@ biblioteca externa é o driver oficial do MongoDB (`lib/`).
 
 O mesmo servidor entrega:
 
-- a **API** em `/api/**` (autenticação e talhões);
+- a **API** em `/api/**` (autenticação, perfil, propriedades, talhões, estoque, ocorrências, safras e custos);
 - os **arquivos do front** (raiz do repositório), na mesma origem da API;
 - `/health` e `/ready`.
 
@@ -80,7 +100,7 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_PORT` | `8080` | Porta. O argumento da linha de comando tem prioridade. |
 | `SERVIDOR_HOST` | `127.0.0.1` | Interface onde o servidor escuta. |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
-| `SERVIDOR_RAIZ` | `../..` | Pasta do front, relativa a `backend/servidor/`. |
+| `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/servidor/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
@@ -126,6 +146,19 @@ curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
 curl -i -H "Authorization: Bearer $T" $B/api/talhoes
 curl -i -H "Authorization: Bearer $T" "$B/api/talhoes?cultura=Soja&q=norte"
 curl -i -H "Authorization: Bearer $T" $B/api/talhoes/resumo
+
+# safras (use os ids dos talhões devolvidos acima)
+curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  -d '{"nome":"Soja 2026/27","cultura":"Soja","dataInicio":"2026-09-01","dataFim":"2027-03-31","talhoes":["ID-DO-TALHAO"]}' $B/api/safras
+curl -i -H "Authorization: Bearer $T" "$B/api/safras?etapa=Planejamento"
+curl -i -X POST -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/avancar
+curl -i -H "Authorization: Bearer $T" $B/api/safras/COLE-O-ID/historico
+
+# custos (talhaoId e safraId são opcionais)
+curl -i -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+  -d '{"description":"Diesel 500 L","category":"Combustível","value":3100,"date":"2026-07-25","talhaoId":null,"safraId":null}' $B/api/custos
+curl -i -H "Authorization: Bearer $T" "$B/api/custos?category=Combustível&de=2026-07-01&ate=2026-07-31"
+curl -i -H "Authorization: Bearer $T" "$B/api/custos/resumo?safraId=COLE-O-ID"
 curl -i -X PUT -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
   -d '{"nome":"T-01 Norte","cultura":"Soja","hectares":130,"status":"Em preparo"}' $B/api/talhoes/COLE-O-ID
 
@@ -184,6 +217,10 @@ reais por socket. Cobre:
 - cadastro: cada validação e e-mail duplicado;
 - login, logout e token; confirmação de e-mail, reenvio com intervalo e redefinição de senha;
 - talhões: validações, CRUD, filtros, resumo e isolamento entre dois usuários;
+- safras: validações, conflito de talhão no mesmo período, ciclo completo até a
+  finalização, histórico do período e isolamento entre dois usuários;
+- custos: validações, vínculos com talhão e safra, filtros, indicadores sobre um
+  conjunto conhecido, safra finalizada fechada e isolamento entre dois usuários;
 - concorrência: 50 requisições paralelas, cadastros simultâneos com o mesmo e-mail,
   talhões simultâneos com o mesmo nome, exceção em handler (500), clientes que
   desconectam no meio e limite de conexões (503).
@@ -219,7 +256,7 @@ Regras do cadastro:
 
 - e-mail válido e único (sem diferenciar maiúsculas);
 - telefone `(DD) 9XXXX-XXXX`;
-- senha com 8+ caracteres, 1 maiúscula, 1 número e 1 símbolo (as mesmas regras de `scripts/auth.js`);
+- senha com 8+ caracteres, 1 maiúscula, 1 número e 1 símbolo (as mesmas regras de `frontend/scripts/auth.js`);
 - confirmação igual à senha;
 - `terms` igual a `true`;
 - o cadastro cria o usuário (`emailConfirmado=false`) e a propriedade (`farm`, `area`).
@@ -246,6 +283,131 @@ Campos do talhão:
 
 Cada usuário só vê e edita os talhões da própria propriedade. Talhão de outra
 propriedade responde 404. Não há DELETE nesta entrega.
+
+### Estoque
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/insumos` | 200 com o catálogo da propriedade ativa |
+| `GET /api/insumos/{id}` | 200 com um item ativo · 404 |
+| `GET /api/insumos/atividades` | atividades persistidas acessíveis ao titular e propriedade da sessão |
+| `POST /api/insumos` | 201 · 400 |
+| `PUT /api/insumos/{id}` | 200 · 400 · 404 |
+| `DELETE /api/insumos/{id}` | 204 · 404 · 409 se houver saldo |
+| `GET /api/insumos/{id}/movimentacoes` | 200 com o histórico persistido |
+| `POST /api/insumos/{id}/movimentacoes` | 201 · 400 · 404 · 409 por saldo insuficiente |
+| `GET /api/insumos/resumo` | indicadores reais de produtos, críticos, entradas do mês e valor atual |
+
+O catálogo guarda `nome`, `categoria`, `unidade`, `saldo`, `minimo`,
+`limiarCritico` opcional e `custoUnitario`. A regra 0,6 do mock não é aplicada:
+saldo abaixo de `minimo` fica Baixo; se houver `limiarCritico` explícito, saldo
+menor ou igual a esse limiar fica Crítico. O limiar não pode superar o mínimo.
+
+As movimentações são `entrada`, `saida` ou `ajuste`; registram data do servidor,
+saldo anterior/posterior, unidade histórica, fornecedor, observação e custo.
+O ajuste informa o **saldo contado**, pode zerar o item e exige motivo.
+Uma saída manual pode omitir atividade; com `atividadeId`, o servidor exige
+uma atividade persistida do titular na mesma propriedade e conserva ID/título
+no histórico. A leitura aceita os IDs BSON da modelagem da #6. Não há criação
+de atividades nem geração de custos de outro módulo por estas rotas de estoque.
+
+Entradas com custo informado atualizam o custo médio ponderado; preço omitido
+conserva o anterior. O valor em estoque é a soma de saldo × custo médio, com
+arredondamento monetário para centavos. Entradas mensais comparam mês e ano
+no fuso `America/Sao_Paulo`, incluindo entradas de produtos depois arquivados.
+
+A saída nunca permite saldo negativo. O saldo inicial tem evento auditável.
+Exclusão exige saldo zero e apenas arquiva o catálogo, preservando a rota de
+histórico do ID antigo. Unidade não pode ser reinterpretada depois de saldo ou
+movimentações: nesse caso, cadastre outro produto. A propriedade com estoque
+ou histórico não pode ser excluída. Os repositórios em memória e Mongo usam as
+mesmas regras numéricas; Mongo grava saldo/histórico em transação com retry de
+conflitos transitórios. O Compose inicializa um replica set local de um membro.
+
+Os comandos e evidências dos testes estão em [docs/estoque.md](../../docs/estoque.md).
+
+### Safras
+
+Uma safra é um ciclo produtivo de uma cultura em um ou mais talhões da
+propriedade ativa, dentro de um período.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/safras?etapa=&cultura=&q=` | 200 com a lista (`etapa` e `cultura` sem diferenciar maiúsculas, `todas`/`todos` = sem filtro; `q` busca no nome) |
+| `POST /api/safras` | 201 com a safra · 400 · 409 nome repetido ou talhão ocupado |
+| `GET /api/safras/{id}` | 200 · 404 |
+| `PUT /api/safras/{id}` | 200 · 400 · 404 · 409 (inclusive safra finalizada) |
+| `DELETE /api/safras/{id}` | 204 · 404 · 409 se já saiu do Planejamento |
+| `POST /api/safras/{id}/avancar` | 200 com a safra na próxima etapa · 404 · 409 se já finalizada |
+| `GET /api/safras/{id}/historico` | 200 com os eventos dos talhões da safra dentro do período · 404 |
+
+Campos da safra:
+
+- `nome`: obrigatório, até 80 caracteres, único por propriedade sem diferenciar maiúsculas;
+- `cultura`: Soja, Milho, Trigo, Café ou Algodão (a mesma lista dos talhões);
+- `dataInicio` e `dataFim`: `AAAA-MM-DD`, término igual ou depois do início;
+- `talhoes`: lista com ao menos um id de talhão da propriedade, sem repetição.
+
+A resposta traz também `etapa`, `historicoEtapas` (etapa e instante de cada
+mudança), `finalizadaEm` (só depois de finalizar) e `areaHectares`, que é a soma
+atual dos hectares dos talhões associados (não é digitada).
+
+Regras do ciclo:
+
+- etapas: Planejamento → Preparação → Plantio → Manejo → Colheita → Finalização;
+- toda safra nasce em Planejamento; a etapa só muda por `/avancar`, uma por vez e sem voltar;
+- safra finalizada fica só para consulta: não é editada, avançada nem excluída;
+- só se exclui safra em Planejamento (depois disso ela já tem histórico);
+- um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`);
+- safra com custos lançados não é excluída, e a edição não pode tirar dela um
+  talhão que tenha custo nela (409 com o campo `talhoes`).
+
+O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
+`/api/talhoes/{id}/historico` dos seus talhões cuja data, no fuso de São Paulo,
+cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
+`talhaoNome`.
+
+### Custos
+
+Lançamentos de custo da propriedade ativa, para controle gerencial (não contábil).
+Os nomes dos campos são os `name` do formulário de `custos.html`.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/custos?category=&talhaoId=&safraId=&de=&ate=&q=` | 200 com a lista, da data mais recente para a mais antiga · 400 período inválido |
+| `GET /api/custos/resumo?` (mesmos filtros) | 200 com os indicadores dos lançamentos filtrados · 400 |
+| `POST /api/custos` | 201 com o lançamento · 400 · 409 safra finalizada |
+| `GET /api/custos/{id}` | 200 · 404 |
+| `PUT /api/custos/{id}` | 200 · 400 · 404 · 409 safra finalizada |
+| `DELETE /api/custos/{id}` | 204 · 404 · 409 safra finalizada |
+
+Campos do lançamento:
+
+- `description`: obrigatório, até 120 caracteres;
+- `category`: Insumos, Mão de Obra, Maquinário, Combustível ou Outros (as opções do formulário);
+- `value`: número de 0,01 até 1 bilhão, guardado arredondado em centavos. Texto é recusado;
+- `date`: `AAAA-MM-DD`;
+- `talhaoId`: opcional. Vazio ou `null` = custo da propriedade toda;
+- `safraId`: opcional. Com talhão e safra juntos, o talhão precisa fazer parte da safra.
+
+A resposta traz também `talhaoNome`, `safraNome` e `cultura` (a da safra; sem
+safra, a do talhão; sem os dois, `null`). Custo de safra finalizada não é criado,
+alterado nem excluído: o histórico da safra fica fechado.
+
+Filtros (todos opcionais e combináveis):
+
+- `category`: sem diferenciar maiúsculas; `todos` = sem filtro;
+- `talhaoId`: id do talhão, ou `propriedade` para os custos sem talhão;
+- `safraId`: id da safra, ou `nenhuma` para os custos sem safra;
+- `de` e `ate`: período inclusivo em `AAAA-MM-DD`;
+- `q`: busca na descrição.
+
+O resumo devolve `total`, `quantidade`, `areaHectares`, `custoPorHectare`,
+`porCategoria` (as cinco, inclusive zeradas), `porTalhao` (`Propriedade` para
+os sem talhão), `porSafra`, `porCultura` e `evolucao` (total por mês `AAAA-MM`,
+em ordem). Os totais são somados em centavos. A área usada no custo por hectare é
+a da safra filtrada, a do talhão filtrado ou, sem esses filtros, a soma dos
+talhões da propriedade. Sem área, `custoPorHectare` é `null`.
 
 ### Saúde
 
@@ -286,10 +448,13 @@ backend/servidor/
     handlers/
       AuthHandler.java          rotas /api/auth/* e /api/me
       TalhoesHandler.java       rotas /api/talhoes
+      SafrasHandler.java        rotas /api/safras (ciclo produtivo)
+      CustosHandler.java        rotas /api/custos (lançamentos e indicadores)
       EstaticosHandler.java     arquivos do front
       SaudeHandler.java         /health e /ready
     dados/
       RepositorioUsuarios.java / RepositorioTalhoes.java    interfaces
+      RepositorioSafras.java / RepositorioCustos.java       interfaces
       *Mongo.java               implementações com MongoDB
       *Memoria.java             implementações em memória (testes e --memoria)
       ConexaoMongo.java         MongoClient único (thread-safe)
@@ -308,10 +473,16 @@ backend/servidor/
 - `usuarios`: índice único em `email`.
 - `propriedades`.
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `custos`: índice em `(propriedadeId, date)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
 ## Fora desta entrega
 
-Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e
-Configurações. Os formulários de autenticação do front usam as rotas desta API.
+Atividades, Insumos, Ocorrências, Dashboard, Notificações e Configurações.
+Os formulários de autenticação do front usam as rotas desta API.
+A tela `frontend/safras.html` consome `/api/safras` (criar, avançar etapas,
+histórico e vínculos). Escopo I10/I11 e o papel do `core`: [docs/safras.md](../../docs/safras.md).
+A tela de Custos ainda pode gravar no navegador em alguns fluxos; o resumo por
+safra usa `/api/custos` quando autenticado.

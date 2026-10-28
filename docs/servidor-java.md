@@ -37,7 +37,7 @@ Antes deste trabalho:
   e ambos **não foram alterados**;
 - não existia contrato de API. Ele foi derivado dos atributos `name` dos
   formulários (`criar-conta.html`, `login.html`, `areas-cultivo.html` etc.) e das
-  validações de `scripts/auth.js` e `scripts/areas-cultivo.js`.
+  validações de `frontend/scripts/auth.js` e `frontend/scripts/areas-cultivo.js`.
 
 ## 3. Requisitos atendidos
 
@@ -214,7 +214,7 @@ Os nomes dos campos JSON são os `name` dos formulários do front. Tudo sob
 | `POST /api/auth/forgot-password` | `email` | 200 sempre (não revela se o e-mail existe) |
 | `POST /api/auth/reset-password` | `token, password, password-confirm` | 200 · 400 (token inválido, vencido ou já usado) |
 
-Validações do cadastro, espelhando `scripts/auth.js`:
+Validações do cadastro, espelhando `frontend/scripts/auth.js`:
 
 - campos obrigatórios sem espaços nas pontas;
 - e-mail válido, normalizado em minúsculas e único;
@@ -242,6 +242,17 @@ O resumo devolve `{totalHectares, quantidadeTotal, quantidadeAtivos}` da
 propriedade inteira, sem aplicar filtros. A busca `q` compara com o nome em
 minúsculas. O filtro `cultura` não diferencia maiúsculas, e `todos` significa
 sem filtro, como nos chips do front.
+
+### 7.3 Safras
+
+Contrato HTTP autenticado (`Authorization: Bearer`): listar/criar/editar/excluir
+em planejamento, `POST /api/safras/{id}/avancar` (uma etapa por vez) e
+`GET /api/safras/{id}/historico`. Detalhes e códigos em
+[backend/servidor/README.md](../backend/servidor/README.md).
+
+A UI está em `frontend/safras.html` + `frontend/scripts/safras.js`, linkada na
+sidebar das telas operacionais. O `core` não publica CRUD de safras — apenas
+modelo/índices e `/health`/`/ready`.
 
 ## 8. Modelo de dados (MongoDB)
 

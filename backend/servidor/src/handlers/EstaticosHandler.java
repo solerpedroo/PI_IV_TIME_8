@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 /*
-    Serve os arquivos do front (raiz do repositorio).
+    Serve os arquivos do front (diretorio frontend).
     So entrega extensoes da lista de permissao e barra caminhos perigosos:
     "..", arquivos/pastas que comecam com ponto (.env, .git), backend/ etc.
 */
