@@ -21,11 +21,20 @@ public class RelatorioSafra
         return String.valueOf (registro.get ("_id"));
     }
 
-    private static LocalDate dia (Object valor)
+    public static LocalDate dia (Object valor)
     {
         if (!(valor instanceof String) || !((String) valor).matches ("\\d{4}-\\d{2}-\\d{2}")) return null;
         try { return LocalDate.parse ((String) valor); }
         catch (Exception erro) { return null; }
+    }
+
+    // Os relatórios somam os mesmos centavos dos lançamentos cadastrados.
+    public static long centavos (Document custo) throws ErroHttp
+    {
+        long valor = new BigDecimal (custo.get ("value").toString ()).movePointRight (2)
+            .setScale (0, RoundingMode.HALF_UP).longValueExact ();
+        if (valor < 0) throw new ErroHttp (409, "Custo inválido na safra.");
+        return valor;
     }
 
     private static Document item (String tipo, Document registro, String descricao, String data, String talhao)
@@ -92,9 +101,7 @@ public class RelatorioSafra
                 talhao == null ? "Sem talhão" : talhao.getString ("nome"));
             item.append ("categoria", custo.getString ("category"));
             // Mesmo arredondamento dos custos; long e soma exata evitam perda silenciosa.
-            long centavos = new BigDecimal (custo.get ("value").toString ()).movePointRight (2)
-                .setScale (0, RoundingMode.HALF_UP).longValueExact ();
-            if (centavos < 0) throw new ErroHttp (409, "Custo inválido na safra.");
+            long centavos = centavos (custo);
             item.append ("valorCentavos", centavos);
             if (custo.getString ("talhaoId") != null && (!ids.contains (custo.getString ("talhaoId")) || talhao == null))
                 pendencias.add (new Document (item).append ("motivo", "Talhão do custo não encontrado na safra; não incluído nos totais."));

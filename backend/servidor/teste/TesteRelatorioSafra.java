@@ -65,6 +65,8 @@ public class TesteRelatorioSafra
         verificar ("custos gerais da safra sem ratear custos sem safra", contagens.getLong ("custo") == 2);
         verificar ("soma exata 0,10 + 0,20", resultado.getLong ("totalCentavos") == 30);
         verificar ("datas e vínculos inválidos como pendências", resultado.getList ("pendencias", Document.class).size () == 6);
+        try { RelatorioSafra.centavos (new Document ("value", -1)); throw new AssertionError ("Custo negativo aceito"); }
+        catch (ErroHttp erro) { verificar ("custo inválido preserva erro 409", erro.getStatus () == 409); }
         Document vazio = RelatorioSafra.compor (propriedade, safra, List.of (talhao), List.of (), List.of (), List.of ());
         verificar ("conjunto vazio real", vazio.getList ("registros", Document.class).isEmpty () && vazio.getLong ("totalCentavos") == 0);
         Document semTalhao = RelatorioSafra.compor (propriedade, safra, List.of (), List.of (), List.of (), List.of ());
