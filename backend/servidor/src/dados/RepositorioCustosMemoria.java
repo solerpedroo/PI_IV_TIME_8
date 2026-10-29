@@ -67,6 +67,23 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         this.custos.put (id.toHexString (), new Document (custo));
     }
 
+    public synchronized boolean criarSeAusente (Document custo) throws Exception
+    {
+        if (custo == null || custo.get ("origem", Document.class) == null)
+            throw new Exception ("Custo sem origem");
+
+        String origem = custo.get ("origem", Document.class).getString ("movimentacaoId");
+
+        for (Document atual : this.custos.values ())
+            if (custo.getString ("propriedadeId").equals (atual.getString ("propriedadeId")) &&
+                atual.get ("origem", Document.class) != null &&
+                origem.equals (atual.get ("origem", Document.class).getString ("movimentacaoId")))
+                return false;
+
+        this.criar (custo);
+        return true;
+    }
+
     public synchronized boolean atualizar (String propriedadeId, String id, Document campos) throws Exception
     {
         if (campos == null)

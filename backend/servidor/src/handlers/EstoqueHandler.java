@@ -1,4 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundario: Tomas de Paula Michelon Toniato - RA: 25004211 */
 package handlers;
 
 import dados.CalculosEstoque;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.bson.Document;
 import seguranca.Sessoes;
+import servicos.CustosDeConsumo;
 import util.Json;
 import util.Validacao;
 
@@ -24,12 +26,19 @@ public class EstoqueHandler
     private static final ZoneId FUSO = ZoneId.of ("America/Sao_Paulo");
     private final RepositorioEstoque estoque;
     private final Sessoes sessoes;
+    private CustosDeConsumo consumo;
 
     public EstoqueHandler (RepositorioEstoque estoque, Sessoes sessoes) throws Exception
     {
         if (estoque == null || sessoes == null) throw new Exception ("Dependência de estoque ausente");
         this.estoque = estoque;
         this.sessoes = sessoes;
+    }
+
+    // Saida vinculada a atividade tambem gera o custo de Insumos (#156).
+    public void setConsumo (CustosDeConsumo consumo)
+    {
+        this.consumo = consumo;
     }
 
     public void registrar (Roteador r) throws Exception
@@ -198,7 +207,8 @@ public class EstoqueHandler
 
     private Resposta movimentar (Requisicao q) throws Exception
     {
-        if (this.ativo (q) == null) return Resposta.erro (404, "Produto não encontrado.");
+        Document produto = this.ativo (q);
+        if (produto == null) return Resposta.erro (404, "Produto não encontrado.");
         Document corpo = q.getCorpoJson ();
         Validacao v = new Validacao (corpo);
         String tipo = v.texto ("tipo", "Informe o tipo.", 10);
@@ -218,6 +228,8 @@ public class EstoqueHandler
             if (atividade == null) v.erro ("atividadeId", "Selecione uma atividade existente desta propriedade.");
         }
         if (v.temErros ()) return v.resposta ();
+        // O consumo guarda o custo medio da baixa: o custo gerado nao muda com compras futuras.
+        if (atividade != null && custo == null) custo = CalculosEstoque.numero (produto, "custoUnitario");
         Document movimento = new Document ("tipo", tipo).append ("quantidade", quantidade).append ("observacao", observacao)
             .append ("fornecedor", fornecedor).append ("atividadeId", atividadeId.isBlank () ? null : atividadeId)
             .append ("atividade", atividade == null ? "" : tituloAtividade (atividade)).append ("custoUnitario", custo)
@@ -225,7 +237,22 @@ public class EstoqueHandler
         Document atualizado = this.estoque.movimentar (propriedade (q), q.getParametro ("id"), movimento);
         if (atualizado == null) return Resposta.json (409, new Document ("error", "Saldo insuficiente.")
             .append ("fields", new Document ("quantidade", "A saída supera o saldo disponível.")));
-        return Resposta.json (201, Json.publico (movimento, "propriedadeId", "insumoId"));
+        Document ret = Json.publico (movimento, "propriedadeId", "insumoId");
+        if (this.consumo != null && atividade != null)
+        {
+            // A baixa ja esta gravada: uma falha aqui nao pode virar erro e induzir outra baixa.
+            // O custo que faltar e criado na proxima consulta de custos (CustosDeConsumo.sincronizar).
+            try
+            {
+                Document gerado = this.consumo.registrar (propriedade (q), movimento, atualizado, atividade);
+                if (gerado != null) ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
+            }
+            catch (Exception erro)
+            {
+                ret.append ("custoPendente", true);
+            }
+        }
+        return Resposta.json (201, ret);
     }
 
     private Resposta historico (Requisicao q) throws Exception

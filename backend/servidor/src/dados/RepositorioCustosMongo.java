@@ -4,9 +4,12 @@
 */
 package dados;
 
+import com.mongodb.ErrorCategory;
+import com.mongodb.MongoWriteException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Sorts;
 import java.util.ArrayList;
@@ -31,6 +34,11 @@ public class RepositorioCustosMongo implements RepositorioCustos
         this.custos = banco.getCollection ("custos");
 
         this.custos.createIndex (Indexes.ascending ("propriedadeId", "date"));
+
+        // um custo por movimentacao de estoque: a chave unica impede duplicidade mesmo entre servidores
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "origem.movimentacaoId"),
+                                 new IndexOptions ().unique (true)
+                                                    .partialFilterExpression (Filters.exists ("origem.movimentacaoId")));
     }
 
     // filtro por _id que tambem exige a propriedade (um usuario nunca enxerga custo de outro)
@@ -75,6 +83,28 @@ public class RepositorioCustosMongo implements RepositorioCustos
 
         custo.put ("_id", new ObjectId ());
         this.custos.insertOne (custo);
+    }
+
+    public boolean criarSeAusente (Document custo) throws Exception
+    {
+        if (custo == null || custo.get ("origem", Document.class) == null)
+            throw new Exception ("Custo sem origem");
+
+        boolean ret = true;
+
+        try
+        {
+            this.criar (custo);
+        }
+        catch (MongoWriteException erro)
+        {
+            if (erro.getError ().getCategory () != ErrorCategory.DUPLICATE_KEY)
+                throw erro;
+
+            ret = false;
+        }
+
+        return ret;
     }
 
     public boolean atualizar (String propriedadeId, String id, Document campos) throws Exception

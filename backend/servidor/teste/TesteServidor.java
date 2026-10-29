@@ -30,6 +30,8 @@ import org.bson.types.ObjectId;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Sessoes;
 import handlers.EstaticosHandler;
+import servicos.CustosDeConsumo;
+import java.time.Instant;
 import http.Requisicao;
 
 /*
@@ -44,6 +46,9 @@ public class TesteServidor
 
     private static RepositorioUsuariosMemoria usuarios;
     private static RepositorioEstoqueMemoria estoque;
+    private static RepositorioCustosMemoria custos;
+    private static RepositorioTalhoesMemoria talhoes;
+    private static RepositorioSafrasMemoria safras;
 
     // ------------------------------------------------------------------ auxiliares
 
@@ -709,6 +714,129 @@ public class TesteServidor
         return null;
     }
 
+    // custos de consumo da propriedade de quem tem o token
+    private static List<Document> custosDeConsumo (String token) throws Exception
+    {
+        ArrayList<Document> ret = new ArrayList<Document> ();
+
+        for (Document custo : lista (get ("/api/custos", token)))
+            if (custo.get ("origem") != null)
+                ret.add (custo);
+
+        return ret;
+    }
+
+    private static void testarCustosDeConsumo () throws Exception
+    {
+        System.out.println ("\n# custo gerado pelo consumo de estoque");
+
+        String   a       = login ("maria@agro.com", "Nova@1234");
+        String   b       = login ("joao@agro.com",  "Senha@123");
+        Document usuario = usuarios.buscarPor ("email", "maria@agro.com");
+        String   uid     = usuario.getObjectId ("_id").toHexString ();
+        String   pid     = usuario.getString ("propriedadeId");
+        String   t1      = idDoTalhao (a, "T-01 Norte");
+        String   t3      = idDoTalhao (a, "T-03 V\u00e1rzea");
+        String   cafe    = idDaSafra  (a, "Caf\u00e9 2026");
+        String   soja    = idDaSafra  (a, "Soja Ver\u00e3o 26/27"); // finalizada no teste de safras
+
+        Document produto = new Document ("nome", "Ureia consumo").append ("categoria", "Fertilizante").append ("unidade", "kg")
+                               .append ("saldo", 200).append ("minimo", 10).append ("custoUnitario", 2.5);
+        String   insumo  = post ("/api/insumos", produto.toJson (), a).json ().getString ("id");
+
+        ObjectId adubacao = new ObjectId ();
+        ObjectId antiga   = new ObjectId ();
+        estoque.adicionarAtividadeParaTeste (new Document ("_id", adubacao).append ("usuarioId", uid).append ("propriedadeId", pid)
+                                                 .append ("nome", "Aduba\u00e7\u00e3o de cobertura").append ("talhao", "T-03 V\u00e1rzea")
+                                                 .append ("safraId", cafe));
+        estoque.adicionarAtividadeParaTeste (new Document ("_id", antiga).append ("usuarioId", uid).append ("propriedadeId", pid)
+                                                 .append ("nome", "Aplica\u00e7\u00e3o antiga").append ("talhao", "T-01 Norte")
+                                                 .append ("safraId", soja));
+
+        int antes = custosDeConsumo (a).size ();
+
+        // consumo de 50 kg a R$ 2,50 = R$ 125,00 no talhao e na safra da atividade
+        Resp saida = post ("/api/insumos/" + insumo + "/movimentacoes",
+                           new Document ("tipo", "saida").append ("quantidade", 50).append ("atividadeId", adubacao.toHexString ()).toJson (), a);
+        conferir ("saida de 50 kg com atividade -> 201", 201, saida);
+        Document mov = saida.status == 201 ? saida.json () : new Document ();
+        conferir ("resposta da saida traz o custo gerado",
+                  mov.getString ("custoId") != null && Double.valueOf (125.0).equals (mov.get ("custoValor", Number.class).doubleValue ()));
+
+        List<Document> gerados = custosDeConsumo (a);
+        Document       custo   = gerados.isEmpty () ? new Document () : gerados.get (0);
+        for (Document item : gerados)
+            if (item.getString ("id").equals (mov.getString ("custoId")))
+                custo = item;
+        Document origem = custo.get ("origem", Document.class) == null ? new Document () : custo.get ("origem", Document.class);
+
+        conferir ("um custo novo para a saida", gerados.size () == antes + 1);
+        conferir ("custo em Insumos com o valor do consumo",
+                  "Insumos".equals (custo.getString ("category")) && Double.valueOf (125.0).equals (custo.get ("value", Number.class).doubleValue ()));
+        conferir ("custo no talhao e na safra da atividade",
+                  t3.equals (custo.getString ("talhaoId")) && cafe.equals (custo.getString ("safraId")) &&
+                  "Caf\u00e9".equals (custo.getString ("cultura")));
+        conferir ("custo referencia a movimentacao, o insumo e a atividade",
+                  mov.getString ("id").equals (origem.getString ("movimentacaoId")) && insumo.equals (origem.getString ("insumoId")) &&
+                  adubacao.toHexString ().equals (origem.getString ("atividadeId")) &&
+                  Double.valueOf (50.0).equals (origem.get ("quantidade", Number.class).doubleValue ()));
+        conferir ("descricao cita insumo, quantidade e atividade",
+                  custo.getString ("description") != null && custo.getString ("description").contains ("Ureia consumo: 50 kg") &&
+                  custo.getString ("description").contains ("Aduba\u00e7\u00e3o de cobertura"));
+        conferir ("saldo baixou junto", get ("/api/insumos/" + insumo, a).json ().get ("saldo", Number.class).doubleValue () == 150);
+
+        // repetir o registro da mesma movimentacao ou consultar de novo nao duplica
+        Document movimento = estoque.listarMovimentacoes (pid, insumo).get (0);
+        Document repetido  = new CustosDeConsumo (custos, estoque, talhoes, safras)
+                                 .registrar (pid, movimento, estoque.buscarPorId (pid, insumo),
+                                             estoque.buscarAtividade (uid, pid, adubacao.toHexString ()));
+        conferir ("repetir o registro devolve o mesmo custo",
+                  repetido != null && mov.getString ("custoId").equals (repetido.get ("_id").toString ()));
+        get ("/api/custos/resumo", a);
+        conferir ("repetir e consultar de novo nao duplica", custosDeConsumo (a).size () == antes + 1);
+
+        // custo que nao chegou a ser gravado (baixa feita direto no repositorio) entra na proxima consulta
+        estoque.movimentar (pid, insumo, new Document ("tipo", "saida").append ("quantidade", 4.0).append ("custoUnitario", 2.5)
+                                              .append ("atividadeId", adubacao.toHexString ()).append ("criadoEm", Instant.now ().toString ()));
+        int gravados = 0;
+        for (Document item : TesteServidor.custos.listar (pid))
+            if (item.get ("origem") != null)
+                gravados++;
+        conferir ("baixa direta no repositorio ainda nao tem custo", gravados == antes + 1);
+        List<Document> depois = custosDeConsumo (a);
+        boolean        quatro = false;
+        for (Document item : depois)
+            if (Double.valueOf (10.0).equals (item.get ("value", Number.class).doubleValue ()))
+                quatro = true;
+        conferir ("consulta cria o custo que faltava (4 kg = R$ 10,00)", depois.size () == antes + 2 && quatro);
+
+        // saida sem atividade e entrada nao geram custo
+        post ("/api/insumos/" + insumo + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":1}", a);
+        post ("/api/insumos/" + insumo + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":5,\"custoUnitario\":3}", a);
+        conferir ("saida sem atividade e entrada nao geram custo", custosDeConsumo (a).size () == antes + 2);
+
+        // atividade de safra finalizada: o custo fica so no talhao
+        Resp finalizada = post ("/api/insumos/" + insumo + "/movimentacoes",
+                                new Document ("tipo", "saida").append ("quantidade", 2).append ("atividadeId", antiga.toHexString ()).toJson (), a);
+        Document semSafra = new Document ();
+        for (Document item : custosDeConsumo (a))
+            if (finalizada.status == 201 && item.getString ("id").equals (finalizada.json ().getString ("custoId")))
+                semSafra = item;
+        conferir ("safra finalizada nao recebe o custo, que fica no talhao",
+                  t1.equals (semSafra.getString ("talhaoId")) && semSafra.getString ("safraId") == null);
+
+        // so muda pela movimentacao do insumo
+        String id = mov.getString ("custoId");
+        conferir ("custo de consumo nao e editado -> 409", 409,
+                  put ("/api/custos/" + id, custo ("X", "Outros", 10, "2026-08-01", null, null), a));
+        conferir ("custo de consumo nao e excluido -> 409", 409, requisitar ("DELETE", "/api/custos/" + id, null, a));
+
+        // indicadores e isolamento
+        Document resumoCafe = get ("/api/custos/resumo?safraId=" + cafe + "&category=Insumos&q=consumo", a).json ();
+        conferir ("resumo da safra inclui o consumo", resumoCafe.get ("total", Number.class).doubleValue () == 135);
+        conferir ("outro usuario nao ve o custo de consumo", custosDeConsumo (b).isEmpty ());
+    }
+
     private static void testarSafras () throws Exception
     {
         System.out.println ("\n# safras, ciclo produtivo e isolamento");
@@ -1167,9 +1295,13 @@ public class TesteServidor
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
         TesteServidor.estoque = new RepositorioEstoqueMemoria ();
 
-        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (), TesteServidor.estoque,
-                                                     new RepositorioSafrasMemoria (),
-                                                     new RepositorioCustosMemoria (), null, Path.of ("../../frontend"));
+        TesteServidor.custos  = new RepositorioCustosMemoria ();
+        TesteServidor.talhoes = new RepositorioTalhoesMemoria ();
+        TesteServidor.safras  = new RepositorioSafrasMemoria ();
+
+        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, TesteServidor.talhoes, TesteServidor.estoque,
+                                                     TesteServidor.safras,
+                                                     TesteServidor.custos, null, Path.of ("../../frontend"));
 
         // rota de teste que sempre lanca excecao
         roteador.adicionarPublica ("GET", "/explodir", requisicao -> { throw new RuntimeException ("de proposito"); });
@@ -1190,6 +1322,7 @@ public class TesteServidor
             TesteServidor.testarPropriedades ();
             TesteServidor.testarSafras ();
             TesteServidor.testarCustos ();
+            TesteServidor.testarCustosDeConsumo ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();

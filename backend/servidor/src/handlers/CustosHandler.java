@@ -22,6 +22,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
+import servicos.CustosDeConsumo;
 import util.Json;
 import util.Validacao;
 
@@ -38,6 +39,8 @@ import util.Validacao;
     O lancamento pode ficar na propriedade toda (sem talhao) ou num talhao, e pode
     pertencer a uma safra. Com talhao e safra juntos, o talhao precisa ser da safra.
     Custo de safra finalizada nao e criado, alterado nem excluido (o historico fica fechado).
+    Custo gerado por consumo de estoque (campo origem) so muda pela movimentacao do insumo:
+    PUT e DELETE devolvem 409, e as consultas criam antes os custos de consumo que faltarem.
     Os nomes dos campos sao os "name" do formulario de custos.html.
 */
 public class CustosHandler implements Manipulador
@@ -54,6 +57,7 @@ public class CustosHandler implements Manipulador
     private final RepositorioSafras  safras;
     private final RepositorioTalhoes talhoes;
     private final Sessoes            sessoes;
+    private       CustosDeConsumo    consumo;
 
     public CustosHandler (RepositorioCustos custos, RepositorioSafras safras, RepositorioTalhoes talhoes,
                           Sessoes sessoes) throws Exception
@@ -74,6 +78,12 @@ public class CustosHandler implements Manipulador
         this.safras  = safras;
         this.talhoes = talhoes;
         this.sessoes = sessoes;
+    }
+
+    // custos gerados pelas saidas de estoque com atividade (#156); sem ele, so lancamentos manuais
+    public void setConsumo (CustosDeConsumo consumo)
+    {
+        this.consumo = consumo;
     }
 
     // todas as rotas caem em tratar, que escolhe a acao pelo metodo e pelo caminho
@@ -231,6 +241,11 @@ public class CustosHandler implements Manipulador
         Document safra = safraId == null ? null : safras.get (safraId);
 
         return safra != null && "Finaliza\u00e7\u00e3o".equals (safra.getString ("etapa"));
+    }
+
+    private static Resposta deConsumo ()
+    {
+        return Resposta.json (409, new Document ("error", "Custo gerado pelo consumo de estoque. Corrija pela movimenta\u00e7\u00e3o do insumo."));
     }
 
     private static Resposta safraFechada ()
@@ -442,6 +457,13 @@ public class CustosHandler implements Manipulador
         if (busca != null)
             busca = busca.toLowerCase (Locale.ROOT);
 
+        // saida de estoque cujo custo nao chegou a ser gravado entra antes da consulta
+        if (this.consumo != null)
+            synchronized (this.sessoes)
+            {
+                this.consumo.sincronizar (requisicao.getSessao ().getUsuarioId (), propriedadeId);
+            }
+
         LinkedHashMap<String, Document> talhoes   = CustosHandler.porId (this.talhoes.listar (propriedadeId));
         LinkedHashMap<String, Document> safras    = CustosHandler.porId (this.safras.listar  (propriedadeId));
         ArrayList<Document>             filtrados = new ArrayList<Document> ();
@@ -524,6 +546,9 @@ public class CustosHandler implements Manipulador
             if (atual == null)
                 return Resposta.erro (404, "Not found");
 
+            if (atual.get ("origem") != null)
+                return CustosHandler.deConsumo ();
+
             Document                        corpo     = requisicao.getCorpoJson ();
             Validacao                       validacao = new Validacao (corpo);
             LinkedHashMap<String, Document> talhoes   = CustosHandler.porId (this.talhoes.listar (propriedadeId));
@@ -563,6 +588,8 @@ public class CustosHandler implements Manipulador
 
             if (custo == null)
                 ret = Resposta.erro (404, "Not found");
+            else if (custo.get ("origem") != null)
+                ret = CustosHandler.deConsumo ();
             else if (CustosHandler.emSafraFinalizada (custo.getString ("safraId"),
                                                       CustosHandler.porId (this.safras.listar (propriedadeId))))
                 ret = CustosHandler.safraFechada ();
