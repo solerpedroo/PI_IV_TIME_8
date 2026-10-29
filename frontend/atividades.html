@@ -140,6 +140,7 @@
           <p data-activities-period>Planejamento e acompanhamento</p>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline" type="button" data-report-open>Relatório de atividades</button>
           <label class="search-box">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <span class="visually-hidden">Buscar atividade</span>
@@ -651,6 +652,13 @@
 
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
+  <!-- As datas do relatório são planejadas; os estados são atuais. -->
+  <div class="modal-backdrop" data-modal="report-operational" aria-hidden="true"><div class="modal report-operational-modal" role="dialog" aria-modal="true" aria-labelledby="report-operational-title">
+    <h2 id="report-operational-title">Relatório de atividades</h2><form><label>Início <input name="de" type="date" required></label> <label>Fim <input name="ate" type="date" required></label> <button type="submit" class="btn btn-primary">Consultar</button></form>
+    <p data-report-message role="status" aria-live="polite"></p><div data-report-output class="report-operational-output"></div><div class="modal-actions"><button type="button" class="btn btn-outline" data-report-close>Fechar</button><button type="button" class="btn btn-primary" data-report-export disabled>Exportar CSV</button></div>
+  </div></div>
+  <style>.report-operational-modal{width:min(800px,100%)} .report-operational-output{max-height:55vh;overflow:auto;overflow-wrap:anywhere} [data-modal="report-operational"] form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px} [data-modal="report-operational"] label{display:grid;gap:4px}</style>
+  <script src="scripts/relatorio-util.js" defer></script><script src="scripts/relatorio-operacional.js" defer></script><script src="scripts/relatorio-atividades.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
   <script src="scripts/data/operational-defaults.js" defer></script>

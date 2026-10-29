@@ -39,6 +39,7 @@
     talhao: new URLSearchParams(window.location.search).get("talhao") || "",
   };
 
+
   /** Card em edição/conclusão/cancelamento/exclusão no momento (contexto dos modais). */
   let activeCard = null;
   let formMode = "create"; // "create" | "edit"
@@ -1358,6 +1359,32 @@
     // O calendário consulta depois do quadro para comparar com os cards já remotos.
     carregamentoRemoto.finally(carregarCalendario);
     carregarSafras();
+    aplicarDeepLinkNotificacao();
+  }
+
+  // Destinos do sino: atividade específica ou atividades do dia corrente (#167).
+  async function aplicarDeepLinkNotificacao() {
+    const params = new URLSearchParams(window.location.search);
+    const atividadeId = params.get("atividadeId");
+    const filtrarHoje = params.get("hoje") === "1";
+
+    await carregamentoRemoto;
+
+    // "Atividades para hoje" é o dia corrente selecionado no calendário: a data
+    // de cada atividade (inclusive "12 ago") vem resolvida pelo servidor.
+    if (filtrarHoje) {
+      calendario.ref = hojeISO();
+      calendario.dia = hojeISO();
+      await carregarCalendario();
+    }
+
+    if (atividadeId) {
+      const card = $$(".kanban-card").find((item) => item.dataset.id === atividadeId);
+      if (card) {
+        card.hidden = false;
+        openDetail(card);
+      }
+    }
   }
 
   if (document.readyState === "loading") {

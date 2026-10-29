@@ -32,6 +32,10 @@ import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
 import handlers.PerfilHandler;
 import handlers.SafrasHandler;
+import handlers.RelatorioSafraHandler;
+import handlers.RelatorioPropriedadeHandler;
+import handlers.RelatorioEstoqueHandler;
+import handlers.RelatorioAtividadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import handlers.OcorrenciasHandler;
@@ -132,6 +136,10 @@ public class Servidor
         handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
         new CalendarioHandler (atividades).registrar (roteador);
+        new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
+        new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
+        new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
+        new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
