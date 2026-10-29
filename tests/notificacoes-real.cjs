@@ -176,6 +176,16 @@ function ontemIso() {
     assert.equal(await page.locator('.notif-item[data-notif-kind="stock"]').count(), 0);
     assert.ok(await page.locator('.notif-item[data-notif-kind="ocorrencia"]').count() >= 1);
 
+    // Sem as preferências confirmadas, o painel falha fechado para não reativar
+    // uma família que a conta já desabilitou.
+    await page.route("**/api/perfil", (route) => route.fulfill({
+      status: 503, contentType: "application/json", body: JSON.stringify({ error: "Indisponível" }),
+    }));
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector("[data-notif-empty]")?.textContent.includes("Não foi possível carregar"));
+    assert.equal(await page.locator(".notif-item").count(), 0);
+    await page.unroute("**/api/perfil");
+
     console.log("OK: quatro alertas, navegação, leitura persistente e preferências.");
   } finally {
     if (browser) await browser.close();
