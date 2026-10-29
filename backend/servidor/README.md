@@ -367,6 +367,27 @@ O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
 cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
 `talhaoNome`.
 
+### Calendário
+
+Atividades da propriedade ativa agrupadas por dia, para as visões de semana e
+mês da tela de Atividades.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/calendario?de=&ate=&status=&tipo=&talhao=&q=` | 200 com o período · 400 período ausente, inválido, invertido ou maior que 62 dias |
+
+- `de` e `ate`: obrigatórios, `AAAA-MM-DD`, período inclusivo de até 62 dias;
+- `status`, `tipo`, `talhao` e `q`: os mesmos filtros de `GET /api/atividades`, para
+  as contagens baterem com o quadro filtrado.
+
+A resposta traz `total`, `porStatus`, `porTipo` (todos os tipos, inclusive
+zerados), `dias` (todos os dias do período, cada um com `total` e `porStatus`) e
+`atividades` (só as do período, ordenadas por data, horário e nome, com a data
+resolvida em `dataIso`). A data `12 ago`, do formato do protótipo, não tem ano:
+vale a ocorrência mais próxima do dia em que a atividade foi criada (`10 jan`
+criada em dezembro de 2026 cai em janeiro de 2027). `semData` conta as
+atividades cuja data não pôde ser resolvida.
+
 ### Custos
 
 Lançamentos de custo da propriedade ativa, para controle gerencial (não contábil).
@@ -408,27 +429,6 @@ os sem talhão), `porSafra`, `porCultura` e `evolucao` (total por mês `AAAA-MM`
 em ordem). Os totais são somados em centavos. A área usada no custo por hectare é
 a da safra filtrada, a do talhão filtrado ou, sem esses filtros, a soma dos
 talhões da propriedade. Sem área, `custoPorHectare` é `null`.
-
-### Calendário
-
-Atividades da propriedade ativa agrupadas por dia, para as visões de semana e
-mês da tela de Atividades.
-
-| Método e rota | Respostas |
-|---|---|
-| `GET /api/calendario?de=&ate=&status=&tipo=&talhao=&q=` | 200 com o período · 400 período ausente, inválido, invertido ou maior que 62 dias |
-
-- `de` e `ate`: obrigatórios, `AAAA-MM-DD`, período inclusivo de até 62 dias;
-- `status`, `tipo`, `talhao` e `q`: os mesmos filtros de `GET /api/atividades`, para
-  as contagens baterem com o quadro filtrado.
-
-A resposta traz `total`, `porStatus`, `porTipo` (todos os tipos, inclusive
-zerados), `dias` (todos os dias do período, cada um com `total` e `porStatus`) e
-`atividades` (só as do período, ordenadas por data, horário e nome, com a data
-resolvida em `dataIso`). A data `12 ago`, do formato do protótipo, não tem ano:
-vale a ocorrência mais próxima do dia em que a atividade foi criada (`10 jan`
-criada em dezembro de 2026 cai em janeiro de 2027). `semData` conta as
-atividades cuja data não pôde ser resolvida.
 
 ### Saúde
 

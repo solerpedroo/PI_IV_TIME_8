@@ -135,11 +135,11 @@ public class Servidor
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
         handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
-        new CalendarioHandler (atividades).registrar (roteador);
         new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
         new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
         new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
         new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
+        new CalendarioHandler (atividades).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
