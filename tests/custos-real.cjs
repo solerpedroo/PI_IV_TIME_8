@@ -6,6 +6,7 @@
  * 3. Talhão, safra e período recortam lista, indicadores e CSV.
  * 4. Edição e exclusão confirmadas pela API; erro de vínculo volta no campo.
  * 5. Recarga mantém o período escolhido e os dados do servidor.
+ * 6. Saída de estoque com atividade gera o custo de Insumos sem duplicidade (#156).
  */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -213,6 +214,42 @@ async function settled(page) {
     await page.goto(base + "/dashboard.html");
     await page.waitForFunction(() => /1\.400,00/.test(document.querySelector('[data-metric="cost"]').textContent));
     console.log("OK recarga e painel");
+
+    // 6. Consumo pela tela de Insumos: 50 kg a R$ 2,50 viram R$ 125,00 de custo.
+    const atividade = (await api("/api/atividades", { nome: "Adubação T-01", tipo: "Aplicação", talhao: "T-01 Norte", data: "2026-04-15", safraId: safra.id }, token)).data;
+    assert.ok(atividade.id, "atividade de apoio");
+    const ureia = (await api("/api/insumos", { nome: "Ureia", categoria: "Fertilizante", unidade: "kg", saldo: 200, minimo: 10, custoUnitario: 2.5 }, token)).data;
+    await page.goto(base + "/insumos.html");
+    const linha = page.locator("[data-stock-table] tbody tr").first();
+    await linha.waitFor();
+    await linha.locator("[data-popover-trigger]").click();
+    await linha.locator("[data-operation=saida]").click();
+    await page.waitForFunction((id) => document.querySelector(`[data-saida-form] [name=atividadeId] option[value="${id}"]`), atividade.id);
+    await page.locator("[data-saida-form] [name=quantidade]").fill("50");
+    await page.locator("[data-saida-form] [name=atividadeId]").selectOption(atividade.id);
+    await page.locator("[data-saida-form]").evaluate((form) => form.requestSubmit());
+    await page.waitForFunction(() => [...document.querySelectorAll(".toast")].some((toast) => toast.textContent.includes("125,00 lançado em Custos")));
+    const consumo = (await api("/api/custos?q=consumo", null, token)).data;
+    assert.equal(consumo.length, 1, "um custo para a saída");
+    assert.equal(consumo[0].value, 125);
+    assert.equal(consumo[0].talhaoId, norte.id);
+    assert.equal(consumo[0].safraId, safra.id);
+    assert.equal(consumo[0].origem.insumoId, ureia.id);
+    assert.equal((await api(`/api/custos/${consumo[0].id}`, { description: "x", category: "Outros", value: 1, date: "2026-04-15" }, token, "PUT")).status, 409);
+
+    // O custo é da data da baixa (hoje): sai do período de abril guardado antes.
+    await page.goto(base + "/custos.html");
+    await settled(page);
+    await page.locator("[data-cost-clear-filters]").click();
+    await page.waitForFunction(() => document.querySelector("[data-cost-table] tbody tr .cost-origin"));
+    await settled(page);
+    const linhaConsumo = page.locator("[data-cost-table] tbody tr").filter({ hasText: "Consumo de Ureia" });
+    assert.equal(await linhaConsumo.locator("[data-edit-cost]").count(), 0, "sem editar no custo de consumo");
+    assert.equal(await linhaConsumo.locator(".cost-origin-link").getAttribute("href"), `insumos.html?insumoId=${ureia.id}`);
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector("[data-cost-table] tbody tr .cost-origin"));
+    assert.equal((await api("/api/custos?q=consumo", null, token)).data.length, 1, "consultas repetidas não duplicam");
+    console.log("OK consumo de estoque gera custo sem duplicidade");
 
     assert.deepEqual(pageErrors, [], "sem erros de script");
     console.log("custos-real: todas as verificações passaram");
