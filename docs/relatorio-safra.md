@@ -1,7 +1,7 @@
 <!-- Miguel — RA: 25003110 -->
 # Relatório da safra — #172, etapa 2/4 da #28
 
-Entrega restrita à [subissue #172](https://github.com/solerpedroo/PI_IV_TIME_8/issues/172), a partir de `dev` em `4f3daae`. A mesma branch também implementa o [resumo da propriedade (#171)](relatorio-propriedade.md). Os relatórios de estoque (#173) e atividades (#174) permanecem separados; não há cálculo de produtividade.
+Entrega restrita à [subissue #172](https://github.com/solerpedroo/PI_IV_TIME_8/issues/172), a partir de `dev` em `4f3daae`. A mesma branch também implementa o [resumo da propriedade (#171)](relatorio-propriedade.md). A branch também reúne os relatórios de [estoque (#173)](relatorio-estoque.md) e [atividades (#174)](relatorio-atividades.md); não há cálculo de produtividade.
 
 ## Uso e contrato
 
@@ -42,7 +42,7 @@ Ambiente isolado local: Java Temurin 21, MongoDB 8.0.16 com replica set, Node 18
 | Reload | Relatório reabre pelo parâmetro da URL com o mesmo total. |
 | Reinício | Processo **Java** encerrado e iniciado novamente; novo login; resposta completa comparada campo a campo com a anterior, usando Mongo persistente. O processo Mongo não foi reiniciado. |
 
-O fluxo real tem **31 verificações nomeadas**, além das asserções HTTP e comparação dos campos/IDs. A falha HTTP e a resposta atrasada são injetadas somente nos testes desses estados da interface; criação, consulta, CSV, reload e reinício usam o servidor e o Mongo reais.
+O fluxo real tem **49 verificações nomeadas**, além das asserções HTTP e comparação dos campos/IDs. A falha HTTP e a resposta atrasada são injetadas somente nos testes desses estados da interface; criação, consulta, CSV, reload e reinício usam o servidor e o Mongo reais.
 
 Dois subagentes revisaram o plano e a implementação. O erro inicial da expressão de datas foi corrigido antes do primeiro commit e coberto pelo teste Java e pela API real. A revisão final não identificou defeito crítico/médio residual.
 
@@ -75,4 +75,4 @@ node tests/relatorio-safra-real.cjs
 | Exportação corresponde à consulta | CSV usa o mesmo objeto da tela, comparação por IDs e total | Implementado e validado |
 | Casos inválidos e persistência | Testes de fonte/contexto/datas e reload/reinício Java | Validado |
 | Integração à `dev` | Branch `feat/i172-relatorio-safra` | Pendente de revisão/merge pela equipe |
-| Principal #28 | Esta branch cobre #171 e #172 | Continua parcial; não concluir #173/#174 |
+| Principal #28 | Esta branch cobre #171, #172, #173 e #174 | Aguarda revisão e integração à dev |

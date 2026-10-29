@@ -11,7 +11,7 @@ A exportação CSV contém o mesmo resultado exibido, com identificação da pro
 
 Com Java 21, execute `sh backend/servidor/testar.sh`. Para o fluxo real, siga as instruções em [relatorio-safra.md](relatorio-safra.md): o teste `tests/relatorio-safra-real.cjs` também cobre a propriedade com Java, MongoDB local isolado e Chromium. O teste cria um banco aleatório e remove apenas esse banco ao terminar.
 
-Validação executada: regressões Java (335 testes do servidor, 49 de perfil, 61 de ocorrências e 22 do relatório de safra) e 31 verificações nomeadas no fluxo real. Para a propriedade, conferiu-se o conjunto conhecido de 2 talhões e 17,5 ha, 3 safras, 2 atividades, 1 ocorrência, 3 custos e total R$ 999,30; período vazio, pendência por data sem ano, datas inválidas, isolamento, CSV fiel, reload, troca de contexto e reinício do processo Java com Mongo persistente. O processo Mongo não foi reiniciado. O fluxo também verifica que o relatório de safra continua funcionando após compartilhar o utilitário de CSV.
+Validação executada: regressões Java (335 testes do servidor, 49 de perfil, 61 de ocorrências e 22 do relatório de safra) e 49 verificações nomeadas no fluxo real. Para a propriedade, conferiu-se o conjunto conhecido de 2 talhões e 17,5 ha, 3 safras, 2 atividades, 1 ocorrência, 3 custos e total R$ 999,30; período vazio, pendência por data sem ano, datas inválidas, isolamento, CSV fiel, reload, troca de contexto e reinício do processo Java com Mongo persistente. O processo Mongo não foi reiniciado. O fluxo também verifica que o relatório de safra continua funcionando após compartilhar o utilitário de CSV.
 
 ## Matriz da frente
 
@@ -20,4 +20,4 @@ Validação executada: regressões Java (335 testes do servidor, 49 de perfil, 6
 | Resumo da propriedade sobre registros reais, período explícito e CSV correspondente | Implementado e validado |
 | Casos inválidos, conjunto conhecido e vazio, reload e reinício Java | Validados conforme o teste reproduzível |
 | Integração à `dev` | Pendente de revisão e merge do PR #220 |
-| Relatórios detalhados de estoque (#173) e atividades (#174) | Frentes separadas, não concluídas |
+| Relatórios detalhados de estoque (#173) e atividades (#174) | Implementados nesta branch; aguardam integração |
