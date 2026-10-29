@@ -206,7 +206,7 @@ async function clickCardAction(page, name, action) {
     });
     // O submit dispara uma mutação assíncrona; só consultamos a API depois de
     // o modal fechar, sinal de que o PUT foi confirmado e a interface atualizada.
-    await page.waitForSelector('[data-modal="activity-form"]:not(.is-open)');
+    await page.locator('[data-modal="activity-form"].is-open').waitFor({state: 'hidden'});
     const editadaApi = await api(`/api/atividades/${idAtividade1}`, null, sessionToken);
     assert.deepEqual(
       [editadaApi.data.horario, editadaApi.data.responsavel, editadaApi.data.prioridade],
