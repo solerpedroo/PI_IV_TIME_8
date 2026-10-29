@@ -31,6 +31,7 @@ import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
 import handlers.PerfilHandler;
 import handlers.SafrasHandler;
+import handlers.RelatorioSafraHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import handlers.OcorrenciasHandler;
@@ -130,6 +131,7 @@ public class Servidor
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
         handlerSafras.registrar (roteador);
         new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
+        new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
