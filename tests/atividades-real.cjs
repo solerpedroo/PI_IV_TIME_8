@@ -204,6 +204,9 @@ async function clickCardAction(page, name, action) {
       horario: "07:30", responsavel: "Equipe Norte", prioridade: "Alta",
       safraId: safra.data.id,
     });
+    // O submit dispara uma mutação assíncrona; só consultamos a API depois de
+    // o modal fechar, sinal de que o PUT foi confirmado e a interface atualizada.
+    await page.waitForSelector('[data-modal="activity-form"]:not(.is-open)');
     const editadaApi = await api(`/api/atividades/${idAtividade1}`, null, sessionToken);
     assert.deepEqual(
       [editadaApi.data.horario, editadaApi.data.responsavel, editadaApi.data.prioridade],
