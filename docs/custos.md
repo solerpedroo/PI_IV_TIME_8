@@ -1,5 +1,5 @@
 <!-- Autor: Tomas de Paula Michelon Toniato - RA: 25004211 -->
-# Custos - I19/#23 (#157, #158, #159)
+# Custos - I18/#22 e I19/#23 (#156, #157, #158, #159)
 
 A tela de Custos usa somente a API Java autenticada (`/api/custos` e
 `/api/custos/resumo`, contrato no
@@ -40,10 +40,28 @@ O orçamento previsto e o período escolhido ficam no armazenamento local da
 propriedade (`costs`), porque não há rota de orçamento nesta entrega. O campo
 `entries` desse registro fica vazio e só existe para aceitar o cache anterior.
 
-## Fora desta entrega
+## Custo gerado pelo consumo de estoque (#156)
 
-O vínculo do custo com o consumo de estoque de uma atividade concluída (#156)
-depende da integração de atividades com estoque (#24, #160, #161).
+- Toda saída de insumo vinculada a uma atividade gera um lançamento de custo
+  em Insumos: quantidade x custo médio do insumo no momento da baixa, com o
+  talhão e a safra da atividade e a data da baixa. A resposta da saída traz
+  `custoId` e `custoValor`, e a tela de Insumos avisa o valor lançado.
+- O lançamento guarda `origem` (movimentação, insumo, atividade, quantidade,
+  unidade e custo unitário). A movimentação é a chave: existe no máximo um custo
+  por movimentação (índice único no MongoDB), então repetir o registro ou as
+  consultas nunca duplica o valor.
+- A baixa continua sendo do estoque. Se o custo não for gravado logo depois da
+  baixa, a próxima consulta de custos da propriedade cria o que falta.
+- Custo de consumo não é editado nem excluído em Custos (409): ele muda pela
+  movimentação do insumo. Na lista aparece com a marca "Consumo" e um atalho
+  para o produto no estoque; o CSV tem a coluna Origem.
+- Atividade de safra finalizada: o custo fica só no talhão, sem a safra.
+- Sem custo unitário no insumo, a saída não gera lançamento.
+- No modo `--memoria`, o estoque passou a enxergar as atividades reais do
+  servidor, como já acontece no MongoDB.
+
+A conclusão da atividade com baixa automática de estoque continua na #24 (#160,
+#161); quando ela registrar a saída, o custo sai por este mesmo caminho.
 
 ## Evidência
 
@@ -52,5 +70,13 @@ depende da integração de atividades com estoque (#24, #160, #161).
   talhão de 50 ha, cultura da safra e do talhão, evolução, filtros de talhão,
   safra e período, CSV do recorte, erro de vínculo no campo, edição, exclusão,
   recarga mantendo o período e o total no Painel.
+- `backend/servidor/testar.sh`: 18 verificações novas em `testarCustosDeConsumo`
+  (50 kg a R$ 2,50 = R$ 125,00 no talhão e na safra da atividade, origem,
+  saldo, repetição sem duplicar, custo recuperado na consulta seguinte, saída
+  sem atividade e entrada sem custo, safra finalizada, 409 em editar e excluir,
+  resumo da safra e isolamento). Total: 353/353. `TesteMongo` confere o índice
+  único com MongoDB real.
+- Consumo pela tela de Insumos em `tests/custos-real.cjs` e validação pela API
+  com MongoDB real, antes e depois de reiniciar o servidor.
 - `node tests/ui-polish.cjs` e `node tests/local-screens.cjs`: layout nas sete
   larguras e comportamento sem API (nenhum lançamento inventado).
