@@ -21,3 +21,7 @@ talhões/safras do usuário. Não há lista fixa no HTML.
 - Contrato HTTP: [backend/servidor/README.md](../backend/servidor/README.md) (seção Safras)
 - Modelo acadêmico: [modelo-dados.md](modelo-dados.md) (#101)
 - Visão do servidor: [servidor-java.md](servidor-java.md) §7.3
+
+## Relatório do ciclo (#172)
+
+Na tela Safras, **Relatório da safra** reúne os registros reais com período explícito e exporta o mesmo resultado em CSV. Contrato, regras de vínculo, pendências, limites e validação reproduzível estão em [relatorio-safra.md](relatorio-safra.md).
