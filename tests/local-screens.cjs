@@ -212,9 +212,17 @@ let failures = 0;
 
   await run('notificações: lidas após recarga', async (page) => {
     await go(page, 'dashboard.html');
+    await page.waitForFunction(() => {
+      const empty = document.querySelector('[data-notif-empty]');
+      return document.querySelectorAll('.notif-item').length > 0 || (empty && !empty.hidden);
+    });
     await page.locator('[data-notif-mark-all]').evaluate((element) => element.click());
     assert.equal(await page.locator('.notif-item.is-unread').count(), 0);
     await page.reload();
+    await page.waitForFunction(() => {
+      const empty = document.querySelector('[data-notif-empty]');
+      return document.querySelectorAll('.notif-item').length > 0 || (empty && !empty.hidden);
+    });
     assert.equal(await page.locator('.notif-item.is-unread').count(), 0);
   });
 

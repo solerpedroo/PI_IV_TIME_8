@@ -128,6 +128,15 @@
       $("[data-stock-retry]").hidden = true;
       $$("[data-open-produto], [data-open-entrada]").forEach(button => { button.disabled = false; });
       render();
+      // Destino do alerta de estoque no sino (#167).
+      const insumoId = new URLSearchParams(location.search).get("insumoId");
+      if (insumoId) {
+        const product = products.find((item) => item.id === insumoId);
+        if (product) {
+          active = product;
+          details(product).catch(() => {});
+        }
+      }
     } catch (error) { unavailable("Não foi possível consultar o estoque. " + error.message); throw error; }
   }
 

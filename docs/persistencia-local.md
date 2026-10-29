@@ -49,7 +49,7 @@ Cada chave começa com `agro.operational.v1.`. O conteúdo tem o formato `{ "ver
 | `occurrences` | Legado preservado; não é mais lido nem escrito pela tela de ocorrências. |
 | `costs` | Lançamentos, orçamento e período selecionado. |
 | `settings` | Perfil, propriedade, safra e preferências de notificação. |
-| `notifications` | Identificação das notificações estáticas já lidas. |
+| `notifications` | IDs estáveis dos alertas já lidos (`stock:…`, `atraso:…`, `hoje:…`, `ocorrencia:…`). Ver [notificacoes.md](notificacoes.md). |
 
 Senhas, tokens, formulários de autenticação, HTML de telas e filtros temporários não fazem parte desses dados. A troca de senha continua dependendo de integração com o servidor; a interface informa que nenhuma senha foi alterada, em vez de simular sucesso.
 

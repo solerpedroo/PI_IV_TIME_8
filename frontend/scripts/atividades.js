@@ -36,8 +36,21 @@
     status: "",
     tipo: "",
     day: "",
+    // Filtro do alerta "atividades para hoje" (?hoje=1), integrado ao applyFilters.
+    hoje: false,
     talhao: new URLSearchParams(window.location.search).get("talhao") || "",
   };
+
+  function rotulosDoDiaCorrente(agora = new Date()) {
+    const meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const rotulo = `${agora.getDate()} ${meses[agora.getMonth()]}`;
+    const iso = [
+      agora.getFullYear(),
+      String(agora.getMonth() + 1).padStart(2, "0"),
+      String(agora.getDate()).padStart(2, "0"),
+    ].join("-");
+    return { rotulo, iso };
+  }
 
   /** Card em edição/conclusão/cancelamento/exclusão no momento (contexto dos modais). */
   let activeCard = null;
@@ -167,7 +180,12 @@
     if (q && !text.includes(q)) return false;
     if (filters.status && card.dataset.status !== filters.status) return false;
     if (filters.tipo && card.dataset.tipo !== filters.tipo) return false;
-    if (filters.day && card.dataset.date !== filters.day) return false;
+    if (filters.hoje) {
+      const { rotulo, iso } = rotulosDoDiaCorrente();
+      if (card.dataset.date !== rotulo && card.dataset.date !== iso) return false;
+    } else if (filters.day && card.dataset.date !== filters.day) {
+      return false;
+    }
     if (filters.talhao && card.dataset.talhao !== filters.talhao) return false;
     return true;
   }
@@ -380,8 +398,9 @@
 
     $$(".week-day").forEach((day) => {
       day.addEventListener("click", () => {
-        const isSame = filters.day === day.dataset.day;
+        const isSame = filters.day === day.dataset.day && !filters.hoje;
         $$(".week-day").forEach((d) => d.classList.remove("is-selected"));
+        filters.hoje = false;
         filters.day = isSame ? "" : day.dataset.day;
         if (!isSame) day.classList.add("is-selected");
         applyFilters();
@@ -1131,6 +1150,31 @@
 
     carregamentoRemoto = carregarAtividadesRemotas();
     carregarSafras();
+    aplicarDeepLinkNotificacao();
+  }
+
+  // Destinos do sino: atividade específica ou atividades do dia corrente (#167).
+  async function aplicarDeepLinkNotificacao() {
+    const params = new URLSearchParams(window.location.search);
+    const atividadeId = params.get("atividadeId");
+    const filtrarHoje = params.get("hoje") === "1";
+
+    await carregamentoRemoto;
+
+    if (filtrarHoje) {
+      filters.hoje = true;
+      filters.day = "";
+      $$(".week-day").forEach((day) => day.classList.remove("is-selected"));
+      applyFilters();
+    }
+
+    if (atividadeId) {
+      const card = $$(".kanban-card").find((item) => item.dataset.id === atividadeId);
+      if (card) {
+        card.hidden = false;
+        openDetail(card);
+      }
+    }
   }
 
   if (document.readyState === "loading") {
