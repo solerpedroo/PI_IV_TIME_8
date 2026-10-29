@@ -235,12 +235,17 @@
   async function carregarFontes() {
     const vazia = [];
     const [perfil, atividades, insumos, ocorrencias] = await Promise.all([
-      api("/api/perfil").catch(() => null),
+      // Sem preferências confirmadas, falhamos fechados: não é aceitável
+      // reativar alertas que a conta já desabilitou por uma falha transitória.
+      api("/api/perfil"),
       api("/api/atividades").catch(() => vazia),
       api("/api/insumos").catch(() => vazia),
       api("/api/ocorrencias").catch(() => vazia),
     ]);
 
+    if (!perfil?.preferencias || typeof perfil.preferencias !== "object") {
+      throw new Error("Preferências indisponíveis");
+    }
     const prefs = { ...preferenciasPadrao(), ...(perfil?.preferencias || {}) };
     return {
       prefs,
