@@ -100,6 +100,9 @@
 .evolution-card { display: flex; flex-direction: column; flex: 0 0 auto; overflow: hidden; }
 .cost-evolution { display: grid; gap: 11px; padding: 4px 20px 20px; }
 .crop-cost-empty { margin: 0; padding: 12px 0; }
+.cost-origin { margin-left: 4px; }
+.cost-origin-link { display: inline-grid; place-items: center; color: var(--text-muted); }
+.cost-origin-link svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 @media (max-width: 1200px) { .costs-content-row { grid-template-columns: 1fr; } .costs-right-column { display: grid; grid-template-columns: 1fr 1fr; } .costs-metrics { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .costs-metrics { grid-template-columns: 1fr 1fr; } .costs-right-column { display: flex; } }

@@ -311,10 +311,17 @@
     return `<div class="action-menu-wrap"><button class="icon-btn icon-btn--sm" type="button" data-popover-trigger aria-controls="cost-menu-${id}" aria-expanded="false" aria-label="Ações de ${window.AgroLocal.escape(entry.description)}"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="action-menu" id="cost-menu-${id}" data-popover role="menu"><button class="action-menu-item" type="button" role="menuitem" data-edit-cost="${id}"><span class="action-menu-icon tone-primary"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button><button class="action-menu-item is-danger" type="button" role="menuitem" data-delete-cost="${id}"><span class="action-menu-icon tone-error"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg></span><span class="action-menu-label">Excluir</span></button></div></div>`;
   }
 
+  // Custo de consumo (#156) só muda pela movimentação do insumo: no lugar do menu,
+  // um atalho para o produto no estoque.
+  function originMarkup(entry) {
+    const insumo = encodeURIComponent(entry.origem.insumoId || "");
+    return `<a class="icon-btn icon-btn--sm cost-origin-link" href="insumos.html?insumoId=${insumo}" title="Gerado pelo consumo de estoque. Corrija pela movimentação do insumo." aria-label="Ver consumo de ${window.AgroLocal.escape(entry.description)} no estoque"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg></a>`;
+  }
+
   function renderTable() {
     const escape = window.AgroLocal.escape;
     const entries = state.entries;
-    $("[data-cost-table] tbody").innerHTML = entries.map((entry) => `<tr data-cost-id="${escape(entry.id)}"><td><span class="cost-row-description">${escape(entry.description)}</span></td><td><span class="badge badge-neutral">${escape(entry.category)}</span></td><td><span class="cost-row-muted">${escape(entry.talhaoNome || "Propriedade")}</span></td><td><span class="cost-row-muted">${escape(entry.safraNome || "-")}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${actionMarkup(entry)}</td></tr>`).join("");
+    $("[data-cost-table] tbody").innerHTML = entries.map((entry) => `<tr data-cost-id="${escape(entry.id)}"><td><span class="cost-row-description">${escape(entry.description)}</span></td><td><span class="badge badge-neutral">${escape(entry.category)}</span>${entry.origem ? ' <span class="badge badge-info cost-origin">Consumo</span>' : ""}</td><td><span class="cost-row-muted">${escape(entry.talhaoNome || "Propriedade")}</span></td><td><span class="cost-row-muted">${escape(entry.safraNome || "-")}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${entry.origem ? originMarkup(entry) : actionMarkup(entry)}</td></tr>`).join("");
     $("[data-cost-table]").hidden = entries.length === 0;
     $("[data-cost-empty]").hidden = entries.length > 0 || !state.summary;
     $("[data-cost-count]").textContent = state.summary ? `${entries.length} lançamento${entries.length === 1 ? "" : "s"}` : "-";
@@ -633,8 +640,8 @@
     $("[data-export-costs]").addEventListener("click", () => {
       if (!state.summary) { toast("error", "Nada para exportar", "A consulta atual não foi confirmada pelo servidor."); return; }
       const { de, ate } = periodRange();
-      const rows = [["Descrição", "Categoria", "Talhão", "Safra", "Cultura", "Data", "Valor"],
-        ...state.entries.map((entry) => [entry.description, entry.category, entry.talhaoNome || "Propriedade", entry.safraNome || "", entry.cultura || "", entry.date, entry.value.toFixed(2)])];
+      const rows = [["Descrição", "Categoria", "Talhão", "Safra", "Cultura", "Data", "Valor", "Origem"],
+        ...state.entries.map((entry) => [entry.description, entry.category, entry.talhaoNome || "Propriedade", entry.safraNome || "", entry.cultura || "", entry.date, entry.value.toFixed(2), entry.origem ? "Consumo de estoque" : "Lançamento manual"])];
       const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")).join("\n");
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([String.fromCharCode(0xFEFF) + csv], { type: "text/csv;charset=utf-8" }));
