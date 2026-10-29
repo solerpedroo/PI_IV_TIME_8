@@ -51,13 +51,6 @@ async function mockApi(context, origin, options = {}) {
         if (!match[2] && req.method() === 'PUT') { Object.assign(item, req.postDataJSON()); return reply(200, item); }
       }
     }
-    // Listagens vazias válidas para o sino e telas que consultam sem CRUD neste mock.
-    if (req.method() === 'GET' && url.pathname === '/api/atividades' && !options.activities) return reply(200, []);
-    if (req.method() === 'GET' && url.pathname === '/api/insumos') return reply(200, options.insumos || []);
-    if (req.method() === 'GET' && url.pathname === '/api/insumos/resumo') {
-      return reply(200, {totalProdutos: 0, criticos: 0, valorEmEstoque: 0, entradasNoMes: 0});
-    }
-    if (req.method() === 'GET' && url.pathname === '/api/insumos/atividades') return reply(200, []);
     // Apenas inicialização das telas: o CRUD de ocorrências é testado no Java real.
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias') return reply(200, options.occurrences || []);
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias/resumo') return reply(200,
