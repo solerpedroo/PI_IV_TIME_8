@@ -1,6 +1,12 @@
 <!-- Autor Secundário: Pedro Henrique Contardi Soler - 25005592 -->
 # Conformidade de `dev` com o GitHub Project — 23/10/2026
 
+> Atualização de 29/10/2026 — I24/#28 possui a frente #172 implementada e validada
+> na branch `feat/i172-relatorio-safra`, ainda pendente de integração à `dev`.
+> O relatório da safra usa registros operacionais reais e exportação CSV correspondente,
+> sem produtividade. Contrato, matriz desta frente e evidências reproduzíveis estão em
+> [relatorio-safra.md](relatorio-safra.md). Isso não conclui a principal nem as frentes #171/#173/#174.
+
 > Atualização de 28/10/2026 — I13/#17 permanece **parcial** no PR #215: o
 > planejamento de atividades, vínculo validado de talhão/safra/cultura, status
 > unificado, cancelamento e histórico usam a API Java e possuem evidência na
