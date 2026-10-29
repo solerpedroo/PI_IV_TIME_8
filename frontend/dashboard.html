@@ -1,3 +1,4 @@
+<!-- Miguel — RA: 25003110 -->
 <!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <!-- Miguel — RA: 25003110 -->
@@ -145,6 +146,7 @@
           <p>Safra 2025/26 · Fazenda Santa Rita · 1.284 hectares</p>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline" type="button" data-open-property-report>Relatório da propriedade</button>
           <label class="search-box">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <span class="visually-hidden">Buscar</span>
@@ -488,6 +490,18 @@
 
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
+  <!-- Relatório independente dos indicadores locais do painel. -->
+  <div class="modal-backdrop" data-modal="property-report" aria-hidden="true"><div class="modal property-report-modal" role="dialog" aria-modal="true" aria-labelledby="property-report-title">
+    <h2 id="property-report-title">Relatório da propriedade</h2>
+    <form data-property-report-form><label>Início <input type="date" name="de" required></label> <label>Fim <input type="date" name="ate" required></label> <button class="btn btn-primary" type="submit">Consultar</button></form>
+    <p data-property-report-message role="status" aria-live="polite"></p><div data-property-report-content class="property-report-content"></div>
+    <div class="modal-actions"><button class="btn btn-outline" type="button" data-close-property-report>Fechar</button><button class="btn btn-primary" type="button" data-export-property-report disabled>Exportar CSV</button></div>
+  </div></div>
+  <style>/* O conteúdo do resumo rola sem esconder as ações em telas menores. */
+    .property-report-modal { width: min(800px, 100%); } .property-report-content { max-height: 55vh; overflow: auto; } .property-report-content p { overflow-wrap: anywhere; }
+    [data-property-report-form] { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin-bottom:16px; } [data-property-report-form] label { display:grid; gap:4px; }
+  </style>
+  <script src="scripts/relatorio-util.js" defer></script><script src="scripts/relatorio-propriedade.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
   <script src="scripts/data/operational-defaults.js" defer></script>

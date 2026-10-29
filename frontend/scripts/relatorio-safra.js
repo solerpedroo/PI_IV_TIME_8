@@ -9,14 +9,7 @@
   const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
   const money = cents => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
   let snapshot = null, generation = 0, loadedContext = "", opener = null;
-  const escape = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
-
-  function context() {
-    try {
-      const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
-      return JSON.stringify([sessionStorage.getItem("agro.sessionToken"), user?.id, user?.propriedadeId]);
-    } catch { return ""; }
-  }
+  const { escape, context } = window.AgroRelatorio;
   function url(id) {
     const target = new URL(location.href);
     if (id) target.searchParams.set("relatorio", id);
@@ -73,12 +66,6 @@
     }
   }
 
-  // Aspas protegem separadores/quebras; apóstrofo impede fórmulas em planilhas.
-  function cell(value) {
-    let text = String(value ?? "");
-    if (/^[\s\uFEFF]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text)) text = "'" + text;
-    return '"' + text.replaceAll('"', '""') + '"';
-  }
   function csv(report) {
     const rows = [
       ["Propriedade", report.propriedade.nome, report.propriedade.id],
@@ -94,17 +81,12 @@
       for (const item of items) rows.push([label, item.tipo, item.id, item.descricao, item.data, item.talhao, item.status,
         item.categoria, item.valorCentavos == null ? "" : (item.valorCentavos / 100).toFixed(2), item.motivo]);
     }
-    return "\uFEFF" + rows.map(row => row.map(cell).join(";")).join("\r\n");
+    return rows;
   }
   exportButton.addEventListener("click", () => {
     if (loadedContext !== context()) { clear("A sessão ou propriedade mudou. Consulte novamente."); return; }
     if (!snapshot) return;
-    const objectUrl = URL.createObjectURL(new Blob([csv(snapshot)], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = `agrogestao-safra-${snapshot.safra.id}.csv`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    window.AgroRelatorio.download(csv(snapshot), `agrogestao-safra-${snapshot.safra.id}.csv`);
   });
   document.addEventListener("click", event => {
     const trigger = event.target.closest("[data-report]");
