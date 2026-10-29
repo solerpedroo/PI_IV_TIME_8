@@ -42,7 +42,8 @@ public class TesteRelatorioSafra
             .append ("dataInicio", "2026-01-01").append ("dataFim", "2026-12-31").append ("etapa", "Planejamento")
             .append ("talhoes", List.of (tid));
         String sid = RelatorioSafra.id (safra);
-        List<Document> atividades = List.of (registro (sid, "2026-01-01"), registro (sid, "2026-12-31"),
+        // O vínculo também deve aceitar a capitalização permitida no cadastro.
+        List<Document> atividades = List.of (registro (sid, "2026-01-01").append ("talhao", "norte"), registro (sid, "2026-12-31"),
             registro (sid, "12 ago"), registro (sid, "2027-01-01"), registro ("outra", "2026-02-01"),
             registro (sid, "2026-02-30"), registro (sid, "2026-01-01").append ("talhao", "Inexistente"));
         List<Document> custos = new ArrayList<> ();
@@ -60,7 +61,7 @@ public class TesteRelatorioSafra
         verificar ("área atual", resultado.getDouble ("areaHectares") == 12.5);
         verificar ("nome legado da propriedade", resultado.get ("propriedade", Document.class).getString ("nome").equals ("Fazenda teste"));
         Document contagens = resultado.get ("contagens", Document.class);
-        verificar ("atividades por ID, datas inclusivas e vínculo explícito", contagens.getLong ("atividade") == 2);
+        verificar ("atividades por ID, datas inclusivas e vínculo sem distinção de maiúsculas", contagens.getLong ("atividade") == 2);
         verificar ("ocorrências por talhão e data, sem excluídas", contagens.getLong ("ocorrencia") == 2);
         verificar ("custos gerais da safra sem ratear custos sem safra", contagens.getLong ("custo") == 2);
         verificar ("soma exata 0,10 + 0,20", resultado.getLong ("totalCentavos") == 30);

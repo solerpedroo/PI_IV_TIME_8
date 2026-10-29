@@ -79,7 +79,8 @@ public class RelatorioSafra
         {
             if (!safraId.equals (atividade.getString ("safraId"))) continue;
             Document item = item ("atividade", atividade, atividade.getString ("nome"), atividade.getString ("data"), atividade.getString ("talhao"));
-            if (areas.stream ().noneMatch (t -> t.getString ("nome").equals (atividade.getString ("talhao"))))
+            // O cadastro de atividades aceita o nome do talhão sem distinguir maiúsculas.
+            if (areas.stream ().noneMatch (t -> t.getString ("nome") != null && t.getString ("nome").equalsIgnoreCase (atividade.getString ("talhao"))))
                 pendencias.add (new Document (item).append ("motivo", "Talhão da atividade não encontrado na safra; não incluído nos totais."));
             else if (noPeriodo (item, inicio, fim, pendencias)) registros.add (item);
         }
