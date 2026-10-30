@@ -241,15 +241,29 @@ public class EstoqueHandler
         if (this.consumo != null && atividade != null)
         {
             // A baixa ja esta gravada: uma falha aqui nao pode virar erro e induzir outra baixa.
-            // O custo que faltar e criado na proxima consulta de custos (CustosDeConsumo.sincronizar).
+            // Se o registro pontual falhar, sincronizar () tenta recuperar na propria escrita.
+            String propriedadeId = propriedade (q);
             try
             {
-                Document gerado = this.consumo.registrar (propriedade (q), movimento, atualizado, atividade);
+                Document gerado = this.consumo.registrar (propriedadeId, movimento, atualizado, atividade);
                 if (gerado != null) ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
             }
             catch (Exception erro)
             {
-                ret.append ("custoPendente", true);
+                Document recuperado = null;
+                try
+                {
+                    this.consumo.sincronizar (q.getSessao ().getUsuarioId (), propriedadeId);
+                    recuperado = this.consumo.daMovimentacao (propriedadeId, Json.publico (movimento).getString ("id"));
+                }
+                catch (Exception ignorado)
+                {
+                    recuperado = null;
+                }
+                if (recuperado != null)
+                    ret.append ("custoId", Json.publico (recuperado).getString ("id")).append ("custoValor", recuperado.get ("value"));
+                else
+                    ret.append ("custoPendente", true);
             }
         }
         return Resposta.json (201, ret);
