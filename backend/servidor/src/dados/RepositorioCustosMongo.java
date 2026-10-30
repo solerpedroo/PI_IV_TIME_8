@@ -76,6 +76,18 @@ public class RepositorioCustosMongo implements RepositorioCustos
         return ret;
     }
 
+    public Document buscarPorMovimentacao (String propriedadeId, String movimentacaoId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (movimentacaoId == null || movimentacaoId.isBlank ())
+            return null;
+
+        return this.custos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId),
+                                              Filters.eq ("origem.movimentacaoId", movimentacaoId))).first ();
+    }
+
     public void criar (Document custo) throws Exception
     {
         if (custo == null)
