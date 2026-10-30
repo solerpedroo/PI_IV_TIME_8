@@ -63,7 +63,7 @@
       await load();
       // Saída com atividade também lança o custo de Insumos (#156); o valor vem do servidor.
       const cost = result?.custoValor ? ` Custo de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(result.custoValor)} lançado em Custos.`
-        : result?.custoPendente ? " O custo do consumo aparece em Custos na próxima consulta." : "";
+        : result?.custoPendente ? " A baixa foi gravada; o custo do consumo ficou pendente e pode ser sincronizado em Custos." : "";
       toast("success", "Estoque atualizado", "Operação registrada com sucesso." + cost);
     } catch (error) {
       if (!confirmed) errors(form, error.fields);
