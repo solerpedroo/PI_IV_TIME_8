@@ -626,6 +626,9 @@ public class TesteServidor
         conferir ("resolver: 31 fev nao existe", CalendarioHandler.resolver ("31 fev", LocalDate.of (2026, 10, 28)) == null);
         conferir ("resolver: ISO e mantido",
                   LocalDate.of (2031, 3, 3).equals (CalendarioHandler.resolver ("2031-03-03", null)));
+        // 2024-01-01 e 2025-01-01 ficam a 183 dias de 2024-07-02; o empate fica com o ano da criacao.
+        conferir ("resolver: empate prefere o ano da criacao",
+                  LocalDate.of (2024, 1, 1).equals (CalendarioHandler.resolver ("1 jan", LocalDate.of (2024, 7, 2))));
     }
 
     /* A API única de status preserva os mesmos eventos para Lista, arraste e menu. */
