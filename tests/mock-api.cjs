@@ -123,6 +123,7 @@ function costsRoute(req, url, reply, costs, plots) {
   const plot = (id) => plots.find(item => item.id === id);
   const publicCost = (cost) => ({...cost, safraId: null, talhaoNome: plot(cost.talhaoId)?.nome || null, safraNome: null, cultura: plot(cost.talhaoId)?.cultura || null});
   const id = url.pathname.split('/')[3];
+  if (req.method() === 'POST' && id === 'sincronizar-consumo') return reply(200, {criados: 0});
   if (req.method() === 'POST' && !id) {
     const cost = {id: 'custo-' + (costs.length + 1) + '-' + Date.now(), ...req.postDataJSON(), safraId: null};
     costs.push(cost);
