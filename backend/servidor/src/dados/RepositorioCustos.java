@@ -18,6 +18,9 @@ public interface RepositorioCustos
 
     public Document buscarPorId (String propriedadeId, String id) throws Exception;
 
+    // custo de consumo pela movimentacao de estoque; null se ainda nao existir
+    public Document buscarPorMovimentacao (String propriedadeId, String movimentacaoId) throws Exception;
+
     // grava e preenche o _id
     public void criar (Document custo) throws Exception;
 
