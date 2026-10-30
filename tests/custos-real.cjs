@@ -199,9 +199,16 @@ async function settled(page) {
     assert.equal((await api(`/api/custos/${diesel.id}`, null, token)).data.value, 400);
     const salario = (await api("/api/custos?q=sal", null, token)).data[0];
     await page.evaluate((id) => document.querySelector(`[data-delete-cost="${id}"]`).click(), salario.id);
+    await page.waitForSelector("[data-modal='cost-delete'].is-open");
+    assert.match(await text(page, "[data-delete-cost-desc]"), /Salário/);
+    await page.locator("[data-modal='cost-delete'] [data-close-modal]").click();
+    await page.waitForFunction(() => !document.querySelector("[data-modal='cost-delete']").classList.contains("is-open"));
+    assert.equal(await rows(page), 2, "cancelar exclusão mantém o lançamento");
+    await page.evaluate((id) => document.querySelector(`[data-delete-cost="${id}"]`).click(), salario.id);
+    await page.locator("[data-confirm-delete-cost]").click();
     await page.waitForFunction(() => document.querySelectorAll("[data-cost-table] tbody tr").length === 1);
     assert.equal((await api(`/api/custos/${salario.id}`, null, token)).status, 404);
-    console.log("OK edição, exclusão e erro de vínculo");
+    console.log("OK edição, exclusão confirmada e erro de vínculo");
 
     // 5. Recarga: o período continua e os valores vêm do servidor.
     await page.reload();
