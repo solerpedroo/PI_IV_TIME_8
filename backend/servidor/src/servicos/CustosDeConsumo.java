@@ -26,8 +26,8 @@ import org.bson.types.ObjectId;
     ou a sincronizacao nunca duplica o valor.
 
     A baixa do estoque continua sendo do EstoqueHandler. Se o custo nao puder ser
-    gravado logo depois da baixa, sincronizar () cria os que faltam na proxima
-    consulta de custos da propriedade.
+    gravado logo depois da baixa, o handler tenta sincronizar () na propria escrita
+    (ou POST /api/custos/sincronizar-consumo). Consultas GET nao sincronizam.
 */
 public class CustosDeConsumo
 {
@@ -79,6 +79,26 @@ public class CustosDeConsumo
     private static String quantidade (double valor)
     {
         return new BigDecimal (Double.toString (valor)).stripTrailingZeros ().toPlainString ().replace ('.', ',');
+    }
+
+    // Instant.parse estrito: data legada invalida nao derruba o registro nem a sync.
+    private static Instant instante (String criadoEm)
+    {
+        Instant ret = Instant.now ();
+
+        if (criadoEm != null && !criadoEm.isBlank ())
+        {
+            try
+            {
+                ret = Instant.parse (criadoEm);
+            }
+            catch (Exception ignorado)
+            {
+                ret = Instant.now ();
+            }
+        }
+
+        return ret;
     }
 
     private static String nomeDaAtividade (Document atividade)
@@ -148,7 +168,7 @@ public class CustosDeConsumo
         String talhaoId       = this.talhaoId (propriedadeId, atividade);
         String descricao      = "Consumo de " + insumo.getString ("nome") + ": " + CustosDeConsumo.quantidade (qtd) + " " +
                                 unidade + " (" + CustosDeConsumo.nomeDaAtividade (atividade) + ")";
-        String criadoEm       = movimento.getString ("criadoEm") != null ? movimento.getString ("criadoEm") : Instant.now ().toString ();
+        Instant criadoEm      = CustosDeConsumo.instante (movimento.getString ("criadoEm"));
 
         if (descricao.length () > CustosDeConsumo.MAXIMO_DESCRICAO)
             descricao = descricao.substring (0, CustosDeConsumo.MAXIMO_DESCRICAO - 3) + "...";
@@ -164,7 +184,7 @@ public class CustosDeConsumo
         Document custo = new Document ("description",  descricao)
                              .append  ("category",     "Insumos")
                              .append  ("value",        centavos / 100.0)
-                             .append  ("date",         Instant.parse (criadoEm).atZone (CustosDeConsumo.FUSO).toLocalDate ().toString ())
+                             .append  ("date",         criadoEm.atZone (CustosDeConsumo.FUSO).toLocalDate ().toString ())
                              .append  ("talhaoId",     talhaoId)
                              .append  ("safraId",      this.safraId (propriedadeId, atividade, talhaoId))
                              .append  ("origem",       origem)
@@ -181,24 +201,14 @@ public class CustosDeConsumo
     // custo ja gravado para a movimentacao; null se nao houver
     public Document daMovimentacao (String propriedadeId, String movimentacaoId) throws Exception
     {
-        Document ret = null;
-
-        for (Document custo : this.custos.listar (propriedadeId))
-        {
-            Document origem = custo.get ("origem", Document.class);
-
-            if (ret == null && origem != null && movimentacaoId.equals (origem.getString ("movimentacaoId")))
-                ret = custo;
-        }
-
-        return ret;
+        return this.custos.buscarPorMovimentacao (propriedadeId, movimentacaoId);
     }
 
     /*
         Cria os custos que faltam para as saidas com atividade da propriedade
         (gravacao interrompida depois da baixa, ou saida anterior a esta entrega).
-        Devolve quantos foram criados. As atividades sao procuradas com o mesmo
-        escopo de usuario que o estoque usou para aceitar o vinculo.
+        Devolve quantos foram criados. Chamado na escrita (falha da baixa) ou via
+        POST /api/custos/sincronizar-consumo — nao nas consultas GET.
     */
     public int sincronizar (String usuarioId, String propriedadeId) throws Exception
     {
@@ -221,7 +231,10 @@ public class CustosDeConsumo
                 Document atividade = this.estoque.buscarAtividade (usuarioId, propriedadeId, atividadeId);
 
                 if (insumo != null && atividade != null && this.registrar (propriedadeId, movimento, insumo, atividade) != null)
+                {
+                    comCusto.add (CustosDeConsumo.id (movimento.get ("_id")));
                     ret++; // corrida com outro registro devolve o custo existente, sem gravar outro
+                }
             }
         }
 
