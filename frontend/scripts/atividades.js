@@ -530,6 +530,8 @@
   async function carregarCalendario() {
     const numero = ++calendario.consulta;
     const { de, ate } = periodoCalendario();
+    // Dia na URL fora do período atual não filtra o quadro para vazio.
+    if (calendario.dia && (calendario.dia < de || calendario.dia > ate)) calendario.dia = "";
     calendario.assinatura = assinaturaQuadro();
     gravarContextoCalendario();
     if (!getSessionToken()) {
@@ -582,6 +584,8 @@
 
   function initCalendario() {
     if (!calendario.ref) calendario.ref = calendario.dia || hojeISO();
+    const { de, ate } = periodoCalendario();
+    if (calendario.dia && (calendario.dia < de || calendario.dia > ate)) calendario.dia = "";
     $$("[data-calendar-view]").forEach((botao) => botao.addEventListener("click", () => {
       if (calendario.visao === botao.dataset.calendarView) return;
       calendario.visao = botao.dataset.calendarView;
