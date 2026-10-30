@@ -119,17 +119,24 @@ public class CalendarioHandler implements Manipulador
             int      dia    = Integer.parseInt (partes[0]);
             int      mes    = CalendarioHandler.MESES.indexOf (partes[1]) + 1;
 
-            // tenta o ano anterior, o da criacao e o seguinte; fica com o mais proximo
+            // tenta o ano anterior, o da criacao e o seguinte; fica com o mais proximo.
+            // Empate: prefere o ano da criacao (nao o primeiro candidato varrido).
             for (int ano = criacao.getYear () - 1; mes > 0 && ano <= criacao.getYear () + 1; ano++)
             {
                 try
                 {
                     LocalDate candidata = LocalDate.of (ano, mes, dia);
+                    long      distNova  = Math.abs (ChronoUnit.DAYS.between (criacao, candidata));
 
-                    if (ret == null ||
-                        Math.abs (ChronoUnit.DAYS.between (criacao, candidata)) <
-                        Math.abs (ChronoUnit.DAYS.between (criacao, ret)))
+                    if (ret == null)
                         ret = candidata;
+                    else
+                    {
+                        long distAtual = Math.abs (ChronoUnit.DAYS.between (criacao, ret));
+                        if (distNova < distAtual ||
+                            (distNova == distAtual && candidata.getYear () == criacao.getYear ()))
+                            ret = candidata;
+                    }
                 }
                 catch (Exception erro)
                 {
@@ -269,7 +276,8 @@ public class CalendarioHandler implements Manipulador
                                            .append ("total", 0)
                                            .append ("porStatus", CalendarioHandler.contador (AtividadesHandler.STATUS_VALIDOS)));
 
-        for (Document atividade : this.atividades.listar (requisicao.getSessao ().getPropriedadeId ()))
+        // ISO fora do período já ficou de fora no repositório; protótipo/inválidos ainda passam por resolver.
+        for (Document atividade : this.atividades.listarParaCalendario (requisicao.getSessao ().getPropriedadeId (), de, ate))
         {
             if (!CalendarioHandler.passa (atividade, status, tipo, talhao, busca))
                 continue;
