@@ -792,10 +792,11 @@ public class TesteServidor
                                              estoque.buscarAtividade (uid, pid, adubacao.toHexString ()));
         conferir ("repetir o registro devolve o mesmo custo",
                   repetido != null && mov.getString ("custoId").equals (repetido.get ("_id").toString ()));
+        post ("/api/custos/sincronizar-consumo", null, a);
         get ("/api/custos/resumo", a);
-        conferir ("repetir e consultar de novo nao duplica", custosDeConsumo (a).size () == antes + 1);
+        conferir ("repetir sync e consultar nao duplica", custosDeConsumo (a).size () == antes + 1);
 
-        // custo que nao chegou a ser gravado (baixa feita direto no repositorio) entra na proxima consulta
+        // custo que nao chegou a ser gravado (baixa feita direto no repositorio) entra via sync explicita
         estoque.movimentar (pid, insumo, new Document ("tipo", "saida").append ("quantidade", 4.0).append ("custoUnitario", 2.5)
                                               .append ("atividadeId", adubacao.toHexString ()).append ("criadoEm", Instant.now ().toString ()));
         int gravados = 0;
@@ -803,12 +804,16 @@ public class TesteServidor
             if (item.get ("origem") != null)
                 gravados++;
         conferir ("baixa direta no repositorio ainda nao tem custo", gravados == antes + 1);
+        conferir ("GET nao cria custo faltante sozinho", custosDeConsumo (a).size () == antes + 1);
+        Resp sync = post ("/api/custos/sincronizar-consumo", null, a);
+        conferir ("POST sincronizar-consumo -> 200", 200, sync);
+        conferir ("sync cria um custo faltante", sync.json ().getInteger ("criados") == 1);
         List<Document> depois = custosDeConsumo (a);
         boolean        quatro = false;
         for (Document item : depois)
             if (Double.valueOf (10.0).equals (item.get ("value", Number.class).doubleValue ()))
                 quatro = true;
-        conferir ("consulta cria o custo que faltava (4 kg = R$ 10,00)", depois.size () == antes + 2 && quatro);
+        conferir ("sync cria o custo que faltava (4 kg = R$ 10,00)", depois.size () == antes + 2 && quatro);
 
         // saida sem atividade e entrada nao geram custo
         post ("/api/insumos/" + insumo + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":1}", a);
@@ -835,6 +840,19 @@ public class TesteServidor
         Document resumoCafe = get ("/api/custos/resumo?safraId=" + cafe + "&category=Insumos&q=consumo", a).json ();
         conferir ("resumo da safra inclui o consumo", resumoCafe.get ("total", Number.class).doubleValue () == 135);
         conferir ("outro usuario nao ve o custo de consumo", custosDeConsumo (b).isEmpty ());
+
+        // data legada invalida nao derruba o registro do custo (depois dos totais conhecidos)
+        estoque.movimentar (pid, insumo, new Document ("tipo", "saida").append ("quantidade", 1.0)
+                                   .append ("custoUnitario", 2.5).append ("atividadeId", adubacao.toHexString ())
+                                   .append ("criadoEm", "nao-e-instant"));
+        Document ultima = null;
+        for (Document item : estoque.listarMovimentacoes (pid, insumo))
+            if ("nao-e-instant".equals (item.getString ("criadoEm")))
+                ultima = item;
+        Document custoRuim = new CustosDeConsumo (custos, estoque, talhoes, safras)
+                                 .registrar (pid, ultima, estoque.buscarPorId (pid, insumo),
+                                             estoque.buscarAtividade (uid, pid, adubacao.toHexString ()));
+        conferir ("criadoEm invalido ainda gera custo", custoRuim != null && custoRuim.getString ("date") != null);
     }
 
     private static void testarSafras () throws Exception
