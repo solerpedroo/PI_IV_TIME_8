@@ -415,9 +415,12 @@ baixa), com o talhão e a safra da atividade e o campo `origem`
 (`movimentacaoId`, `insumoId`, `atividadeId`, `quantidade`, `unidade`,
 `custoUnitario`). A resposta da saída traz `custoId` e `custoValor`. Há no
 máximo um custo por movimentação (índice único `propriedadeId` +
-`origem.movimentacaoId`); se a gravação do custo falhar depois da baixa, a
-próxima consulta de custos cria o que falta. `PUT` e `DELETE` de um custo de
-consumo devolvem 409: ele muda pela movimentação do insumo.
+`origem.movimentacaoId`). Se a gravação do custo falhar depois da baixa, o
+handler tenta sincronizar na própria escrita; se ainda falhar, a resposta traz
+`custoPendente` e `POST /api/custos/sincronizar-consumo` recupera os faltantes
+(`{"criados":N}`). Consultas `GET /api/custos` e `/resumo` **não** sincronizam.
+`PUT` e `DELETE` de um custo de consumo devolvem 409: ele muda pela
+movimentação do insumo.
 
 ### Saúde
 
