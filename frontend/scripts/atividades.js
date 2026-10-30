@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Tomas de Paula Michelon Toniato - RA: 25004211 */
 /**
  * Agro — interações da tela Atividades (híbrido com API e persistência local)
  * --------------------------------------------------------------------------
@@ -35,22 +36,9 @@
     query: "",
     status: "",
     tipo: "",
-    day: "",
-    // Filtro do alerta "atividades para hoje" (?hoje=1), integrado ao applyFilters.
-    hoje: false,
     talhao: new URLSearchParams(window.location.search).get("talhao") || "",
   };
 
-  function rotulosDoDiaCorrente(agora = new Date()) {
-    const meses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-    const rotulo = `${agora.getDate()} ${meses[agora.getMonth()]}`;
-    const iso = [
-      agora.getFullYear(),
-      String(agora.getMonth() + 1).padStart(2, "0"),
-      String(agora.getDate()).padStart(2, "0"),
-    ].join("-");
-    return { rotulo, iso };
-  }
 
   /** Card em edição/conclusão/cancelamento/exclusão no momento (contexto dos modais). */
   let activeCard = null;
@@ -180,12 +168,7 @@
     if (q && !text.includes(q)) return false;
     if (filters.status && card.dataset.status !== filters.status) return false;
     if (filters.tipo && card.dataset.tipo !== filters.tipo) return false;
-    if (filters.hoje) {
-      const { rotulo, iso } = rotulosDoDiaCorrente();
-      if (card.dataset.date !== rotulo && card.dataset.date !== iso) return false;
-    } else if (filters.day && card.dataset.date !== filters.day) {
-      return false;
-    }
+    if (!calendarioPermite(card)) return false;
     if (filters.talhao && card.dataset.talhao !== filters.talhao) return false;
     return true;
   }
@@ -343,7 +326,12 @@
       const el = $(selector);
       if (el) el.textContent = String(value);
     };
-    setText("[data-metric='total']", total);
+    // Com o calendário confirmado, o total é o do período; sem ele, o do quadro.
+    if (!calendario.dados) {
+      setText("[data-metric='total']", total);
+      setText("[data-metric-total-desc]", "no quadro (calendário indisponível)");
+    }
+    setText("[data-metric-done-share]", `${total ? Math.round((done / total) * 100) : 0}% do quadro`);
     setText("[data-metric='pending']", pending);
     setText("[data-metric='in-progress']", inProgress);
     setText("[data-metric='done']", done);
@@ -378,6 +366,7 @@
     }
 
     recomputeMetrics();
+    sincronizarCalendario();
   }
 
   function initFilterControls() {
@@ -396,16 +385,237 @@
       applyFilters();
     });
 
-    $$(".week-day").forEach((day) => {
-      day.addEventListener("click", () => {
-        const isSame = filters.day === day.dataset.day && !filters.hoje;
-        $$(".week-day").forEach((d) => d.classList.remove("is-selected"));
-        filters.hoje = false;
-        filters.day = isSame ? "" : day.dataset.day;
-        if (!isSame) day.classList.add("is-selected");
-        applyFilters();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Calendário: semana e mês com as atividades reais (/api/calendario)     */
+  /* ---------------------------------------------------------------------- */
+  // A data de cada atividade no período vem resolvida pelo servidor (dataIso),
+  // inclusive as do formato "12 ago", que não têm ano. A tela só agrupa.
+  const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const urlInicial = new URLSearchParams(window.location.search);
+  const calendario = {
+    visao: urlInicial.get("visao") === "mes" ? "mes" : "semana",
+    ref: /^\d{4}-\d{2}-\d{2}$/.test(urlInicial.get("data") || "") ? urlInicial.get("data") : "",
+    dia: /^\d{4}-\d{2}-\d{2}$/.test(urlInicial.get("dia") || "") ? urlInicial.get("dia") : "",
+    soPeriodo: urlInicial.get("periodo") === "1",
+    dados: null,
+    ids: new Set(),
+    idsDia: new Map(),
+    consulta: 0,
+    assinatura: null,
+    espera: 0,
+  };
+
+  // "Hoje" segue o fuso da fazenda, igual ao servidor.
+  function hojeISO() {
+    const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    return ["year", "month", "day"].map((chave) => partes.find((parte) => parte.type === chave).value).join("-");
+  }
+
+  const paraData = (iso) => { const [a, m, d] = iso.split("-").map(Number); return new Date(a, m - 1, d, 12); };
+  const paraISO = (data) => [data.getFullYear(), String(data.getMonth() + 1).padStart(2, "0"), String(data.getDate()).padStart(2, "0")].join("-");
+  const somarDias = (iso, dias) => { const data = paraData(iso); data.setDate(data.getDate() + dias); return paraISO(data); };
+  const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const curta = (iso) => `${iso.slice(8)} ${MESES_CURTOS[Number(iso.slice(5, 7)) - 1]}`;
+
+  // Semana de segunda a domingo; mês do primeiro ao último dia.
+  function periodoCalendario() {
+    const ref = paraData(calendario.ref);
+    if (calendario.visao === "mes") {
+      return { de: paraISO(new Date(ref.getFullYear(), ref.getMonth(), 1, 12)), ate: paraISO(new Date(ref.getFullYear(), ref.getMonth() + 1, 0, 12)) };
+    }
+    const de = somarDias(calendario.ref, -((ref.getDay() + 6) % 7));
+    return { de, ate: somarDias(de, 6) };
+  }
+
+  // Número ISO 8601 da semana (a que contém a quinta-feira).
+  function numeroSemana(iso) {
+    const data = paraData(iso);
+    data.setDate(data.getDate() + 3 - ((data.getDay() + 6) % 7));
+    const primeira = new Date(data.getFullYear(), 0, 4, 12);
+    return 1 + Math.round(((data - primeira) / 86400000 - 3 + ((primeira.getDay() + 6) % 7)) / 7);
+  }
+
+  function rotuloPeriodo() {
+    const { de, ate } = periodoCalendario();
+    if (calendario.visao === "mes") {
+      const mes = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(paraData(de));
+      return mes.charAt(0).toUpperCase() + mes.slice(1);
+    }
+    return `${curta(de)} a ${curta(ate)} ${ate.slice(0, 4)}`;
+  }
+
+  // O contexto do calendário fica na URL: recarregar a página mantém período e dia.
+  function gravarContextoCalendario() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("visao", calendario.visao);
+    url.searchParams.set("data", calendario.ref);
+    if (calendario.dia) url.searchParams.set("dia", calendario.dia); else url.searchParams.delete("dia");
+    if (calendario.soPeriodo) url.searchParams.set("periodo", "1"); else url.searchParams.delete("periodo");
+    window.history.replaceState({}, "", url);
+  }
+
+  // Sem dia ou período escolhido, o quadro mostra tudo. Sem resposta do
+  // servidor, o calendário não esconde cards que ele não conseguiu conferir.
+  function calendarioPermite(card) {
+    if (!calendario.dados) return true;
+    if (calendario.dia) return Boolean(calendario.idsDia.get(calendario.dia)?.has(card.dataset.id));
+    if (calendario.soPeriodo) return calendario.ids.has(card.dataset.id);
+    return true;
+  }
+
+  function mensagemCalendario(texto, repetir = false) {
+    $("[data-calendar-message]").textContent = texto;
+    $("[data-calendar-retry]").hidden = !repetir;
+  }
+
+  function botaoDia(iso, total, classe, conteudo) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = classe;
+    botao.dataset.calendarDate = iso;
+    botao.setAttribute("aria-pressed", String(calendario.dia === iso));
+    botao.setAttribute("aria-label", `${paraData(iso).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}: ${total} atividade${total === 1 ? "" : "s"}`);
+    botao.classList.toggle("is-selected", calendario.dia === iso);
+    botao.classList.toggle("is-today", iso === hojeISO());
+    botao.innerHTML = conteudo;
+    return botao;
+  }
+
+  function renderCalendario() {
+    const { de, ate } = periodoCalendario();
+    const dados = calendario.dados;
+    const totais = new Map((dados?.dias || []).map((dia) => [dia.data, dia.total]));
+    const contagem = (iso) => `<span class="week-day-count${totais.get(iso) ? " is-primary" : ""}">${dados ? totais.get(iso) || 0 : "-"}</span>`;
+    const corpo = $("[data-calendar-days]");
+
+    $("[data-calendar-title]").textContent = calendario.visao === "mes" ? "Mês" : `Semana ${numeroSemana(de)}`;
+    $("[data-calendar-range]").textContent = rotuloPeriodo();
+    $("[data-activities-period]").textContent = `Planejamento e acompanhamento · ${rotuloPeriodo()}`;
+    $$("[data-calendar-view]").forEach((botao) => botao.setAttribute("aria-pressed", String(botao.dataset.calendarView === calendario.visao)));
+    $("[data-calendar-only-period]").checked = calendario.soPeriodo;
+    corpo.classList.toggle("is-month", calendario.visao === "mes");
+
+    const dias = [];
+    for (let iso = de; iso <= ate; iso = somarDias(iso, 1)) dias.push(iso);
+    if (calendario.visao === "semana") {
+      corpo.replaceChildren(...dias.map((iso, indice) => botaoDia(iso, totais.get(iso) || 0, "week-day",
+        `<span class="week-day-name">${DIAS_SEMANA[indice]}</span><span class="week-day-date">${curta(iso)}</span>${contagem(iso)}`)));
+    } else {
+      const vazios = (paraData(de).getDay() + 6) % 7;
+      corpo.replaceChildren(
+        ...DIAS_SEMANA.map((nome) => Object.assign(document.createElement("span"), { className: "month-weekday", textContent: nome.charAt(0) })),
+        ...Array.from({ length: vazios }, () => Object.assign(document.createElement("span"), { className: "month-blank" })),
+        ...dias.map((iso) => botaoDia(iso, totais.get(iso) || 0, "month-day",
+          `<span class="month-day-number">${Number(iso.slice(8))}</span>${totais.get(iso) ? `<span class="month-day-count">${totais.get(iso)}</span>` : ""}`)));
+    }
+
+    const resumo = $("[data-calendar-summary]");
+    resumo.replaceChildren(...Object.entries(dados?.porTipo || {}).map(([tipo, total]) => {
+      const linha = document.createElement("div");
+      linha.append(Object.assign(document.createElement("dt"), { textContent: tipo }), Object.assign(document.createElement("dd"), { textContent: String(total) }));
+      return linha;
+    }));
+    $("[data-calendar-summary-title]").textContent = calendario.visao === "mes" ? "Resumo do mês" : "Resumo da semana";
+
+    const total = $("[data-metric='total']");
+    if (dados) {
+      total.textContent = String(dados.total);
+      $("[data-metric-total-desc]").textContent = calendario.dia ? `${dados.total} no período · ${calendario.idsDia.get(calendario.dia)?.size || 0} em ${curta(calendario.dia)}` : rotuloPeriodo();
+    }
+  }
+
+  // Consulta o período com os mesmos filtros do quadro; uma resposta antiga nunca vence a mais recente.
+  async function carregarCalendario() {
+    const numero = ++calendario.consulta;
+    const { de, ate } = periodoCalendario();
+    // Dia na URL fora do período atual não filtra o quadro para vazio.
+    if (calendario.dia && (calendario.dia < de || calendario.dia > ate)) calendario.dia = "";
+    calendario.assinatura = assinaturaQuadro();
+    gravarContextoCalendario();
+    if (!getSessionToken()) {
+      calendario.dados = null;
+      mensagemCalendario("Entre na conta para consultar o calendário.");
+      renderCalendario();
+      return;
+    }
+    mensagemCalendario("Carregando calendário…");
+    const parametros = new URLSearchParams(Object.entries({ de, ate, status: filters.status, tipo: filters.tipo, talhao: filters.talhao, q: filters.query })
+      .filter(([, valor]) => valor));
+    try {
+      const dados = await apiRequest(`/api/calendario?${parametros}`);
+      if (numero !== calendario.consulta) return;
+      calendario.dados = dados;
+      calendario.ids = new Set(dados.atividades.map((atividade) => String(atividade.id)));
+      calendario.idsDia = new Map();
+      dados.atividades.forEach((atividade) => {
+        if (!calendario.idsDia.has(atividade.dataIso)) calendario.idsDia.set(atividade.dataIso, new Set());
+        calendario.idsDia.get(atividade.dataIso).add(String(atividade.id));
       });
+      mensagemCalendario("");
+    } catch (err) {
+      if (numero !== calendario.consulta) return;
+      calendario.dados = null;
+      mensagemCalendario(`${err.message} As contagens não foram atualizadas.`, true);
+    }
+    renderCalendario();
+    applyFilters();
+  }
+
+  // Filtros e cards que mudam a contagem; qualquer diferença pede nova consulta.
+  function assinaturaQuadro() {
+    const cards = $$(".kanban-card").map((card) => [card.dataset.id, card.dataset.date, card.dataset.status, card.dataset.tipo, card.dataset.talhao, card.dataset.activity].join("|"));
+    return JSON.stringify([filters.status, filters.tipo, filters.talhao, filters.query, cards]);
+  }
+
+  function sincronizarCalendario() {
+    if (calendario.assinatura === null || calendario.assinatura === assinaturaQuadro()) return;
+    calendario.assinatura = assinaturaQuadro();
+    clearTimeout(calendario.espera);
+    calendario.espera = setTimeout(carregarCalendario, 250);
+  }
+
+  function mudarPeriodo(ref) {
+    calendario.ref = ref;
+    calendario.dia = "";
+    carregarCalendario();
+  }
+
+  function initCalendario() {
+    if (!calendario.ref) calendario.ref = calendario.dia || hojeISO();
+    const { de, ate } = periodoCalendario();
+    if (calendario.dia && (calendario.dia < de || calendario.dia > ate)) calendario.dia = "";
+    $$("[data-calendar-view]").forEach((botao) => botao.addEventListener("click", () => {
+      if (calendario.visao === botao.dataset.calendarView) return;
+      calendario.visao = botao.dataset.calendarView;
+      mudarPeriodo(calendario.dia || calendario.ref);
+    }));
+    $("[data-calendar-prev]").addEventListener("click", () => {
+      const { de } = periodoCalendario();
+      mudarPeriodo(calendario.visao === "mes" ? somarDias(de, -1) : somarDias(de, -7));
     });
+    $("[data-calendar-next]").addEventListener("click", () => {
+      const { ate } = periodoCalendario();
+      mudarPeriodo(somarDias(ate, 1));
+    });
+    $("[data-calendar-today]").addEventListener("click", () => mudarPeriodo(hojeISO()));
+    $("[data-calendar-retry]").addEventListener("click", carregarCalendario);
+    $("[data-calendar-only-period]").addEventListener("change", (event) => {
+      calendario.soPeriodo = event.target.checked;
+      gravarContextoCalendario();
+      applyFilters();
+    });
+    // Clicar no dia filtra o quadro; clicar de novo volta ao período.
+    $("[data-calendar-days]").addEventListener("click", (event) => {
+      const botao = event.target.closest("[data-calendar-date]");
+      if (!botao) return;
+      calendario.dia = calendario.dia === botao.dataset.calendarDate ? "" : botao.dataset.calendarDate;
+      gravarContextoCalendario();
+      renderCalendario();
+      applyFilters();
+    });
+    renderCalendario();
   }
 
   /* ---------------------------------------------------------------------- */
@@ -1137,6 +1347,7 @@
     initPrepToasts();
     initTalhaoFilterChip();
     initFilterControls();
+    initCalendario();
     initViewToggle();
     initDragAndDrop();
     initCardActions();
@@ -1149,6 +1360,8 @@
     applyFilters();
 
     carregamentoRemoto = carregarAtividadesRemotas();
+    // O calendário consulta depois do quadro para comparar com os cards já remotos.
+    carregamentoRemoto.finally(carregarCalendario);
     carregarSafras();
     aplicarDeepLinkNotificacao();
   }
@@ -1161,11 +1374,12 @@
 
     await carregamentoRemoto;
 
+    // "Atividades para hoje" é o dia corrente selecionado no calendário: a data
+    // de cada atividade (inclusive "12 ago") vem resolvida pelo servidor.
     if (filtrarHoje) {
-      filters.hoje = true;
-      filters.day = "";
-      $$(".week-day").forEach((day) => day.classList.remove("is-selected"));
-      applyFilters();
+      calendario.ref = hojeISO();
+      calendario.dia = hojeISO();
+      await carregarCalendario();
     }
 
     if (atividadeId) {

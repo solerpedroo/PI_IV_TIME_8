@@ -25,6 +25,7 @@ import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.AtividadesHandler;
+import handlers.CalendarioHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
@@ -144,6 +145,7 @@ public class Servidor
         new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
         new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
         new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
+        new CalendarioHandler (atividades).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 

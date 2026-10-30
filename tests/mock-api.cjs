@@ -5,6 +5,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+function calendar(url, activities) {
+  const de = url.searchParams.get('de'), ate = url.searchParams.get('ate');
+  const dias = [];
+  for (let dia = new Date(de + 'T12:00:00Z'); dia.toISOString().slice(0, 10) <= ate; dia.setUTCDate(dia.getUTCDate() + 1)) {
+    const data = dia.toISOString().slice(0, 10);
+    dias.push({data, total: activities.filter(item => item.data === data).length, porStatus: {}});
+  }
+  const lista = activities.filter(item => item.data >= de && item.data <= ate && /^\d{4}-/.test(item.data)).map(item => ({...item, dataIso: item.data}));
+  const porTipo = Object.fromEntries(['Aplicação', 'Irrigação', 'Colheita', 'Manutenção', 'Manejo'].map(tipo => [tipo, lista.filter(item => item.tipo === tipo).length]));
+  return {de, ate, total: lista.length, semData: 0, porStatus: {}, porTipo, dias, atividades: lista};
+}
+
 // Contrato HTTP compartilhado pelas suítes de UI; os testes Java usam servidor real.
 async function mockApi(context, origin, options = {}) {
   const sandbox = {window: {}};
@@ -60,6 +72,8 @@ async function mockApi(context, origin, options = {}) {
         if (!match[2] && req.method() === 'PUT') { Object.assign(item, req.postDataJSON()); return reply(200, item); }
       }
     }
+    // Calendário com o contrato do CalendarioHandler; só datas ISO entram no período.
+    if (url.pathname === '/api/calendario' && req.method() === 'GET') return reply(200, calendar(url, activities));
     // Apenas inicialização das telas: o CRUD de ocorrências é testado no Java real.
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias') return reply(200, options.occurrences || []);
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias/resumo') return reply(200,
