@@ -37,6 +37,38 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
     }
 
     @Override
+    public synchronized List<Document> listarParaCalendario (String propriedadeId, String de, String ate) throws Exception
+    {
+        if (propriedadeId == null || de == null || ate == null)
+            throw new Exception ("Parâmetros do calendário ausentes");
+
+        ArrayList<Document> ret = new ArrayList<Document> ();
+        for (Document atividade : this.atividades.values ())
+        {
+            if (!propriedadeId.equals (atividade.getString ("propriedadeId")))
+                continue;
+            if (!RepositorioAtividadesMemoria.candidataCalendario (atividade.getString ("data"), de, ate))
+                continue;
+            ret.add (new Document (atividade));
+        }
+
+        return ret;
+    }
+
+    // ISO no intervalo, protótipo "12 ago" ou texto que não é ISO (semData); ISO fora fica de fora.
+    static boolean candidataCalendario (String data, String de, String ate)
+    {
+        if (data == null)
+            return true;
+
+        String texto = data.trim ();
+        if (texto.matches ("\\d{4}-\\d{2}-\\d{2}"))
+            return texto.compareTo (de) >= 0 && texto.compareTo (ate) <= 0;
+
+        return true;
+    }
+
+    @Override
     public synchronized Document buscarPorId (String propriedadeId, String id) throws Exception
     {
         if (propriedadeId == null || id == null)
