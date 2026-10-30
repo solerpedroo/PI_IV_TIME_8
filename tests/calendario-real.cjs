@@ -201,6 +201,14 @@ async function contar(page, iso, total) {
     assert.deepEqual(await visiveis(page), ["Adubar"]);
     console.log("OK recarga mantém o contexto");
 
+    // 7. Dia na URL fora do período é descartado (não zera o quadro).
+    await page.goto(`${base}/atividades.html?visao=semana&data=${segunda}&dia=${proxima}`);
+    await page.waitForFunction(() => document.querySelector("[data-calendar-message]").textContent === "");
+    await contar(page, segunda, 2);
+    assert.equal(await page.locator("[data-calendar-days] [aria-pressed='true']").count(), 0, "dia fora do período não fica selecionado");
+    assert.ok((await visiveis(page)).length >= 5, "quadro não fica vazio por dia inválido");
+    console.log("OK dia fora do período é limpo");
+
     assert.deepEqual(pageErrors, [], "sem erros de script");
     console.log("calendario-real: todas as verificações passaram");
   } catch (error) {
