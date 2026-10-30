@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -29,7 +30,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Sessoes;
+import handlers.CalendarioHandler;
 import handlers.EstaticosHandler;
+import servicos.CustosDeConsumo;
+import java.time.Instant;
 import http.Requisicao;
 
 /*
@@ -44,6 +48,9 @@ public class TesteServidor
 
     private static RepositorioUsuariosMemoria usuarios;
     private static RepositorioEstoqueMemoria estoque;
+    private static RepositorioCustosMemoria custos;
+    private static RepositorioTalhoesMemoria talhoes;
+    private static RepositorioSafrasMemoria safras;
 
     // ------------------------------------------------------------------ auxiliares
 
@@ -496,6 +503,139 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    private static String atividade (String nome, String tipo, String talhao, String data, String horario)
+    {
+        Document ret = new Document ("nome", nome).append ("tipo", tipo).append ("talhao", talhao).append ("data", data);
+
+        if (horario != null)
+            ret.append ("horario", horario);
+
+        return ret.toJson ();
+    }
+
+    // dia do calendario com essa data
+    private static Document dia (Document calendario, String data)
+    {
+        for (Document dia : calendario.getList ("dias", Document.class))
+            if (dia.getString ("data").equals (data))
+                return dia;
+        return new Document ("total", -1);
+    }
+
+    private static int totalDoCalendario (String consulta, String token) throws Exception
+    {
+        Resp resp = get ("/api/calendario?" + consulta, token);
+
+        return resp.status == 200 ? resp.json ().getInteger ("total") : -1;
+    }
+
+    private static void testarCalendario () throws Exception
+    {
+        System.out.println ("\n# calendario de atividades por semana e mes");
+
+        String a = login ("maria@agro.com", "Nova@1234");
+        String b = login ("joao@agro.com",  "Senha@123");
+
+        String aplicacao  = "Aplica\u00e7\u00e3o";
+        String irrigacao  = "Irriga\u00e7\u00e3o";
+        String manutencao = "Manuten\u00e7\u00e3o";
+        String semana     = "de=2031-03-03&ate=2031-03-09";
+
+        conferir ("calendario sem token -> 401", 401, get ("/api/calendario?" + semana, null));
+        Document semPeriodo = camposComErro (get ("/api/calendario", a));
+        conferir ("calendario sem periodo -> 400 com de e ate",
+                  semPeriodo.containsKey ("de") && semPeriodo.containsKey ("ate"));
+        conferir ("data impossivel -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-02-30&ate=2031-03-09", a)).containsKey ("de"));
+        conferir ("periodo invertido -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-03-09&ate=2031-03-03", a)).containsKey ("ate"));
+        conferir ("periodo maior que 62 dias -> 400",
+                  camposComErro (get ("/api/calendario?de=2031-01-01&ate=2031-03-04", a)).containsKey ("ate"));
+        conferir ("periodo de 62 dias e aceito", 200, get ("/api/calendario?de=2031-01-01&ate=2031-03-03", a));
+
+        // duas semanas e dois meses diferentes
+        String plantio = post ("/api/atividades", atividade ("Plantio", aplicacao, "T-01 Norte", "2031-03-03", "08:00"), a).json ().getString ("id");
+        post ("/api/atividades", atividade ("Irrigar", irrigacao, "t-02 sul",   "2031-03-03", "06:00"), a);
+        post ("/api/atividades", atividade ("Colher",  "Colheita", "T-01 Norte", "2031-03-09", null),   a);
+        post ("/api/atividades", atividade ("Revisar", manutencao, "T-01 Norte", "2031-03-10", null),   a);
+        post ("/api/atividades", atividade ("Abril",   aplicacao,  "T-01 Norte", "2031-04-01", null),   a);
+
+        Resp     respSemana = get ("/api/calendario?" + semana, a);
+        Document doc        = respSemana.status == 200 ? respSemana.json () : new Document ();
+        conferir ("semana -> 200", 200, respSemana);
+        conferir ("semana traz so as 3 atividades do periodo", Integer.valueOf (3).equals (doc.getInteger ("total")));
+        conferir ("semana tem os 7 dias, inclusive os vazios",
+                  doc.containsKey ("dias") && doc.getList ("dias", Document.class).size () == 7 &&
+                  dia (doc, "2031-03-05").getInteger ("total") == 0);
+        conferir ("contagem por dia", dia (doc, "2031-03-03").getInteger ("total") == 2 &&
+                                      dia (doc, "2031-03-09").getInteger ("total") == 1);
+        conferir ("contagem por status no dia",
+                  dia (doc, "2031-03-03").get ("porStatus", Document.class).getInteger ("Pendente") == 2);
+        conferir ("contagem por tipo no periodo",
+                  doc.containsKey ("porTipo") &&
+                  doc.get ("porTipo", Document.class).getInteger (aplicacao) == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger (irrigacao) == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger ("Colheita") == 1 &&
+                  doc.get ("porTipo", Document.class).getInteger (manutencao) == 0);
+
+        ArrayList<String> nomes = new ArrayList<String> ();
+        if (doc.containsKey ("atividades"))
+            for (Document item : doc.getList ("atividades", Document.class))
+                nomes.add (item.getString ("nome") + "@" + item.getString ("dataIso"));
+        conferir ("atividades em ordem de data e horario",
+                  nomes.equals (List.of ("Irrigar@2031-03-03", "Plantio@2031-03-03", "Colher@2031-03-09")));
+        conferir ("resposta nao expoe campos internos", !respSemana.corpo.contains ("propriedadeId"));
+
+        conferir ("semana seguinte so com a manutencao", totalDoCalendario ("de=2031-03-10&ate=2031-03-16", a) == 1);
+        conferir ("mes de marco com 4 atividades", totalDoCalendario ("de=2031-03-01&ate=2031-03-31", a) == 4);
+        conferir ("mes de abril com 1 atividade",  totalDoCalendario ("de=2031-04-01&ate=2031-04-30", a) == 1);
+        Resp marco = get ("/api/calendario?de=2031-03-01&ate=2031-03-31", a);
+        conferir ("mes tem todos os 31 dias",
+                  marco.status == 200 && marco.json ().getList ("dias", Document.class).size () == 31);
+
+        // os filtros sao os mesmos da lista de atividades
+        conferir ("filtro por tipo",   totalDoCalendario (semana + "&tipo=" + URLEncoder.encode (irrigacao, StandardCharsets.UTF_8), a) == 1);
+        conferir ("filtro por talhao", totalDoCalendario (semana + "&talhao=T-01%20Norte", a) == 2);
+        conferir ("filtro por busca",  totalDoCalendario (semana + "&q=COLH", a) == 1);
+        conferir ("filtro todos e ignorado", totalDoCalendario (semana + "&tipo=todos", a) == 3);
+        post ("/api/atividades/" + plantio + "/status", "{\"status\":\"Agendada\"}", a);
+        conferir ("filtro por status acompanha a mudanca", totalDoCalendario (semana + "&status=Agendada", a) == 1);
+        Resp agendada = get ("/api/calendario?" + semana, a);
+        conferir ("contagem por status acompanha a mudanca",
+                  agendada.status == 200 && agendada.json ().get ("porStatus", Document.class).getInteger ("Agendada") == 1 &&
+                  dia (agendada.json (), "2031-03-03").get ("porStatus", Document.class).getInteger ("Agendada") == 1);
+
+        conferir ("calendario de outro usuario nao mostra as atividades", totalDoCalendario ("de=2031-03-01&ate=2031-03-31", b) == 0);
+
+        // formato do prototipo: o ano e o da ocorrencia mais proxima da criacao
+        LocalDate hoje     = LocalDate.now (ZoneId.of ("America/Sao_Paulo"));
+        LocalDate daqui    = hoje.plusDays (3);
+        String    meses    = "jan fev mar abr mai jun jul ago set out nov dez";
+        String    curta    = daqui.getDayOfMonth () + " " + meses.split (" ")[daqui.getMonthValue () - 1];
+        conferir ("atividade no formato do prototipo -> 201", 201,
+                  post ("/api/atividades", atividade ("Prototipo", aplicacao, "T-01 Norte", curta, null), b));
+        Resp proxima = get ("/api/calendario?de=" + hoje + "&ate=" + hoje.plusDays (6), b);
+        boolean   achou    = false;
+        if (proxima.status == 200)
+            for (Document item : proxima.json ().getList ("atividades", Document.class))
+                if ("Prototipo".equals (item.getString ("nome")) && daqui.toString ().equals (item.getString ("dataIso")))
+                    achou = true;
+        conferir ("data sem ano cai na ocorrencia mais proxima", achou);
+
+        conferir ("resolver: 10 jan criada em dezembro vai para o ano seguinte",
+                  LocalDate.of (2027, 1, 10).equals (CalendarioHandler.resolver ("10 jan", LocalDate.of (2026, 12, 10))));
+        conferir ("resolver: 20 mai criada em outubro fica no mesmo ano",
+                  LocalDate.of (2026, 5, 20).equals (CalendarioHandler.resolver ("20 mai", LocalDate.of (2026, 10, 28))));
+        conferir ("resolver: 29 fev usa o ano bissexto mais proximo",
+                  LocalDate.of (2028, 2, 29).equals (CalendarioHandler.resolver ("29 fev", LocalDate.of (2027, 6, 1))));
+        conferir ("resolver: 31 fev nao existe", CalendarioHandler.resolver ("31 fev", LocalDate.of (2026, 10, 28)) == null);
+        conferir ("resolver: ISO e mantido",
+                  LocalDate.of (2031, 3, 3).equals (CalendarioHandler.resolver ("2031-03-03", null)));
+        // 2024-01-01 e 2025-01-01 ficam a 183 dias de 2024-07-02; o empate fica com o ano da criacao.
+        conferir ("resolver: empate prefere o ano da criacao",
+                  LocalDate.of (2024, 1, 1).equals (CalendarioHandler.resolver ("1 jan", LocalDate.of (2024, 7, 2))));
+    }
+
     /* A API única de status preserva os mesmos eventos para Lista, arraste e menu. */
     private static void testarAtividadesEHistorico () throws Exception
     {
@@ -707,6 +847,147 @@ public class TesteServidor
             if (talhao.getString ("nome").equalsIgnoreCase (nome))
                 return talhao.getString ("id");
         return null;
+    }
+
+    // custos de consumo da propriedade de quem tem o token
+    private static List<Document> custosDeConsumo (String token) throws Exception
+    {
+        ArrayList<Document> ret = new ArrayList<Document> ();
+
+        for (Document custo : lista (get ("/api/custos", token)))
+            if (custo.get ("origem") != null)
+                ret.add (custo);
+
+        return ret;
+    }
+
+    private static void testarCustosDeConsumo () throws Exception
+    {
+        System.out.println ("\n# custo gerado pelo consumo de estoque");
+
+        String   a       = login ("maria@agro.com", "Nova@1234");
+        String   b       = login ("joao@agro.com",  "Senha@123");
+        Document usuario = usuarios.buscarPor ("email", "maria@agro.com");
+        String   uid     = usuario.getObjectId ("_id").toHexString ();
+        String   pid     = usuario.getString ("propriedadeId");
+        String   t1      = idDoTalhao (a, "T-01 Norte");
+        String   t3      = idDoTalhao (a, "T-03 V\u00e1rzea");
+        String   cafe    = idDaSafra  (a, "Caf\u00e9 2026");
+        String   soja    = idDaSafra  (a, "Soja Ver\u00e3o 26/27"); // finalizada no teste de safras
+
+        Document produto = new Document ("nome", "Ureia consumo").append ("categoria", "Fertilizante").append ("unidade", "kg")
+                               .append ("saldo", 200).append ("minimo", 10).append ("custoUnitario", 2.5);
+        String   insumo  = post ("/api/insumos", produto.toJson (), a).json ().getString ("id");
+
+        ObjectId adubacao = new ObjectId ();
+        ObjectId antiga   = new ObjectId ();
+        estoque.adicionarAtividadeParaTeste (new Document ("_id", adubacao).append ("usuarioId", uid).append ("propriedadeId", pid)
+                                                 .append ("nome", "Aduba\u00e7\u00e3o de cobertura").append ("talhao", "T-03 V\u00e1rzea")
+                                                 .append ("safraId", cafe));
+        estoque.adicionarAtividadeParaTeste (new Document ("_id", antiga).append ("usuarioId", uid).append ("propriedadeId", pid)
+                                                 .append ("nome", "Aplica\u00e7\u00e3o antiga").append ("talhao", "T-01 Norte")
+                                                 .append ("safraId", soja));
+
+        int antes = custosDeConsumo (a).size ();
+
+        // consumo de 50 kg a R$ 2,50 = R$ 125,00 no talhao e na safra da atividade
+        Resp saida = post ("/api/insumos/" + insumo + "/movimentacoes",
+                           new Document ("tipo", "saida").append ("quantidade", 50).append ("atividadeId", adubacao.toHexString ()).toJson (), a);
+        conferir ("saida de 50 kg com atividade -> 201", 201, saida);
+        Document mov = saida.status == 201 ? saida.json () : new Document ();
+        conferir ("resposta da saida traz o custo gerado",
+                  mov.getString ("custoId") != null && Double.valueOf (125.0).equals (mov.get ("custoValor", Number.class).doubleValue ()));
+
+        List<Document> gerados = custosDeConsumo (a);
+        Document       custo   = gerados.isEmpty () ? new Document () : gerados.get (0);
+        for (Document item : gerados)
+            if (item.getString ("id").equals (mov.getString ("custoId")))
+                custo = item;
+        Document origem = custo.get ("origem", Document.class) == null ? new Document () : custo.get ("origem", Document.class);
+
+        conferir ("um custo novo para a saida", gerados.size () == antes + 1);
+        conferir ("custo em Insumos com o valor do consumo",
+                  "Insumos".equals (custo.getString ("category")) && Double.valueOf (125.0).equals (custo.get ("value", Number.class).doubleValue ()));
+        conferir ("custo no talhao e na safra da atividade",
+                  t3.equals (custo.getString ("talhaoId")) && cafe.equals (custo.getString ("safraId")) &&
+                  "Caf\u00e9".equals (custo.getString ("cultura")));
+        conferir ("custo referencia a movimentacao, o insumo e a atividade",
+                  mov.getString ("id").equals (origem.getString ("movimentacaoId")) && insumo.equals (origem.getString ("insumoId")) &&
+                  adubacao.toHexString ().equals (origem.getString ("atividadeId")) &&
+                  Double.valueOf (50.0).equals (origem.get ("quantidade", Number.class).doubleValue ()));
+        conferir ("descricao cita insumo, quantidade e atividade",
+                  custo.getString ("description") != null && custo.getString ("description").contains ("Ureia consumo: 50 kg") &&
+                  custo.getString ("description").contains ("Aduba\u00e7\u00e3o de cobertura"));
+        conferir ("saldo baixou junto", get ("/api/insumos/" + insumo, a).json ().get ("saldo", Number.class).doubleValue () == 150);
+
+        // repetir o registro da mesma movimentacao ou consultar de novo nao duplica
+        Document movimento = estoque.listarMovimentacoes (pid, insumo).get (0);
+        Document repetido  = new CustosDeConsumo (custos, estoque, talhoes, safras)
+                                 .registrar (pid, movimento, estoque.buscarPorId (pid, insumo),
+                                             estoque.buscarAtividade (uid, pid, adubacao.toHexString ()));
+        conferir ("repetir o registro devolve o mesmo custo",
+                  repetido != null && mov.getString ("custoId").equals (repetido.get ("_id").toString ()));
+        post ("/api/custos/sincronizar-consumo", null, a);
+        get ("/api/custos/resumo", a);
+        conferir ("repetir sync e consultar nao duplica", custosDeConsumo (a).size () == antes + 1);
+
+        // custo que nao chegou a ser gravado (baixa feita direto no repositorio) entra via sync explicita
+        estoque.movimentar (pid, insumo, new Document ("tipo", "saida").append ("quantidade", 4.0).append ("custoUnitario", 2.5)
+                                              .append ("atividadeId", adubacao.toHexString ()).append ("criadoEm", Instant.now ().toString ()));
+        int gravados = 0;
+        for (Document item : TesteServidor.custos.listar (pid))
+            if (item.get ("origem") != null)
+                gravados++;
+        conferir ("baixa direta no repositorio ainda nao tem custo", gravados == antes + 1);
+        conferir ("GET nao cria custo faltante sozinho", custosDeConsumo (a).size () == antes + 1);
+        Resp sync = post ("/api/custos/sincronizar-consumo", null, a);
+        conferir ("POST sincronizar-consumo -> 200", 200, sync);
+        conferir ("sync cria um custo faltante", sync.json ().getInteger ("criados") == 1);
+        List<Document> depois = custosDeConsumo (a);
+        boolean        quatro = false;
+        for (Document item : depois)
+            if (Double.valueOf (10.0).equals (item.get ("value", Number.class).doubleValue ()))
+                quatro = true;
+        conferir ("sync cria o custo que faltava (4 kg = R$ 10,00)", depois.size () == antes + 2 && quatro);
+
+        // saida sem atividade e entrada nao geram custo
+        post ("/api/insumos/" + insumo + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":1}", a);
+        post ("/api/insumos/" + insumo + "/movimentacoes", "{\"tipo\":\"entrada\",\"quantidade\":5,\"custoUnitario\":3}", a);
+        conferir ("saida sem atividade e entrada nao geram custo", custosDeConsumo (a).size () == antes + 2);
+
+        // atividade de safra finalizada: o custo fica so no talhao
+        Resp finalizada = post ("/api/insumos/" + insumo + "/movimentacoes",
+                                new Document ("tipo", "saida").append ("quantidade", 2).append ("atividadeId", antiga.toHexString ()).toJson (), a);
+        Document semSafra = new Document ();
+        for (Document item : custosDeConsumo (a))
+            if (finalizada.status == 201 && item.getString ("id").equals (finalizada.json ().getString ("custoId")))
+                semSafra = item;
+        conferir ("safra finalizada nao recebe o custo, que fica no talhao",
+                  t1.equals (semSafra.getString ("talhaoId")) && semSafra.getString ("safraId") == null);
+
+        // so muda pela movimentacao do insumo
+        String id = mov.getString ("custoId");
+        conferir ("custo de consumo nao e editado -> 409", 409,
+                  put ("/api/custos/" + id, custo ("X", "Outros", 10, "2026-08-01", null, null), a));
+        conferir ("custo de consumo nao e excluido -> 409", 409, requisitar ("DELETE", "/api/custos/" + id, null, a));
+
+        // indicadores e isolamento
+        Document resumoCafe = get ("/api/custos/resumo?safraId=" + cafe + "&category=Insumos&q=consumo", a).json ();
+        conferir ("resumo da safra inclui o consumo", resumoCafe.get ("total", Number.class).doubleValue () == 135);
+        conferir ("outro usuario nao ve o custo de consumo", custosDeConsumo (b).isEmpty ());
+
+        // data legada invalida nao derruba o registro do custo (depois dos totais conhecidos)
+        estoque.movimentar (pid, insumo, new Document ("tipo", "saida").append ("quantidade", 1.0)
+                                   .append ("custoUnitario", 2.5).append ("atividadeId", adubacao.toHexString ())
+                                   .append ("criadoEm", "nao-e-instant"));
+        Document ultima = null;
+        for (Document item : estoque.listarMovimentacoes (pid, insumo))
+            if ("nao-e-instant".equals (item.getString ("criadoEm")))
+                ultima = item;
+        Document custoRuim = new CustosDeConsumo (custos, estoque, talhoes, safras)
+                                 .registrar (pid, ultima, estoque.buscarPorId (pid, insumo),
+                                             estoque.buscarAtividade (uid, pid, adubacao.toHexString ()));
+        conferir ("criadoEm invalido ainda gera custo", custoRuim != null && custoRuim.getString ("date") != null);
     }
 
     private static void testarSafras () throws Exception
@@ -1167,9 +1448,13 @@ public class TesteServidor
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
         TesteServidor.estoque = new RepositorioEstoqueMemoria ();
 
-        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, new RepositorioTalhoesMemoria (), TesteServidor.estoque,
-                                                     new RepositorioSafrasMemoria (),
-                                                     new RepositorioCustosMemoria (), null, Path.of ("../../frontend"));
+        TesteServidor.custos  = new RepositorioCustosMemoria ();
+        TesteServidor.talhoes = new RepositorioTalhoesMemoria ();
+        TesteServidor.safras  = new RepositorioSafrasMemoria ();
+
+        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, TesteServidor.talhoes, TesteServidor.estoque,
+                                                     TesteServidor.safras,
+                                                     TesteServidor.custos, null, Path.of ("../../frontend"));
 
         // rota de teste que sempre lanca excecao
         roteador.adicionarPublica ("GET", "/explodir", requisicao -> { throw new RuntimeException ("de proposito"); });
@@ -1186,10 +1471,12 @@ public class TesteServidor
             TesteServidor.testarConfirmacaoERedefinicao ();
             TesteServidor.testarTalhoes ();
             TesteServidor.testarAtividadesEHistorico ();
+            TesteServidor.testarCalendario ();
             TesteServidor.testarEstoque ();
             TesteServidor.testarPropriedades ();
             TesteServidor.testarSafras ();
             TesteServidor.testarCustos ();
+            TesteServidor.testarCustosDeConsumo ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();

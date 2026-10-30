@@ -138,27 +138,22 @@ let failures = 0;
     assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Teste editado').status, 'Concluída');
   });
 
-  await run('custos: orçamento, período, lançamento, edição, exclusão e métricas', async (page) => {
+  // Lançamentos e indicadores reais estão em tests/custos-real.cjs (servidor Java).
+  await run('custos: orçamento e período locais, sem inventar lançamentos sem API', async (page) => {
     await go(page, 'custos.html');
+    await page.waitForFunction(() => document.querySelector('[data-cost-message]').textContent.includes('Não foi possível'));
+    assert.equal(await page.locator('[data-cost-table] tbody tr').count(), 0);
+    assert.equal(await page.locator('[data-cost-total]').textContent(), '-');
     await page.locator('[data-budget-edit]').click();
     await submit(page, '[data-budget-form]', { budget: '100000' });
     assert.equal((await data(page, 'costs')).budget, 100000);
     await page.locator('[data-open-period-modal]').click();
-    await page.locator('[data-period-option="Safra 2025/26"]').click();
+    await page.locator('[data-period-option="ano"]').click();
     await page.locator('[data-confirm-period]').click();
-    assert.equal((await data(page, 'costs')).period, 'Safra 2025/26');
-    await page.locator('[data-open-cost-modal]').click();
-    await submit(page, '[data-cost-form]', { description: 'Custo teste', category: 'Insumos', plot: 'T-01 Norte', date: '2026-10-14', value: '50' });
-    const created = (await data(page, 'costs')).entries.find((entry) => entry.description === 'Custo teste');
-    assert.ok(created);
-    await page.evaluate((id) => document.querySelector(`[data-edit-cost="${id}"]`).click(), created.id);
-    await submit(page, '[data-cost-form]', { description: 'Custo revisado', category: 'Insumos', plot: 'T-01 Norte', date: '2026-10-14', value: '80' });
+    assert.equal((await data(page, 'costs')).period, 'ano');
     await page.reload();
-    assert.equal((await data(page, 'costs')).entries.find((entry) => entry.id === created.id).value, 80);
-    assert.match(await page.locator('[data-budget-spent]').textContent(), /20.270,00/);
-    await page.evaluate((id) => document.querySelector(`[data-delete-cost="${id}"]`).click(), created.id);
-    await page.reload();
-    assert.equal((await data(page, 'costs')).entries.some((entry) => entry.id === created.id), false);
+    assert.equal(await page.locator('[data-period-label]').textContent(), 'Ano atual');
+    assert.match(await page.locator('[data-budget-total]').textContent(), /100.000,00/);
   });
 
   await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page, context, api) => {
@@ -206,15 +201,23 @@ let failures = 0;
   await run('dashboard continua utilizável com custos locais inválidos', async (page) => {
     await page.addInitScript(() => localStorage.setItem('agro.operational.v1.e2e-local.e2e-property.costs', '{invalido'));
     await go(page, 'dashboard.html');
-    assert.equal(await page.locator('[data-metric="cost"]').textContent(), '—');
+    assert.equal(await page.locator('[data-metric="cost"]').textContent(), '-');
     assert.ok(Number(await page.locator('[data-metric="pending"]').textContent()) >= 0);
   });
 
   await run('notificações: lidas após recarga', async (page) => {
     await go(page, 'dashboard.html');
+    await page.waitForFunction(() => {
+      const empty = document.querySelector('[data-notif-empty]');
+      return document.querySelectorAll('.notif-item').length > 0 || (empty && !empty.hidden);
+    });
     await page.locator('[data-notif-mark-all]').evaluate((element) => element.click());
     assert.equal(await page.locator('.notif-item.is-unread').count(), 0);
     await page.reload();
+    await page.waitForFunction(() => {
+      const empty = document.querySelector('[data-notif-empty]');
+      return document.querySelectorAll('.notif-item').length > 0 || (empty && !empty.hidden);
+    });
     assert.equal(await page.locator('.notif-item.is-unread').count(), 0);
   });
 

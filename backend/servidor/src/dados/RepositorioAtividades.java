@@ -16,6 +16,13 @@ public interface RepositorioAtividades
     /** Lista todas as atividades da propriedade ativa, em ordem de criação. */
     public List<Document> listar (String propriedadeId) throws Exception;
 
+    /**
+     * Candidatas ao calendário no período [de, ate] (AAAA-MM-DD inclusivo):
+     * datas ISO dentro do intervalo, datas no formato do protótipo (sem ano) e
+     * datas inválidas (para semData). Exclui ISO fora do período — o volume típico.
+     */
+    public List<Document> listarParaCalendario (String propriedadeId, String de, String ate) throws Exception;
+
     /** Busca uma atividade específica pelo seu identificador na propriedade. */
     public Document buscarPorId (String propriedadeId, String id) throws Exception;
 

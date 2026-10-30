@@ -77,6 +77,30 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
     }
 
     @Override
+    public List<Document> listarParaCalendario (String propriedadeId, String de, String ate) throws Exception
+    {
+        if (propriedadeId == null || de == null || ate == null)
+            throw new Exception ("Parâmetros do calendário ausentes");
+
+        // ISO no intervalo usa o índice (propriedadeId, data); o restante (protótipo/inválido) entra para resolver/semData.
+        Bson isoNoPeriodo = Filters.and (Filters.regex ("data", "^\\d{4}-\\d{2}-\\d{2}$"),
+                                         Filters.gte ("data", de),
+                                         Filters.lte ("data", ate));
+        Bson naoIso       = Filters.not (Filters.regex ("data", "^\\d{4}-\\d{2}-\\d{2}$"));
+        Bson filtro       = Filters.and (Filters.eq ("propriedadeId", propriedadeId),
+                                         Filters.or (isoNoPeriodo, naoIso));
+
+        ArrayList<Document> ret = new ArrayList<Document> ();
+        for (Document d : this.atividades.find (filtro).sort (Sorts.descending ("_id")))
+        {
+            d.put ("id", d.getObjectId ("_id").toHexString ());
+            ret.add (d);
+        }
+
+        return ret;
+    }
+
+    @Override
     public Document buscarPorId (String propriedadeId, String id) throws Exception
     {
         Bson f = filtro (propriedadeId, id);

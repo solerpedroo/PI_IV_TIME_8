@@ -164,7 +164,7 @@ async function menu(page, trigger) {
   await page.locator('#cost-category-trigger').click();
   await page.locator('#cost-category-listbox [data-value="Insumos"]').click();
   await page.locator('#cost-plot-trigger').click();
-  await reachable(page.locator('#cost-plot-listbox [data-value="T-01 Norte"]'));
+  await reachable(page.locator('#cost-plot-listbox [data-value]').filter({ hasText: 'T-01 Norte' }));
   await screenshot(page, 'custos-select-no-formulario');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-modal="cost-form"]').getAttribute('aria-hidden'), 'false');
@@ -195,8 +195,9 @@ async function menu(page, trigger) {
   await page.locator('[data-cost-search]').fill('');
   const deleting = await menu(page, row.locator('[data-popover-trigger]'));
   await deleting.locator('[data-delete-cost]').click();
-  assert.equal(await row.count(), 0);
-  assert.match(await page.locator('[data-cost-total]').locator('..').locator('.metric-card-desc').textContent(), /4%/);
+  // A exclusão espera a confirmação da API antes de sair da lista.
+  await row.waitFor({ state: 'detached' });
+  assert.equal(await page.locator('[data-budget-percent]').textContent(), '4% utilizado');
   const cropSum = await page.locator('.crop-cost-item > strong').evaluateAll((items) => items.reduce((sum, item) => sum + Number(item.textContent.replace(/[^\d,]/g, '').replace(',', '.')), 0));
   assert.equal(cropSum, 20190, 'resumo por cultura diverge do total de lançamentos');
   await page.locator('[data-budget-edit]').click();
@@ -234,12 +235,13 @@ async function menu(page, trigger) {
     assert.ok(await page.locator('form [aria-invalid="true"]').count(), 'formulário vazio aceito: ' + screen);
     await screenshot(page, screen + '-validacao');
   }
-  // Um custo ilegível não pode virar um total zero aparentemente confirmado.
+  // Um cache local ilegível não altera o total, que vem da API; a tela de Custos avisa do orçamento.
   await page.evaluate(() => localStorage.setItem('agro.operational.v1.e2e-local.e2e-property.costs', '{invalido'));
   await go(page, 'dashboard');
-  assert.equal(await page.locator('[data-metric="cost"]').textContent(), '—');
+  await page.waitForFunction(() => /20\.190,00/.test(document.querySelector('[data-metric="cost"]').textContent));
+  await go(page, 'custos');
   assert.match(await page.locator('[data-storage-error]').textContent(), /recuperar os custos/);
-  await screenshot(page, 'dashboard-custos-indisponiveis');
+  await screenshot(page, 'custos-orcamento-indisponivel');
   assert.deepEqual(errors, [], 'console ou recurso com erro');
   console.log('OK formulários, erros, selects, calendário, foco, CRUD, orçamento, resumos, safra, recarga, vazio, menus e custo ilegível; console sem erros');
   await browser.close();

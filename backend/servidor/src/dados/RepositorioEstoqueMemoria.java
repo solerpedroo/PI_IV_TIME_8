@@ -1,4 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundario: Tomas de Paula Michelon Toniato - RA: 25004211 */
 package dados;
 
 import java.util.ArrayList;
@@ -13,6 +14,20 @@ public class RepositorioEstoqueMemoria implements RepositorioEstoque
     private final LinkedHashMap<String, Document> insumos = new LinkedHashMap<> ();
     private final ArrayList<Document> movimentos = new ArrayList<> ();
     private final LinkedHashMap<String, Document> atividades = new LinkedHashMap<> ();
+
+    // No modo --memoria o estoque enxerga as atividades reais do servidor, como no
+    // MongoDB (mesma colecao); sem elas, so as adicionadas pelos testes.
+    private final RepositorioAtividades atividadesReais;
+
+    public RepositorioEstoqueMemoria ()
+    {
+        this (null);
+    }
+
+    public RepositorioEstoqueMemoria (RepositorioAtividades atividadesReais)
+    {
+        this.atividadesReais = atividadesReais;
+    }
 
     public synchronized List<Document> listar (String propriedadeId)
     {
@@ -87,16 +102,21 @@ public class RepositorioEstoqueMemoria implements RepositorioEstoque
         this.atividades.put (atividade.getObjectId ("_id").toHexString (), new Document (atividade));
     }
 
-    public synchronized List<Document> listarAtividades (String usuarioId, String propriedadeId)
+    public synchronized List<Document> listarAtividades (String usuarioId, String propriedadeId) throws Exception
     {
         ArrayList<Document> lista = new ArrayList<> ();
         for (Document atividade : this.atividades.values ())
             if (usuarioId.equals (atividade.getString ("usuarioId")) && propriedadeId.equals (atividade.getString ("propriedadeId")))
                 lista.add (new Document (atividade));
+        if (this.atividadesReais != null)
+            for (Document atividade : this.atividadesReais.listar (propriedadeId))
+                if (usuarioId.equals (atividade.getString ("usuarioId")) && atividade.get ("_id") instanceof String &&
+                    ObjectId.isValid (atividade.getString ("_id")))
+                    lista.add (new Document (atividade).append ("_id", new ObjectId (atividade.getString ("_id"))));
         return lista;
     }
 
-    public synchronized Document buscarAtividade (String usuarioId, String propriedadeId, String id)
+    public synchronized Document buscarAtividade (String usuarioId, String propriedadeId, String id) throws Exception
     {
         for (Document atividade : this.listarAtividades (usuarioId, propriedadeId))
             if (atividade.getObjectId ("_id").toHexString ().equals (id)) return atividade;

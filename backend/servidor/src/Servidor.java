@@ -25,12 +25,17 @@ import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
 import handlers.AuthHandler;
 import handlers.AtividadesHandler;
+import handlers.CalendarioHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
 import handlers.PropriedadesHandler;
 import handlers.PerfilHandler;
 import handlers.SafrasHandler;
+import handlers.RelatorioSafraHandler;
+import handlers.RelatorioPropriedadeHandler;
+import handlers.RelatorioEstoqueHandler;
+import handlers.RelatorioAtividadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
 import handlers.OcorrenciasHandler;
@@ -41,6 +46,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import seguranca.Sessoes;
+import servicos.CustosDeConsumo;
 import servicos.ServicoEmail;
 
 /*
@@ -125,11 +131,21 @@ public class Servidor
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, sessoes);
         handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
-        new EstoqueHandler (estoque, sessoes).registrar (roteador);
+        CustosDeConsumo consumo = new CustosDeConsumo (custos, estoque, talhoes, safras);
+        EstoqueHandler handlerEstoque = new EstoqueHandler (estoque, sessoes);
+        handlerEstoque.setConsumo (consumo);
+        handlerEstoque.registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
         handlerSafras.registrar (roteador);
-        new CustosHandler  (custos, safras, talhoes, sessoes).registrar (roteador);
+        CustosHandler handlerCustos = new CustosHandler (custos, safras, talhoes, sessoes);
+        handlerCustos.setConsumo (consumo);
+        handlerCustos.registrar (roteador);
+        new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
+        new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
+        new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
+        new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
+        new CalendarioHandler (atividades).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
@@ -189,7 +205,7 @@ public class Servidor
             RepositorioUsuarios usuarios = new RepositorioUsuariosMemoria ();
             RepositorioTalhoes  talhoes  = new RepositorioTalhoesMemoria  ();
             RepositorioAtividades atividades = new RepositorioAtividadesMemoria ();
-            RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  ();
+            RepositorioEstoque  estoque  = new RepositorioEstoqueMemoria  (atividades);
             RepositorioSafras   safras   = new RepositorioSafrasMemoria   ();
             RepositorioCustos   custos   = new RepositorioCustosMemoria   ();
 

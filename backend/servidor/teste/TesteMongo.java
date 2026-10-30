@@ -127,6 +127,25 @@ public class TesteMongo
             conferir (!custos.excluir ("outra", cid) && custos.excluir (principal, cid) && custos.listar (principal).isEmpty (),
                       "excluir custo respeita a propriedade");
             System.out.println ("MongoDB: custos ok");
+
+            // custo de consumo: a chave unica (propriedade, movimentacao) impede duplicidade
+            Document consumo = new Document ("description", "Consumo").append ("category", "Insumos").append ("value", 125.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal)
+                .append ("origem", new Document ("tipo", "consumo").append ("movimentacaoId", "mov-1"));
+            conferir (custos.criarSeAusente (consumo), "primeiro custo da movimentacao e gravado");
+            conferir (!custos.criarSeAusente (new Document (consumo).append ("_id", null)),
+                      "segundo custo da mesma movimentacao e recusado pelo indice unico");
+            conferir (custos.criarSeAusente (new Document (consumo).append ("propriedadeId", "outra")),
+                      "mesma movimentacao em outra propriedade nao conflita");
+            conferir (custos.criarSeAusente (new Document (consumo).append ("origem",
+                          new Document ("tipo", "consumo").append ("movimentacaoId", "mov-2"))),
+                      "outra movimentacao gera outro custo");
+            custos.criar (new Document ("description", "Manual").append ("category", "Outros").append ("value", 1.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal));
+            custos.criar (new Document ("description", "Manual 2").append ("category", "Outros").append ("value", 1.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal));
+            conferir (custos.listar (principal).size () == 4, "lancamentos manuais sem origem nao entram no indice unico");
+            System.out.println ("MongoDB: custos de consumo sem duplicidade ok");
         }
         finally
         {

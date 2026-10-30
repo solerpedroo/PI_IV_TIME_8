@@ -301,14 +301,8 @@ window.AgroOperationalDefaults = {
   ],
   "costs": {
     "budget": 520000,
-    "period": "Jan — Ago 2026",
-    "entries": [
-      { "id": 1, "description": "Glifosato 20L", "category": "Insumos", "plot": "T-03 Leste", "date": "2026-08-05", "value": 2840 },
-      { "id": 2, "description": "Salário operador — Jul", "category": "Mão de Obra", "plot": "Propriedade", "date": "2026-08-01", "value": 4200 },
-      { "id": 3, "description": "Manutenção pulverizador", "category": "Maquinário", "plot": "T-01 Norte", "date": "2026-07-28", "value": 1650 },
-      { "id": 4, "description": "Diesel — 500 L", "category": "Combustível", "plot": "Propriedade", "date": "2026-07-25", "value": 3100 },
-      { "id": 5, "description": "Sementes de soja — 2 t", "category": "Insumos", "plot": "T-01 Norte", "date": "2026-07-20", "value": 8400 }
-    ]
+    "period": "todo",
+    "entries": []
   }
 };
 // Os mesmos valores iniciais das configurações também ficam disponíveis
@@ -318,15 +312,9 @@ window.AgroOperationalDefaults.settings = {
   property: {farm: "Fazenda Santa Rita", area: 1284, city: "Campinas, SP", harvest: "2025/26"},
   preferences: {stock: true, weather: true, activities: true, occurrences: true, reports: false}
 };
-// Painel e Custos partem dos mesmos exemplos, antes do primeiro salvamento.
+// Custos não tem exemplos: os lançamentos vêm somente da API.
 window.AgroOperationalDefaults.costs = {
   budget: 520000,
-  period: "Jan — Ago 2026",
-  entries: [
-    { id: 1, description: "Glifosato 20L", category: "Insumos", plot: "T-03 Leste", date: "2026-08-05", value: 2840 },
-    { id: 2, description: "Salário operador — Jul", category: "Mão de Obra", plot: "Propriedade", date: "2026-08-01", value: 4200 },
-    { id: 3, description: "Manutenção pulverizador", category: "Maquinário", plot: "T-01 Norte", date: "2026-07-28", value: 1650 },
-    { id: 4, description: "Diesel — 500 L", category: "Combustível", plot: "Propriedade", date: "2026-07-25", value: 3100 },
-    { id: 5, description: "Sementes de soja — 2 t", category: "Insumos", plot: "T-01 Norte", date: "2026-07-20", value: 8400 }
-  ]
+  period: "todo",
+  entries: []
 };

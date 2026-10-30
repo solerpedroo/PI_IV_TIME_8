@@ -1,0 +1,36 @@
+# Autor: Tomas de Paula Michelon Toniato - RA: 25004211
+name: Calendario Java e navegador
+on:
+  pull_request:
+    paths:
+      - 'backend/servidor/**'
+      - 'frontend/scripts/atividades.js'
+      - 'frontend/atividades.html'
+      - 'frontend/styles/atividades.css'
+      - 'tests/calendario-real.cjs'
+      - '.github/workflows/calendario-testes.yml'
+permissions:
+  contents: read
+jobs:
+  calendario:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Compilar e testar servidor
+        run: sh backend/servidor/testar.sh
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install chromium --with-deps
+      - name: Validar calendario com servidor em memoria
+        env:
+          PLAYWRIGHT_MODULE: playwright
+        run: node tests/calendario-real.cjs

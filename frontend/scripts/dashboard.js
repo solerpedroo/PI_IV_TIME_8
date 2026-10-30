@@ -14,6 +14,7 @@
   const money = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
   let activities = [];
   let occurrenceQuery = 0;
+  let costQuery = 0;
 
   // Centraliza a escrita para que a ausência de um card não interrompa o painel.
   function setMetric(name, value) {
@@ -96,6 +97,23 @@
     }
   }
 
+  // O custo acumulado é o mesmo total da tela de Custos, sem filtros.
+  async function loadCosts() {
+    const query = ++costQuery;
+    setMetric('cost', '-');
+    try {
+      const token = sessionStorage.getItem('agro.sessionToken');
+      if (!token) throw new Error('Sessão ausente');
+      const base = location.port === '8080' ? location.origin : 'http://127.0.0.1:8080';
+      const response = await fetch(base + '/api/custos/resumo', {headers: {Authorization: 'Bearer ' + token}, signal: AbortSignal.timeout(15000)});
+      if (!response.ok) throw new Error('Consulta indisponível');
+      const summary = await response.json();
+      if (query === costQuery) setMetric('cost', money.format(summary.total));
+    } catch {
+      // Sem confirmação do servidor o card continua com "-".
+    }
+  }
+
   // Produção é representada pela área cadastrada para cada cultura nos talhões.
   function renderCultures(plots) {
     const host = $('[data-cultures-list]');
@@ -123,15 +141,11 @@
     activities = local.read('activities');
     const plots = local.read('plots');
     const stock = local.read('stock');
-    const costs = local.read('costs');
-    const totalCosts = Array.isArray(costs.entries)
-      ? costs.entries.reduce((total, entry) => total + entry.value, 0)
-      : null;
 
     setMetric('areas', String(plots.filter((record) => record.status === 'Ativo').length));
     setMetric('stock', String(stock.filter((record) => record.qty < record.min).length));
-    setMetric('cost', totalCosts === null ? '—' : money.format(totalCosts));
     loadOccurrences();
+    loadCosts();
     renderCultures(plots);
     render();
   }

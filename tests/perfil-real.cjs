@@ -120,6 +120,7 @@ async function submit(page, selector, endpoint, method = 'PUT', expected = 200) 
   context = await contextFor(session); page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await page.goto(base + '/configuracoes.html'); await loaded(page);
   assert.equal(await page.locator('[data-preference=stock]').isChecked(), false);
+  await page.locator('#default-property option[value="' + property.id + '"]').waitFor({state: 'attached'});
   assert.equal(await page.locator('#default-property').inputValue(), property.id);
 
   // Troca de e-mail usa senha atual e código real do fluxo local de e-mail.

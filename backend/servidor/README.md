@@ -55,7 +55,7 @@ biblioteca externa é o driver oficial do MongoDB (`lib/`).
 
 O mesmo servidor entrega:
 
-- a **API** em `/api/**` (autenticação, perfil, propriedades, talhões, estoque, ocorrências, safras e custos);
+- a **API** em `/api/**` (autenticação, perfil, propriedades, talhões, estoque, ocorrências, safras, custos e calendário);
 - os **arquivos do front** (raiz do repositório), na mesma origem da API;
 - `/health` e `/ready`.
 
@@ -367,6 +367,29 @@ O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
 cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
 `talhaoNome`.
 
+### Calendário
+
+Atividades da propriedade ativa agrupadas por dia, para as visões de semana e
+mês da tela de Atividades.
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/calendario?de=&ate=&status=&tipo=&talhao=&q=` | 200 com o período · 400 período ausente, inválido, invertido ou maior que 62 dias |
+
+- `de` e `ate`: obrigatórios, `AAAA-MM-DD`, período inclusivo de até 62 dias;
+- `status`, `tipo`, `talhao` e `q`: os mesmos filtros de `GET /api/atividades`, para
+  as contagens baterem com o quadro filtrado.
+
+A resposta traz `total`, `porStatus`, `porTipo` (todos os tipos, inclusive
+zerados), `dias` (todos os dias do período, cada um com `total` e `porStatus`) e
+`atividades` (só as do período, ordenadas por data, horário e nome, com a data
+resolvida em `dataIso`). A data `12 ago`, do formato do protótipo, não tem ano:
+vale a ocorrência mais próxima do dia em que a atividade foi criada (`10 jan`
+criada em dezembro de 2026 cai em janeiro de 2027); em empate, prevalece o ano
+da criação. A listagem no banco já descarta ISO fora de `de`/`ate` (índice
+`propriedadeId` + `data`); protótipo e inválidas seguem para o resolvedor.
+`semData` conta as atividades cuja data não pôde ser resolvida.
+
 ### Custos
 
 Lançamentos de custo da propriedade ativa, para controle gerencial (não contábil).
@@ -409,6 +432,19 @@ em ordem). Os totais são somados em centavos. A área usada no custo por hectar
 a da safra filtrada, a do talhão filtrado ou, sem esses filtros, a soma dos
 talhões da propriedade. Sem área, `custoPorHectare` é `null`.
 
+Custo de consumo de estoque: toda saída de `POST /api/insumos/{id}/movimentacoes`
+com `atividadeId` gera um lançamento em Insumos (quantidade x custo médio da
+baixa), com o talhão e a safra da atividade e o campo `origem`
+(`movimentacaoId`, `insumoId`, `atividadeId`, `quantidade`, `unidade`,
+`custoUnitario`). A resposta da saída traz `custoId` e `custoValor`. Há no
+máximo um custo por movimentação (índice único `propriedadeId` +
+`origem.movimentacaoId`). Se a gravação do custo falhar depois da baixa, o
+handler tenta sincronizar na própria escrita; se ainda falhar, a resposta traz
+`custoPendente` e `POST /api/custos/sincronizar-consumo` recupera os faltantes
+(`{"criados":N}`). Consultas `GET /api/custos` e `/resumo` **não** sincronizam.
+`PUT` e `DELETE` de um custo de consumo devolvem 409: ele muda pela
+movimentação do insumo.
+
 ### Saúde
 
 - `GET /health` → `{"status":"UP"}`
@@ -450,6 +486,7 @@ backend/servidor/
       TalhoesHandler.java       rotas /api/talhoes
       SafrasHandler.java        rotas /api/safras (ciclo produtivo)
       CustosHandler.java        rotas /api/custos (lançamentos e indicadores)
+      CalendarioHandler.java    rota /api/calendario (atividades por semana e mês)
       EstaticosHandler.java     arquivos do front
       SaudeHandler.java         /health e /ready
     dados/
