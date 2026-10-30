@@ -385,8 +385,10 @@ zerados), `dias` (todos os dias do período, cada um com `total` e `porStatus`) 
 `atividades` (só as do período, ordenadas por data, horário e nome, com a data
 resolvida em `dataIso`). A data `12 ago`, do formato do protótipo, não tem ano:
 vale a ocorrência mais próxima do dia em que a atividade foi criada (`10 jan`
-criada em dezembro de 2026 cai em janeiro de 2027). `semData` conta as
-atividades cuja data não pôde ser resolvida.
+criada em dezembro de 2026 cai em janeiro de 2027); em empate, prevalece o ano
+da criação. A listagem no banco já descarta ISO fora de `de`/`ate` (índice
+`propriedadeId` + `data`); protótipo e inválidas seguem para o resolvedor.
+`semData` conta as atividades cuja data não pôde ser resolvida.
 
 ### Custos
 
