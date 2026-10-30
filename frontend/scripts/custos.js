@@ -450,7 +450,7 @@
 
   function setBusy(value) {
     busy = value;
-    $$("[data-cost-form] button[type=submit], [data-delete-cost]").forEach((button) => { button.disabled = value; });
+    $$("[data-cost-form] button[type=submit], [data-delete-cost], [data-confirm-delete-cost]").forEach((button) => { button.disabled = value; });
   }
 
   // O sucesso só é anunciado depois da resposta do servidor; a lista é relida em seguida.
@@ -615,7 +615,8 @@
   }
 
   function initActions() {
-    $("[data-cost-table]").addEventListener("click", async (event) => {
+    let pendingDelete = null;
+    $("[data-cost-table]").addEventListener("click", (event) => {
       const edit = event.target.closest("[data-edit-cost]");
       const remove = event.target.closest("[data-delete-cost]");
       if (edit) {
@@ -625,16 +626,26 @@
       if (remove && !busy) {
         const entry = state.entries.find((item) => item.id === remove.dataset.deleteCost);
         if (!entry) return;
-        setBusy(true);
-        try {
-          await request(`/api/custos/${encodeURIComponent(entry.id)}`, { method: "DELETE" });
-          toast("info", "Lançamento excluído", `${entry.description} foi removido no servidor.`);
-        } catch (error) {
-          toast("error", "Exclusão não confirmada", error.message);
-        }
-        setBusy(false);
-        await load();
+        pendingDelete = entry;
+        $("[data-delete-cost-desc]").textContent =
+          `"${entry.description}" será removido no servidor e sairá da lista e dos indicadores.`;
+        setModalState("cost-delete", true);
       }
+    });
+    $("[data-confirm-delete-cost]").addEventListener("click", async () => {
+      const entry = pendingDelete;
+      if (!entry || busy) return;
+      setBusy(true);
+      try {
+        await request(`/api/custos/${encodeURIComponent(entry.id)}`, { method: "DELETE" });
+        toast("info", "Lançamento excluído", `${entry.description} foi removido no servidor.`);
+        pendingDelete = null;
+        setModalState("cost-delete", false);
+      } catch (error) {
+        toast("error", "Exclusão não confirmada", error.message);
+      }
+      setBusy(false);
+      await load();
     });
     // O CSV é exatamente o recorte exibido: mesma consulta da lista e dos indicadores.
     $("[data-export-costs]").addEventListener("click", () => {
@@ -653,7 +664,7 @@
   }
 
   function initModalDismissals() {
-    ["budget-form", "period-form"].forEach((name) => {
+    ["budget-form", "period-form", "cost-delete"].forEach((name) => {
       const modal = $(`[data-modal="${name}"]`);
       $$("[data-close-modal]", modal).forEach((button) => button.addEventListener("click", () => setModalState(name, false)));
       modal.addEventListener("click", (event) => {
