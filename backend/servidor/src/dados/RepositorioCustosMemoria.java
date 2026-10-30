@@ -57,6 +57,26 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         return ret;
     }
 
+    public synchronized Document buscarPorMovimentacao (String propriedadeId, String movimentacaoId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (movimentacaoId == null || movimentacaoId.isBlank ())
+            return null;
+
+        Document ret = null;
+        for (Document custo : this.custos.values ())
+        {
+            Document origem = custo.get ("origem", Document.class);
+            if (ret == null && propriedadeId.equals (custo.getString ("propriedadeId")) && origem != null &&
+                movimentacaoId.equals (origem.getString ("movimentacaoId")))
+                ret = new Document (custo);
+        }
+
+        return ret;
+    }
+
     public synchronized void criar (Document custo) throws Exception
     {
         if (custo == null)
@@ -65,6 +85,20 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         ObjectId id = new ObjectId ();
         custo.put ("_id", id);
         this.custos.put (id.toHexString (), new Document (custo));
+    }
+
+    public synchronized boolean criarSeAusente (Document custo) throws Exception
+    {
+        if (custo == null || custo.get ("origem", Document.class) == null)
+            throw new Exception ("Custo sem origem");
+
+        String origem = custo.get ("origem", Document.class).getString ("movimentacaoId");
+
+        if (this.buscarPorMovimentacao (custo.getString ("propriedadeId"), origem) != null)
+            return false;
+
+        this.criar (custo);
+        return true;
     }
 
     public synchronized boolean atualizar (String propriedadeId, String id, Document campos) throws Exception
