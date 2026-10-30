@@ -15,7 +15,11 @@ atividades reais da propriedade ativa.
   todos os dias (inclusive os zerados) e os totais por status e por tipo.
 - O formato do protótipo (`12 ago`) não tem ano. Vale a ocorrência mais próxima
   da criação da atividade, então uma atividade de `10 jan` cadastrada em
-  dezembro aparece no janeiro seguinte, não no anterior.
+  dezembro aparece no janeiro seguinte, não no anterior. Em empate de distância,
+  prevalece o ano da criação.
+- A consulta no servidor já exclui datas ISO fora do período (índice
+  `propriedadeId` + `data`); datas do protótipo e inválidas ainda passam pelo
+  resolvedor / `semData`.
 
 ## Contagens e seleção (#170)
 
@@ -28,7 +32,8 @@ atividades reais da propriedade ativa.
 - Criar, editar, mudar status ou filtrar refaz a consulta. Uma resposta antiga
   nunca substitui uma mais nova.
 - Visão, período, dia e a opção de período ficam na URL (`visao`, `data`,
-  `dia`, `periodo`), então recarregar a página mantém o contexto.
+  `dia`, `periodo`), então recarregar a página mantém o contexto. Se `dia` na
+  URL estiver fora do período atual, a seleção é descartada.
 - Sem resposta do servidor, a tela avisa, oferece "Tentar novamente" e não
   esconde cards que não conseguiu conferir.
 
