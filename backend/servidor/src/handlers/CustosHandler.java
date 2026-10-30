@@ -31,6 +31,7 @@ import util.Validacao;
 
     GET    /api/custos?category=&talhaoId=&safraId=&de=&ate=&q=  lista, do mais recente ao mais antigo
     GET    /api/custos/resumo?(mesmos filtros)                    indicadores sobre os lancamentos filtrados
+    POST   /api/custos/sincronizar-consumo                        recupera custos de consumo faltantes
     POST   /api/custos                                            cria
     GET    /api/custos/{id}                                       consulta
     PUT    /api/custos/{id}                                       altera
@@ -40,7 +41,8 @@ import util.Validacao;
     pertencer a uma safra. Com talhao e safra juntos, o talhao precisa ser da safra.
     Custo de safra finalizada nao e criado, alterado nem excluido (o historico fica fechado).
     Custo gerado por consumo de estoque (campo origem) so muda pela movimentacao do insumo:
-    PUT e DELETE devolvem 409, e as consultas criam antes os custos de consumo que faltarem.
+    PUT e DELETE devolvem 409. A sincronizacao dos custos faltantes nao roda em GET:
+    ocorre na propria baixa (ou em POST /api/custos/sincronizar-consumo).
     Os nomes dos campos sao os "name" do formulario de custos.html.
 */
 public class CustosHandler implements Manipulador
@@ -89,13 +91,14 @@ public class CustosHandler implements Manipulador
     // todas as rotas caem em tratar, que escolhe a acao pelo metodo e pelo caminho
     public void registrar (Roteador roteador) throws Exception
     {
-        // /resumo antes de /{id} para nao ser confundido com um id
-        roteador.adicionar ("GET",    "/api/custos/resumo", this);
-        roteador.adicionar ("GET",    "/api/custos",        this);
-        roteador.adicionar ("POST",   "/api/custos",        this);
-        roteador.adicionar ("GET",    "/api/custos/{id}",   this);
-        roteador.adicionar ("PUT",    "/api/custos/{id}",   this);
-        roteador.adicionar ("DELETE", "/api/custos/{id}",   this);
+        // /resumo e /sincronizar-consumo antes de /{id} para nao serem confundidos com id
+        roteador.adicionar ("GET",    "/api/custos/resumo",              this);
+        roteador.adicionar ("POST",   "/api/custos/sincronizar-consumo", this);
+        roteador.adicionar ("GET",    "/api/custos",                     this);
+        roteador.adicionar ("POST",   "/api/custos",                     this);
+        roteador.adicionar ("GET",    "/api/custos/{id}",                this);
+        roteador.adicionar ("PUT",    "/api/custos/{id}",                this);
+        roteador.adicionar ("DELETE", "/api/custos/{id}",                this);
     }
 
     @Override
@@ -103,9 +106,13 @@ public class CustosHandler implements Manipulador
     {
         Resposta ret;
         String   metodo = requisicao.getMetodo ().equals ("HEAD") ? "GET" : requisicao.getMetodo ();
-        int      partes = requisicao.getCaminho ().substring (1).split ("/", -1).length; // api/custos/{id}
+        String   caminho = requisicao.getCaminho ();
+        int      partes = caminho.substring (1).split ("/", -1).length; // api/custos/{id}
 
-        if (partes == 2)
+        if (caminho.endsWith ("/sincronizar-consumo"))
+            ret = metodo.equals ("POST") ? this.sincronizarConsumo (requisicao)
+                                         : Resposta.erro (405, "Method not allowed");
+        else if (partes == 2)
         {
             if (metodo.equals ("GET"))
                 ret = this.consultarLista (requisicao, false);
@@ -428,6 +435,24 @@ public class CustosHandler implements Manipulador
 
     // ------------------------------------------------------------------ rotas
 
+    // POST /api/custos/sincronizar-consumo — recupera custos faltantes sem pesar o GET
+    private Resposta sincronizarConsumo (Requisicao requisicao) throws Exception
+    {
+        if (this.consumo == null)
+            return Resposta.json (200, new Document ("criados", 0));
+
+        synchronized (this.sessoes)
+        {
+            Resposta mudou = this.contextoMudou (requisicao);
+            if (mudou != null)
+                return mudou;
+
+            int criados = this.consumo.sincronizar (requisicao.getSessao ().getUsuarioId (),
+                                                    requisicao.getSessao ().getPropriedadeId ());
+            return Resposta.json (200, new Document ("criados", criados));
+        }
+    }
+
     // GET /api/custos e GET /api/custos/resumo, com os mesmos filtros
     private Resposta consultarLista (Requisicao requisicao, boolean resumir) throws Exception
     {
@@ -456,13 +481,6 @@ public class CustosHandler implements Manipulador
 
         if (busca != null)
             busca = busca.toLowerCase (Locale.ROOT);
-
-        // saida de estoque cujo custo nao chegou a ser gravado entra antes da consulta
-        if (this.consumo != null)
-            synchronized (this.sessoes)
-            {
-                this.consumo.sincronizar (requisicao.getSessao ().getUsuarioId (), propriedadeId);
-            }
 
         LinkedHashMap<String, Document> talhoes   = CustosHandler.porId (this.talhoes.listar (propriedadeId));
         LinkedHashMap<String, Document> safras    = CustosHandler.porId (this.safras.listar  (propriedadeId));
