@@ -11,7 +11,8 @@ A tela de Custos usa somente a API Java autenticada (`/api/custos` e
 Criar, editar e excluir enviam a operação e só depois releem a lista. O toast de
 sucesso aparece apenas quando o servidor confirma; um erro de validação volta no
 campo correspondente (por exemplo, talhão que não pertence à safra escolhida) e
-nada é gravado. Safra finalizada aparece desabilitada para lançamentos novos.
+nada é gravado. Excluir lançamento manual pede confirmação no modal antes do
+DELETE. Safra finalizada aparece desabilitada para lançamentos novos.
 
 ## Filtros, período e exportação (#158)
 
@@ -51,10 +52,15 @@ propriedade (`costs`), porque não há rota de orçamento nesta entrega. O campo
   por movimentação (índice único no MongoDB), então repetir o registro ou as
   consultas nunca duplica o valor.
 - A baixa continua sendo do estoque. Se o custo não for gravado logo depois da
-  baixa, a próxima consulta de custos da propriedade cria o que falta.
+  baixa, o handler tenta `sincronizar()` na própria escrita; se ainda falhar,
+  a resposta traz `custoPendente` e `POST /api/custos/sincronizar-consumo`
+  recupera os faltantes. Consultas `GET` de custos **não** sincronizam.
+- Datas de movimentação inválidas/legadas usam o instante atual no registro do
+  custo (não derrubam a sync).
 - Custo de consumo não é editado nem excluído em Custos (409): ele muda pela
   movimentação do insumo. Na lista aparece com a marca "Consumo" e um atalho
-  para o produto no estoque; o CSV tem a coluna Origem.
+  para o produto no estoque; o CSV tem a coluna Origem. Lançamento manual pede
+  confirmação antes de excluir.
 - Atividade de safra finalizada: o custo fica só no talhão, sem a safra.
 - Sem custo unitário no insumo, a saída não gera lançamento.
 - No modo `--memoria`, o estoque passou a enxergar as atividades reais do
@@ -70,12 +76,11 @@ A conclusão da atividade com baixa automática de estoque continua na #24 (#160
   talhão de 50 ha, cultura da safra e do talhão, evolução, filtros de talhão,
   safra e período, CSV do recorte, erro de vínculo no campo, edição, exclusão,
   recarga mantendo o período e o total no Painel.
-- `backend/servidor/testar.sh`: 18 verificações novas em `testarCustosDeConsumo`
+- `backend/servidor/testar.sh`: verificações em `testarCustosDeConsumo`
   (50 kg a R$ 2,50 = R$ 125,00 no talhão e na safra da atividade, origem,
-  saldo, repetição sem duplicar, custo recuperado na consulta seguinte, saída
-  sem atividade e entrada sem custo, safra finalizada, 409 em editar e excluir,
-  resumo da safra e isolamento). Total: 353/353. `TesteMongo` confere o índice
-  único com MongoDB real.
+  saldo, repetição sem duplicar, GET sem sync + `POST /api/custos/sincronizar-consumo`,
+  saída sem atividade e entrada sem custo, safra finalizada, 409 em editar e excluir,
+  resumo da safra e isolamento). `TesteMongo` confere o índice único com MongoDB real.
 - Consumo pela tela de Insumos em `tests/custos-real.cjs` e validação pela API
   com MongoDB real, antes e depois de reiniciar o servidor.
 - `node tests/ui-polish.cjs` e `node tests/local-screens.cjs`: layout nas sete
