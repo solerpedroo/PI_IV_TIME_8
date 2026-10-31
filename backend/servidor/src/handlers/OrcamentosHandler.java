@@ -244,10 +244,10 @@ public class OrcamentosHandler implements Manipulador
         Object alerta = corpo.get ("alerta");
         int    limite = atual == null ? OrcamentosHandler.ALERTA_PADRAO : atual.getInteger ("alerta").intValue ();
 
-        if (!(valor instanceof Number) ||
-            !(((Number) valor).doubleValue () >= 0.01) ||                     // tambem barra NaN
-            ((Number) valor).doubleValue () > OrcamentosHandler.VALOR_MAXIMO)
+        if (!(valor instanceof Number) || !(((Number) valor).doubleValue () >= 0.01)) // tambem barra NaN
             validacao.erro ("valor", "Informe um valor maior que zero.");
+        else if (((Number) valor).doubleValue () > OrcamentosHandler.VALOR_MAXIMO)
+            validacao.erro ("valor", "Use no m\u00e1ximo R$ 1.000.000.000,00.");
 
         if (alerta != null)
         {
