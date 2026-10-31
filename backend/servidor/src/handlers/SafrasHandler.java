@@ -7,6 +7,7 @@ package handlers;
 
 import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
+import dados.RepositorioColheitas;
 import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Manipulador;
@@ -60,6 +61,7 @@ public class SafrasHandler implements Manipulador
     private final RepositorioCustos  custos;
     private final Sessoes            sessoes;
     private final RepositorioAtividades atividades;
+    private       RepositorioColheitas  colheitas; // opcional: sem ele, nao confere colheitas na edicao
 
     // Evita perder vínculos ou alterar os dados de safra preservados nas atividades.
     private boolean temAtividades (String propriedadeId, String safraId) throws Exception
@@ -91,6 +93,12 @@ public class SafrasHandler implements Manipulador
         this.custos  = custos;
         this.atividades = atividades;
         this.sessoes = sessoes;
+    }
+
+    // colheitas registradas (#222): a edicao nao tira da safra um talhao que ja foi colhido nela
+    public void setColheitas (RepositorioColheitas colheitas)
+    {
+        this.colheitas = colheitas;
     }
 
     // todas as rotas caem em tratar, que escolhe a acao pelo metodo e pelo caminho
@@ -299,6 +307,33 @@ public class SafrasHandler implements Manipulador
         return ret;
     }
 
+    // 409 se a edicao tirar da safra um talhao que tem colheita registrada nela; null se puder
+    private Resposta talhaoComColheita (String propriedadeId, String safraId, Document campos,
+                                        LinkedHashMap<String, Document> talhoes) throws Exception
+    {
+        Resposta     ret      = null;
+        List<String> mantidos = campos.getList ("talhoes", String.class);
+
+        if (this.colheitas == null)
+            return null;
+
+        for (Document colheita : this.colheitas.listar (propriedadeId))
+        {
+            String talhaoId = colheita.getString ("talhaoId");
+
+            if (ret == null && safraId.equals (colheita.getString ("safraId")) && !mantidos.contains (talhaoId))
+            {
+                Document talhao   = talhoes.get (talhaoId);
+                String   mensagem = "O talh\u00e3o " + (talhao == null ? talhaoId : talhao.getString ("nome")) +
+                                    " tem colheitas registradas nesta safra.";
+                ret = Resposta.json (409, new Document ("error", "Plot has harvests in this crop season")
+                                              .append ("fields", new Document ("talhoes", mensagem)));
+            }
+        }
+
+        return ret;
+    }
+
     private static Resposta nomeRepetido ()
     {
         return Resposta.json (409, new Document ("error", "Crop season name already exists")
@@ -458,6 +493,10 @@ public class SafrasHandler implements Manipulador
                 return ret;
 
             ret = this.talhaoComCusto (propriedadeId, id, campos, talhoes);
+            if (ret != null)
+                return ret;
+
+            ret = this.talhaoComColheita (propriedadeId, id, campos, talhoes);
             if (ret != null)
                 return ret;
 

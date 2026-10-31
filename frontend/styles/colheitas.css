@@ -1,0 +1,40 @@
+/* Autor: Tomas de Paula Michelon Toniato - RA: 25004211 */
+/* Colheita e produtividade na tela de Safras (#225). */
+.harvest-card { margin-top: 20px; }
+.harvest-header { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.harvest-subtitle { margin: 2px 0 0; color: var(--text-muted); font-size: 12px; }
+.harvest-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* A tela de Safras usa selects nativos; aqui eles ganham a mesma anatomia dos campos. */
+.harvest-actions select { min-height: 40px; min-width: 168px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--surface); color: var(--text-primary); font: inherit; font-size: 13px; cursor: pointer; }
+.harvest-actions select:hover { border-color: var(--border-strong); }
+.harvest-actions select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.harvest-status { display: flex; align-items: center; gap: 10px; padding: 0 20px; }
+.harvest-message { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.harvest-message:empty { display: none; }
+.harvest-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 12px 20px 4px; }
+.harvest-metric { display: grid; gap: 3px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--bg-subtle); min-width: 0; }
+.harvest-metric span { color: var(--text-secondary); font-size: 12px; }
+.harvest-metric strong { color: var(--text-primary); font-family: var(--font-mono); font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.harvest-metric small { color: var(--text-muted); font-size: 11px; }
+.harvest-section-title { margin: 18px 20px 8px; color: var(--text-primary); font-size: 14px; font-weight: 600; }
+.harvest-table-wrap { overflow-x: auto; padding: 0 0 8px; }
+.harvest-table { min-width: 760px; }
+.harvest-table td small { display: block; margin-top: 2px; }
+.harvest-table tr[data-harvest-cycle] { cursor: pointer; }
+.harvest-table tr.is-selected td { background: var(--primary-subtle); }
+.harvest-nowrap { white-space: nowrap; }
+.harvest-muted { color: var(--text-muted); font-size: 12px; }
+.harvest-variation { font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+.harvest-variation.is-up { color: var(--success); }
+.harvest-variation.is-down { color: var(--error); }
+.harvest-row-actions { display: flex; gap: 4px; justify-content: flex-end; white-space: nowrap; }
+.harvest-row-actions .btn-small { min-height: 30px; padding: 6px 9px; font-size: 12px; }
+.harvest-delete { color: var(--error); }
+.harvest-empty { margin: 8px 20px; color: var(--text-muted); font-size: 12px; }
+.harvest-empty-state { padding: 24px 20px; }
+@media (max-width: 900px) {
+  .harvest-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .harvest-actions { width: 100%; }
+  .harvest-actions .filter-select { flex: 1 1 140px; }
+  .harvest-actions .filter-select select { width: 100%; }
+}
