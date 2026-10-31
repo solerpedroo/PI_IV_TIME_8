@@ -12,4 +12,5 @@ javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin $(find src teste -name "*.
 java -cp "bin${SEP}lib/*" TesteServidor &&
 java -cp "bin${SEP}lib/*" TestePerfil &&
 java -cp "bin${SEP}lib/*" TesteOcorrencias &&
+java -cp "bin${SEP}lib/*" TesteColheitas &&
 java -cp "bin${SEP}lib/*" TesteRelatorioSafra
