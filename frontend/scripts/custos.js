@@ -1,8 +1,9 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Tomas de Paula Michelon Toniato - RA: 25004211 */
 /* Custos: a API é a fonte dos lançamentos e dos indicadores. Lista, cards,
- * gráfico, cultura, evolução e CSV saem da mesma consulta filtrada; só o
- * orçamento e o período escolhido ficam guardados neste navegador. */
+ * gráfico, cultura, evolução e CSV saem da mesma consulta filtrada. O orçamento
+ * planejado de cada safra também vem da API (/api/orcamentos); neste navegador
+ * fica só o período escolhido. */
 (() => {
   "use strict";
 
@@ -16,7 +17,8 @@
 
   /* entries e summary são sempre a última resposta confirmada pelo servidor. */
   const state = {
-    budget: window.AgroLocal.initial("costs").budget,
+    // Valor antigo do orçamento local: mantido só para o cache continuar válido.
+    legacyBudget: window.AgroLocal.initial("costs").budget,
     period: "todo",
     from: "",
     to: "",
@@ -27,11 +29,15 @@
     entries: [],
     summary: null,
     talhoes: [],
-    safras: []
+    safras: [],
+    // Planejado x realizado por safra; null enquanto a API não confirmou.
+    budgets: null,
+    budgetSeason: ""
   };
 
   let persist = () => true;
   let loadNumber = 0;
+  let budgetNumber = 0;
   let busy = false;
   let searchTimer = 0;
   function toast(type, title, description) {
@@ -222,6 +228,7 @@
   // Lista e resumo usam os mesmos filtros; uma resposta antiga nunca substitui a mais recente.
   async function load() {
     const number = ++loadNumber;
+    loadBudgets();
     message("Carregando lançamentos…");
     try {
       const filters = query();
@@ -256,14 +263,93 @@
       element.textContent = summary ? formatCompact(categoryTotal(category)) : "-";
       element.closest(".metric-card").querySelector(".metric-card-desc").textContent = summary ? `${percent(categoryTotal(category), total)} do custo total` : "do custo total";
     });
+  }
 
-    const usage = state.budget > 0 ? (total / state.budget) * 100 : 0;
-    const remaining = state.budget - total;
-    $("[data-budget-total]").textContent = money.format(state.budget);
-    $("[data-budget-spent]").textContent = summary ? money.format(total) : "-";
-    $("[data-budget-percent]").textContent = summary ? `${Math.round(usage)}% utilizado` : "-";
-    $("[data-budget-remaining]").textContent = !summary ? "" : remaining >= 0 ? `${money.format(remaining)} restantes` : `${money.format(-remaining)} acima do orçamento`;
-    $("[data-budget-progress]").style.width = `${summary ? Math.min(100, usage) : 0}%`;
+  /* ------------------------------------------------------------ orçamento */
+
+  // Planejado x realizado de todas as safras; a resposta antiga nunca substitui a nova.
+  async function loadBudgets() {
+    const number = ++budgetNumber;
+    $("[data-budget-message]").textContent = state.budgets ? "" : "Carregando orçamentos…";
+    $("[data-budget-retry]").hidden = true;
+    try {
+      const budgets = await request("/api/orcamentos");
+      if (number !== budgetNumber) return;
+      state.budgets = budgets;
+      $("[data-budget-message]").textContent = "";
+    } catch (error) {
+      if (number !== budgetNumber) return;
+      state.budgets = null;
+      $("[data-budget-message]").textContent = `${error.message} O orçamento não foi atualizado.`;
+      $("[data-budget-retry]").hidden = false;
+    }
+    renderBudget();
+  }
+
+  // A safra do card segue o filtro de safra; sem filtro, fica a escolhida ou a primeira em andamento.
+  function pickBudgetSeason() {
+    const ids = state.safras.map((safra) => safra.id);
+    if (ids.includes(state.safraId)) return state.safraId;
+    if (ids.includes(state.budgetSeason)) return state.budgetSeason;
+    return (state.safras.find((safra) => safra.etapa !== "Finalização") || state.safras[0])?.id || "";
+  }
+
+  function fillBudgetSelect() {
+    const select = $("[data-budget-season]");
+    state.budgetSeason = pickBudgetSeason();
+    // Sem opção fixa: o card sempre mostra uma safra real (ou "Nenhuma safra" quando não há).
+    select.replaceChildren(...(state.safras.length ? state.safras.map((safra) => new Option(seasonLabel(safra), safra.id)) : [new Option("Nenhuma safra", "")]));
+    select.value = state.budgetSeason;
+    select.dispatchEvent(new Event("change"));
+  }
+
+  const SITUATIONS = {
+    "sem-orcamento": { label: "Sem orçamento", css: "badge-neutral" },
+    dentro: { label: "Dentro do planejado", css: "badge-success" },
+    proximo: { label: "Perto do limite", css: "badge-warning" },
+    acima: { label: "Acima do planejado", css: "badge-error" }
+  };
+
+  const signed = (value) => `${value > 0 ? "+" : value < 0 ? "-" : ""}${money.format(Math.abs(value))}`;
+  const percentText = (value) => `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+
+  function budgetStatus(item) {
+    if (item.situacao === "sem-orcamento") return item.finalizada ? "Safra finalizada sem orçamento definido." : "Defina o planejado para acompanhar o desvio desta safra.";
+    if (item.situacao === "acima") return `Acima do planejado em ${money.format(item.desvio)} (${percentText(item.desvioPercentual)}).`;
+    if (item.situacao === "proximo") return `Atenção: ${percentText(item.percentualUsado)} do planejado já foi usado (aviso a partir de ${item.alerta}%).`;
+    return `${percentText(item.percentualUsado)} do planejado usado; o aviso começa em ${item.alerta}%.`;
+  }
+
+  function renderBudget() {
+    const item = state.budgets?.find((budget) => budget.safraId === state.budgetSeason) || null;
+    const edit = $("[data-budget-edit]");
+    const status = $("[data-budget-status]");
+    const planned = item?.planejado != null;
+    edit.disabled = !item || item.finalizada;
+    edit.title = item?.finalizada ? "Safra finalizada: orçamento somente leitura." : "";
+    edit.setAttribute("aria-label", planned ? "Editar orçamento da safra" : "Definir orçamento da safra");
+    $("[data-budget-total]").textContent = !item ? "-" : planned ? money.format(item.planejado) : "Não definido";
+    $("[data-budget-spent]").textContent = item ? money.format(item.realizado) : "-";
+    $("[data-budget-deviation]").textContent = planned ? signed(item.desvio) : "-";
+    $("[data-budget-percent]").textContent = planned ? `${percentText(item.percentualUsado)} utilizado` : "-";
+    $("[data-budget-remaining]").textContent = !planned ? "" : item.saldo >= 0 ? `${money.format(item.saldo)} restantes` : `${money.format(-item.saldo)} acima do orçamento`;
+    $(".budget-progress").hidden = !planned;
+    const bar = $("[data-budget-progress]");
+    bar.style.width = `${planned ? Math.min(100, item.percentualUsado) : 0}%`;
+    bar.dataset.situation = item?.situacao || "";
+    status.hidden = !item;
+    status.dataset.situation = item?.situacao || "";
+    status.textContent = item ? budgetStatus(item) : "";
+    if (!state.safras.length && state.budgets) $("[data-budget-message]").textContent = "Cadastre uma safra para definir o orçamento.";
+
+    const escape = window.AgroLocal.escape;
+    $("[data-budget-list]").innerHTML = (state.budgets || []).map((budget) => {
+      const situation = SITUATIONS[budget.situacao] || SITUATIONS["sem-orcamento"];
+      const values = budget.planejado != null
+        ? `${money.format(budget.realizado)} de ${money.format(budget.planejado)} (${percentText(budget.percentualUsado)})`
+        : `${money.format(budget.realizado)} realizado, sem planejado`;
+      return `<button class="budget-list-item${budget.safraId === state.budgetSeason ? " is-selected" : ""}" type="button" data-budget-pick="${escape(budget.safraId)}"><span class="budget-list-info"><strong>${escape(budget.safraNome)}</strong><small>${escape(values)}</small></span><span class="badge ${situation.css}" data-budget-situation="${escape(budget.situacao)}">${situation.label}</span></button>`;
+    }).join("") || '<p class="cost-row-muted">Nenhuma safra na propriedade.</p>';
   }
 
   function bars(rows) {
@@ -367,6 +453,7 @@
     state.talhaoId = $("[data-cost-filter-plot]").value;
     state.safraId = $("[data-cost-filter-season]").value;
     $$("[data-cost-filter-plot], [data-cost-filter-season]").forEach((select) => select.dispatchEvent(new Event("change")));
+    fillBudgetSelect();
   }
 
   // Safra finalizada não recebe lançamento novo; a edição de um antigo mantém a opção visível.
@@ -504,30 +591,79 @@
     });
   }
 
+  // O orçamento só muda depois da confirmação do servidor; erros voltam no campo.
   function initBudgetModal() {
     const form = $("[data-budget-form]");
-    $("[data-budget-edit]").addEventListener("click", () => {
-      form.elements.budget.value = state.budget;
-      $("[data-error-for='budget']", form).textContent = "";
-      setModalState("budget-form", true);
-      form.elements.budget.focus();
+    const errorHost = $("[data-budget-form-error]", form);
+    const remove = $("[data-budget-remove]", form);
+    const current = () => state.budgets?.find((budget) => budget.safraId === state.budgetSeason) || null;
+    const setSaving = (value) => $$("button", form).forEach((button) => { button.disabled = value; });
+
+    $("[data-budget-season]").addEventListener("change", (event) => {
+      if (!event.target.value) return;
+      state.budgetSeason = event.target.value;
+      renderBudget();
     });
-    form.addEventListener("submit", (event) => {
+    $("[data-budget-list]").addEventListener("click", (event) => {
+      const pick = event.target.closest("[data-budget-pick]");
+      if (!pick) return;
+      $("[data-budget-season]").value = pick.dataset.budgetPick;
+      $("[data-budget-season]").dispatchEvent(new Event("change"));
+    });
+    $("[data-budget-retry]").addEventListener("click", loadBudgets);
+    $("[data-budget-edit]").addEventListener("click", () => {
+      const item = current();
+      if (!item || item.finalizada) return;
+      form.reset();
+      clearErrors(form);
+      errorHost.textContent = "";
+      form.elements.valor.value = item.planejado ?? "";
+      form.elements.alerta.value = item.alerta ?? 80;
+      remove.hidden = item.planejado == null;
+      $("#budget-form-title").textContent = item.planejado == null ? "Definir orçamento" : "Editar orçamento";
+      $("[data-budget-form-desc]").textContent = `${item.safraNome}: o realizado vem dos custos lançados nesta safra.`;
+      setModalState("budget-form", true);
+      form.elements.valor.focus();
+    });
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const budget = Number(form.elements.budget.value);
-      const error = $("[data-error-for='budget']", form);
-      if (!Number.isFinite(budget) || budget <= 0) {
-        form.elements.budget.setAttribute("aria-invalid", "true");
-        error.textContent = "Informe um valor maior que zero.";
-        toast("error", "Orçamento inválido", "Revise o valor informado.");
-        return;
+      const item = current();
+      if (!item) return;
+      clearErrors(form);
+      errorHost.textContent = "";
+      const valor = Number(form.elements.valor.value);
+      const alerta = Number(form.elements.alerta.value);
+      let invalid = false;
+      if (!form.elements.valor.value || !Number.isFinite(valor) || valor <= 0) { setError(form, "valor", "Informe um valor maior que zero."); invalid = true; }
+      if (!Number.isInteger(alerta) || alerta < 50 || alerta > 100) { setError(form, "alerta", "Use um alerta entre 50% e 100% do planejado."); invalid = true; }
+      if (invalid) { toast("error", "Orçamento inválido", "Revise os campos destacados."); return; }
+      setSaving(true);
+      try {
+        await request(`/api/orcamentos/${encodeURIComponent(item.safraId)}`, { method: "PUT", body: JSON.stringify({ valor, alerta }) });
+        setModalState("budget-form", false);
+        toast("success", "Orçamento salvo", `${item.safraNome}: ${money.format(valor)} planejado, confirmado pelo servidor.`);
+      } catch (error) {
+        if (error.fields) Object.entries(error.fields).forEach(([name, text]) => setError(form, name, text));
+        else errorHost.textContent = error.message;
+        toast("error", "Orçamento não salvo", error.message);
       }
-      form.elements.budget.removeAttribute("aria-invalid");
-      state.budget = budget;
-      if (!persist()) return;
-      renderMetrics();
-      setModalState("budget-form", false);
-      toast("success", "Orçamento atualizado", "O acompanhamento foi recalculado sobre o recorte atual.");
+      setSaving(false);
+      await loadBudgets();
+    });
+    remove.addEventListener("click", async () => {
+      const item = current();
+      if (!item) return;
+      setSaving(true);
+      try {
+        await request(`/api/orcamentos/${encodeURIComponent(item.safraId)}`, { method: "DELETE" });
+        setModalState("budget-form", false);
+        toast("info", "Orçamento removido", `${item.safraNome} ficou sem planejado.`);
+      } catch (error) {
+        errorHost.textContent = error.message;
+        toast("error", "Remoção não confirmada", error.message);
+      }
+      setSaving(false);
+      await loadBudgets();
     });
   }
 
@@ -598,6 +734,11 @@
     $("[data-cost-filter-season]").addEventListener("change", (event) => {
       if (event.target.value === state.safraId) return;
       state.safraId = event.target.value;
+      if (state.safras.some((safra) => safra.id === state.safraId)) {
+        state.budgetSeason = state.safraId;
+        $("[data-budget-season]").value = state.budgetSeason;
+        $("[data-budget-season]").dispatchEvent(new Event("change"));
+      }
       load();
     });
     $("[data-cost-clear-filters]").addEventListener("click", () => {
@@ -687,8 +828,8 @@
 
   function init() {
     const initial = window.AgroLocal.initial("costs");
-    persist = window.AgroLocal.connect("costs", () => ({ budget: state.budget, period: periodToken(), entries: [] }),
-      (records) => { state.budget = records.budget; readPeriod(records.period); },
+    persist = window.AgroLocal.connect("costs", () => ({ budget: state.legacyBudget, period: periodToken(), entries: [] }),
+      (records) => { state.legacyBudget = records.budget; readPeriod(records.period); },
       initial, { budget: initial.budget, period: "todo", entries: [] });
     initDatePicker();
     initForm();

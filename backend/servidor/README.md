@@ -445,6 +445,33 @@ handler tenta sincronizar na própria escrita; se ainda falhar, a resposta traz
 `PUT` e `DELETE` de um custo de consumo devolvem 409: ele muda pela
 movimentação do insumo.
 
+### Orçamento por safra
+
+Planejado versus realizado de cada safra da propriedade ativa (#226). Detalhes
+e evidências em [docs/orcamento.md](../../docs/orcamento.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/orcamentos` | 200 com todas as safras da propriedade, com ou sem planejado |
+| `GET /api/orcamentos/{safraId}` | 200 · 404 safra fora da propriedade |
+| `PUT /api/orcamentos/{safraId}` | 201 na primeira definição · 200 nas alterações · 400 · 404 · 409 safra finalizada |
+| `DELETE /api/orcamentos/{safraId}` | 204 · 404 sem orçamento · 409 safra finalizada |
+
+Corpo do `PUT`: `valor` (número de 0,01 até 1 bilhão, guardado em centavos) e
+`alerta` opcional (inteiro de 50 a 100, o percentual do planejado que liga o
+aviso; padrão 80, e a alteração sem `alerta` mantém o anterior). Há no máximo
+um orçamento por safra (índice único `propriedadeId` + `safraId`).
+
+Cada item traz `planejado`, `alerta`, `realizado` (soma em centavos de todos os
+custos da safra, manuais e de consumo, o mesmo total de
+`/api/custos/resumo?safraId=`), `lancamentos`, `saldo` (planejado - realizado),
+`desvio` (realizado - planejado), `desvioPercentual`, `percentualUsado`,
+`planejadoPorHectare`, `realizadoPorHectare` e `situacao`: `sem-orcamento`,
+`dentro`, `proximo` (usou `alerta`% ou mais) ou `acima` (passou do planejado).
+Safra sem orçamento não ganha meta inventada: planejado, desvio e percentuais
+ficam `null`. `TesteOrcamentos` roda no `testar` em memória e, com banco
+`_teste`, em `java -cp 'bin:lib/*' TesteOrcamentos --mongo`.
+
 ### Saúde
 
 - `GET /health` → `{"status":"UP"}`
@@ -512,6 +539,7 @@ backend/servidor/
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `custos`: índice em `(propriedadeId, date)`.
+- `orcamentos`: índice único em `(propriedadeId, safraId)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
@@ -521,5 +549,5 @@ Atividades, Insumos, Ocorrências, Dashboard, Notificações e Configurações.
 Os formulários de autenticação do front usam as rotas desta API.
 A tela `frontend/safras.html` consome `/api/safras` (criar, avançar etapas,
 histórico e vínculos). Escopo I10/I11 e o papel do `core`: [docs/safras.md](../../docs/safras.md).
-A tela de Custos ainda pode gravar no navegador em alguns fluxos; o resumo por
-safra usa `/api/custos` quando autenticado.
+A tela de Custos usa `/api/custos` e `/api/orcamentos`; no navegador fica só o
+período escolhido.

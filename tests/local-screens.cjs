@@ -139,21 +139,21 @@ let failures = 0;
   });
 
   // Lançamentos e indicadores reais estão em tests/custos-real.cjs (servidor Java).
-  await run('custos: orçamento e período locais, sem inventar lançamentos sem API', async (page) => {
+  await run('custos: período local, sem inventar lançamentos nem orçamento sem API', async (page) => {
     await go(page, 'custos.html');
     await page.waitForFunction(() => document.querySelector('[data-cost-message]').textContent.includes('Não foi possível'));
     assert.equal(await page.locator('[data-cost-table] tbody tr').count(), 0);
     assert.equal(await page.locator('[data-cost-total]').textContent(), '-');
-    await page.locator('[data-budget-edit]').click();
-    await submit(page, '[data-budget-form]', { budget: '100000' });
-    assert.equal((await data(page, 'costs')).budget, 100000);
+    // O orçamento vem de /api/orcamentos: sem API não há valor nem edição.
+    assert.equal(await page.locator('[data-budget-edit]').isDisabled(), true);
+    assert.equal(await page.locator('[data-budget-total]').textContent(), '-');
     await page.locator('[data-open-period-modal]').click();
     await page.locator('[data-period-option="ano"]').click();
     await page.locator('[data-confirm-period]').click();
     assert.equal((await data(page, 'costs')).period, 'ano');
     await page.reload();
     assert.equal(await page.locator('[data-period-label]').textContent(), 'Ano atual');
-    assert.match(await page.locator('[data-budget-total]').textContent(), /100.000,00/);
+    assert.equal(await page.locator('[data-budget-total]').textContent(), '-');
   });
 
   await run('configurações: perfil, propriedade, preferências e safra sem credenciais', async (page, context, api) => {
