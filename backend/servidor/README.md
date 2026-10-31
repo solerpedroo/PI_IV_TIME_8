@@ -360,12 +360,46 @@ Regras do ciclo:
 - só se exclui safra em Planejamento (depois disso ela já tem histórico);
 - um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`);
 - safra com custos lançados não é excluída, e a edição não pode tirar dela um
-  talhão que tenha custo nela (409 com o campo `talhoes`).
+  talhão que tenha custo nela (409 com o campo `talhoes`);
+- a edição também não tira da safra um talhão que já tem colheita registrada nela
+  (409 com o campo `talhoes`).
 
 O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
 `/api/talhoes/{id}/historico` dos seus talhões cuja data, no fuso de São Paulo,
 cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
 `talhaoNome`.
+
+### Colheitas
+
+Quantidade colhida por safra e talhão e produtividade por hectare (#222).
+Detalhes e evidências em [docs/colheita.md](../../docs/colheita.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/colheitas?safraId=&talhaoId=&cultura=&de=&ate=` | 200 com a lista, da data mais recente para a mais antiga · 400 período inválido |
+| `GET /api/colheitas/resumo?` (mesmos filtros) | 200 com produção e produtividade do recorte · 400 |
+| `GET /api/colheitas/comparativo?cultura=` | 200 com um item por safra, do início mais antigo ao mais novo |
+| `POST /api/colheitas` | 201 · 400 · 409 safra antes do plantio ou finalizada |
+| `GET /api/colheitas/{id}` | 200 · 404 |
+| `PUT /api/colheitas/{id}` | 200 · 400 · 404 · 409 |
+| `DELETE /api/colheitas/{id}` | 204 · 404 · 409 safra finalizada |
+
+Campos: `safraId` e `talhaoId` obrigatórios (o talhão precisa ser da safra),
+`quantidade` maior que zero, `unidade` `kg`, `t` (1.000 kg) ou `sc` (saca de
+60 kg), `data` em `AAAA-MM-DD` (não antes do início da safra nem no futuro) e
+`observacao` opcional de até 200 caracteres. A resposta traz `quantidadeKg`,
+`safraNome`, `talhaoNome`, `cultura` e `finalizada`. Colheita só é registrada da
+etapa Plantio em diante; safra finalizada fica só para consulta.
+
+O resumo devolve `registros`, `totalKg`, `totalSacas`, `areaHectares`,
+`produtividadeKgHa`, `produtividadeScHa`, `porSafra` e `porTalhao`. A área de
+cada ciclo é a soma dos hectares dos talhões da safra (ou só o talhão filtrado);
+um talhão colhido em dois ciclos conta a área duas vezes. Os totais são somados
+em gramas. Sem área ou sem colheita, a produtividade é `null`. O comparativo traz
+todas as safras, inclusive sem colheita (`totalKg` 0 e produtividade `null`), com
+`talhoesColhidos`, `ultimaColheita` e `variacaoPercentual` da produtividade frente
+ao ciclo anterior da mesma cultura. `TesteColheitas` roda no `testar` em memória e,
+com banco `_teste`, em `java -cp 'bin:lib/*' TesteColheitas --mongo`.
 
 ### Calendário
 
@@ -510,6 +544,7 @@ backend/servidor/
 - `usuarios`: índice único em `email`.
 - `propriedades`.
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `colheitas`: índices em `(propriedadeId, safraId)` e `(propriedadeId, data)`.
 - `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `custos`: índice em `(propriedadeId, date)`.
 
