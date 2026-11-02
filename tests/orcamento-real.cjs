@@ -144,8 +144,11 @@ async function shot(page, name) {
     // 2. Validação local não envia nada; depois o planejado vale só com a resposta da API.
     await page.locator("[data-budget-edit]").click();
     await submit(page, "[data-budget-form]", { valor: "0", alerta: "90" });
-    assert.match(await text(page, "[data-budget-form] [data-error-for='valor']"), /maior que zero/);
+    assert.match(await text(page, "[data-budget-form] [data-error-for='valor']"), /0,01/);
     assert.equal((await api(`/api/orcamentos/${soja.id}`, null, token)).data.planejado, null, "valor inválido não chegou ao servidor");
+    await submit(page, "[data-budget-form]", { valor: "0.005", alerta: "90" });
+    assert.match(await text(page, "[data-budget-form] [data-error-for='valor']"), /0,01/);
+    assert.equal((await api(`/api/orcamentos/${soja.id}`, null, token)).data.planejado, null, "valor abaixo de 0,01 não chegou ao servidor");
 
     // Valor acima do máximo passa no navegador e volta do servidor no campo.
     await submit(page, "[data-budget-form]", { valor: "2000000000", alerta: "90" });
@@ -197,9 +200,12 @@ async function shot(page, name) {
     await page.locator(`[data-budget-pick="${soja.id}"]`).click();
     assert.match(await text(page, "[data-budget-total]"), /900,00/);
 
-    // Remover devolve a safra para "sem orçamento" e mantém o realizado.
+    // Remover com confirmação devolve a safra para "sem orçamento" e mantém o realizado.
     await page.locator("[data-budget-edit]").click();
     await page.locator("[data-budget-remove]").click();
+    await page.locator("[data-modal='budget-delete']").waitFor();
+    assert.equal(await page.locator("[data-modal='budget-delete']").getAttribute("aria-hidden"), "false");
+    await page.locator("[data-confirm-budget-delete]").click();
     await page.waitForFunction(() => document.querySelector("[data-budget-total]").textContent === "Não definido");
     assert.equal((await api(`/api/orcamentos/${soja.id}`, null, token)).data.planejado, null);
     assert.match(await text(page, "[data-budget-spent]"), /950,00/);
