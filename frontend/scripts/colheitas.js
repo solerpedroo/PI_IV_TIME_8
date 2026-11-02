@@ -225,11 +225,14 @@
 
   function validar(form, payload) {
     const erros = {};
+    const safra = state.safras.find((item) => item.id === payload.safraId);
     if (!payload.safraId) erros.safraId = "Selecione a safra.";
     if (!payload.talhaoId) erros.talhaoId = "Selecione o talhão.";
     if (!Number.isFinite(payload.quantidade) || payload.quantidade <= 0) erros.quantidade = "Informe uma quantidade maior que zero.";
+    else if (Math.round(payload.quantidade * 1000) === 0) erros.quantidade = "Informe no mínimo 0,001 na unidade escolhida.";
     if (!payload.data) erros.data = "Informe a data da colheita.";
     else if (payload.data > hoje()) erros.data = "A data da colheita não pode estar no futuro.";
+    else if (safra?.dataInicio && payload.data < safra.dataInicio) erros.data = "A colheita não pode ser anterior ao início da safra.";
     if (Object.keys(erros).length) {
       mostrarErros(form, erros);
       return false;
@@ -330,7 +333,11 @@
     const ciclos = $("[data-safras-list]");
     if (ciclos) new MutationObserver(() => {
       clearTimeout(recarga);
-      recarga = setTimeout(() => { carregarReferencias().then(carregar).catch(() => {}); }, 300);
+      recarga = setTimeout(() => {
+        carregarReferencias().then(carregar).catch((error) => {
+          mensagem(`${error?.error || "Servidor indisponível."} A lista de safras da colheita pode estar desatualizada.`, true);
+        });
+      }, 300);
     }).observe(ciclos, { childList: true });
   }
 
