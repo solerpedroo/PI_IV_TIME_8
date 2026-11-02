@@ -307,9 +307,9 @@ public class SafrasHandler implements Manipulador
         return ret;
     }
 
-    // 409 se a edicao tirar da safra um talhao que tem colheita registrada nela; null se puder
-    private Resposta talhaoComColheita (String propriedadeId, String safraId, Document campos,
-                                        LinkedHashMap<String, Document> talhoes) throws Exception
+    // 409 se a edicao invalidar o talhao ou a data de uma colheita existente; null se puder
+    private Resposta conflitoComColheita (String propriedadeId, String safraId, Document campos,
+                                          LinkedHashMap<String, Document> talhoes) throws Exception
     {
         Resposta     ret      = null;
         List<String> mantidos = campos.getList ("talhoes", String.class);
@@ -329,6 +329,11 @@ public class SafrasHandler implements Manipulador
                 ret = Resposta.json (409, new Document ("error", "Plot has harvests in this crop season")
                                               .append ("fields", new Document ("talhoes", mensagem)));
             }
+            else if (ret == null && safraId.equals (colheita.getString ("safraId")) &&
+                     colheita.getString ("data").compareTo (campos.getString ("dataInicio")) < 0)
+                ret = Resposta.json (409, new Document ("error", "Crop season starts after a registered harvest")
+                                              .append ("fields", new Document ("dataInicio",
+                                                       "A safra possui colheita em " + colheita.getString ("data") + ".")));
         }
 
         return ret;
@@ -496,7 +501,7 @@ public class SafrasHandler implements Manipulador
             if (ret != null)
                 return ret;
 
-            ret = this.talhaoComColheita (propriedadeId, id, campos, talhoes);
+            ret = this.conflitoComColheita (propriedadeId, id, campos, talhoes);
             if (ret != null)
                 return ret;
 
