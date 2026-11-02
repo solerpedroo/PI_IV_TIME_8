@@ -148,7 +148,9 @@ public class Servidor
         CustosHandler handlerCustos = new CustosHandler (custos, safras, talhoes, sessoes);
         handlerCustos.setConsumo (consumo);
         handlerCustos.registrar (roteador);
-        new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
+        RelatorioSafraHandler handlerRelatorioSafra = new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes);
+        handlerRelatorioSafra.setColheitas (colheitas);
+        handlerRelatorioSafra.registrar (roteador);
         new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
         new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
         new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
