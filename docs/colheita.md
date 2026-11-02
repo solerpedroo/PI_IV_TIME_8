@@ -13,13 +13,14 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
 - Unidade explícita: `kg`, `t` (1.000 kg) ou `sc` (saca de 60 kg). A quantidade
   fica como foi informada e também convertida em `quantidadeKg`.
 - Recusas (400, campo a campo): safra ou talhão de fora da propriedade, talhão
-  que não é da safra, quantidade zero, negativa ou em texto, unidade fora da
-  lista, data impossível, anterior ao início da safra ou no futuro, observação
+  que não é da safra, quantidade abaixo de 0,001, negativa ou em texto, unidade
+  fora da lista, data impossível, anterior ao início da safra ou no futuro, observação
   com mais de 200 caracteres. Nada é gravado nas recusas.
 - Regra do ciclo: colheita só a partir do Plantio (Planejamento e Preparação
   devolvem 409 no campo `safraId`); safra finalizada fica só para consulta
   (`POST`, `PUT` e `DELETE` devolvem 409, como os custos dela).
-- A edição de uma safra não tira dela um talhão que já tem colheita registrada.
+- A edição de uma safra não tira dela um talhão que já tem colheita registrada
+  nem move o início do ciclo para depois de uma colheita existente.
 
 ## Produtividade por hectare (#224)
 
@@ -46,14 +47,14 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
 
 ## Evidência
 
-- `backend/servidor/testar.sh`: `TesteColheitas` com 41 verificações em memória
+- `backend/servidor/testar.sh`: `TesteColheitas` com 43 verificações em memória
   sobre um conjunto conhecido (Soja 24/25 com 150 t em 50 ha = 50 sc/ha e Soja
   25/26 com 186 t = 62 sc/ha, +24%): todas as recusas, etapa antes do plantio,
   conversão de unidades, resumo por safra, talhão, cultura e período, talhão
   sem área, comparativo com ciclo sem colheita, isolamento entre propriedades,
   troca de contexto, safra que não perde talhão colhido e safra finalizada.
 - `java -cp 'bin:lib/*' TesteColheitas --mongo` com MongoDB real (replica set):
-  43 verificações, incluindo a leitura por repositórios novos (reinício) e os
+  45 verificações, incluindo a leitura por repositórios novos (reinício) e os
   índices.
 - `node tests/colheita-real.cjs` (servidor Java em memória + Chromium): nada
   inventado sem colheita, validação local e do servidor, dois registros pela
