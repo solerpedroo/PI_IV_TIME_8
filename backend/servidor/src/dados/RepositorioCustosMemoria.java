@@ -46,6 +46,22 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         return ret;
     }
 
+    public synchronized List<Document> listarPorSafra (String propriedadeId, String safraId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (safraId == null)
+            throw new Exception ("Safra ausente");
+
+        ArrayList<Document> ret = new ArrayList<Document> ();
+        for (Document custo : this.custos.values ())
+            if (propriedadeId.equals (custo.getString ("propriedadeId")) && safraId.equals (custo.getString ("safraId")))
+                ret.add (new Document (custo));
+
+        return ret;
+    }
+
     public synchronized Document buscarPorId (String propriedadeId, String id) throws Exception
     {
         Document ret   = null;
