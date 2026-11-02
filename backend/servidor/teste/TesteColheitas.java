@@ -302,6 +302,9 @@ public class TesteColheitas
             Document periodo = TesteColheitas.json (TesteColheitas.chamar (roteador, a, "GET", rota + "/resumo?de=2026-03-11&ate=2026-03-31", null));
             TesteColheitas.conferir ("periodo 11 a 31/03/2026: 2 registros (66.000 kg)",
                                      periodo.getInteger ("registros").intValue () == 2 && TesteColheitas.igual (periodo.get ("totalKg"), 66000));
+            TesteColheitas.conferir ("periodo: produtividade null (nao divide producao parcial pela area do ciclo)",
+                                     periodo.get ("produtividadeKgHa") == null && periodo.get ("produtividadeScHa") == null &&
+                                     Boolean.TRUE.equals (periodo.getBoolean ("produtividadeOmitidaPorPeriodo")));
             TesteColheitas.conferir ("periodo invertido -> 400",
                                      TesteColheitas.status (roteador, a, "GET", rota + "/resumo?de=2026-04-01&ate=2026-03-01", null) == 400);
 
@@ -377,8 +380,8 @@ public class TesteColheitas
                 Document lido = TesteColheitas.json (TesteColheitas.chamar (depois, a, "GET", rota + "/resumo?safraId=" + antiga, null));
                 TesteColheitas.conferir ("Mongo: repositorios novos (reinicio) leem 150.000 kg e 50 sc/ha",
                                          TesteColheitas.igual (lido.get ("totalKg"), 150000) && TesteColheitas.igual (lido.get ("produtividadeScHa"), 50));
-                TesteColheitas.conferir ("Mongo: indices de safra e de data criados",
-                                         conexao.getBanco ().getCollection ("colheitas").listIndexes ().into (new ArrayList<Document> ()).size () == 3);
+                TesteColheitas.conferir ("Mongo: indices de safra, data e talhao criados",
+                                         conexao.getBanco ().getCollection ("colheitas").listIndexes ().into (new ArrayList<Document> ()).size () == 4);
             }
         }
         catch (Exception erro)
