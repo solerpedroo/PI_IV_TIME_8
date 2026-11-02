@@ -213,6 +213,7 @@ public class TesteColheitas
             String amanha = LocalDate.now (ZoneId.of ("America/Sao_Paulo")).plusDays (1).toString ();
             String[][] recusas = {
                 { "quantidade zero",               TesteColheitas.colheita (atual, norte, 0,    "kg", "2026-03-01"), "quantidade" },
+                { "quantidade abaixo da precisao", TesteColheitas.colheita (atual, norte, 0.0004, "kg", "2026-03-01"), "quantidade" },
                 { "quantidade negativa",           TesteColheitas.colheita (atual, norte, -5,   "kg", "2026-03-01"), "quantidade" },
                 { "unidade fora da lista",         TesteColheitas.colheita (atual, norte, 10,   "saca", "2026-03-01"), "unidade" },
                 { "talhao fora da safra",          TesteColheitas.colheita (atual, leste, 10,   "kg", "2026-03-01"), "talhaoId" },
@@ -343,6 +344,13 @@ public class TesteColheitas
             Resposta tirarSul = TesteColheitas.chamar (roteador, a, "PUT", "/api/safras/" + atual, semSul);
             TesteColheitas.conferir ("safra nao perde talhao que ja tem colheita (409 no campo talhoes)",
                                      tirarSul.getStatus () == 409 && TesteColheitas.json (tirarSul).get ("fields", Document.class).getString ("talhoes").contains ("Sul"));
+
+            String inicioDepois = new Document ("nome", "Soja 25/26").append ("cultura", "Soja").append ("dataInicio", "2026-03-11")
+                                     .append ("dataFim", "2026-06-30").append ("talhoes", List.of (norte, sul)).toJson ();
+            Resposta moverInicio = TesteColheitas.chamar (roteador, a, "PUT", "/api/safras/" + atual, inicioDepois);
+            TesteColheitas.conferir ("safra nao comeca depois de uma colheita existente (409 em dataInicio)",
+                                     moverInicio.getStatus () == 409 &&
+                                     TesteColheitas.json (moverInicio).get ("fields", Document.class).containsKey ("dataInicio"));
 
             // ---------------------------------------------------------------- excluir e safra finalizada
             TesteColheitas.conferir ("DELETE -> 204 e depois 404",
