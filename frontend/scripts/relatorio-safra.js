@@ -32,10 +32,16 @@
   }
   function rows(items, pending = false) {
     if (!items.length) return `<p>${pending ? "Nenhuma pendência." : "Nenhum registro no período."}</p>`;
-    return items.map(item => `<article class="meta-cell" data-report-item="${escape(item.tipo)}"><strong>${escape(item.tipo)} · ${escape(item.descricao)}</strong><p>${escape(item.id)} · ${escape(item.data || "Sem data completa")} · ${escape(item.talhao || "Sem talhão")} · ${escape(item.status || "")}</p>${item.valorCentavos != null ? `<p>${escape(item.categoria)} · ${escape(money(item.valorCentavos))}</p>` : ""}${pending ? `<p>${escape(item.motivo)}</p>` : ""}</article>`).join("");
+    return items.map(item => `<article class="meta-cell" data-report-item="${escape(item.tipo)}"><strong>${escape(item.tipo)} · ${escape(item.descricao)}</strong><p>${escape(item.id)} · ${escape(item.data || "Sem data completa")} · ${escape(item.talhao || "Sem talhão")} · ${escape(item.status || "")}</p>${item.valorCentavos != null ? `<p>${escape(item.categoria)} · ${escape(money(item.valorCentavos))}</p>` : ""}${item.quantidadeKg != null ? `<p>${escape(item.quantidadeKg)} kg</p>` : ""}${pending ? `<p>${escape(item.motivo)}</p>` : ""}</article>`).join("");
+  }
+  function produtividade(report) {
+    if (report.produtividadeScHa == null && report.produtividadeKgHa == null) {
+      return report.contagens?.colheita ? "sem área de talhão no ciclo" : "sem colheita no período";
+    }
+    return `${report.produtividadeScHa} sc/ha · ${report.produtividadeKgHa} kg/ha`;
   }
   function render(report) {
-    content.innerHTML = `<section class="history-section"><h3>${escape(report.safra.nome)}</h3><p>${escape(report.propriedade.nome)} · ${escape(report.safra.cultura)} · ${escape(report.safra.etapa)}</p><p>Período inclusivo: ${escape(report.periodo.inicio)} a ${escape(report.periodo.fim)}</p><p>${escape(report.origemArea)}: ${escape(report.areaHectares)}</p><p>${report.talhoes.map(item => `${escape(item.nome)} (${escape(item.hectares)} ha)`).join(" · ")}</p><p>${escape(report.regraOcorrencias)}</p><p>Atividades: ${report.contagens.atividade} · Ocorrências: ${report.contagens.ocorrencia} · Custos: ${report.contagens.custo}</p><p>Total de custos: <strong data-report-total>${escape(money(report.totalCentavos))}</strong></p><h3>Registros no período</h3>${rows(report.registros)}<h3>Pendências (${report.pendencias.length})</h3>${rows(report.pendencias, true)}</section>`;
+    content.innerHTML = `<section class="history-section"><h3>${escape(report.safra.nome)}</h3><p>${escape(report.propriedade.nome)} · ${escape(report.safra.cultura)} · ${escape(report.safra.etapa)}</p><p>Período inclusivo: ${escape(report.periodo.inicio)} a ${escape(report.periodo.fim)}</p><p>${escape(report.origemArea)}: ${escape(report.areaHectares)}</p><p>${report.talhoes.map(item => `${escape(item.nome)} (${escape(item.hectares)} ha)`).join(" · ")}</p><p>${escape(report.regraOcorrencias)}</p><p>Atividades: ${report.contagens.atividade} · Ocorrências: ${report.contagens.ocorrencia} · Custos: ${report.contagens.custo} · Colheitas: ${report.contagens.colheita ?? 0}</p><p>Produção colhida: <strong data-report-harvest>${escape(report.totalColheitaKg ?? 0)} kg</strong> · Produtividade: <strong data-report-yield>${escape(produtividade(report))}</strong></p><p>Total de custos: <strong data-report-total>${escape(money(report.totalCentavos))}</strong></p><h3>Registros no período</h3>${rows(report.registros)}<h3>Pendências (${report.pendencias.length})</h3>${rows(report.pendencias, true)}</section>`;
   }
   async function open(id, trigger) {
     const requestGeneration = ++generation;
@@ -74,12 +80,15 @@
       ["Regra das ocorrências", report.regraOcorrencias],
       ...report.talhoes.map(item => ["Talhão", item.id, item.nome, item.hectares, "ha"]),
       ["Atividades", report.contagens.atividade], ["Ocorrências", report.contagens.ocorrencia], ["Custos", report.contagens.custo],
+      ["Colheitas", report.contagens.colheita ?? 0], ["Produção colhida (kg)", report.totalColheitaKg ?? 0],
+      ["Produtividade (kg/ha)", report.produtividadeKgHa ?? ""], ["Produtividade (sc/ha)", report.produtividadeScHa ?? ""],
       ["Total de custos (BRL)", (report.totalCentavos / 100).toFixed(2)],
-      ["Conjunto", "Tipo", "ID", "Descrição", "Data", "Talhão", "Status", "Categoria", "Valor (BRL)", "Motivo"]
+      ["Conjunto", "Tipo", "ID", "Descrição", "Data", "Talhão", "Status", "Categoria", "Valor (BRL)", "Kg", "Motivo"]
     ];
     for (const [label, items] of [["Registro", report.registros], ["Pendência", report.pendencias]]) {
       for (const item of items) rows.push([label, item.tipo, item.id, item.descricao, item.data, item.talhao, item.status,
-        item.categoria, item.valorCentavos == null ? "" : (item.valorCentavos / 100).toFixed(2), item.motivo]);
+        item.categoria, item.valorCentavos == null ? "" : (item.valorCentavos / 100).toFixed(2),
+        item.quantidadeKg == null ? "" : item.quantidadeKg, item.motivo]);
     }
     return rows;
   }
