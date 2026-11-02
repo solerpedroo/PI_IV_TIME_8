@@ -16,6 +16,9 @@ public interface RepositorioCustos
     // em ordem de cadastro
     public List<Document> listar (String propriedadeId) throws Exception;
 
+    // so os lancamentos da safra (GET unitario de orcamento / filtros por safra)
+    public List<Document> listarPorSafra (String propriedadeId, String safraId) throws Exception;
+
     public Document buscarPorId (String propriedadeId, String id) throws Exception;
 
     // custo de consumo pela movimentacao de estoque; null se ainda nao existir

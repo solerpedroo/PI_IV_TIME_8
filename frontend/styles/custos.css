@@ -51,6 +51,28 @@
 .budget-progress-labels { display: flex; justify-content: space-between; gap: 12px; color: var(--text-secondary); font-size: 11px; }
 .budget-progress-labels span:first-child { color: var(--warning); font-weight: 600; }
 .progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--warning); transition: width .3s ease; }
+/* Planejado x realizado (#229): a cor acompanha a situação calculada pela API. */
+.progress-track span[data-situation="dentro"] { background: var(--success); }
+.progress-track span[data-situation="acima"] { background: var(--error); }
+.budget-body .input-group select { width: 100%; }
+.budget-status { margin: 0; border-radius: var(--radius-sm); padding: 9px 11px; background: var(--bg-subtle); color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+.budget-status[data-situation="dentro"] { background: var(--success-bg); color: var(--success); }
+.budget-status[data-situation="proximo"] { background: var(--warning-bg); color: #7a5a07; }
+.budget-status[data-situation="acima"] { background: var(--error-bg); color: var(--error); font-weight: 600; }
+.budget-message:empty, .budget-progress[hidden] { display: none; }
+.budget-message { margin: 0; }
+.budget-compare { display: grid; gap: 8px; padding: 0 20px 18px; border-top: 1px solid var(--border); }
+.budget-compare-title { margin: 14px 0 2px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.budget-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+.budget-list-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 10px; background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.budget-list-item:hover { border-color: var(--border-strong); }
+.budget-list-item.is-selected { border-color: var(--primary); background: var(--primary-subtle); }
+.budget-list-info { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.budget-list-info strong { color: var(--text-primary); font-size: 12px; font-weight: 600; }
+.budget-list-info small { color: var(--text-muted); font-size: 11px; }
+.budget-list-item .badge { flex: 0 0 auto; white-space: nowrap; }
+.budget-modal-actions { flex-wrap: wrap; }
+.budget-modal-actions .budget-remove { margin-right: auto; color: var(--error); }
 .crop-cost-list { display: grid; padding: 4px 20px 8px; }
 .crop-cost-item { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--border); }
 .crop-cost-item:last-child { border-bottom: 0; }

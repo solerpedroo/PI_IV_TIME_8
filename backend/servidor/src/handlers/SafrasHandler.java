@@ -8,6 +8,7 @@ package handlers;
 import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
 import dados.RepositorioColheitas;
+import dados.RepositorioOrcamentos;
 import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Manipulador;
@@ -62,6 +63,7 @@ public class SafrasHandler implements Manipulador
     private final Sessoes            sessoes;
     private final RepositorioAtividades atividades;
     private       RepositorioColheitas  colheitas; // opcional: sem ele, nao confere colheitas na edicao
+    private       RepositorioOrcamentos orcamentos; // opcional: remove o planejado ao excluir a safra
 
     // Evita perder vínculos ou alterar os dados de safra preservados nas atividades.
     private boolean temAtividades (String propriedadeId, String safraId) throws Exception
@@ -99,6 +101,12 @@ public class SafrasHandler implements Manipulador
     public void setColheitas (RepositorioColheitas colheitas)
     {
         this.colheitas = colheitas;
+    }
+
+    // planejado da safra (#226): a exclusao da safra nao deixa orcamento orfao
+    public void setOrcamentos (RepositorioOrcamentos orcamentos)
+    {
+        this.orcamentos = orcamentos;
     }
 
     // todas as rotas caem em tratar, que escolhe a acao pelo metodo e pelo caminho
@@ -538,7 +546,11 @@ public class SafrasHandler implements Manipulador
             else if (!this.safras.excluir (propriedadeId, id))
                 ret = Resposta.erro (404, "Not found");
             else
+            {
+                if (this.orcamentos != null)
+                    this.orcamentos.excluir (propriedadeId, id);
                 ret = Resposta.semConteudo ();
+            }
 
             return ret;
         }

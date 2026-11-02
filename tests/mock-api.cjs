@@ -51,6 +51,8 @@ async function mockApi(context, origin, options = {}) {
     if (options.visual && req.method() === 'GET') {
       if (['/api/atividades', '/api/safras', '/api/insumos', '/api/insumos/atividades'].includes(url.pathname)) return reply(200, []);
       if (url.pathname === '/api/insumos/resumo') return reply(200, {totalProdutos:0,criticos:0,valorEmEstoque:0,entradasNoMes:0});
+      // Orçamento por safra (#229): sem safras na revisão visual, a lista vem vazia.
+      if (url.pathname === '/api/orcamentos') return reply(200, []);
     }
     // Custos em memória com o mesmo contrato do CustosHandler (lista filtrada e resumo).
     if (options.visual && url.pathname.startsWith('/api/custos')) return costsRoute(req, url, reply, costs, plots);
