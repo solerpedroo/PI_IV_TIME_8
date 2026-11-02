@@ -25,12 +25,19 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
 ## Produtividade por hectare (#224)
 
 - `GET /api/colheitas/resumo` soma a produção do recorte (safra, talhão,
-  cultura e período) em gramas e divide pela área real: a soma dos hectares dos
-  talhões de cada safra, ou só o talhão filtrado. Um talhão colhido em dois
-  ciclos conta a área uma vez por ciclo.
+  cultura e período) em gramas. Sem `de`/`ate`, divide pela área real: a soma
+  dos hectares dos talhões de cada safra, ou só o talhão filtrado. Um talhão
+  colhido em dois ciclos conta a área uma vez por ciclo.
 - Devolve `kg/ha` e `sc/ha`, e o detalhamento `porSafra` e `porTalhao`.
 - Sem área (talhão com 0 ha) ou sem colheita, a produtividade fica `null`:
   a área não é inventada.
+- Com filtro de período (`de` e/ou `ate`), a produção do intervalo continua no
+  `totalKg`, mas `produtividadeKgHa`/`produtividadeScHa` ficam `null` e
+  `produtividadeOmitidaPorPeriodo` vem `true` — evita dividir produção parcial
+  pela área plantada inteira do ciclo.
+- A listagem é por propriedade (sem paginação, como custos/atividades); no Mongo
+  há índices `(propriedadeId, safraId)`, `(propriedadeId, data)` e
+  `(propriedadeId, talhaoId)`.
 
 ## Comparar ciclos e exibir produtividade (#225)
 
@@ -42,24 +49,29 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
   sc/ha e kg/ha do recorte, o comparativo de ciclos (clicar num ciclo filtra o
   resto) e a lista de colheitas com edição e exclusão confirmadas pelo servidor.
 - O formulário só oferece safras do Plantio em diante e só os talhões da safra
-  escolhida. Erro do servidor volta no campo. Ao avançar uma safra na lista de
-  ciclos, a seção relê as safras (a finalizada vira somente leitura).
+  escolhida; a validação local espelha o piso de 0,001 e a data ≥ início da
+  safra. Erro do servidor volta no campo. Ao avançar uma safra na lista de
+  ciclos, a seção relê as safras (a finalizada vira somente leitura) e avisa se
+  a recarga falhar.
+- O relatório de safra (`GET /api/relatorios/safras/{id}`) inclui colheitas do
+  ciclo no período, `totalColheitaKg`, `produtividadeKgHa`/`produtividadeScHa`
+  e a contagem `colheita` (tela e CSV).
 
 ## Evidência
 
-- `backend/servidor/testar.sh`: `TesteColheitas` com 43 verificações em memória
+- `backend/servidor/testar.sh`: `TesteColheitas` com 44 verificações em memória
   sobre um conjunto conhecido (Soja 24/25 com 150 t em 50 ha = 50 sc/ha e Soja
   25/26 com 186 t = 62 sc/ha, +24%): todas as recusas, etapa antes do plantio,
-  conversão de unidades, resumo por safra, talhão, cultura e período, talhão
-  sem área, comparativo com ciclo sem colheita, isolamento entre propriedades,
-  troca de contexto, safra que não perde talhão colhido e safra finalizada.
+  conversão de unidades, resumo por safra, talhão, cultura e período (com
+  produtividade omitida no período), talhão sem área, comparativo com ciclo sem
+  colheita, isolamento entre propriedades, troca de contexto, safra que não
+  perde talhão colhido e safra finalizada.
 - `java -cp 'bin:lib/*' TesteColheitas --mongo` com MongoDB real (replica set):
-  45 verificações, incluindo a leitura por repositórios novos (reinício) e os
+  46 verificações, incluindo a leitura por repositórios novos (reinício) e os
   índices.
 - `node tests/colheita-real.cjs` (servidor Java em memória + Chromium): nada
   inventado sem colheita, validação local e do servidor, dois registros pela
   tela, recarga, produtividade e variação entre os dois ciclos, edição, exclusão
   com confirmação e safra finalizada pela própria tela ficando somente leitura.
   Com `UI_SCREENSHOTS=<pasta>` grava a seção.
-- `relatorio-safra-real` (MongoDB real), `local-screens`, `local-persistence` e
-  `storage-scope` continuam passando.
+- `TesteRelatorioSafra` cobre produção e produtividade no relatório do ciclo.
