@@ -316,7 +316,10 @@
   function budgetStatus(item) {
     if (item.situacao === "sem-orcamento") return item.finalizada ? "Safra finalizada sem orçamento definido." : "Defina o planejado para acompanhar o desvio desta safra.";
     if (item.situacao === "acima") return `Acima do planejado em ${money.format(item.desvio)} (${percentText(item.desvioPercentual)}).`;
-    if (item.situacao === "proximo") return `Atenção: ${percentText(item.percentualUsado)} do planejado já foi usado (aviso a partir de ${item.alerta}%).`;
+    if (item.situacao === "proximo") {
+      if (item.percentualUsado >= 100) return `No limite do planejado (${percentText(item.percentualUsado)}). Só passa a “acima” com gasto maior que o orçamento.`;
+      return `Atenção: ${percentText(item.percentualUsado)} do planejado já foi usado (aviso a partir de ${item.alerta}%).`;
+    }
     return `${percentText(item.percentualUsado)} do planejado usado; o aviso começa em ${item.alerta}%.`;
   }
 
@@ -634,7 +637,7 @@
       const valor = Number(form.elements.valor.value);
       const alerta = Number(form.elements.alerta.value);
       let invalid = false;
-      if (!form.elements.valor.value || !Number.isFinite(valor) || valor <= 0) { setError(form, "valor", "Informe um valor maior que zero."); invalid = true; }
+      if (!form.elements.valor.value || !Number.isFinite(valor) || valor < 0.01) { setError(form, "valor", "Informe um valor de no mínimo R$ 0,01."); invalid = true; }
       if (!Number.isInteger(alerta) || alerta < 50 || alerta > 100) { setError(form, "alerta", "Use um alerta entre 50% e 100% do planejado."); invalid = true; }
       if (invalid) { toast("error", "Orçamento inválido", "Revise os campos destacados."); return; }
       setSaving(true);
@@ -650,19 +653,26 @@
       setSaving(false);
       await loadBudgets();
     });
-    remove.addEventListener("click", async () => {
+    remove.addEventListener("click", () => {
       const item = current();
+      if (!item || item.planejado == null) return;
+      $("[data-budget-delete-desc]").textContent = `O planejado de ${item.safraNome} (${money.format(item.planejado)}) será removido no servidor. O realizado dos custos permanece.`;
+      setModalState("budget-form", false);
+      setModalState("budget-delete", true);
+    });
+    $("[data-confirm-budget-delete]").addEventListener("click", async () => {
+      const item = current();
+      const botao = $("[data-confirm-budget-delete]");
       if (!item) return;
-      setSaving(true);
+      botao.disabled = true;
       try {
         await request(`/api/orcamentos/${encodeURIComponent(item.safraId)}`, { method: "DELETE" });
-        setModalState("budget-form", false);
+        setModalState("budget-delete", false);
         toast("info", "Orçamento removido", `${item.safraNome} ficou sem planejado.`);
       } catch (error) {
-        errorHost.textContent = error.message;
         toast("error", "Remoção não confirmada", error.message);
       }
-      setSaving(false);
+      botao.disabled = false;
       await loadBudgets();
     });
   }
@@ -805,7 +815,7 @@
   }
 
   function initModalDismissals() {
-    ["budget-form", "period-form", "cost-delete"].forEach((name) => {
+    ["budget-form", "budget-delete", "period-form", "cost-delete"].forEach((name) => {
       const modal = $(`[data-modal="${name}"]`);
       $$("[data-close-modal]", modal).forEach((button) => button.addEventListener("click", () => setModalState(name, false)));
       modal.addEventListener("click", (event) => {
