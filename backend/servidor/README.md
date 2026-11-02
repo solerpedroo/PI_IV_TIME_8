@@ -385,11 +385,12 @@ Detalhes e evidências em [docs/colheita.md](../../docs/colheita.md).
 | `DELETE /api/colheitas/{id}` | 204 · 404 · 409 safra finalizada |
 
 Campos: `safraId` e `talhaoId` obrigatórios (o talhão precisa ser da safra),
-`quantidade` maior que zero, `unidade` `kg`, `t` (1.000 kg) ou `sc` (saca de
+`quantidade` de no mínimo `0,001`, `unidade` `kg`, `t` (1.000 kg) ou `sc` (saca de
 60 kg), `data` em `AAAA-MM-DD` (não antes do início da safra nem no futuro) e
 `observacao` opcional de até 200 caracteres. A resposta traz `quantidadeKg`,
 `safraNome`, `talhaoNome`, `cultura` e `finalizada`. Colheita só é registrada da
-etapa Plantio em diante; safra finalizada fica só para consulta.
+etapa Plantio em diante; safra finalizada fica só para consulta. Depois de uma
+colheita, a safra não pode perder o talhão nem mover seu início para após o registro.
 
 O resumo devolve `registros`, `totalKg`, `totalSacas`, `areaHectares`,
 `produtividadeKgHa`, `produtividadeScHa`, `porSafra` e `porTalhao`. A área de
