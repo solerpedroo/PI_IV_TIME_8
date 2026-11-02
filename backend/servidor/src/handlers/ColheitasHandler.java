@@ -252,6 +252,8 @@ public class ColheitasHandler implements Manipulador
 
         if (!(quantidade instanceof Number) || !(((Number) quantidade).doubleValue () > 0)) // tambem barra NaN
             validacao.erro ("quantidade", "Informe uma quantidade maior que zero.");
+        else if (Math.round (((Number) quantidade).doubleValue () * 1000) == 0)
+            validacao.erro ("quantidade", "Informe no m\u00ednimo 0,001 na unidade escolhida.");
         else if (((Number) quantidade).doubleValue () > ColheitasHandler.QUANTIDADE_MAXIMA)
             validacao.erro ("quantidade", "Quantidade acima do permitido.");
 
