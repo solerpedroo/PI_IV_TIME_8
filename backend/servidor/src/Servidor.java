@@ -146,6 +146,7 @@ public class Servidor
         handlerCustos.setConsumo (consumo);
         handlerCustos.registrar (roteador);
         RepositorioOrcamentos orcamentos = conexao == null ? new RepositorioOrcamentosMemoria () : new RepositorioOrcamentosMongo (conexao.getBanco ());
+        handlerSafras.setOrcamentos (orcamentos);
         new OrcamentosHandler (orcamentos, safras, talhoes, custos, sessoes).registrar (roteador);
         new RelatorioSafraHandler (usuarios, safras, talhoes, atividades, ocorrencias, custos, sessoes).registrar (roteador);
         new RelatorioPropriedadeHandler (usuarios, talhoes, safras, estoque, atividades, ocorrencias, custos, sessoes).registrar (roteador);
