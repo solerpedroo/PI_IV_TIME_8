@@ -32,6 +32,8 @@ public class RepositorioColheitasMongo implements RepositorioColheitas
 
         this.colheitas.createIndex (Indexes.ascending ("propriedadeId", "safraId"));
         this.colheitas.createIndex (Indexes.ascending ("propriedadeId", "data"));
+        // filtro por talhao no resumo/lista (mesmo padrao: escopo da propriedade, sem paginacao)
+        this.colheitas.createIndex (Indexes.ascending ("propriedadeId", "talhaoId"));
     }
 
     // filtro por _id que tambem exige a propriedade (um usuario nunca enxerga colheita de outro)
