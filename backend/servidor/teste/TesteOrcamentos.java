@@ -191,7 +191,9 @@ public class TesteOrcamentos
             String   a        = sessoes.criar (new ObjectId ().toHexString (), propriedade);
             String   b        = sessoes.criar (new ObjectId ().toHexString (), outra);
 
-            new SafrasHandler     (safras, talhoes, custos, atividades, sessoes).registrar (roteador);
+            SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
+            handlerSafras.setOrcamentos (orcamentos);
+            handlerSafras.registrar (roteador);
             new CustosHandler     (custos, safras, talhoes, sessoes).registrar (roteador);
             new OrcamentosHandler (orcamentos, safras, talhoes, custos, sessoes).registrar (roteador);
 
@@ -319,6 +321,13 @@ public class TesteOrcamentos
                                       item.get ("planejado") == null && "sem-orcamento".equals (item.getString ("situacao")) &&
                                       TesteOrcamentos.igual (item.get ("realizado"), 750.25));
             TesteOrcamentos.conferir ("DELETE de novo -> 404", TesteOrcamentos.chamar (roteador, a, "DELETE", rotaVerao, null).getStatus () == 404);
+
+            // safra em planejamento sem custos/atividades: excluir a safra apaga o orcamento junto
+            String rascunho = TesteOrcamentos.safra (safras, propriedade, "Rascunho", norte, "2027-01-01", "2027-06-30");
+            TesteOrcamentos.chamar (roteador, a, "PUT", "/api/orcamentos/" + rascunho, "{\"valor\":50}");
+            TesteOrcamentos.conferir ("DELETE da safra remove o orcamento orfao",
+                                      TesteOrcamentos.chamar (roteador, a, "DELETE", "/api/safras/" + rascunho, null).getStatus () == 204 &&
+                                      orcamentos.buscarPorSafra (propriedade, rascunho) == null);
 
             TesteOrcamentos.chamar (roteador, a, "PUT", rotaInverno, "{\"valor\":150,\"alerta\":50}");
             item = TesteOrcamentos.json (TesteOrcamentos.chamar (roteador, a, "GET", rotaInverno, null));
