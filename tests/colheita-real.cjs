@@ -122,7 +122,7 @@ async function shot(page, name) {
     const page = await context.newPage();
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
-    // O 400 da data anterior ao início da safra é provocado de propósito no passo 2.
+    // Validação local (data < início da safra) e eventuais 400 do servidor.
     page.on("console", (entry) => { if (entry.type() === "error" && !/status of 400/.test(entry.text())) pageErrors.push(entry.text()); });
 
     await page.goto(base + "/safras.html");
@@ -138,14 +138,18 @@ async function shot(page, name) {
     assert.equal(await page.locator(`[data-harvest-form] [name='safraId'] option[value="${milho.id}"]`).isDisabled(), true, "safra em planejamento não recebe colheita");
     await shot(page, "inicio");
 
-    // 2. Validação local não envia nada; a do servidor volta no campo.
+    // 2. Validação local não envia nada (quantidade, precisão e data < início da safra).
     await choose(page, "[data-harvest-form] [name='safraId']", atual.id);
     await submit(page, "[data-harvest-form]", { talhaoId: norte.id, quantidade: "", unidade: "sc", data: "2026-03-10" });
     assert.match(await text(page, "[data-harvest-form] [data-error-for='quantidade']"), /maior que zero/);
     assert.equal((await api(`/api/colheitas?safraId=${atual.id}`, null, token)).data.length, 0, "nada enviado sem quantidade");
+    await submit(page, "[data-harvest-form]", { talhaoId: norte.id, quantidade: "0.0004", unidade: "sc", data: "2026-03-10" });
+    assert.match(await text(page, "[data-harvest-form] [data-error-for='quantidade']"), /0,001/);
+    assert.equal((await api(`/api/colheitas?safraId=${atual.id}`, null, token)).data.length, 0, "nada enviado abaixo da precisão");
     await submit(page, "[data-harvest-form]", { talhaoId: norte.id, quantidade: "2000", unidade: "sc", data: "2025-12-31" });
     await page.waitForFunction(() => /anterior ao início da safra/.test(document.querySelector("[data-harvest-form] [data-error-for='data']").textContent));
     assert.equal(await page.locator("[data-modal='harvest-form']").getAttribute("aria-hidden"), "false", "modal continua aberto no erro");
+    assert.equal((await api(`/api/colheitas?safraId=${atual.id}`, null, token)).data.length, 0, "nada enviado com data anterior ao início");
 
     // 3. Registros pela tela: 2.000 sc no Norte e 36 t no Sul.
     await submit(page, "[data-harvest-form]", { talhaoId: norte.id, quantidade: "2000", unidade: "sc", data: "2026-03-10" });
