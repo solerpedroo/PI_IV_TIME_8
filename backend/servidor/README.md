@@ -467,7 +467,9 @@ custos da safra, manuais e de consumo, o mesmo total de
 `/api/custos/resumo?safraId=`), `lancamentos`, `saldo` (planejado - realizado),
 `desvio` (realizado - planejado), `desvioPercentual`, `percentualUsado`,
 `planejadoPorHectare`, `realizadoPorHectare` e `situacao`: `sem-orcamento`,
-`dentro`, `proximo` (usou `alerta`% ou mais) ou `acima` (passou do planejado).
+`dentro`, `proximo` (usou `alerta`% ou mais, inclusive 100% exato) ou `acima`
+(realizado maior que o planejado). O GET por safra soma só os custos dela
+(`listarPorSafra`). Excluir a safra em Planejamento remove o orçamento junto.
 Safra sem orçamento não ganha meta inventada: planejado, desvio e percentuais
 ficam `null`. `TesteOrcamentos` roda no `testar` em memória e, com banco
 `_teste`, em `java -cp 'bin:lib/*' TesteOrcamentos --mongo`.
