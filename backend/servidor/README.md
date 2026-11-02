@@ -377,7 +377,7 @@ Detalhes e evidências em [docs/colheita.md](../../docs/colheita.md).
 | Método e rota | Respostas |
 |---|---|
 | `GET /api/colheitas?safraId=&talhaoId=&cultura=&de=&ate=` | 200 com a lista, da data mais recente para a mais antiga · 400 período inválido |
-| `GET /api/colheitas/resumo?` (mesmos filtros) | 200 com produção e produtividade do recorte · 400 |
+| `GET /api/colheitas/resumo?` (mesmos filtros) | 200 com produção; produtividade só sem `de`/`ate` · 400 |
 | `GET /api/colheitas/comparativo?cultura=` | 200 com um item por safra, do início mais antigo ao mais novo |
 | `POST /api/colheitas` | 201 · 400 · 409 safra antes do plantio ou finalizada |
 | `GET /api/colheitas/{id}` | 200 · 404 |
@@ -393,14 +393,22 @@ etapa Plantio em diante; safra finalizada fica só para consulta. Depois de uma
 colheita, a safra não pode perder o talhão nem mover seu início para após o registro.
 
 O resumo devolve `registros`, `totalKg`, `totalSacas`, `areaHectares`,
-`produtividadeKgHa`, `produtividadeScHa`, `porSafra` e `porTalhao`. A área de
-cada ciclo é a soma dos hectares dos talhões da safra (ou só o talhão filtrado);
-um talhão colhido em dois ciclos conta a área duas vezes. Os totais são somados
-em gramas. Sem área ou sem colheita, a produtividade é `null`. O comparativo traz
-todas as safras, inclusive sem colheita (`totalKg` 0 e produtividade `null`), com
-`talhoesColhidos`, `ultimaColheita` e `variacaoPercentual` da produtividade frente
-ao ciclo anterior da mesma cultura. `TesteColheitas` roda no `testar` em memória e,
-com banco `_teste`, em `java -cp 'bin:lib/*' TesteColheitas --mongo`.
+`produtividadeKgHa`, `produtividadeScHa`, `produtividadeOmitidaPorPeriodo`,
+`porSafra` e `porTalhao`. A área de cada ciclo é a soma dos hectares dos talhões
+da safra (ou só o talhão filtrado); um talhão colhido em dois ciclos conta a área
+duas vezes. Os totais são somados em gramas. Sem área ou sem colheita, a
+produtividade é `null`. Com `de` e/ou `ate`, a produção do intervalo permanece,
+mas a produtividade fica `null` (`produtividadeOmitidaPorPeriodo: true`) para não
+dividir produção parcial pela área plantada do ciclo. A listagem é por
+propriedade, sem paginação (como os demais módulos); índices Mongo em
+`(propriedadeId, safraId)`, `(propriedadeId, data)` e `(propriedadeId, talhaoId)`.
+O comparativo traz todas as safras, inclusive sem colheita (`totalKg` 0 e
+produtividade `null`), com `talhoesColhidos`, `ultimaColheita` e
+`variacaoPercentual` da produtividade frente ao ciclo anterior da mesma cultura.
+O relatório de safra inclui as colheitas do ciclo (`totalColheitaKg`,
+`produtividadeKgHa`/`ScHa`, contagem `colheita`). `TesteColheitas` roda no
+`testar` em memória e, com banco `_teste`, em
+`java -cp 'bin:lib/*' TesteColheitas --mongo`.
 
 ### Calendário
 
