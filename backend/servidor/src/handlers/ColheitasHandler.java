@@ -17,6 +17,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -29,7 +30,7 @@ import util.Validacao;
     Colheita por safra e talhao e produtividade por hectare (dominio gerencial, sem previsao).
 
     GET    /api/colheitas?safraId=&talhaoId=&cultura=&de=&ate=   lista, da data mais recente para a mais antiga
-    GET    /api/colheitas/resumo?(mesmos filtros)                producao e produtividade do recorte
+    GET    /api/colheitas/resumo?(mesmos filtros)                producao; produtividade so sem de/ate
     GET    /api/colheitas/comparativo?cultura=                   um item por ciclo (safra), em ordem de inicio
     POST   /api/colheitas                                        registra
     GET    /api/colheitas/{id}                                   consulta
@@ -244,8 +245,12 @@ public class ColheitasHandler implements Manipulador
 
         if (talhaoId != null && !talhoes.containsKey (talhaoId))
             validacao.erro ("talhaoId", "Selecione um talh\u00e3o da propriedade.");
-        else if (talhaoId != null && safra != null && !safra.getList ("talhoes", String.class).contains (talhaoId))
-            validacao.erro ("talhaoId", "O talh\u00e3o n\u00e3o faz parte da safra escolhida.");
+        else if (talhaoId != null && safra != null)
+        {
+            List<String> vinculos = safra.getList ("talhoes", String.class);
+            if (vinculos == null || !vinculos.contains (talhaoId))
+                validacao.erro ("talhaoId", "O talh\u00e3o n\u00e3o faz parte da safra escolhida.");
+        }
 
         if (unidade != null && !ColheitasHandler.UNIDADES.contains (unidade))
             validacao.erro ("unidade", "Use kg, t ou sc (saca de 60 kg).");
@@ -384,9 +389,10 @@ public class ColheitasHandler implements Manipulador
         soma[1]++;
     }
 
-    // producao e produtividade das colheitas ja filtradas
+    // producao das colheitas ja filtradas; produtividade so sem filtro de periodo (de/ate),
+    // para nao dividir producao parcial pela area plantada inteira do ciclo
     private static Document resumo (List<Document> lista, Map<String, Document> talhoes, Map<String, Document> safras,
-                                    String talhaoId)
+                                    String talhaoId, boolean periodoParcial)
     {
         long                          total     = 0;
         double                        area      = 0;
@@ -423,8 +429,8 @@ public class ColheitasHandler implements Manipulador
                                  .append  ("registros",         entrada.getValue ()[1])
                                  .append  ("totalKg",           ColheitasHandler.kg (entrada.getValue ()[0]))
                                  .append  ("areaHectares",      areaDoCiclo)
-                                 .append  ("produtividadeKgHa", ColheitasHandler.kgPorHectare (entrada.getValue ()[0], areaDoCiclo))
-                                 .append  ("produtividadeScHa", ColheitasHandler.scPorHectare (entrada.getValue ()[0], areaDoCiclo)));
+                                 .append  ("produtividadeKgHa", periodoParcial ? null : ColheitasHandler.kgPorHectare (entrada.getValue ()[0], areaDoCiclo))
+                                 .append  ("produtividadeScHa", periodoParcial ? null : ColheitasHandler.scPorHectare (entrada.getValue ()[0], areaDoCiclo)));
         }
 
         // talhao em varios ciclos: a area conta uma vez por ciclo
@@ -445,16 +451,17 @@ public class ColheitasHandler implements Manipulador
                                   .append  ("ciclos",            vezes)
                                   .append  ("registros",         entrada.getValue ()[1])
                                   .append  ("totalKg",           ColheitasHandler.kg (entrada.getValue ()[0]))
-                                  .append  ("produtividadeKgHa", ColheitasHandler.kgPorHectare (entrada.getValue ()[0], hectares * vezes))
-                                  .append  ("produtividadeScHa", ColheitasHandler.scPorHectare (entrada.getValue ()[0], hectares * vezes)));
+                                  .append  ("produtividadeKgHa", periodoParcial ? null : ColheitasHandler.kgPorHectare (entrada.getValue ()[0], hectares * vezes))
+                                  .append  ("produtividadeScHa", periodoParcial ? null : ColheitasHandler.scPorHectare (entrada.getValue ()[0], hectares * vezes)));
         }
 
         return new Document ("registros",         lista.size ())
                    .append  ("totalKg",           ColheitasHandler.kg (total))
                    .append  ("totalSacas",        ColheitasHandler.sacas (total))
                    .append  ("areaHectares",      area)
-                   .append  ("produtividadeKgHa", ColheitasHandler.kgPorHectare (total, area))
-                   .append  ("produtividadeScHa", ColheitasHandler.scPorHectare (total, area))
+                   .append  ("produtividadeKgHa", periodoParcial ? null : ColheitasHandler.kgPorHectare (total, area))
+                   .append  ("produtividadeScHa", periodoParcial ? null : ColheitasHandler.scPorHectare (total, area))
+                   .append  ("produtividadeOmitidaPorPeriodo", periodoParcial)
                    .append  ("porSafra",          listaSafras)
                    .append  ("porTalhao",         listaTalhoes);
     }
@@ -495,7 +502,7 @@ public class ColheitasHandler implements Manipulador
                 ColheitasHandler.inserirOrdenado (filtradas, colheita);
 
         if (resumir)
-            return Resposta.json (200, ColheitasHandler.resumo (filtradas, talhoes, safras, talhaoId));
+            return Resposta.json (200, ColheitasHandler.resumo (filtradas, talhoes, safras, talhaoId, de != null || ate != null));
 
         ArrayList<Document> ret = new ArrayList<Document> ();
         for (Document colheita : filtradas)
@@ -526,7 +533,7 @@ public class ColheitasHandler implements Manipulador
                 ultima.put (safraId, data);
         }
 
-        // insercao ordenada por inicio do ciclo (e nome, no empate)
+        // insercao ordenada por inicio do ciclo (e nome normalizado, no empate)
         for (Document safra : this.safras.listar (propriedadeId))
         {
             if (cultura != null && !cultura.equalsIgnoreCase (safra.getString ("cultura")))
@@ -537,6 +544,7 @@ public class ColheitasHandler implements Manipulador
             long   gramas    = soma == null ? 0 : soma[0];
             double area      = SafrasHandler.area (safra, talhoes);
             int    talhoesOk = 0;
+            String nomeOrd   = safra.getString ("nome") == null ? "" : safra.getString ("nome").toLowerCase (Locale.ROOT);
 
             for (String dono : colhidos.values ())
                 if (dono.equals (safraId))
@@ -550,7 +558,7 @@ public class ColheitasHandler implements Manipulador
                                 .append  ("dataInicio",        safra.getString ("dataInicio"))
                                 .append  ("dataFim",           safra.getString ("dataFim"))
                                 .append  ("areaHectares",      area)
-                                .append  ("talhoesNaSafra",    safra.getList ("talhoes", String.class).size ())
+                                .append  ("talhoesNaSafra",    safra.getList ("talhoes", String.class) == null ? 0 : safra.getList ("talhoes", String.class).size ())
                                 .append  ("talhoesColhidos",   talhoesOk)
                                 .append  ("registros",         soma == null ? 0 : soma[1])
                                 .append  ("totalKg",           ColheitasHandler.kg (gramas))
@@ -559,11 +567,17 @@ public class ColheitasHandler implements Manipulador
                                 .append  ("produtividadeScHa", ColheitasHandler.scPorHectare (gramas, area))
                                 .append  ("ultimaColheita",    ultima.get (safraId));
 
-            String chave   = safra.getString ("dataInicio") + safra.getString ("nomeNormalizado");
+            // mesma chave nos itens novos e nos ja inseridos: dataInicio + nome em Locale.ROOT
+            String chave   = safra.getString ("dataInicio") + nomeOrd;
             int    posicao = 0;
-            while (posicao < ret.size () &&
-                   (ret.get (posicao).getString ("dataInicio") + ret.get (posicao).getString ("safraNome").toLowerCase ()).compareTo (chave) <= 0)
+            while (posicao < ret.size ())
+            {
+                Document atual = ret.get (posicao);
+                String   nome  = atual.getString ("safraNome") == null ? "" : atual.getString ("safraNome").toLowerCase (Locale.ROOT);
+                if ((atual.getString ("dataInicio") + nome).compareTo (chave) > 0)
+                    break;
                 posicao++;
+            }
             ret.add (posicao, item);
         }
 
