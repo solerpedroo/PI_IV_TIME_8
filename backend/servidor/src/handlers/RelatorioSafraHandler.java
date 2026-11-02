@@ -3,6 +3,7 @@ package handlers;
 
 import dados.*;
 import http.*;
+import java.util.List;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
@@ -19,12 +20,18 @@ public class RelatorioSafraHandler implements Manipulador
     private final RepositorioOcorrencias ocorrencias;
     private final RepositorioCustos custos;
     private final Sessoes sessoes;
+    private RepositorioColheitas colheitas; // opcional: sem ele, o relatório não inclui produção
 
     public RelatorioSafraHandler (RepositorioUsuarios usuarios, RepositorioSafras safras, RepositorioTalhoes talhoes,
         RepositorioAtividades atividades, RepositorioOcorrencias ocorrencias, RepositorioCustos custos, Sessoes sessoes)
     {
         this.usuarios = usuarios; this.safras = safras; this.talhoes = talhoes;
         this.atividades = atividades; this.ocorrencias = ocorrencias; this.custos = custos; this.sessoes = sessoes;
+    }
+
+    public void setColheitas (RepositorioColheitas colheitas)
+    {
+        this.colheitas = colheitas;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -45,9 +52,10 @@ public class RelatorioSafraHandler implements Manipulador
         if (safra == null) return Resposta.erro (404, "Safra não encontrada.");
 
         // Uma falha em qualquer fonte interrompe o relatório; nunca vira total zero.
+        List<Document> colheitasDaSafra = this.colheitas == null ? List.of () : this.colheitas.listar (propriedadeId);
         Document resultado = RelatorioSafra.compor (propriedade, safra, this.talhoes.listar (propriedadeId),
             this.atividades.listar (propriedadeId), this.ocorrencias.listar (sessao.getUsuarioId (), propriedadeId),
-            this.custos.listar (propriedadeId));
+            this.custos.listar (propriedadeId), colheitasDaSafra);
         synchronized (this.sessoes)
         {
             Sessao atual = this.sessoes.buscar (requisicao.getToken ());

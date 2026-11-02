@@ -195,16 +195,14 @@ async function menu(page, trigger) {
   await page.locator('[data-cost-search]').fill('');
   const deleting = await menu(page, row.locator('[data-popover-trigger]'));
   await deleting.locator('[data-delete-cost]').click();
-  // A exclusão espera a confirmação da API antes de sair da lista.
+  // A exclusão pede confirmação no modal e espera a API antes de sair da lista.
+  await page.locator('[data-confirm-delete-cost]').click();
   await row.waitFor({ state: 'detached' });
-  assert.equal(await page.locator('[data-budget-percent]').textContent(), '4% utilizado');
+  // Sem safra não há orçamento: o card não inventa meta (o fluxo real está em orcamento-real.cjs).
+  assert.equal(await page.locator('[data-budget-edit]').isDisabled(), true);
+  assert.equal(await page.locator('[data-budget-message]').textContent(), 'Cadastre uma safra para definir o orçamento.');
   const cropSum = await page.locator('.crop-cost-item > strong').evaluateAll((items) => items.reduce((sum, item) => sum + Number(item.textContent.replace(/[^\d,]/g, '').replace(',', '.')), 0));
   assert.equal(cropSum, 20190, 'resumo por cultura diverge do total de lançamentos');
-  await page.locator('[data-budget-edit]').click();
-  await page.locator('[name="budget"]').fill('1000');
-  await page.locator('[data-budget-form] [type="submit"]').click();
-  assert.match(await page.locator('[data-budget-remaining]').textContent(), /19.190,00 acima do orçamento/);
-  assert.equal(await page.locator('[data-budget-percent]').textContent(), '2019% utilizado');
 
   // O menu não pode continuar flutuando depois de rolar a página ou redimensionar.
   const trigger = page.locator('[data-cost-table] [data-popover-trigger]').first();

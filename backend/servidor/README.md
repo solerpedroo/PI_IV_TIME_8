@@ -360,12 +360,55 @@ Regras do ciclo:
 - só se exclui safra em Planejamento (depois disso ela já tem histórico);
 - um talhão não pode estar em duas safras cujos períodos se cruzam (409 com o campo `talhoes`);
 - safra com custos lançados não é excluída, e a edição não pode tirar dela um
-  talhão que tenha custo nela (409 com o campo `talhoes`).
+  talhão que tenha custo nela (409 com o campo `talhoes`);
+- a edição também não tira da safra um talhão que já tem colheita registrada nela
+  (409 com o campo `talhoes`).
 
 O histórico da safra junta os eventos (`atividade`, `ocorrencia`, `custo`) de
 `/api/talhoes/{id}/historico` dos seus talhões cuja data, no fuso de São Paulo,
 cai dentro do período. Vem do mais recente para o mais antigo, com `talhaoId` e
 `talhaoNome`.
+
+### Colheitas
+
+Quantidade colhida por safra e talhão e produtividade por hectare (#222).
+Detalhes e evidências em [docs/colheita.md](../../docs/colheita.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/colheitas?safraId=&talhaoId=&cultura=&de=&ate=` | 200 com a lista, da data mais recente para a mais antiga · 400 período inválido |
+| `GET /api/colheitas/resumo?` (mesmos filtros) | 200 com produção; produtividade só sem `de`/`ate` · 400 |
+| `GET /api/colheitas/comparativo?cultura=` | 200 com um item por safra, do início mais antigo ao mais novo |
+| `POST /api/colheitas` | 201 · 400 · 409 safra antes do plantio ou finalizada |
+| `GET /api/colheitas/{id}` | 200 · 404 |
+| `PUT /api/colheitas/{id}` | 200 · 400 · 404 · 409 |
+| `DELETE /api/colheitas/{id}` | 204 · 404 · 409 safra finalizada |
+
+Campos: `safraId` e `talhaoId` obrigatórios (o talhão precisa ser da safra),
+`quantidade` de no mínimo `0,001`, `unidade` `kg`, `t` (1.000 kg) ou `sc` (saca de
+60 kg), `data` em `AAAA-MM-DD` (não antes do início da safra nem no futuro) e
+`observacao` opcional de até 200 caracteres. A resposta traz `quantidadeKg`,
+`safraNome`, `talhaoNome`, `cultura` e `finalizada`. Colheita só é registrada da
+etapa Plantio em diante; safra finalizada fica só para consulta. Depois de uma
+colheita, a safra não pode perder o talhão nem mover seu início para após o registro.
+
+O resumo devolve `registros`, `totalKg`, `totalSacas`, `areaHectares`,
+`produtividadeKgHa`, `produtividadeScHa`, `produtividadeOmitidaPorPeriodo`,
+`porSafra` e `porTalhao`. A área de cada ciclo é a soma dos hectares dos talhões
+da safra (ou só o talhão filtrado); um talhão colhido em dois ciclos conta a área
+duas vezes. Os totais são somados em gramas. Sem área ou sem colheita, a
+produtividade é `null`. Com `de` e/ou `ate`, a produção do intervalo permanece,
+mas a produtividade fica `null` (`produtividadeOmitidaPorPeriodo: true`) para não
+dividir produção parcial pela área plantada do ciclo. A listagem é por
+propriedade, sem paginação (como os demais módulos); índices Mongo em
+`(propriedadeId, safraId)`, `(propriedadeId, data)` e `(propriedadeId, talhaoId)`.
+O comparativo traz todas as safras, inclusive sem colheita (`totalKg` 0 e
+produtividade `null`), com `talhoesColhidos`, `ultimaColheita` e
+`variacaoPercentual` da produtividade frente ao ciclo anterior da mesma cultura.
+O relatório de safra inclui as colheitas do ciclo (`totalColheitaKg`,
+`produtividadeKgHa`/`ScHa`, contagem `colheita`). `TesteColheitas` roda no
+`testar` em memória e, com banco `_teste`, em
+`java -cp 'bin:lib/*' TesteColheitas --mongo`.
 
 ### Calendário
 
@@ -445,6 +488,35 @@ handler tenta sincronizar na própria escrita; se ainda falhar, a resposta traz
 `PUT` e `DELETE` de um custo de consumo devolvem 409: ele muda pela
 movimentação do insumo.
 
+### Orçamento por safra
+
+Planejado versus realizado de cada safra da propriedade ativa (#226). Detalhes
+e evidências em [docs/orcamento.md](../../docs/orcamento.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/orcamentos` | 200 com todas as safras da propriedade, com ou sem planejado |
+| `GET /api/orcamentos/{safraId}` | 200 · 404 safra fora da propriedade |
+| `PUT /api/orcamentos/{safraId}` | 201 na primeira definição · 200 nas alterações · 400 · 404 · 409 safra finalizada |
+| `DELETE /api/orcamentos/{safraId}` | 204 · 404 sem orçamento · 409 safra finalizada |
+
+Corpo do `PUT`: `valor` (número de 0,01 até 1 bilhão, guardado em centavos) e
+`alerta` opcional (inteiro de 50 a 100, o percentual do planejado que liga o
+aviso; padrão 80, e a alteração sem `alerta` mantém o anterior). Há no máximo
+um orçamento por safra (índice único `propriedadeId` + `safraId`).
+
+Cada item traz `planejado`, `alerta`, `realizado` (soma em centavos de todos os
+custos da safra, manuais e de consumo, o mesmo total de
+`/api/custos/resumo?safraId=`), `lancamentos`, `saldo` (planejado - realizado),
+`desvio` (realizado - planejado), `desvioPercentual`, `percentualUsado`,
+`planejadoPorHectare`, `realizadoPorHectare` e `situacao`: `sem-orcamento`,
+`dentro`, `proximo` (usou `alerta`% ou mais, inclusive 100% exato) ou `acima`
+(realizado maior que o planejado). O GET por safra soma só os custos dela
+(`listarPorSafra`). Excluir a safra em Planejamento remove o orçamento junto.
+Safra sem orçamento não ganha meta inventada: planejado, desvio e percentuais
+ficam `null`. `TesteOrcamentos` roda no `testar` em memória e, com banco
+`_teste`, em `java -cp 'bin:lib/*' TesteOrcamentos --mongo`.
+
 ### Saúde
 
 - `GET /health` → `{"status":"UP"}`
@@ -510,8 +582,10 @@ backend/servidor/
 - `usuarios`: índice único em `email`.
 - `propriedades`.
 - `talhoes`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `colheitas`: índices em `(propriedadeId, safraId)` e `(propriedadeId, data)`.
 - `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `custos`: índice em `(propriedadeId, date)`.
+- `orcamentos`: índice único em `(propriedadeId, safraId)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
@@ -521,5 +595,5 @@ Atividades, Insumos, Ocorrências, Dashboard, Notificações e Configurações.
 Os formulários de autenticação do front usam as rotas desta API.
 A tela `frontend/safras.html` consome `/api/safras` (criar, avançar etapas,
 histórico e vínculos). Escopo I10/I11 e o papel do `core`: [docs/safras.md](../../docs/safras.md).
-A tela de Custos ainda pode gravar no navegador em alguns fluxos; o resumo por
-safra usa `/api/custos` quando autenticado.
+A tela de Custos usa `/api/custos` e `/api/orcamentos`; no navegador fica só o
+período escolhido.

@@ -34,6 +34,7 @@ public class RepositorioCustosMongo implements RepositorioCustos
         this.custos = banco.getCollection ("custos");
 
         this.custos.createIndex (Indexes.ascending ("propriedadeId", "date"));
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "safraId"));
 
         // um custo por movimentacao de estoque: a chave unica impede duplicidade mesmo entre servidores
         this.custos.createIndex (Indexes.ascending ("propriedadeId", "origem.movimentacaoId"),
@@ -58,6 +59,19 @@ public class RepositorioCustosMongo implements RepositorioCustos
             throw new Exception ("Propriedade ausente");
 
         return this.custos.find (Filters.eq ("propriedadeId", propriedadeId))
+                          .sort (Sorts.ascending ("_id"))
+                          .into (new ArrayList<Document> ());
+    }
+
+    public List<Document> listarPorSafra (String propriedadeId, String safraId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (safraId == null)
+            throw new Exception ("Safra ausente");
+
+        return this.custos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("safraId", safraId)))
                           .sort (Sorts.ascending ("_id"))
                           .into (new ArrayList<Document> ());
     }

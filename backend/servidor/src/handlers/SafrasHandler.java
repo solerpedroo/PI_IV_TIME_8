@@ -7,6 +7,8 @@ package handlers;
 
 import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
+import dados.RepositorioColheitas;
+import dados.RepositorioOrcamentos;
 import dados.RepositorioSafras;
 import dados.RepositorioTalhoes;
 import http.Manipulador;
@@ -60,6 +62,8 @@ public class SafrasHandler implements Manipulador
     private final RepositorioCustos  custos;
     private final Sessoes            sessoes;
     private final RepositorioAtividades atividades;
+    private       RepositorioColheitas  colheitas; // opcional: sem ele, nao confere colheitas na edicao
+    private       RepositorioOrcamentos orcamentos; // opcional: remove o planejado ao excluir a safra
 
     // Evita perder vínculos ou alterar os dados de safra preservados nas atividades.
     private boolean temAtividades (String propriedadeId, String safraId) throws Exception
@@ -91,6 +95,18 @@ public class SafrasHandler implements Manipulador
         this.custos  = custos;
         this.atividades = atividades;
         this.sessoes = sessoes;
+    }
+
+    // colheitas registradas (#222): a edicao nao tira da safra um talhao que ja foi colhido nela
+    public void setColheitas (RepositorioColheitas colheitas)
+    {
+        this.colheitas = colheitas;
+    }
+
+    // planejado da safra (#226): a exclusao da safra nao deixa orcamento orfao
+    public void setOrcamentos (RepositorioOrcamentos orcamentos)
+    {
+        this.orcamentos = orcamentos;
     }
 
     // todas as rotas caem em tratar, que escolhe a acao pelo metodo e pelo caminho
@@ -299,6 +315,38 @@ public class SafrasHandler implements Manipulador
         return ret;
     }
 
+    // 409 se a edicao invalidar o talhao ou a data de uma colheita existente; null se puder
+    private Resposta conflitoComColheita (String propriedadeId, String safraId, Document campos,
+                                          LinkedHashMap<String, Document> talhoes) throws Exception
+    {
+        Resposta     ret      = null;
+        List<String> mantidos = campos.getList ("talhoes", String.class);
+
+        if (this.colheitas == null)
+            return null;
+
+        for (Document colheita : this.colheitas.listar (propriedadeId))
+        {
+            String talhaoId = colheita.getString ("talhaoId");
+
+            if (ret == null && safraId.equals (colheita.getString ("safraId")) && !mantidos.contains (talhaoId))
+            {
+                Document talhao   = talhoes.get (talhaoId);
+                String   mensagem = "O talh\u00e3o " + (talhao == null ? talhaoId : talhao.getString ("nome")) +
+                                    " tem colheitas registradas nesta safra.";
+                ret = Resposta.json (409, new Document ("error", "Plot has harvests in this crop season")
+                                              .append ("fields", new Document ("talhoes", mensagem)));
+            }
+            else if (ret == null && safraId.equals (colheita.getString ("safraId")) &&
+                     colheita.getString ("data").compareTo (campos.getString ("dataInicio")) < 0)
+                ret = Resposta.json (409, new Document ("error", "Crop season starts after a registered harvest")
+                                              .append ("fields", new Document ("dataInicio",
+                                                       "A safra possui colheita em " + colheita.getString ("data") + ".")));
+        }
+
+        return ret;
+    }
+
     private static Resposta nomeRepetido ()
     {
         return Resposta.json (409, new Document ("error", "Crop season name already exists")
@@ -461,6 +509,10 @@ public class SafrasHandler implements Manipulador
             if (ret != null)
                 return ret;
 
+            ret = this.conflitoComColheita (propriedadeId, id, campos, talhoes);
+            if (ret != null)
+                return ret;
+
             if (!this.safras.atualizar (propriedadeId, id, campos))
                 return SafrasHandler.nomeRepetido ();
 
@@ -494,7 +546,11 @@ public class SafrasHandler implements Manipulador
             else if (!this.safras.excluir (propriedadeId, id))
                 ret = Resposta.erro (404, "Not found");
             else
+            {
+                if (this.orcamentos != null)
+                    this.orcamentos.excluir (propriedadeId, id);
                 ret = Resposta.semConteudo ();
+            }
 
             return ret;
         }

@@ -57,20 +57,34 @@ public class TesteRelatorioSafra
         List<Document> ocorrencias = List.of (ocorrencia, new Document (ocorrencia).append ("_id", new ObjectId ()).append ("data", "2026-12-31"),
             new Document (ocorrencia).append ("excluida", true), new Document (ocorrencia).append ("talhaoId", null),
             new Document (ocorrencia).append ("data", "2027-01-01"));
-        Document resultado = RelatorioSafra.compor (propriedade, safra, List.of (talhao), atividades, ocorrencias, custos);
+        List<Document> colheitas = List.of (
+            new Document ("_id", new ObjectId ()).append ("safraId", sid).append ("talhaoId", tid)
+                .append ("quantidade", 125).append ("unidade", "sc").append ("quantidadeKg", 7500)
+                .append ("data", "2026-06-15"),
+            new Document ("_id", new ObjectId ()).append ("safraId", sid).append ("talhaoId", "inexistente")
+                .append ("quantidade", 1).append ("unidade", "kg").append ("quantidadeKg", 1)
+                .append ("data", "2026-06-16"),
+            new Document ("_id", new ObjectId ()).append ("safraId", "outra").append ("talhaoId", tid)
+                .append ("quantidade", 99).append ("unidade", "t").append ("quantidadeKg", 99000)
+                .append ("data", "2026-06-15"));
+        Document resultado = RelatorioSafra.compor (propriedade, safra, List.of (talhao), atividades, ocorrencias, custos, colheitas);
         verificar ("área atual", resultado.getDouble ("areaHectares") == 12.5);
         verificar ("nome legado da propriedade", resultado.get ("propriedade", Document.class).getString ("nome").equals ("Fazenda teste"));
         Document contagens = resultado.get ("contagens", Document.class);
         verificar ("atividades por ID, datas inclusivas e vínculo sem distinção de maiúsculas", contagens.getLong ("atividade") == 2);
         verificar ("ocorrências por talhão e data, sem excluídas", contagens.getLong ("ocorrencia") == 2);
         verificar ("custos gerais da safra sem ratear custos sem safra", contagens.getLong ("custo") == 2);
+        verificar ("colheita da safra no período", contagens.getLong ("colheita") == 1 && resultado.getDouble ("totalColheitaKg") == 7500);
+        verificar ("produtividade da safra (7500 kg / 12,5 ha = 600 kg/ha = 10 sc/ha)",
+                   resultado.getDouble ("produtividadeKgHa") == 600 && resultado.getDouble ("produtividadeScHa") == 10);
         verificar ("soma exata 0,10 + 0,20", resultado.getLong ("totalCentavos") == 30);
-        verificar ("datas e vínculos inválidos como pendências", resultado.getList ("pendencias", Document.class).size () == 6);
+        verificar ("datas e vínculos inválidos como pendências", resultado.getList ("pendencias", Document.class).size () == 7);
         try { RelatorioSafra.centavos (new Document ("value", -1)); throw new AssertionError ("Custo negativo aceito"); }
         catch (ErroHttp erro) { verificar ("custo inválido preserva erro 409", erro.getStatus () == 409); }
-        Document vazio = RelatorioSafra.compor (propriedade, safra, List.of (talhao), List.of (), List.of (), List.of ());
-        verificar ("conjunto vazio real", vazio.getList ("registros", Document.class).isEmpty () && vazio.getLong ("totalCentavos") == 0);
-        Document semTalhao = RelatorioSafra.compor (propriedade, safra, List.of (), List.of (), List.of (), List.of ());
+        Document vazio = RelatorioSafra.compor (propriedade, safra, List.of (talhao), List.of (), List.of (), List.of (), List.of ());
+        verificar ("conjunto vazio real", vazio.getList ("registros", Document.class).isEmpty () && vazio.getLong ("totalCentavos") == 0 &&
+                   vazio.getDouble ("totalColheitaKg") == 0 && vazio.get ("produtividadeKgHa") == null);
+        Document semTalhao = RelatorioSafra.compor (propriedade, safra, List.of (), List.of (), List.of (), List.of (), List.of ());
         verificar ("talhão removido não inventa área", semTalhao.getDouble ("areaHectares") == 0 && semTalhao.getList ("pendencias", Document.class).size () == 1);
         for (String fim : List.of ("2025-01-01", "2026-02-30"))
         {
