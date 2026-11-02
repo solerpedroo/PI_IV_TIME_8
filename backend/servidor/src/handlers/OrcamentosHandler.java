@@ -171,6 +171,20 @@ public class OrcamentosHandler implements Manipulador
         return ret;
     }
 
+    // GET unitario: so os custos da safra (indice propriedadeId+safraId), sem varrer a propriedade
+    private long[] realizadoDaSafra (String propriedadeId, String safraId) throws Exception
+    {
+        long[] ret = new long[2];
+
+        for (Document custo : this.custos.listarPorSafra (propriedadeId, safraId))
+        {
+            ret[0] += OrcamentosHandler.centavos (custo.get ("value"));
+            ret[1]++;
+        }
+
+        return ret;
+    }
+
     // situacao do realizado frente ao planejado e ao percentual de alerta
     public static String situacao (long planejado, long realizado, int alerta)
     {
@@ -219,13 +233,15 @@ public class OrcamentosHandler implements Manipulador
         }
         else
         {
+            int aviso = alerta == null ? OrcamentosHandler.ALERTA_PADRAO : alerta.intValue ();
+
             ret.append ("planejado",        OrcamentosHandler.reais (planejado))
-               .append ("alerta",           alerta)
+               .append ("alerta",           aviso)
                .append ("saldo",            OrcamentosHandler.reais (planejado - gasto))
                .append ("desvio",           OrcamentosHandler.reais (gasto - planejado))
                .append ("desvioPercentual", OrcamentosHandler.percentual (gasto - planejado, planejado))
                .append ("percentualUsado",  OrcamentosHandler.percentual (gasto, planejado))
-               .append ("situacao",         OrcamentosHandler.situacao (planejado, gasto, alerta.intValue ()))
+               .append ("situacao",         OrcamentosHandler.situacao (planejado, gasto, aviso))
                .append ("atualizadoEm",     orcamento.getString ("atualizadoEm"));
         }
 
@@ -240,9 +256,10 @@ public class OrcamentosHandler implements Manipulador
     // valida o corpo do PUT; devolve {valor, alerta} ou null (erros na validacao)
     private static Document lerOrcamento (Document corpo, Validacao validacao, Document atual)
     {
-        Object valor  = corpo.get ("valor");
-        Object alerta = corpo.get ("alerta");
-        int    limite = atual == null ? OrcamentosHandler.ALERTA_PADRAO : atual.getInteger ("alerta").intValue ();
+        Object  valor  = corpo.get ("valor");
+        Object  alerta = corpo.get ("alerta");
+        Integer atualAlerta = atual == null ? null : atual.getInteger ("alerta");
+        int     limite = atualAlerta == null ? OrcamentosHandler.ALERTA_PADRAO : atualAlerta.intValue ();
 
         if (!(valor instanceof Number) || !(((Number) valor).doubleValue () >= 0.01)) // tambem barra NaN
             validacao.erro ("valor", "Informe um valor maior que zero.");
@@ -295,7 +312,7 @@ public class OrcamentosHandler implements Manipulador
         if (safra != null)
             ret = OrcamentosHandler.item (safra,
                                           this.orcamentos.buscarPorSafra (propriedadeId, safraId),
-                                          this.realizados (propriedadeId).get (safraId),
+                                          this.realizadoDaSafra (propriedadeId, safraId),
                                           this.mapaDeTalhoes (propriedadeId));
 
         return ret;
