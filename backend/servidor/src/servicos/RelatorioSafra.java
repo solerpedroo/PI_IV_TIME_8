@@ -56,6 +56,13 @@ public class RelatorioSafra
     public static Document compor (Document propriedade, Document safra, List<Document> talhoes,
                                     List<Document> atividades, List<Document> ocorrencias, List<Document> custos) throws Exception
     {
+        return compor (propriedade, safra, talhoes, atividades, ocorrencias, custos, List.of ());
+    }
+
+    public static Document compor (Document propriedade, Document safra, List<Document> talhoes,
+                                    List<Document> atividades, List<Document> ocorrencias, List<Document> custos,
+                                    List<Document> colheitas) throws Exception
+    {
         LocalDate inicio = dia (safra.get ("dataInicio")), fim = dia (safra.get ("dataFim"));
         if (inicio == null || fim == null || fim.isBefore (inicio))
             throw new ErroHttp (409, "A safra possui período inválido; corrija o cadastro antes de consultar.");
@@ -63,6 +70,7 @@ public class RelatorioSafra
         Map<String, Document> mapa = new LinkedHashMap<> ();
         for (Document talhao : talhoes) mapa.put (id (talhao), talhao);
         List<String> ids = safra.getList ("talhoes", String.class);
+        if (ids == null) ids = List.of ();
         List<Document> areas = new ArrayList<> (), registros = new ArrayList<> (), pendencias = new ArrayList<> ();
         for (String id : ids)
         {
@@ -112,19 +120,51 @@ public class RelatorioSafra
                 totalCentavos = Math.addExact (totalCentavos, centavos);
             }
         }
+
+        long totalColheitaGramas = 0;
+        for (Document colheita : colheitas)
+        {
+            if (!safraId.equals (colheita.getString ("safraId"))) continue;
+            Document talhao = mapa.get (colheita.getString ("talhaoId"));
+            String unidade = colheita.getString ("unidade") == null ? "kg" : colheita.getString ("unidade");
+            Object quantidade = colheita.get ("quantidade");
+            String descricao = (quantidade instanceof Number ? quantidade.toString () : "?") + " " + unidade;
+            Document item = item ("colheita", colheita, descricao, colheita.getString ("data"),
+                talhao == null ? "Sem talhão" : talhao.getString ("nome"));
+            Object kg = colheita.get ("quantidadeKg");
+            long gramas = kg instanceof Number ? Math.round (((Number) kg).doubleValue () * 1000) : 0;
+            item.append ("quantidadeKg", kg instanceof Number ? ((Number) kg).doubleValue () : null);
+            if (colheita.getString ("talhaoId") != null && (!ids.contains (colheita.getString ("talhaoId")) || talhao == null))
+                pendencias.add (new Document (item).append ("motivo", "Talhão da colheita não encontrado na safra; não incluído nos totais."));
+            else if (noPeriodo (item, inicio, fim, pendencias))
+            {
+                registros.add (item);
+                totalColheitaGramas += gramas;
+            }
+        }
+
         registros.sort ((a, b) -> {
             int data = a.getString ("data").compareTo (b.getString ("data"));
             return data != 0 ? data : (a.getString ("tipo") + a.getString ("id")).compareTo (b.getString ("tipo") + b.getString ("id"));
         });
         Document contagens = new Document ();
-        for (String tipo : List.of ("atividade", "ocorrencia", "custo"))
+        for (String tipo : List.of ("atividade", "ocorrencia", "custo", "colheita"))
             contagens.append (tipo, registros.stream ().filter (r -> tipo.equals (r.getString ("tipo"))).count ());
+        double area = SafrasHandler.area (safra, mapa);
+        double totalKg = Math.round (totalColheitaGramas / 10.0) / 100.0;
+        Double produtividadeKgHa = area > 0 && totalColheitaGramas > 0
+            ? Double.valueOf (Math.round (totalColheitaGramas / area / 100.0) / 10.0) : null;
+        Double produtividadeScHa = area > 0 && totalColheitaGramas > 0
+            ? Double.valueOf (Math.round (totalColheitaGramas / area / 60.0 / 100.0) / 10.0) : null;
         return new Document ("propriedade", new Document ("id", id (propriedade)).append ("nome", propriedade.getString ("nome") == null ? propriedade.getString ("farm") : propriedade.getString ("nome")))
             .append ("safra", new Document ("id", safraId).append ("nome", safra.getString ("nome"))
                 .append ("cultura", safra.getString ("cultura")).append ("etapa", safra.getString ("etapa")))
             .append ("periodo", new Document ("inicio", inicio.toString ()).append ("fim", fim.toString ()))
-            .append ("areaHectares", SafrasHandler.area (safra, mapa)).append ("origemArea", "Área atual dos talhões associados (ha)")
+            .append ("areaHectares", area).append ("origemArea", "Área atual dos talhões associados (ha)")
             .append ("regraOcorrencias", "Ocorrências do usuário nos talhões da safra, dentro do período inclusivo.")
+            .append ("totalColheitaKg", totalKg)
+            .append ("produtividadeKgHa", produtividadeKgHa)
+            .append ("produtividadeScHa", produtividadeScHa)
             .append ("talhoes", areas).append ("registros", registros).append ("pendencias", pendencias)
             .append ("contagens", contagens).append ("totalCentavos", totalCentavos);
     }

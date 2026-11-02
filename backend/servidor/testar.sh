@@ -13,4 +13,5 @@ java -cp "bin${SEP}lib/*" TesteServidor &&
 java -cp "bin${SEP}lib/*" TesteOrcamentos &&
 java -cp "bin${SEP}lib/*" TestePerfil &&
 java -cp "bin${SEP}lib/*" TesteOcorrencias &&
+java -cp "bin${SEP}lib/*" TesteColheitas &&
 java -cp "bin${SEP}lib/*" TesteRelatorioSafra
