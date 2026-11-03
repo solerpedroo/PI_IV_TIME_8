@@ -4,7 +4,7 @@ name: Ocorrências Java e navegador
 on:
   pull_request:
     paths:
-      - 'backend/servidor/**'
+      - 'backend/api/**'
       - 'frontend/scripts/ocorrencias.js'
       - 'frontend/scripts/dashboard.js'
       - 'frontend/ocorrencias.html'
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '22'
       - name: Testes Java em memória
-        run: sh backend/servidor/testar.sh
+        run: sh backend/api/testar.sh
       - name: Preparar navegador
         run: |
           npm install --no-save playwright@1.49.1
@@ -44,7 +44,7 @@ jobs:
         env:
           MONGODB_URI: mongodb://127.0.0.1:27017/agro_ocorrencias_ci_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000
         run: |
-          cd backend/servidor
+          cd backend/api
           java -cp 'bin:lib/*' TesteOcorrencias --mongo
           cd ../..
           node tests/ocorrencias-real.cjs --mongo

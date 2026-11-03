@@ -19,7 +19,7 @@ import br.com.agrogestao.core.infra.mongo.UsuarioRepositorioMongo;
 
 /**
  * Fundação do modelo de dados (#100–#105): ping Atlas, índices e /health|/ready.
- * O CRUD HTTP autenticado de safras fica no {@code backend/servidor} ({@code SafrasHandler}),
+ * O CRUD HTTP autenticado de safras fica no {@code backend/api} ({@code SafrasHandler}),
  * não aqui — evita superfície sem sessão e schema paralelo na mesma coleção.
  */
 public final class CoreApplication {

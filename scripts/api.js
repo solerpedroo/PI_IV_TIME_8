@@ -1,5 +1,5 @@
 /**
- * Agro — cliente HTTP da API Java (backend/servidor, porta 8080).
+ * Agro — cliente HTTP da API Java (backend/api, porta 8080).
  * Validações/cálculos pesados vão ao ServerSocket (backend/serversocket, porta 3000) pelo servidor.
  * --------------------------------------------------------------------------
  * - Guarda a sessão (token + usuário) no sessionStorage da aba.

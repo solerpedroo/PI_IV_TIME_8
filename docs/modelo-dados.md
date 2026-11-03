@@ -16,7 +16,7 @@ MongoDB não oferece chave estrangeira: as escritas da aplicação devem passar 
 
 São coleções separadas: a safra referencia uma cultura e um ou mais talhões, permitindo várias safras ao longo do tempo sem substituir a cultura histórica do talhão. Datas de calendário usam ISO `YYYY-MM-DD`, sem conversão de fuso. O fim não pode anteceder o início; a lista de talhões deve ser não vazia, sem duplicatas. Um talhão não pode entrar em duas safras com períodos sobrepostos. Status da safra: PLANEJAMENTO, PREPARACAO, PLANTIO, MANEJO, COLHEITA, FINALIZADA; o avanço é sequencial e grava cada etapa em `historicoEtapas`. Índices começam pelo titular e propriedade; nome de talhão, cultura e safra é único por propriedade; há índice para consultar safras por talhão e início.
 
-A API HTTP autenticada de safras do produto fica em `backend/servidor` (`SafrasHandler` + Bearer). O `core` valida o modelo e os índices; não expõe CRUD HTTP sem sessão. Ausência de recurso no repositório levanta `RecursoNaoEncontradoException` (distinta de validação com `IllegalArgumentException`). Visão I10/I11: [safras.md](safras.md).
+A API HTTP autenticada de safras do produto fica em `backend/api` (`SafrasHandler` + Bearer). O `core` valida o modelo e os índices; não expõe CRUD HTTP sem sessão. Ausência de recurso no repositório levanta `RecursoNaoEncontradoException` (distinta de validação com `IllegalArgumentException`). Visão I10/I11: [safras.md](safras.md).
 
 ## Validação reproduzível
 

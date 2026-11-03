@@ -10,7 +10,7 @@ const base = 'http://127.0.0.1:8080';
   // Não usa serviços externos nem dados existentes: servidor próprio em memória.
   await assert.rejects(fetch(base + '/health'), 'porta 8080 deve estar livre para o teste');
   const server = spawn('java', ['-cp', 'bin:lib/*', 'Servidor', '8080', '--memoria'], {
-    cwd: path.join(__dirname, '../backend/servidor'),
+    cwd: path.join(__dirname, '../backend/api'),
     env: {...process.env, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '', SMTP_PORT: ''},
   });
   let log = '';

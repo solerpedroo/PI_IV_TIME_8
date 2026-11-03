@@ -7,7 +7,7 @@ const net = require('node:net');
 const path = require('node:path');
 const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
 const base = 'http://127.0.0.1:18081';
-const cwd = path.join(__dirname, '../backend/servidor');
+const cwd = path.join(__dirname, '../backend/api');
 const mongo = execFileSync('docker', ['compose', 'ps', '-q', 'mongo'], {encoding: 'utf8'}).trim();
 if (!mongo) throw new Error('Inicie o serviço mongo do Docker Compose.');
 const env = { ...process.env, MONGODB_URI: `mongodb://127.0.0.1:27017/${banco}?replicaSet=rs0`, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '' };

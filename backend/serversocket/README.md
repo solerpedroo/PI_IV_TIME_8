@@ -143,7 +143,7 @@ O servidor escuta só em loopback por padrão. Há uma linha de log por pedido (
   O servidor escuta só em loopback por padrão; expor em rede ainda exige TLS.
 - A lista de safras válidas (`2024/25`, `2025/26`, `2026/27`) e as culturas/status do talhão estão fixas em
   `ValidadorDeTalhao`, como no cadastro atual.
-- A origem de cada regra é o servidor HTTP antigo (`backend/servidor`): `Validacao`, `TalhoesHandler.lerTalhao`,
+- A origem de cada regra é o servidor HTTP antigo (`backend/api`): `Validacao`, `TalhoesHandler.lerTalhao`,
   `EstoqueHandler.movimentar` + `CalculosEstoque`, `RelatorioSafra`. Ele foi removido desta branch, mas continua na
-  `dev` (ex.: `git show origin/dev:backend/servidor/src/handlers/AuthHandler.java`). Rotas, autenticação, e-mail e
+  `dev` (ex.: `git show origin/dev:backend/api/src/handlers/AuthHandler.java`). Rotas, autenticação, e-mail e
   acesso ao MongoDB que ele implementava passam a ser responsabilidade da API.

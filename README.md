@@ -54,7 +54,7 @@ Este projeto **não** implementa no MVP:
 
 ### Backend / API
 - **Java 21** puro: dois processos complementares
-  - **`backend/servidor`** — HTTP manual na porta **8080** (rotas `/api/**`, estáticos, MongoDB)
+  - **`backend/api`** — HTTP manual na porta **8080** (rotas `/api/**`, estáticos, MongoDB)
   - **`backend/serversocket`** — TCP + objetos serializados na porta **3000** (validações e cálculos; padrão Cliente–Servidor da disciplina)
 - A API HTTP delega ao ServerSocket via `servicos/ClienteDeAlgoritmos` (ex.: cadastro). Ver [`backend/serversocket/README.md`](backend/serversocket/README.md).
 - Sem Spring e sem Maven no servidor principal
@@ -87,8 +87,8 @@ cd PI_IV_TIME_8
 
 ```bash
 sh backend/serversocket/testar.sh    # algoritmos e protocolo (porta 3000)
-bash backend/servidor/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
-cd backend/servidor
+bash backend/api/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
+cd backend/api
 bash compilar.sh
 bash rodar.sh --memoria              # sobe o socket na 3000 e a API na 8080
 ```
@@ -96,7 +96,7 @@ bash rodar.sh --memoria              # sobe o socket na 3000 e a API na 8080
 Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os dados ao encerrar.
 Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh --memoria`.
 
-No Windows, use os scripts `.bat` equivalentes em `backend/servidor/`.
+No Windows, use os scripts `.bat` equivalentes em `backend/api/`.
 
 ### 3) (Recomendado) MongoDB local com replica set
 
@@ -109,7 +109,7 @@ docker compose up -d --wait mongo
 Carregue `MONGODB_URI` (ex.: `mongodb://127.0.0.1:27017/agrogestao_dev?replicaSet=rs0`) e execute:
 
 ```bash
-cd backend/servidor
+cd backend/api
 bash rodar.sh
 ```
 
@@ -139,7 +139,7 @@ PI_IV_TIME_8/
 │   ├── styles/               # design system e estilos por tela
 │   └── Assets/               # imagens
 ├── backend/
-│   ├── servidor/             # API HTTP + arquivos estáticos (ponto de entrada)
+│   ├── api/                  # API HTTP + arquivos estáticos (ponto de entrada)
 │   ├── gateway/              # proxy Java opcional para /api/**
 │   └── core/                 # modelo Mongo/Atlas e testes de domínio
 ├── docs/                     # produto, contratos por módulo, Atlas, design
@@ -195,7 +195,7 @@ PI_IV_TIME_8/
 ### Servidor Java (memória)
 
 ```bash
-bash backend/servidor/testar.sh
+bash backend/api/testar.sh
 ```
 
 ### Mongo + reinício (exemplos)
@@ -226,7 +226,7 @@ Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000
 Confirme o Compose (`docker compose ps`), o `replicaSet=rs0` na URI e que o healthcheck iniciou o RS. Veja também [`docs/servidor-java.md`](docs/servidor-java.md).
 
 ### Cadastro sem e-mail real
-Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/servidor/README.md`](backend/servidor/README.md).
+Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/api/README.md`](backend/api/README.md).
 
 ### Cache local vs API
 Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é cópia de leitura escopada; falha de rede não deve confirmar mutações só no `localStorage`.

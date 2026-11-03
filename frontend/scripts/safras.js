@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-// I11 (UI #15/#132–#134): consome a API I10 já autenticada do backend/servidor
+// I11 (UI #15/#132–#134): consome a API I10 já autenticada do backend/api
 // (/api/safras, Bearer). O core (8081) só expõe /health e /ready — não é o backend desta tela.
 (() => {
   "use strict";

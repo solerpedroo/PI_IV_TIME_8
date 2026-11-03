@@ -102,7 +102,7 @@ aparecer nos alertas ativos.
 Na raiz do repositório, com JDK 21:
 
 ```bash
-sh backend/servidor/testar.sh
+sh backend/api/testar.sh
 npm install --no-save playwright@1.49.1
 npx playwright install chromium
 node tests/ocorrencias-real.cjs
@@ -116,7 +116,7 @@ Com MongoDB em replica set (por exemplo, `docker compose up -d --wait mongo`):
 
 ```bash
 export MONGODB_URI='mongodb://127.0.0.1:27017/agro_ocorrencias_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
-(cd backend/servidor && java -cp 'bin:lib/*' TesteOcorrencias --mongo)
+(cd backend/api && java -cp 'bin:lib/*' TesteOcorrencias --mongo)
 node tests/ocorrencias-real.cjs --mongo
 ```
 

@@ -13,7 +13,7 @@ const ids = [];
 
 async function start() {
   server = spawn('java', ['-cp', 'bin:lib/*', 'Servidor', '8080', ...(mongo ? [] : ['--memoria'])], {
-    cwd: path.join(__dirname, '../backend/servidor'),
+    cwd: path.join(__dirname, '../backend/api'),
     env: {...process.env, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '', SMTP_PORT: ''},
   });
   server.stdout.on('data', chunk => { logs += chunk.toString(); });
@@ -177,7 +177,7 @@ async function submit(page, selector, endpoint, method = 'PUT', expected = 200) 
 })().catch(e => { console.error(e); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close(); await stop();
   if (mongo && ids.length) {
-    const cleanup = spawnSync('java', ['-cp', 'bin:lib/*', 'TestePerfil', '--limpar-e2e', ...ids], {cwd: path.join(__dirname, '../backend/servidor'), env: process.env, encoding: 'utf8'});
+    const cleanup = spawnSync('java', ['-cp', 'bin:lib/*', 'TestePerfil', '--limpar-e2e', ...ids], {cwd: path.join(__dirname, '../backend/api'), env: process.env, encoding: 'utf8'});
     if (cleanup.status !== 0) { console.error('Falha na limpeza dos fixtures de perfil.'); process.exitCode = 1; }
   }
 });

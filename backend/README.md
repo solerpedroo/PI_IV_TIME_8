@@ -6,28 +6,28 @@ O produto usa **dois** servidores Java 21, sem Spring no caminho principal:
 
 | Pasta | Porta | Papel |
 |---|---|---|
-| `servidor/` | 8080 (HTTP) | Páginas estáticas, `/api/**`, sessões, MongoDB |
+| `api/` | 8080 (HTTP) | Páginas estáticas, `/api/**`, sessões, MongoDB |
 | `serversocket/` | 3000 (TCP) | Validações e cálculos via protocolo de objetos (padrão da disciplina) |
 
-O `rodar.sh` de `servidor/` sobe o `serversocket` em segundo plano, salvo
+O `rodar.sh` de `api/` sobe o `serversocket` em segundo plano, salvo
 `SERVIDOR_ALGORITMOS_DISABLED=1`. Detalhes em [`serversocket/README.md`](serversocket/README.md).
 
-O ponto de entrada do navegador continua sendo `servidor/`: mesma origem para o front.
+O ponto de entrada do navegador continua sendo `api/`: mesma origem para o front.
 
 O diretório `core/` concentra o modelo de dados (#100–#105) com o driver
 oficial do MongoDB (Atlas Free): usuários/propriedades, talhões, culturas/safras,
 atividades/histórico, insumos/movimentações, ocorrências/timeline e custos.
 As relações, índices e consultas estão em [modelo de dados](../docs/modelo-dados.md).
 No `core` os endpoints HTTP são só `/health` e `/ready`. O CRUD autenticado de
-safras e a tela `frontend/safras.html` usam o `servidor` (`SafrasHandler` + Bearer).
+safras e a tela `frontend/safras.html` usam a `api` (`SafrasHandler` + Bearer).
 
 ## Executar o servidor
 
 Com JDK 21 no PATH, a partir da raiz do projeto:
 
 ```bash
-bash backend/servidor/testar.sh
-cd backend/servidor
+bash backend/api/testar.sh
+cd backend/api
 bash compilar.sh
 bash rodar.sh --memoria
 ```
@@ -37,7 +37,7 @@ do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para
 persistência, configure `MONGODB_URI` (MongoDB local ou Atlas) e execute
 `bash rodar.sh` sem `--memoria`. Não é necessário Docker para usar Atlas.
 No Windows, use os scripts `.bat` equivalentes. Consulte
-[servidor/README.md](servidor/README.md) para configuração de SMTP e MongoDB.
+[api/README.md](api/README.md) para configuração de SMTP e MongoDB.
 
 O `compose.yaml` na raiz sobe um Mongo local com replica set (loopback), útil
 para o servidor e para `testar-mongo.sh`.

@@ -5,7 +5,7 @@ name: Perfil Java e persistência
 on:
   pull_request:
     paths:
-      - 'backend/servidor/**'
+      - 'backend/api/**'
       - 'frontend/scripts/perfil-api.js'
       - 'frontend/scripts/configuracoes.js'
       - 'frontend/scripts/propriedades-api.js'
@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: '22'
       - name: Regressão do servidor e contratos de perfil
-        run: sh backend/servidor/testar.sh
+        run: sh backend/api/testar.sh
       - name: Preparar MongoDB com transações
         run: |
           docker run -d --name mongo-perfil -p 127.0.0.1:27017:27017 mongo:8.0.32 --replSet rs0 --bind_ip_all
@@ -46,7 +46,7 @@ jobs:
           docker logs mongo-perfil
           exit 1
       - name: Perfil com Mongo e reinício
-        working-directory: backend/servidor
+        working-directory: backend/api
         run: java -cp 'bin:lib/*' TestePerfil --mongo
       - name: Instalar navegador de testes
         run: |

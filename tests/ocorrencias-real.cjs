@@ -7,7 +7,7 @@ const {once} = require('node:events');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const {launchTestBrowser} = require('./browser-launch.cjs');
 const base = 'http://127.0.0.1:8080';
-const cwd = path.join(__dirname, '../backend/servidor');
+const cwd = path.join(__dirname, '../backend/api');
 const mongo = process.argv.includes('--mongo');
 const sep = process.platform === 'win32' ? ';' : ':';
 const classpath = 'bin' + sep + 'lib/*';

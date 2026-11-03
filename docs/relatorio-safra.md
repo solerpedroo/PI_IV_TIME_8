@@ -51,7 +51,7 @@ Dois subagentes revisaram o plano e a implementação. O erro inicial da express
 Com Java 21 no PATH:
 
 ```sh
-sh backend/servidor/testar.sh
+sh backend/api/testar.sh
 ```
 
 Para o fluxo real, inicie um Mongo **local** com replica set. O teste exige porta 8080 livre, conforme a configuração atual do frontend. Dependências de teste podem ficar em diretório temporário:

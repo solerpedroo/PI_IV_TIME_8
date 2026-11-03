@@ -3,7 +3,7 @@
 
 O calendário da tela de Atividades deixou de ser fixo (Semana 32, contagens e
 resumo escritos no HTML). Ele consulta `GET /api/calendario`, documentada no
-[README do servidor](../backend/servidor/README.md), e mostra somente as
+[README do servidor](../backend/api/README.md), e mostra somente as
 atividades reais da propriedade ativa.
 
 ## Semana e mês (#169)
@@ -39,7 +39,7 @@ atividades reais da propriedade ativa.
 
 ## Evidência
 
-- `backend/servidor/testar.sh`: 32 verificações novas em `testarCalendario`
+- `backend/api/testar.sh`: 32 verificações novas em `testarCalendario`
   (período obrigatório, data impossível, período invertido e maior que 62 dias,
   semana e mês com dias zerados, contagem por dia, status e tipo, ordem por data
   e horário, filtros, mudança de status, isolamento entre usuários e a regra do

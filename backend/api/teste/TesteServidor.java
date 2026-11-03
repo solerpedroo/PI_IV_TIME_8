@@ -288,7 +288,7 @@ public class TesteServidor
         conferir ("bloqueia .env.example",        404, get ("/.env.example", null));
         conferir ("bloqueia .git",                404, get ("/.git/config", null));
         conferir ("bloqueia .gitignore",          404, get ("/.gitignore", null));
-        conferir ("bloqueia backend/",            404, get ("/backend/servidor/teste/TesteServidor.java", null));
+        conferir ("bloqueia backend/",            404, get ("/backend/api/teste/TesteServidor.java", null));
         conferir ("bloqueia Backend/ (Windows)",  404, get ("/Backend/gateway/rodar.sh", null));
         conferir ("bloqueia nome curto BACKEN~1", 404, get ("/BACKEN~1/x.js", null));
         conferir ("bloqueia extensao fora da lista (.md)",   404, get ("/docs/README.md", null));

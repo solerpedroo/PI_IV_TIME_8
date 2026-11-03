@@ -69,7 +69,7 @@ e `bson`, versão 5.13.0, baixados do Maven Central.
 
 ## Comandos
 
-Todos rodam a partir de qualquer pasta. Os scripts entram em `backend/servidor/` sozinhos.
+Todos rodam a partir de qualquer pasta. Os scripts entram em `backend/api/` sozinhos.
 
 | Ação | Windows | Linux/macOS/Git Bash |
 |---|---|---|
@@ -105,7 +105,7 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 
 Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/register`, `POST /api/auth/reset-password`, `PUT /api/perfil/senha`, `POST`/`PUT /api/talhoes`, `GET /api/talhoes/resumo`, `POST /api/insumos/{id}/movimentacoes` e `GET /api/relatorios/safras/{id}` (colheitas ainda mescladas na API).
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
-| `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/servidor/`. |
+| `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/api/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
@@ -203,7 +203,7 @@ curl -i $B/api/talhoes                                                    # 401 
 curl -i -H "Content-Type: application/json" -d '{}' $B/api/auth/register  # 400 com os campos inválidos
 curl -i --path-as-is $B/../.env.example                                   # 404 (bloqueado)
 curl -i $B/.env                                                           # 404 (bloqueado)
-curl -i $B/backend/servidor/src/Servidor.java                             # 404 (bloqueado)
+curl -i $B/backend/api/src/Servidor.java                             # 404 (bloqueado)
 curl -i -X DELETE $B/login.html                                           # 405
 ```
 
@@ -544,7 +544,7 @@ ficam `null`. `TesteOrcamentos` roda no `testar` em memória e, com banco
 ## Estrutura
 
 ```
-backend/servidor/
+backend/api/
   compilar | rodar | testar (.sh e .bat)
   lib/                          driver MongoDB (jars)
   src/

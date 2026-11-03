@@ -57,7 +57,7 @@ async function settled(page) {
   }
 
   const server = spawn("java", ["-cp", classpath, "Servidor", "8080", "--memoria"], {
-    cwd: path.join(__dirname, "../backend/servidor"),
+    cwd: path.join(__dirname, "../backend/api"),
     env: { ...process.env, SMTP_HOST: "", SMTP_USERNAME: "", SMTP_PASSWORD: "", SMTP_FROM: "", SMTP_PORT: "" },
   });
   let serverLog = "";

@@ -30,7 +30,7 @@ async function api(url, token, body, method, status = 200) {
 async function start() {
   log = '';
   server = spawn(process.env.JAVA_BIN || 'java', ['-cp', process.platform === 'win32' ? 'bin;lib/*' : 'bin:lib/*', 'Servidor', '8080'], {
-    cwd: path.join(root, 'backend/servidor'), env: {...process.env, MONGODB_URI: uri.toString(), SERVIDOR_RAIZ: path.join(root, 'frontend'),
+    cwd: path.join(root, 'backend/api'), env: {...process.env, MONGODB_URI: uri.toString(), SERVIDOR_RAIZ: path.join(root, 'frontend'),
       SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: ''}
   });
   server.on('error', error => { log += error.message; });
