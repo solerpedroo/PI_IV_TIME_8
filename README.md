@@ -53,7 +53,10 @@ Este projeto **não** implementa no MVP:
 - Persistência local de apoio (`agro-local.js`), escopada por usuário/propriedade — **não** substitui a API
 
 ### Backend / API
-- **Java 21** puro (`backend/servidor`) com HTTP manual (`ServerSocket`)
+- **Java 21** puro: dois processos complementares
+  - **`backend/servidor`** — HTTP manual na porta **8080** (rotas `/api/**`, estáticos, MongoDB)
+  - **`backend/serversocket`** — TCP + objetos serializados na porta **3000** (validações e cálculos; padrão Cliente–Servidor da disciplina)
+- A API HTTP delega ao ServerSocket via `servicos/ClienteDeAlgoritmos` (ex.: cadastro). Ver [`backend/serversocket/README.md`](backend/serversocket/README.md).
 - Sem Spring e sem Maven no servidor principal
 - Driver oficial **MongoDB** (`lib/`)
 - Gateway Java opcional (`backend/gateway`)
@@ -80,16 +83,18 @@ git clone https://github.com/solerpedroo/PI_IV_TIME_8.git
 cd PI_IV_TIME_8
 ```
 
-### 2) Compilar e testar o servidor (memória)
+### 2) Compilar e testar (HTTP + ServerSocket)
 
 ```bash
-bash backend/servidor/testar.sh
+sh backend/serversocket/testar.sh    # algoritmos e protocolo (porta 3000)
+bash backend/servidor/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
 cd backend/servidor
 bash compilar.sh
-bash rodar.sh --memoria
+bash rodar.sh --memoria              # sobe o socket na 3000 e a API na 8080
 ```
 
 Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os dados ao encerrar.
+Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh --memoria`.
 
 No Windows, use os scripts `.bat` equivalentes em `backend/servidor/`.
 
