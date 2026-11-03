@@ -1,0 +1,163 @@
+/*
+    Autor: Tomas de Paula Michelon Toniato
+    RA: 25004211
+*/
+package dados;
+
+import com.mongodb.ErrorCategory;
+import com.mongodb.MongoWriteException;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.Sorts;
+import java.util.ArrayList;
+import java.util.List;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
+
+/*
+    Lancamentos de custo na colecao "custos" do MongoDB.
+    Indice (propriedadeId, date) para as consultas por periodo da propriedade.
+*/
+public class RepositorioCustosMongo implements RepositorioCustos
+{
+    private final MongoCollection<Document> custos;
+
+    public RepositorioCustosMongo (MongoDatabase banco) throws Exception
+    {
+        if (banco == null)
+            throw new Exception ("Banco ausente");
+
+        this.custos = banco.getCollection ("custos");
+
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "date"));
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "safraId"));
+
+        // um custo por movimentacao de estoque: a chave unica impede duplicidade mesmo entre servidores
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "origem.movimentacaoId"),
+                                 new IndexOptions ().unique (true)
+                                                    .partialFilterExpression (Filters.exists ("origem.movimentacaoId")));
+    }
+
+    // filtro por _id que tambem exige a propriedade (um usuario nunca enxerga custo de outro)
+    private static Bson filtro (String propriedadeId, String id)
+    {
+        Bson ret = null;
+
+        if (id != null && ObjectId.isValid (id))
+            ret = Filters.and (Filters.eq ("_id", new ObjectId (id)), Filters.eq ("propriedadeId", propriedadeId));
+
+        return ret;
+    }
+
+    public List<Document> listar (String propriedadeId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        return this.custos.find (Filters.eq ("propriedadeId", propriedadeId))
+                          .sort (Sorts.ascending ("_id"))
+                          .into (new ArrayList<Document> ());
+    }
+
+    public List<Document> listarPorSafra (String propriedadeId, String safraId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (safraId == null)
+            throw new Exception ("Safra ausente");
+
+        return this.custos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId), Filters.eq ("safraId", safraId)))
+                          .sort (Sorts.ascending ("_id"))
+                          .into (new ArrayList<Document> ());
+    }
+
+    public Document buscarPorId (String propriedadeId, String id) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        Document ret    = null;
+        Bson     filtro = RepositorioCustosMongo.filtro (propriedadeId, id);
+
+        if (filtro != null)
+            ret = this.custos.find (filtro).first ();
+
+        return ret;
+    }
+
+    public Document buscarPorMovimentacao (String propriedadeId, String movimentacaoId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        if (movimentacaoId == null || movimentacaoId.isBlank ())
+            return null;
+
+        return this.custos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId),
+                                              Filters.eq ("origem.movimentacaoId", movimentacaoId))).first ();
+    }
+
+    public void criar (Document custo) throws Exception
+    {
+        if (custo == null)
+            throw new Exception ("Custo ausente");
+
+        custo.put ("_id", new ObjectId ());
+        this.custos.insertOne (custo);
+    }
+
+    public boolean criarSeAusente (Document custo) throws Exception
+    {
+        if (custo == null || custo.get ("origem", Document.class) == null)
+            throw new Exception ("Custo sem origem");
+
+        boolean ret = true;
+
+        try
+        {
+            this.criar (custo);
+        }
+        catch (MongoWriteException erro)
+        {
+            if (erro.getError ().getCategory () != ErrorCategory.DUPLICATE_KEY)
+                throw erro;
+
+            ret = false;
+        }
+
+        return ret;
+    }
+
+    public boolean atualizar (String propriedadeId, String id, Document campos) throws Exception
+    {
+        if (campos == null)
+            throw new Exception ("Campos ausentes");
+
+        boolean ret    = false;
+        Bson    filtro = RepositorioCustosMongo.filtro (propriedadeId, id);
+
+        if (filtro != null)
+            ret = this.custos.updateOne (filtro, new Document ("$set", campos)).getMatchedCount () == 1;
+
+        return ret;
+    }
+
+    public boolean excluir (String propriedadeId, String id) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        boolean ret    = false;
+        Bson    filtro = RepositorioCustosMongo.filtro (propriedadeId, id);
+
+        if (filtro != null)
+            ret = this.custos.deleteOne (filtro).getDeletedCount () == 1;
+
+        return ret;
+    }
+}
