@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.bson.Document;
 import seguranca.Sessoes;
+import servicos.ClienteDeAlgoritmos;
 import servicos.CustosDeConsumo;
 import util.Json;
 import util.Validacao;
@@ -230,6 +231,18 @@ public class EstoqueHandler
         if (v.temErros ()) return v.resposta ();
         // O consumo guarda o custo medio da baixa: o custo gerado nao muda com compras futuras.
         if (atividade != null && custo == null) custo = CalculosEstoque.numero (produto, "custoUnitario");
+
+        ClienteDeAlgoritmos.ResultadoMovimentacao remoto = ClienteDeAlgoritmos.calcularMovimentacao (
+            CalculosEstoque.numero (produto, "saldo"),
+            CalculosEstoque.numero (produto, "custoUnitario"),
+            tipo,
+            quantidade,
+            custo,
+            observacao);
+
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
+
         Document movimento = new Document ("tipo", tipo).append ("quantidade", quantidade).append ("observacao", observacao)
             .append ("fornecedor", fornecedor).append ("atividadeId", atividadeId.isBlank () ? null : atividadeId)
             .append ("atividade", atividade == null ? "" : tituloAtividade (atividade)).append ("custoUnitario", custo)
