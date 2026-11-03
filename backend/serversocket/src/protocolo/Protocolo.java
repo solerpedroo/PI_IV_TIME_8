@@ -13,4 +13,5 @@ public class Protocolo
 {
     public static final String VERSAO       = "1.0";
     public static final int    PORTA_PADRAO = 3000;
+    public static final long   MAXIMO_BYTES_POR_MENSAGEM = 1048576L; // 1 MiB, alinhado ao corpo HTTP da API
 }
