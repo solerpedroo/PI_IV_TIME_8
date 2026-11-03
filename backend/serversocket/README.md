@@ -138,9 +138,9 @@ O servidor escuta só em loopback por padrão. Há uma linha de log por pedido (
   estado: não há trava nos algoritmos.
 - **Desativar**: para de aceitar, espera o pedido em andamento de cada conexão, avisa com
   `ComunicadoDeDesligamento` e fecha.
-- O filtro limita classes, profundidade (20) e tamanho de arrays/listas (100.000). Não limita o total de bytes
-  de uma mensagem; por isso o servidor escuta só em loopback por padrão. Para expor em rede, falta limite de
-  tamanho e TLS.
+- O filtro limita classes, profundidade (20) e tamanho de arrays/listas (100.000). Cada mensagem serializada
+  também é limitada a `Protocolo.MAXIMO_BYTES_POR_MENSAGEM` (1 MiB) via `LimiteDeLeitura` no `Parceiro`.
+  O servidor escuta só em loopback por padrão; expor em rede ainda exige TLS.
 - A lista de safras válidas (`2024/25`, `2025/26`, `2026/27`) e as culturas/status do talhão estão fixas em
   `ValidadorDeTalhao`, como no cadastro atual.
 - A origem de cada regra é o servidor HTTP antigo (`backend/servidor`): `Validacao`, `TalhoesHandler.lerTalhao`,
