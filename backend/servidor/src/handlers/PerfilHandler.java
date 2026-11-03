@@ -11,6 +11,7 @@ import org.bson.Document;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Senhas;
 import seguranca.Sessoes;
+import servicos.ClienteDeAlgoritmos;
 import servicos.ServicoEmail;
 import util.PerfilUsuario;
 import util.Validacao;
@@ -166,12 +167,22 @@ public class PerfilHandler
     private Resposta senha (Requisicao q, Document usuario) throws Exception
     {
         Document corpo = q.getCorpoJson ();
-        Validacao v = new Validacao (corpo);
-        String nova = v.senha ("new", "Informe a nova senha.");
-        v.confirmacao (nova);
+
+        // Nova senha validada no ServerSocket; senha atual e gravação permanecem na API.
+        ClienteDeAlgoritmos.ResultadoSenha remoto = ClienteDeAlgoritmos.validarSenha (corpo, "new");
+
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
+
+        String    nova = remoto.password;
+        Validacao v    = new Validacao (corpo);
         this.conferirSenha (usuario, corpo, "current", v);
-        if (nova != null && nova.equals (corpo.get ("current"))) v.erro ("new", "Escolha uma senha diferente da atual.");
-        if (v.temErros ()) return v.resposta ();
+
+        if (nova != null && nova.equals (corpo.get ("current")))
+            v.erro ("new", "Escolha uma senha diferente da atual.");
+
+        if (v.temErros ())
+            return v.resposta ();
         Document campos = new Document ("senhaHash", Senhas.gerar (nova)).append ("tokenRedefinicao", null)
             .append ("redefinicaoExpiraEm", null).append ("tokenTrocaEmail", null).append ("emailPendente", null)
             .append ("trocaEmailExpiraEm", null);

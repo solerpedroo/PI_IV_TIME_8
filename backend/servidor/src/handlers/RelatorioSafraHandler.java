@@ -52,6 +52,7 @@ public class RelatorioSafraHandler implements Manipulador
         if (safra == null) return Resposta.erro (404, "Safra não encontrada.");
 
         // Uma falha em qualquer fonte interrompe o relatório; nunca vira total zero.
+        // Consolidação no ServerSocket (ConsolidadorDeSafra); colheitas ainda mescladas na API (Miguel — RA: 25003110).
         List<Document> colheitasDaSafra = this.colheitas == null ? List.of () : this.colheitas.listar (propriedadeId);
         Document resultado = RelatorioSafra.compor (propriedade, safra, this.talhoes.listar (propriedadeId),
             this.atividades.listar (propriedadeId), this.ocorrencias.listar (sessao.getUsuarioId (), propriedadeId),

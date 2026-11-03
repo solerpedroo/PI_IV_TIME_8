@@ -32,6 +32,7 @@ dump/
 .mongosh*
 
 # SO / editor
+.idea/
 .DS_Store
 Thumbs.db
 *:Zone.Identifier

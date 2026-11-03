@@ -1,0 +1,5 @@
+@echo off
+cd /d "%~dp0"
+if exist bin rmdir /s /q bin
+mkdir bin
+javac --release 21 -encoding UTF-8 -d bin src\*.java src\protocolo\*.java src\protocolo\mensagens\*.java src\algoritmos\*.java teste\*.java && java -cp bin TesteAlgoritmos && java -cp bin TesteProtocolo

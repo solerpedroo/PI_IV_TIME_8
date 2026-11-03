@@ -2,8 +2,17 @@
 
 <!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
 
-O ponto de entrada principal é `servidor/`: Java puro com `ServerSocket`, sem
-Spring e sem Maven. Ele serve as páginas do frontend e a API na mesma origem.
+O produto usa **dois** servidores Java 21, sem Spring no caminho principal:
+
+| Pasta | Porta | Papel |
+|---|---|---|
+| `servidor/` | 8080 (HTTP) | Páginas estáticas, `/api/**`, sessões, MongoDB |
+| `serversocket/` | 3000 (TCP) | Validações e cálculos via protocolo de objetos (padrão da disciplina) |
+
+O `rodar.sh` de `servidor/` sobe o `serversocket` em segundo plano, salvo
+`SERVIDOR_ALGORITMOS_DISABLED=1`. Detalhes em [`serversocket/README.md`](serversocket/README.md).
+
+O ponto de entrada do navegador continua sendo `servidor/`: mesma origem para o front.
 
 O diretório `core/` concentra o modelo de dados (#100–#105) com o driver
 oficial do MongoDB (Atlas Free): usuários/propriedades, talhões, culturas/safras,

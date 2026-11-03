@@ -11,4 +11,9 @@ if [ -z "$MONGODB_URI" ]; then
     export MONGODB_URI="mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000"
 fi
 
+if [ -z "$SERVIDOR_ALGORITMOS_DISABLED" ]; then
+    . ./iniciar-algoritmos.sh
+    trap 'kill "$ALGORITMOS_PID" 2>/dev/null' EXIT INT TERM
+fi
+
 java -cp "bin${SEP}lib/*" Servidor "$@"

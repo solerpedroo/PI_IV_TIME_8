@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.bson.Document;
+import servicos.ClienteDeAlgoritmos;
 import util.Json;
 import util.Validacao;
 
@@ -86,68 +87,27 @@ public class TalhoesHandler
         return Resposta.json (200, Json.escrever (ret));
     }
 
-    // GET /api/talhoes/resumo
+    // GET /api/talhoes/resumo — cálculo no ServerSocket (CalculadoraDeTalhoes)
     private Resposta resumo (Requisicao requisicao) throws Exception
     {
-        double hectares = 0;
-        int    total    = 0;
-        int    ativos   = 0;
-
-        for (Document talhao : this.talhoes.listar (requisicao.getSessao ().getPropriedadeId ()))
-        {
-            hectares += talhao.getDouble ("hectares");
-            total++;
-
-            if (talhao.getString ("status").equals ("Ativo"))
-                ativos++;
-        }
-
-        return Resposta.json (200, new Document ("totalHectares",    hectares)
-                                       .append ("quantidadeTotal",  total)
-                                       .append ("quantidadeAtivos", ativos));
+        return ClienteDeAlgoritmos.resumoTalhoes (this.talhoes.listar (requisicao.getSessao ().getPropriedadeId ()));
     }
 
-    // valida o corpo de POST e PUT; devolve os campos prontos para gravar ou null (erros na validacao)
-    private static Document lerTalhao (Document corpo, Validacao validacao)
+    // valida POST/PUT via ServerSocket (ValidadorDeTalhao); unicidade de nome continua no repositório
+    private static Document lerTalhao (Document corpo) throws Exception
     {
-        String nome    = validacao.texto ("nome", "Informe o nome do talhão.", 80);
-        String cultura = validacao.texto ("cultura", "Selecione uma cultura.", 40);
-        Object valorSafra = corpo.get ("safra");
-        String safra = valorSafra == null ? "2025/26" : (valorSafra instanceof String ? ((String) valorSafra).trim () : null);
-        if (safra == null || safra.isEmpty ())
-            validacao.erro ("safra", "Selecione uma safra.");
+        ClienteDeAlgoritmos.ResultadoTalhao remoto = ClienteDeAlgoritmos.validarTalhao (corpo);
 
-        if (cultura != null && !TalhoesHandler.CULTURAS.contains (cultura))
-            validacao.erro ("cultura", "Selecione uma cultura válida.");
-        if (!TalhoesHandler.SAFRAS.contains (safra))
-            validacao.erro ("safra", "Selecione uma safra válida.");
-
-        Object hectares = corpo.get ("hectares");
-        if (!(hectares instanceof Number) ||
-            !(((Number) hectares).doubleValue () > 0) ||      // tambem barra NaN
-            ((Number) hectares).doubleValue () > 1000000)
-            validacao.erro ("hectares", "Informe um valor de hectares maior que zero.");
-
-        String status = "Ativo";
-        Object valor  = corpo.get ("status");
-        if (valor != null && !"".equals (valor))
-        {
-            if (!(valor instanceof String) || !TalhoesHandler.STATUS.contains (valor))
-                validacao.erro ("status", "Selecione um status válido.");
-            else
-                status = (String) valor;
-        }
-
-        if (validacao.temErros ())
+        if (remoto.respostaErro != null)
             return null;
 
-        return new Document ("nome",            nome)
-                   .append  ("nomeNormalizado", nome.toLowerCase (Locale.ROOT))
-                   .append  ("cultura",         cultura)
-                   .append  ("safra",           safra)
-                   .append  ("hectares",        ((Number) hectares).doubleValue ())
-                   .append  ("status",          status)
-                   .append  ("atualizadoEm",    Instant.now ().toString ());
+        return new Document (remoto.campos).append ("atualizadoEm", Instant.now ().toString ());
+    }
+
+    private static Resposta respostaTalhaoInvalido (Document corpo) throws Exception
+    {
+        ClienteDeAlgoritmos.ResultadoTalhao remoto = ClienteDeAlgoritmos.validarTalhao (corpo);
+        return remoto.respostaErro != null ? remoto.respostaErro : Resposta.erro (400, "Validation failed");
     }
 
     private static Resposta nomeRepetido ()
@@ -173,12 +133,11 @@ public class TalhoesHandler
 
     private Resposta criarProtegido (Requisicao requisicao) throws Exception
     {
-        Document  corpo     = requisicao.getCorpoJson ();
-        Validacao validacao = new Validacao (corpo);
-        Document  talhao    = TalhoesHandler.lerTalhao (corpo, validacao);
+        Document corpo  = requisicao.getCorpoJson ();
+        Document talhao = TalhoesHandler.lerTalhao (corpo);
 
         if (talhao == null)
-            return validacao.resposta ();
+            return TalhoesHandler.respostaTalhaoInvalido (corpo);
 
         talhao.append ("propriedadeId", requisicao.getSessao ().getPropriedadeId ())
               .append ("criadoEm",      talhao.getString ("atualizadoEm"));
@@ -201,12 +160,11 @@ public class TalhoesHandler
         if (anterior == null)
             return Resposta.erro (404, "Not found");
 
-        Document  corpo     = requisicao.getCorpoJson ();
-        Validacao validacao = new Validacao (corpo);
-        Document  campos    = TalhoesHandler.lerTalhao (corpo, validacao);
+        Document corpo  = requisicao.getCorpoJson ();
+        Document campos = TalhoesHandler.lerTalhao (corpo);
 
         if (campos == null)
-            return validacao.resposta ();
+            return TalhoesHandler.respostaTalhaoInvalido (corpo);
 
         // Atividades antigas guardam o nome do talhão; impedir a troca mantém
         // a referência legível e válida também no histórico existente.

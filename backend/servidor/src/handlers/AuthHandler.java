@@ -16,6 +16,7 @@ import seguranca.Sessao;
 import seguranca.Sessoes;
 import seguranca.LimitadorDeTaxa;
 import servicos.ServicoEmail;
+import servicos.ClienteDeAlgoritmos;
 import util.Validacao;
 
 /*
@@ -94,23 +95,20 @@ public class AuthHandler
         if (limitada != null)
             return limitada;
 
-        Document  corpo     = requisicao.getCorpoJson ();
-        Validacao validacao = new Validacao (corpo);
+        Document corpo = requisicao.getCorpoJson ();
 
-        String name     = validacao.texto ("name", "Informe seu nome.", 120);
-        String email    = validacao.email ("email");
-        String phone    = validacao.texto ("phone", "Informe seu telefone.", 20);
-        String password = validacao.senha ("password", "Crie uma senha.");
-        String farm     = validacao.texto ("farm", "Informe a propriedade.", 120);
-        String area     = validacao.texto ("area", "Informe a área.", 60);
-        validacao.confirmacao (password);
-        validacao.marcado ("terms", "Aceite os termos para continuar.");
+        // Validação de campos no ServerSocket (ValidadorDeConta); persistência continua aqui.
+        ClienteDeAlgoritmos.ResultadoCadastro remoto = ClienteDeAlgoritmos.validarCadastro (corpo);
 
-        if (phone != null && !phone.matches ("\\(\\d{2}\\) 9\\d{4}-\\d{4}"))
-            validacao.erro ("phone", "Use o formato (DD) 9XXXX-XXXX.");
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
 
-        if (validacao.temErros ())
-            return validacao.resposta ();
+        String name     = remoto.normalizados.getString ("name");
+        String email    = remoto.normalizados.getString ("email");
+        String phone    = remoto.normalizados.getString ("phone");
+        String password = remoto.password;
+        String farm     = remoto.normalizados.getString ("farm");
+        String area     = remoto.normalizados.getString ("area");
 
         String agora = Instant.now ().toString ();
         String token = UUID.randomUUID ().toString ();
@@ -317,14 +315,21 @@ public class AuthHandler
         if (limitada != null)
             return limitada;
 
-        Validacao validacao = new Validacao (requisicao.getCorpoJson ());
+        Document  corpo     = requisicao.getCorpoJson ();
+        Validacao validacao = new Validacao (corpo);
         String    token     = validacao.texto ("token", "Informe o código de redefinição.", 64);
-        String    password  = validacao.senha ("password", "Crie uma nova senha.");
-        validacao.confirmacao (password);
+
         if (validacao.temErros ())
             return validacao.resposta ();
 
-        String hash = Senhas.gerar (password);
+        // Regras de senha no ServerSocket (ValidadorDeConta); token e persistência aqui.
+        ClienteDeAlgoritmos.ResultadoSenha remoto = ClienteDeAlgoritmos.validarSenha (corpo, "password");
+
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
+
+        String password = remoto.password;
+        String hash     = Senhas.gerar (password);
         String id;
 
         synchronized (this.trava)
