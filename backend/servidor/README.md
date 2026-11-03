@@ -97,8 +97,13 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 
 | Variável | Padrão | Uso |
 |---|---|---|
-| `SERVIDOR_PORT` | `8080` | Porta. O argumento da linha de comando tem prioridade. |
+| `SERVIDOR_PORT` | `8080` | Porta HTTP. O argumento da linha de comando tem prioridade. |
 | `SERVIDOR_HOST` | `127.0.0.1` | Interface onde o servidor escuta. |
+| `SERVIDOR_ALGORITMOS_HOST` | `127.0.0.1` | Host do ServerSocket de validações (`backend/serversocket`, porta **3000**). |
+| `SERVIDOR_ALGORITMOS_PORT` | `3000` | Porta TCP do ServerSocket. `testar.sh` usa **30100**. |
+| `SERVIDOR_ALGORITMOS_DISABLED` | — | Se definida, `rodar.sh` não sobe o ServerSocket (rotas delegadas falham com 503). |
+
+Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/register`, `POST /api/auth/reset-password`, `PUT /api/perfil/senha`, `POST`/`PUT /api/talhoes`, `GET /api/talhoes/resumo`, `POST /api/insumos/{id}/movimentacoes` e `GET /api/relatorios/safras/{id}` (colheitas ainda mescladas na API).
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
 | `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/servidor/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
