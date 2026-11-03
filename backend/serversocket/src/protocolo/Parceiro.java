@@ -2,6 +2,7 @@ package protocolo;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -32,7 +33,8 @@ public class Parceiro
         this.transmissor = new ObjectOutputStream (conexao.getOutputStream ());
         this.transmissor.flush ();
 
-        this.receptor = new ObjectInputStream (conexao.getInputStream ());
+        InputStream entrada = new LimiteDeLeitura (conexao.getInputStream (), Protocolo.MAXIMO_BYTES_POR_MENSAGEM);
+        this.receptor = new ObjectInputStream (entrada);
         this.receptor.setObjectInputFilter (FiltroDeClasses.criar ());
     }
 
