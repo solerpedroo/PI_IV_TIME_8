@@ -29,6 +29,7 @@ public class SupervisoraDeConexao extends Thread
     // lidos tambem pela thread do Servidor (desligar), por isso volatile
     private volatile Parceiro parceiro;
     private volatile boolean  desligando = false;
+    private volatile boolean  conexaoFechada = false;
 
     // um pedido por vez: o desligamento espera o pedido em andamento terminar antes de fechar a conexao
     private final Object trava = new Object ();
@@ -98,10 +99,13 @@ public class SupervisoraDeConexao extends Thread
         }
         finally
         {
-            if (this.parceiro != null)
-                this.parceiro.adeus ();
-            else
-                this.fechar ();
+            if (!this.conexaoFechada)
+            {
+                if (this.parceiro != null)
+                    this.parceiro.adeus ();
+                else
+                    this.fechar ();
+            }
 
             this.aceitadora.terminou (this);
         }
@@ -114,6 +118,9 @@ public class SupervisoraDeConexao extends Thread
 
         synchronized (this.trava)
         {
+            if (this.conexaoFechada)
+                return;
+
             if (this.parceiro != null)
             {
                 try
@@ -127,6 +134,9 @@ public class SupervisoraDeConexao extends Thread
             }
             else
                 this.fechar ();
+
+            this.conexaoFechada = true;
+            this.parceiro      = null;
         }
     }
 
