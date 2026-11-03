@@ -55,6 +55,17 @@ Antes deste trabalho:
 
 ## 4. Visão geral da arquitetura
 
+Desde a branch `ServerRefactor`, o AgroGestão mantém **dois** servidores Java alinhados ao material Cliente–Servidor (Fazedor de Continhas):
+
+| Processo | Pasta | Porta | Protocolo |
+|---|---|---|---|
+| API HTTP | `backend/servidor` | 8080 | HTTP manual (`ParceiroHttp`) |
+| Algoritmos | `backend/serversocket` | 3000 | Objetos `Comunicado` serializados (`protocolo.Parceiro`) |
+
+O navegador fala só com a API HTTP. Rotas como `POST /api/auth/register` delegam validações ao ServerSocket via `servicos/ClienteDeAlgoritmos` (variáveis `SERVIDOR_ALGORITMOS_HOST` / `SERVIDOR_ALGORITMOS_PORT`). Persistência, sessão e autorização permanecem na API.
+
+### 4.1 API HTTP (8080)
+
 ```mermaid
 flowchart LR
     C[Cliente<br/>navegador / curl] -->|TCP| A[AceitadoraDeConexao<br/>thread do accept]
