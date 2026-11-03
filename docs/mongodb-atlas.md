@@ -61,8 +61,16 @@ Não use uma credencial compartilhada. Se alguém sair do grupo, seu acesso pode
 
    ```dotenv
    MONGODB_DATABASE=agrogestao_dev
-   MONGODB_URI='mongodb+srv://dev_vinicius:SENHA@CLUSTER.mongodb.net/?retryWrites=true&w=majority&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000'
+   MONGODB_URI='mongodb+srv://dev_vinicius:SENHA@CLUSTER.mongodb.net/agrogestao_dev?authSource=admin&retryWrites=true&w=majority&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000'
    ```
+
+O servidor HTTP em `backend/api` seleciona o banco pelo caminho da `MONGODB_URI`.
+Se seu `.env` já existe e a URI termina em `.mongodb.net/?...`, acrescente
+`/agrogestao_dev` antes de `?`. A variável `MONGODB_DATABASE` é usada pelo
+`backend/core` e não muda o banco selecionado pela API.
+
+Para usuários Atlas com senha (SCRAM), mantenha `authSource=admin` ao adicionar
+o caminho do banco à URI, pois a autenticação desses usuários ocorre em `admin`.
 
 Para `./backend/core/testar.sh --atlas`, altere temporariamente `MONGODB_DATABASE` para um nome terminado em `_teste` (ex.: `agrogestao_ci_teste`). A fábrica `MongoConexao.paraTestes()` recusa qualquer outro nome.
 
