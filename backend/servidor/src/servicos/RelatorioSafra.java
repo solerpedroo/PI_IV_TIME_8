@@ -3,6 +3,8 @@ package servicos;
 
 import handlers.SafrasHandler;
 import http.ErroHttp;
+import protocolo.mensagens.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.RespostaDeRelatorioDeSafra;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -63,63 +65,25 @@ public class RelatorioSafra
                                     List<Document> atividades, List<Document> ocorrencias, List<Document> custos,
                                     List<Document> colheitas) throws Exception
     {
-        LocalDate inicio = dia (safra.get ("dataInicio")), fim = dia (safra.get ("dataFim"));
-        if (inicio == null || fim == null || fim.isBefore (inicio))
-            throw new ErroHttp (409, "A safra possui período inválido; corrija o cadastro antes de consultar.");
+        // Consolidação principal no ServerSocket (ConsolidadorDeSafra); colheitas ainda só na API.
+        PedidoDeRelatorioDeSafra pedido = RelatorioSafraAlgoritmos.montarPedido (safra, talhoes, atividades, ocorrencias, custos);
+        RespostaDeRelatorioDeSafra remoto = ClienteDeAlgoritmos.consolidarRelatorio (pedido);
+        Document ret = RelatorioSafraAlgoritmos.documentoDeResposta (propriedade, safra, remoto);
 
+        LocalDate inicio = dia (safra.get ("dataInicio"));
+        LocalDate fim    = dia (safra.get ("dataFim"));
         Map<String, Document> mapa = new LinkedHashMap<> ();
-        for (Document talhao : talhoes) mapa.put (id (talhao), talhao);
+        for (Document talhao : talhoes)
+            mapa.put (id (talhao), talhao);
+
         List<String> ids = safra.getList ("talhoes", String.class);
-        if (ids == null) ids = List.of ();
-        List<Document> areas = new ArrayList<> (), registros = new ArrayList<> (), pendencias = new ArrayList<> ();
-        for (String id : ids)
-        {
-            Document talhao = mapa.get (id);
-            if (talhao == null)
-                pendencias.add (new Document ("tipo", "talhao").append ("id", id).append ("descricao", "Talhão indisponível")
-                    .append ("motivo", "Vínculo inexistente; área não contabilizada."));
-            else areas.add (new Document ("id", id).append ("nome", talhao.getString ("nome"))
-                .append ("hectares", SafrasHandler.hectares (talhao)));
-        }
+        if (ids == null)
+            ids = List.of ();
 
         String safraId = id (safra);
-        for (Document atividade : atividades)
-        {
-            if (!safraId.equals (atividade.getString ("safraId"))) continue;
-            Document item = item ("atividade", atividade, atividade.getString ("nome"), atividade.getString ("data"), atividade.getString ("talhao"));
-            // O cadastro de atividades aceita o nome do talhão sem distinguir maiúsculas.
-            if (areas.stream ().noneMatch (t -> t.getString ("nome") != null && t.getString ("nome").equalsIgnoreCase (atividade.getString ("talhao"))))
-                pendencias.add (new Document (item).append ("motivo", "Talhão da atividade não encontrado na safra; não incluído nos totais."));
-            else if (noPeriodo (item, inicio, fim, pendencias)) registros.add (item);
-        }
-        // Ocorrências não têm safraId no contrato atual: a associação é por talhão e data.
-        for (Document ocorrencia : ocorrencias)
-        {
-            if (Boolean.TRUE.equals (ocorrencia.get ("excluida")) || ocorrencia.getString ("talhaoId") == null || !ids.contains (ocorrencia.getString ("talhaoId"))) continue;
-            LocalDate data = dia (ocorrencia.get ("data"));
-            Document item = item ("ocorrencia", ocorrencia, ocorrencia.getString ("titulo"), ocorrencia.getString ("data"), ocorrencia.getString ("talhaoNome"));
-            if (data == null) noPeriodo (item, inicio, fim, pendencias);
-            else if (!data.isBefore (inicio) && !data.isAfter (fim)) registros.add (item);
-        }
-        long totalCentavos = 0;
-        for (Document custo : custos)
-        {
-            if (!safraId.equals (custo.getString ("safraId"))) continue;
-            Document talhao = mapa.get (custo.getString ("talhaoId"));
-            Document item = item ("custo", custo, custo.getString ("description"), custo.getString ("date"),
-                talhao == null ? "Sem talhão" : talhao.getString ("nome"));
-            item.append ("categoria", custo.getString ("category"));
-            // Mesmo arredondamento dos custos; long e soma exata evitam perda silenciosa.
-            long centavos = centavos (custo);
-            item.append ("valorCentavos", centavos);
-            if (custo.getString ("talhaoId") != null && (!ids.contains (custo.getString ("talhaoId")) || talhao == null))
-                pendencias.add (new Document (item).append ("motivo", "Talhão do custo não encontrado na safra; não incluído nos totais."));
-            else if (noPeriodo (item, inicio, fim, pendencias))
-            {
-                registros.add (item);
-                totalCentavos = Math.addExact (totalCentavos, centavos);
-            }
-        }
+        List<Document> registros  = ret.getList ("registros", Document.class);
+        List<Document> pendencias = ret.getList ("pendencias", Document.class);
+        List<Document> areas      = ret.getList ("talhoes", Document.class);
 
         long totalColheitaGramas = 0;
         for (Document colheita : colheitas)
@@ -147,25 +111,24 @@ public class RelatorioSafra
             int data = a.getString ("data").compareTo (b.getString ("data"));
             return data != 0 ? data : (a.getString ("tipo") + a.getString ("id")).compareTo (b.getString ("tipo") + b.getString ("id"));
         });
-        Document contagens = new Document ();
+
+        Document contagens = ret.get ("contagens", Document.class);
         for (String tipo : List.of ("atividade", "ocorrencia", "custo", "colheita"))
             contagens.append (tipo, registros.stream ().filter (r -> tipo.equals (r.getString ("tipo"))).count ());
-        double area = SafrasHandler.area (safra, mapa);
+
+        double area = ret.getDouble ("areaHectares");
         double totalKg = Math.round (totalColheitaGramas / 10.0) / 100.0;
         Double produtividadeKgHa = area > 0 && totalColheitaGramas > 0
             ? Double.valueOf (Math.round (totalColheitaGramas / area / 100.0) / 10.0) : null;
         Double produtividadeScHa = area > 0 && totalColheitaGramas > 0
             ? Double.valueOf (Math.round (totalColheitaGramas / area / 60.0 / 100.0) / 10.0) : null;
-        return new Document ("propriedade", new Document ("id", id (propriedade)).append ("nome", propriedade.getString ("nome") == null ? propriedade.getString ("farm") : propriedade.getString ("nome")))
-            .append ("safra", new Document ("id", safraId).append ("nome", safra.getString ("nome"))
-                .append ("cultura", safra.getString ("cultura")).append ("etapa", safra.getString ("etapa")))
-            .append ("periodo", new Document ("inicio", inicio.toString ()).append ("fim", fim.toString ()))
-            .append ("areaHectares", area).append ("origemArea", "Área atual dos talhões associados (ha)")
-            .append ("regraOcorrencias", "Ocorrências do usuário nos talhões da safra, dentro do período inclusivo.")
-            .append ("totalColheitaKg", totalKg)
-            .append ("produtividadeKgHa", produtividadeKgHa)
-            .append ("produtividadeScHa", produtividadeScHa)
-            .append ("talhoes", areas).append ("registros", registros).append ("pendencias", pendencias)
-            .append ("contagens", contagens).append ("totalCentavos", totalCentavos);
+
+        ret.append ("registros", registros);
+        ret.append ("pendencias", pendencias);
+        ret.append ("contagens", contagens);
+        ret.append ("totalColheitaKg", totalKg);
+        ret.append ("produtividadeKgHa", produtividadeKgHa);
+        ret.append ("produtividadeScHa", produtividadeScHa);
+        return ret;
     }
 }
