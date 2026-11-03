@@ -1,3 +1,4 @@
+/* Autor secundário: Tomas de Paula Michelon Toniato - RA: 25004211 */
 /**
  * Agro — Atividades (frame U6jZ05)
  * --------------------------------------------------------------------------
@@ -117,6 +118,146 @@
   font-family: var(--font-mono);
 }
 
+/* Calendário com semana e mês: navegação, dias com contagem e opções. */
+.calendar-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.calendar-card-header .card-title {
+  white-space: nowrap;
+}
+
+.calendar-card-header .view-toggle-option {
+  padding: 6px 10px;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 0;
+}
+
+.calendar-range {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.calendar-today {
+  justify-self: start;
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.week-day.is-today .week-day-date {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.week-day[aria-pressed="true"] {
+  background: var(--primary-subtle);
+}
+
+.week-calendar-body.is-month {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 3px;
+}
+
+.month-weekday {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.month-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 36px;
+  padding: 2px 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.month-day:hover {
+  background: var(--bg-subtle);
+}
+
+.month-day.is-today {
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.month-day.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.month-day-count {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--text-inverse);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.calendar-options {
+  display: grid;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+
+.calendar-only-period input {
+  accent-color: var(--primary);
+}
+
+.calendar-only-period {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.calendar-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.calendar-message:empty {
+  display: none;
+}
+
+.calendar-retry {
+  justify-self: start;
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Lista alternativa                                                          */
 /* -------------------------------------------------------------------------- */
@@ -151,5 +292,15 @@
   .week-calendar-body {
     grid-template-columns: repeat(7, 1fr);
     grid-auto-flow: column;
+  }
+}
+
+@media (max-width: 1100px) {
+  .week-calendar-body.is-month {
+    grid-auto-flow: row;
+  }
+
+  .month-day {
+    min-height: 44px;
   }
 }

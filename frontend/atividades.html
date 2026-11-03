@@ -137,7 +137,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Atividades</h1>
-          <p>Planejamento e acompanhamento · Semana 32 · 04–10 ago 2026</p>
+          <p data-activities-period>Planejamento e acompanhamento</p>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-outline" type="button" data-report-open>Relatório de atividades</button>
@@ -170,14 +170,13 @@
       <section class="metrics-row" aria-label="Indicadores de atividades">
         <article class="metric-card">
           <div class="metric-card-top">
-            <span class="metric-card-label">Total da semana</span>
+            <span class="metric-card-label">Total no período</span>
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="total">24</p>
-            <span class="metric-card-change">+12%</span>
+            <p class="metric-card-value" data-metric="total">-</p>
           </div>
-          <p class="metric-card-desc">+3 vs. semana anterior</p>
+          <p class="metric-card-desc" data-metric-total-desc>atividades do calendário</p>
         </article>
         <article class="metric-card">
           <div class="metric-card-top">
@@ -208,9 +207,9 @@
           </div>
           <div class="metric-card-value-row">
             <p class="metric-card-value" data-metric="done">8</p>
-            <span class="metric-card-change is-flat">33% do total</span>
+            <span class="metric-card-change is-flat" data-metric-done-share>0% do quadro</span>
           </div>
-          <p class="metric-card-desc">nesta semana</p>
+          <p class="metric-card-desc">no quadro</p>
         </article>
       </section>
 
@@ -241,26 +240,28 @@
       <!-- Conteúdo: calendário da semana + quadro Kanban -->
       <div class="activities-content-row" data-view-kanban>
         <section class="card week-calendar-card" aria-labelledby="calendar-title">
-          <div class="card-header">
-            <h2 class="card-title" id="calendar-title">Semana 32</h2>
+          <div class="card-header calendar-card-header">
+            <h2 class="card-title" id="calendar-title" data-calendar-title>Calendário</h2>
+            <div class="view-toggle" role="group" aria-label="Visualização do calendário">
+              <button type="button" class="view-toggle-option" data-calendar-view="semana" aria-pressed="true">Semana</button>
+              <button type="button" class="view-toggle-option" data-calendar-view="mes" aria-pressed="false">Mês</button>
+            </div>
           </div>
-          <div class="week-calendar-body">
-            <button type="button" class="week-day" data-day="04 ago"><span class="week-day-name">Seg</span><span class="week-day-date">04</span><span class="week-day-count is-primary">3</span></button>
-            <button type="button" class="week-day" data-day="05 ago"><span class="week-day-name">Ter</span><span class="week-day-date">05</span><span class="week-day-count">5</span></button>
-            <button type="button" class="week-day" data-day="06 ago"><span class="week-day-name">Qua</span><span class="week-day-date">06</span><span class="week-day-count">4</span></button>
-            <button type="button" class="week-day" data-day="07 ago"><span class="week-day-name">Qui</span><span class="week-day-date">07</span><span class="week-day-count">6</span></button>
-            <button type="button" class="week-day" data-day="08 ago"><span class="week-day-name">Sex</span><span class="week-day-date">08</span><span class="week-day-count">4</span></button>
-            <button type="button" class="week-day" data-day="09 ago"><span class="week-day-name">Sáb</span><span class="week-day-date">09</span><span class="week-day-count">1</span></button>
-            <button type="button" class="week-day" data-day="10 ago"><span class="week-day-name">Dom</span><span class="week-day-date">10</span><span class="week-day-count">1</span></button>
+          <div class="calendar-nav">
+            <button type="button" class="icon-btn icon-btn--sm" data-calendar-prev aria-label="Período anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <span class="calendar-range" data-calendar-range aria-live="polite"></span>
+            <button type="button" class="icon-btn icon-btn--sm" data-calendar-next aria-label="Próximo período"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <div class="week-calendar-body" data-calendar-days aria-label="Dias do período"></div>
+          <div class="calendar-options">
+            <button type="button" class="btn btn-ghost calendar-today" data-calendar-today>Voltar para hoje</button>
+            <label class="calendar-only-period"><input type="checkbox" data-calendar-only-period> Mostrar no quadro só este período</label>
+            <p class="calendar-message" data-calendar-message role="status"></p>
+            <button type="button" class="btn btn-outline calendar-retry" data-calendar-retry hidden>Tentar novamente</button>
           </div>
           <div class="week-summary">
-            <h3>Resumo da semana</h3>
-            <dl>
-              <div><dt>Aplicações</dt><dd>6</dd></div>
-              <div><dt>Irrigação</dt><dd>4</dd></div>
-              <div><dt>Colheita</dt><dd>3</dd></div>
-              <div><dt>Manutenção</dt><dd>2</dd></div>
-            </dl>
+            <h3 data-calendar-summary-title>Resumo do período</h3>
+            <dl data-calendar-summary></dl>
           </div>
         </section>
 
