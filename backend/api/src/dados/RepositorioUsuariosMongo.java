@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 package dados;
 
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
@@ -38,7 +39,23 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         this.propriedades = banco.getCollection ("propriedades");
         this.cliente      = conexao.getCliente ();
 
-        this.usuarios.createIndex (Indexes.ascending ("email"), new IndexOptions ().unique (true));
+        // O core usa email_unico; versões antigas da API usam email_1.
+        // Reaproveitar o nome existente evita conflito sem remover a proteção de unicidade.
+        String nomeIndiceEmail = "email_unico";
+        for (Document indice : this.usuarios.listIndexes ())
+        {
+            if (new Document ("email", 1).equals (indice.get ("key"))
+                && Boolean.TRUE.equals (indice.get ("unique"))
+                && !Boolean.TRUE.equals (indice.get ("sparse"))
+                && !indice.containsKey ("partialFilterExpression")
+                && !indice.containsKey ("collation"))
+            {
+                nomeIndiceEmail = indice.getString ("name");
+                break;
+            }
+        }
+        this.usuarios.createIndex (Indexes.ascending ("email"),
+                                  new IndexOptions ().unique (true).name (nomeIndiceEmail));
         this.usuarios.createIndex (Indexes.ascending ("tokenConfirmacao"));
         this.usuarios.createIndex (Indexes.ascending ("tokenRedefinicao"));
         this.propriedades.createIndex (Indexes.ascending ("usuarioId"));
