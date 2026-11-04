@@ -135,6 +135,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
 
         Instant agora = Instant.now ();
         atividade.put ("criadaEm", agora.toString ());
+        if (!(atividade.get ("versao") instanceof Number))
+            atividade.put ("versao", 1L);
 
         Document eventoZero = new Document ();
         eventoZero.put ("atividadeId", idStr);
@@ -192,6 +194,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (updates.isEmpty ())
             return true;
 
+        updates.add (Updates.inc ("versao", 1));
+
         // Evita editar uma atividade que foi finalizada por outra instância.
         if (this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("status", statusAtual)), Updates.combine (updates)).getMatchedCount () != 1)
             throw new IllegalStateException ("Estado alterado por outra operação.");
@@ -234,7 +238,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
                     evento.put ("ordem", (int) contagem);
                     // A condição impede que uma transição concorrente reabra ou
                     // sobrescreva um estado confirmado em outra instância.
-                    if (this.atividades.updateOne (sessao, Filters.and (filtro (propriedadeId, id), Filters.eq ("status", statusAtual)), Updates.set ("status", novoStatus)).getModifiedCount () != 1)
+                    if (this.atividades.updateOne (sessao, Filters.and (filtro (propriedadeId, id), Filters.eq ("status", statusAtual)),
+                        Updates.combine (Updates.set ("status", novoStatus), Updates.inc ("versao", 1))).getModifiedCount () != 1)
                         throw new IllegalStateException ("Estado alterado por outra operação; consulte novamente.");
                     this.historicos.insertOne (sessao, evento);
                     return null;
@@ -259,5 +264,38 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         }
 
         return ret;
+    }
+
+    private static long versaoAtual (Document atividade)
+    {
+        Object v = atividade.get ("versao");
+        return v instanceof Number ? ((Number) v).longValue () : 1L;
+    }
+
+    @Override
+    public boolean salvarFotoEvidencia (String propriedadeId, String id, long versaoEsperada, Document subdocumento) throws Exception
+    {
+        Document atual = this.buscarPorId (propriedadeId, id);
+        if (atual == null)
+            return false;
+        String status = atual.getString ("status");
+        if ("Concluída".equalsIgnoreCase (status) || "Cancelada".equalsIgnoreCase (status))
+            throw new IllegalStateException ("Atividade finalizada não permite novo anexo.");
+        if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
+            return false;
+        return this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("versao", versaoEsperada)),
+            Updates.combine (Updates.set (util.FotoEvidencia.CAMPO_RAIZ, subdocumento), Updates.inc ("versao", 1))).getModifiedCount () == 1;
+    }
+
+    @Override
+    public boolean removerFotoEvidencia (String propriedadeId, String id, long versaoEsperada) throws Exception
+    {
+        Document atual = this.buscarPorId (propriedadeId, id);
+        if (atual == null)
+            return false;
+        if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
+            return false;
+        return this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("versao", versaoEsperada)),
+            Updates.combine (Updates.unset (util.FotoEvidencia.CAMPO_RAIZ), Updates.inc ("versao", 1))).getMatchedCount () == 1;
     }
 }
