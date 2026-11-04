@@ -2,7 +2,6 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-import com.mongodb.ConnectionString;
 import dados.ConexaoMongo;
 import dados.RepositorioAtividadesMemoria;
 import dados.RepositorioColheitas;
@@ -145,7 +144,8 @@ public class TesteColheitas
     private static String uriTeste () throws Exception
     {
         String uri   = System.getenv ("MONGODB_URI");
-        String banco = uri == null ? null : new ConnectionString (uri).getDatabase ();
+        String banco = uri == null ? null
+            : ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
 
         if (banco == null || !banco.endsWith ("_teste"))
             throw new Exception ("Use MONGODB_URI com banco terminado em _teste");
