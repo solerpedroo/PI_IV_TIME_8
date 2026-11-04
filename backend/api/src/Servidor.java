@@ -56,6 +56,7 @@ import handlers.RelatorioEstoqueHandler;
 import handlers.RelatorioAtividadesHandler;
 import handlers.SaudeHandler;
 import handlers.TalhoesHandler;
+import handlers.GeorreferenciamentoHandler;
 import handlers.OcorrenciasHandler;
 import http.Roteador;
 import java.io.BufferedReader;
@@ -155,6 +156,7 @@ public class Servidor
         handlerEstoque.setConsumo (consumo);
         handlerEstoque.registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
+        new GeorreferenciamentoHandler (talhoes, ocorrencias, sessoes).registrar (roteador);
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
         handlerSafras.registrar (roteador);
         RepositorioColheitas colheitas = conexao == null ? new RepositorioColheitasMemoria () : new RepositorioColheitasMongo (conexao.getBanco ());
