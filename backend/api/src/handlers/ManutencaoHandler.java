@@ -210,8 +210,14 @@ public class ManutencaoHandler implements Manipulador
 
     private static Resposta nomeRepetido ()
     {
-        return Resposta.json (409, new Document ("error", "Equipment name already exists")
+        return Resposta.json (409, new Document ("error", "J\u00e1 existe um equipamento com esse nome.")
                                        .append ("fields", new Document ("nome", "J\u00e1 existe um equipamento com esse nome.")));
+    }
+
+    private static Resposta preventivaJaRealizada ()
+    {
+        return Resposta.json (409, new Document ("error", "Preventiva j\u00e1 realizada: atualize a agenda ou registre outra preventiva.")
+                                       .append ("fields", new Document ("preventivaId", "Esta preventiva j\u00e1 foi realizada por outra interven\u00e7\u00e3o.")));
     }
 
     // a escrita usa a propriedade da sessao; se ela mudou no meio (outra aba selecionou outra), recusa
@@ -309,16 +315,42 @@ public class ManutencaoHandler implements Manipulador
         return valor instanceof Number ? ((Number) valor).doubleValue () : 0;
     }
 
+    // agrupa por equipamentoId para nao varrer toda a propriedade a cada linha da listagem
+    private static LinkedHashMap<String, ArrayList<Document>> porEquipamento (List<Document> documentos)
+    {
+        LinkedHashMap<String, ArrayList<Document>> ret = new LinkedHashMap<String, ArrayList<Document>> ();
+
+        for (Document documento : documentos)
+        {
+            String equipamentoId = documento.getString ("equipamentoId");
+
+            if (equipamentoId == null)
+                continue;
+
+            ArrayList<Document> lista = ret.get (equipamentoId);
+
+            if (lista == null)
+            {
+                lista = new ArrayList<Document> ();
+                ret.put (equipamentoId, lista);
+            }
+
+            lista.add (documento);
+        }
+
+        return ret;
+    }
+
     // a preventiva programada mais proxima do equipamento; null se nao houver
-    private static Document proximaPreventiva (String equipamentoId, List<Document> preventivas)
+    private static Document proximaPreventiva (List<Document> preventivasDoEquipamento)
     {
         Document escolhida = null;
 
-        for (Document preventiva : preventivas)
-            if (equipamentoId.equals (preventiva.getString ("equipamentoId")) &&
-                ManutencaoHandler.PROGRAMADA.equals (preventiva.getString ("status")) &&
-                (escolhida == null || preventiva.getString ("dataPrevista").compareTo (escolhida.getString ("dataPrevista")) < 0))
-                escolhida = preventiva;
+        if (preventivasDoEquipamento != null)
+            for (Document preventiva : preventivasDoEquipamento)
+                if (ManutencaoHandler.PROGRAMADA.equals (preventiva.getString ("status")) &&
+                    (escolhida == null || preventiva.getString ("dataPrevista").compareTo (escolhida.getString ("dataPrevista")) < 0))
+                    escolhida = preventiva;
 
         return escolhida == null ? null : new Document ("id",           ManutencaoHandler.id (escolhida))
                                               .append  ("descricao",    escolhida.getString ("descricao"))
@@ -326,15 +358,15 @@ public class ManutencaoHandler implements Manipulador
     }
 
     // a intervencao mais recente do equipamento; null se nao houver
-    private static Document ultimaIntervencao (String equipamentoId, List<Document> intervencoes)
+    private static Document ultimaIntervencao (List<Document> intervencoesDoEquipamento)
     {
         Document escolhida = null;
 
-        for (Document intervencao : intervencoes)
-            if (equipamentoId.equals (intervencao.getString ("equipamentoId")) &&
-                (escolhida == null ||
-                 (intervencao.getString ("data") + ManutencaoHandler.id (intervencao)).compareTo (escolhida.getString ("data") + ManutencaoHandler.id (escolhida)) > 0))
-                escolhida = intervencao;
+        if (intervencoesDoEquipamento != null)
+            for (Document intervencao : intervencoesDoEquipamento)
+                if (escolhida == null ||
+                    (intervencao.getString ("data") + ManutencaoHandler.id (intervencao)).compareTo (escolhida.getString ("data") + ManutencaoHandler.id (escolhida)) > 0)
+                    escolhida = intervencao;
 
         return escolhida == null ? null : new Document ("id",        ManutencaoHandler.id (escolhida))
                                               .append  ("data",      escolhida.getString ("data"))
@@ -342,13 +374,12 @@ public class ManutencaoHandler implements Manipulador
                                               .append  ("descricao", escolhida.getString ("descricao"));
     }
 
-    private Document equipamentoPublico (Document equipamento, List<Document> preventivas, List<Document> intervencoes)
+    private Document equipamentoPublico (Document equipamento, List<Document> preventivasDoEquipamento,
+                                         List<Document> intervencoesDoEquipamento)
     {
-        String equipamentoId = ManutencaoHandler.id (equipamento);
-
         return ManutencaoHandler.publico (equipamento)
-                   .append ("proximaPreventiva", ManutencaoHandler.proximaPreventiva (equipamentoId, preventivas))
-                   .append ("ultimaIntervencao", ManutencaoHandler.ultimaIntervencao (equipamentoId, intervencoes));
+                   .append ("proximaPreventiva", ManutencaoHandler.proximaPreventiva (preventivasDoEquipamento))
+                   .append ("ultimaIntervencao", ManutencaoHandler.ultimaIntervencao (intervencoesDoEquipamento));
     }
 
     private static Document preventivaPublica (Document preventiva, Map<String, Document> equipamentos,
@@ -439,9 +470,9 @@ public class ManutencaoHandler implements Manipulador
         String              status        = ManutencaoHandler.filtro (requisicao, "status");
         String              tipo          = ManutencaoHandler.filtro (requisicao, "tipo");
         String              busca         = ManutencaoHandler.filtro (requisicao, "q");
-        List<Document>      preventivas   = this.preventivas.listar (propriedadeId);
-        List<Document>      intervencoes  = this.intervencoes.listar (propriedadeId);
-        ArrayList<Document> ret           = new ArrayList<Document> ();
+        LinkedHashMap<String, ArrayList<Document>> preventivasPorEquipamento  = ManutencaoHandler.porEquipamento (this.preventivas.listar (propriedadeId));
+        LinkedHashMap<String, ArrayList<Document>> intervencoesPorEquipamento = ManutencaoHandler.porEquipamento (this.intervencoes.listar (propriedadeId));
+        ArrayList<Document>                        ret                        = new ArrayList<Document> ();
 
         if (busca != null)
             busca = busca.toLowerCase (Locale.ROOT);
@@ -457,7 +488,10 @@ public class ManutencaoHandler implements Manipulador
             if (busca != null && !equipamento.getString ("nomeNormalizado").contains (busca))
                 continue;
 
-            ret.add (this.equipamentoPublico (equipamento, preventivas, intervencoes));
+            String equipamentoId = ManutencaoHandler.id (equipamento);
+
+            ret.add (this.equipamentoPublico (equipamento, preventivasPorEquipamento.get (equipamentoId),
+                                              intervencoesPorEquipamento.get (equipamentoId)));
         }
 
         return Resposta.json (200, Json.escrever (ret));
@@ -473,8 +507,13 @@ public class ManutencaoHandler implements Manipulador
         if (equipamento == null)
             ret = ManutencaoHandler.equipamentoNaoEncontrado ();
         else
-            ret = Resposta.json (200, this.equipamentoPublico (equipamento, this.preventivas.listar (propriedadeId),
-                                                               this.intervencoes.listar (propriedadeId)));
+        {
+            String equipamentoId = requisicao.getParametro ("id");
+
+            ret = Resposta.json (200, this.equipamentoPublico (equipamento,
+                ManutencaoHandler.porEquipamento (this.preventivas.listar (propriedadeId)).get (equipamentoId),
+                ManutencaoHandler.porEquipamento (this.intervencoes.listar (propriedadeId)).get (equipamentoId)));
+        }
 
         return ret;
     }
@@ -503,7 +542,7 @@ public class ManutencaoHandler implements Manipulador
             if (!this.equipamentos.criar (equipamento))
                 return ManutencaoHandler.nomeRepetido ();
 
-            return Resposta.json (201, this.equipamentoPublico (equipamento, new ArrayList<Document> (), new ArrayList<Document> ()));
+            return Resposta.json (201, this.equipamentoPublico (equipamento, null, null));
         }
     }
 
@@ -531,9 +570,12 @@ public class ManutencaoHandler implements Manipulador
             if (!this.equipamentos.atualizar (propriedadeId, id, new Document (validado.campos).append ("atualizadoEm", Instant.now ().toString ())))
                 return ManutencaoHandler.nomeRepetido ();
 
+            LinkedHashMap<String, ArrayList<Document>> preventivasPorEquipamento  = ManutencaoHandler.porEquipamento (this.preventivas.listar (propriedadeId));
+            LinkedHashMap<String, ArrayList<Document>> intervencoesPorEquipamento = ManutencaoHandler.porEquipamento (this.intervencoes.listar (propriedadeId));
+
             return Resposta.json (200, this.equipamentoPublico (this.equipamentos.buscarPorId (propriedadeId, id),
-                                                                this.preventivas.listar (propriedadeId),
-                                                                this.intervencoes.listar (propriedadeId)));
+                                                                preventivasPorEquipamento.get (id),
+                                                                intervencoesPorEquipamento.get (id)));
         }
     }
 
@@ -784,6 +826,31 @@ public class ManutencaoHandler implements Manipulador
         return Resposta.json (200, Json.escrever (ret));
     }
 
+    // desfaz gravacao parcial de POST /api/intervencoes (compensacao quando a proxima preventiva falha)
+    private void desfazerCriacaoIntervencao (String propriedadeId, String intervencaoId, String preventivaId,
+                                              String proximaPreventivaId, boolean preventivaMarcada) throws Exception
+    {
+        if (proximaPreventivaId != null)
+            this.preventivas.excluir (propriedadeId, proximaPreventivaId);
+
+        if (preventivaMarcada && preventivaId != null)
+            this.preventivas.atualizar (propriedadeId, preventivaId,
+                                        new Document ("status",        ManutencaoHandler.PROGRAMADA)
+                                            .append  ("intervencaoId", null)
+                                            .append  ("realizadaEm",   null)
+                                            .append  ("atualizadoEm",  Instant.now ().toString ()));
+
+        if (intervencaoId != null)
+            this.intervencoes.excluir (propriedadeId, intervencaoId);
+    }
+
+    private static boolean geraCusto (Document intervencao)
+    {
+        Object valor = intervencao.get ("valor");
+
+        return valor instanceof Number && ((Number) valor).doubleValue () >= 0.01;
+    }
+
     // grava o custo (ou o atualiza) sem desfazer a intervencao ja gravada; true se o custo ficou pendente
     private boolean sincronizarCusto (String propriedadeId, Document intervencao, Document equipamento, boolean novo)
     {
@@ -860,8 +927,12 @@ public class ManutencaoHandler implements Manipulador
                                                                                                  Integer.valueOf (((Number) intervalo).intValue ()))
                                                            : null;
 
-            // ---------------------------------------------------------------- gravacoes
-            String   agora       = Instant.now ().toString ();
+            // ---------------------------------------------------------------- gravacoes (compensacao se a proxima preventiva falhar)
+            String   agora              = Instant.now ().toString ();
+            String   intervencaoId      = null;
+            String   proximaPreventivaId = null;
+            boolean  preventivaMarcada  = false;
+
             Document intervencao = new Document ("equipamentoId", equipamentoId)
                                        .append  ("preventivaId",  preventiva == null ? null : preventivaId)
                                        .append  ("tipo",          validado.campos.getString ("tipo"))
@@ -878,39 +949,51 @@ public class ManutencaoHandler implements Manipulador
                                        .append  ("criadoEm",      agora)
                                        .append  ("atualizadoEm",  agora);
 
-            this.intervencoes.criar (intervencao);
-            String intervencaoId = ManutencaoHandler.id (intervencao);
-
-            if (preventiva != null)
+            try
             {
-                this.preventivas.atualizar (propriedadeId, preventivaId,
-                                            new Document ("status",        ManutencaoHandler.REALIZADA)
-                                                .append  ("intervencaoId", intervencaoId)
-                                                .append  ("realizadaEm",   intervencao.getString ("data"))
-                                                .append  ("atualizadoEm",  agora));
+                this.intervencoes.criar (intervencao);
+                intervencaoId = ManutencaoHandler.id (intervencao);
 
-                if (proxima != null)
+                if (preventiva != null)
                 {
-                    Document nova = new Document ("equipamentoId", equipamentoId)
-                                        .append  ("descricao",     preventiva.getString ("descricao"))
-                                        .append  ("dataPrevista",  proxima)
-                                        .append  ("intervaloDias", intervalo)
-                                        .append  ("status",        ManutencaoHandler.PROGRAMADA)
-                                        .append  ("intervencaoId", null)
-                                        .append  ("geradaPorIntervencaoId", intervencaoId)
-                                        .append  ("propriedadeId", propriedadeId)
-                                        .append  ("criadoEm",      agora)
-                                        .append  ("atualizadoEm",  agora);
+                    preventivaMarcada = this.preventivas.marcarRealizadaSeProgramada (propriedadeId, preventivaId, intervencaoId,
+                                                                                      intervencao.getString ("data"), agora);
 
-                    this.preventivas.criar (nova);
-                    this.intervencoes.atualizar (propriedadeId, intervencaoId, new Document ("proximaPreventivaId", ManutencaoHandler.id (nova)));
-                    intervencao.put ("proximaPreventivaId", ManutencaoHandler.id (nova));
+                    if (!preventivaMarcada)
+                    {
+                        this.intervencoes.excluir (propriedadeId, intervencaoId);
+                        return ManutencaoHandler.preventivaJaRealizada ();
+                    }
+
+                    if (proxima != null)
+                    {
+                        Document nova = new Document ("equipamentoId", equipamentoId)
+                                            .append  ("descricao",     preventiva.getString ("descricao"))
+                                            .append  ("dataPrevista",  proxima)
+                                            .append  ("intervaloDias", intervalo)
+                                            .append  ("status",        ManutencaoHandler.PROGRAMADA)
+                                            .append  ("intervencaoId", null)
+                                            .append  ("geradaPorIntervencaoId", intervencaoId)
+                                            .append  ("propriedadeId", propriedadeId)
+                                            .append  ("criadoEm",      agora)
+                                            .append  ("atualizadoEm",  agora);
+
+                        this.preventivas.criar (nova);
+                        proximaPreventivaId = ManutencaoHandler.id (nova);
+                        this.intervencoes.atualizar (propriedadeId, intervencaoId, new Document ("proximaPreventivaId", proximaPreventivaId));
+                        intervencao.put ("proximaPreventivaId", proximaPreventivaId);
+                    }
                 }
+
+                this.atualizarHorimetro (propriedadeId, equipamento, intervencao);
+            }
+            catch (Exception erro)
+            {
+                this.desfazerCriacaoIntervencao (propriedadeId, intervencaoId, preventivaId, proximaPreventivaId, preventivaMarcada);
+                throw erro;
             }
 
-            this.atualizarHorimetro (propriedadeId, equipamento, intervencao);
-
-            boolean  pendente = intervencao.get ("valor") != null && this.sincronizarCusto (propriedadeId, intervencao, equipamento, true);
+            boolean  pendente = ManutencaoHandler.geraCusto (intervencao) && this.sincronizarCusto (propriedadeId, intervencao, equipamento, true);
             Document resposta = ManutencaoHandler.intervencaoPublica (intervencao, ManutencaoHandler.porId (this.equipamentos.listar (propriedadeId)),
                                                                      talhoes, safras);
 
