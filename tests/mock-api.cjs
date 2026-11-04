@@ -53,6 +53,8 @@ async function mockApi(context, origin, options = {}) {
       if (url.pathname === '/api/insumos/resumo') return reply(200, {totalProdutos:0,criticos:0,valorEmEstoque:0,entradasNoMes:0});
       // Orçamento por safra (#229): sem safras na revisão visual, a lista vem vazia.
       if (url.pathname === '/api/orcamentos') return reply(200, []);
+      // Georreferenciamento (#233): sem talhões localizados na revisão visual.
+      if (url.pathname === '/api/mapa') return reply(200, {talhoes: [], semLocalizacao: [], ocorrenciasSemTalhao: 0, limites: null});
     }
     // Custos em memória com o mesmo contrato do CustosHandler (lista filtrada e resumo).
     if (options.visual && url.pathname.startsWith('/api/custos')) return costsRoute(req, url, reply, costs, plots);
@@ -78,6 +80,7 @@ async function mockApi(context, origin, options = {}) {
     if (url.pathname === '/api/calendario' && req.method() === 'GET') return reply(200, calendar(url, activities));
     // Apenas inicialização das telas: o CRUD de ocorrências é testado no Java real.
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias') return reply(200, options.occurrences || []);
+    if (req.method() === 'GET' && url.pathname === '/api/mapa') return reply(200, {talhoes: [], semLocalizacao: [], ocorrenciasSemTalhao: 0, limites: null});
     if (req.method() === 'GET' && url.pathname === '/api/ocorrencias/resumo') return reply(200,
       {abertas: 0, emAcompanhamento: 0, resolvidasMes: 0, prioridadeAlta: 0, mes: url.searchParams.get('mes')});
     if (url.pathname === '/api/me') {
