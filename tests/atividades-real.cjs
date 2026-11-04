@@ -17,6 +17,7 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { aguardarTokenDeConfirmacao } = require("./token-confirmacao.cjs");
 
 const base = "http://127.0.0.1:8080";
 const cpSeparator = process.platform === "win32" ? ";" : ":";
@@ -42,16 +43,6 @@ async function clickCardAction(page, name, action) {
     if (!btn) throw new Error(`Ação "${action}" não encontrada no card: ${name}`);
     btn.click();
   }, { name, action });
-}
-
-async function tokenDeConfirmacao(serverLog) {
-  for (let tentativa = 0; tentativa < 50; tentativa++) {
-    const encontrado = serverLog();
-    const token = encontrado.match(/token: ([a-zA-Z0-9-]+)/);
-    if (token) return token[1];
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error("Token de confirmação não chegou ao log do servidor.");
 }
 
 (async () => {
@@ -117,7 +108,7 @@ async function tokenDeConfirmacao(serverLog) {
       terms: true,
     });
 
-    await api("/api/auth/confirm-email", { token: await tokenDeConfirmacao(() => serverLog) });
+    await api("/api/auth/confirm-email", { token: await aguardarTokenDeConfirmacao(() => serverLog) });
 
     const loginRes = await api("/api/auth/login", {
       email: "miguel.atividades@agro.test",
