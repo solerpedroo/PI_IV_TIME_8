@@ -1,6 +1,7 @@
 package http;
 
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -24,8 +25,19 @@ import java.util.Map;
 public class ParceiroHttp
 {
     public static final int MAXIMO_CABECALHOS = 16 * 1024;   // 16 KB
-    public static final int MAXIMO_CORPO      = 1024 * 1024; // 1 MB
+    public static final int MAXIMO_CORPO      = 1024 * 1024; // 1 MB (JSON comum)
+    /*
+        POST .../foto traz Base64 (~4/3 do binário). Alinhado a FotoEvidencia.TAMANHO_MAXIMO_BYTES (5 MiB).
+    */
+    public static final int MAXIMO_CORPO_FOTO_EVIDENCIA = 8 * 1024 * 1024;
     public static final int TEMPO_LIMITE      = 10 * 1000;   // 10 s
+
+    public static int limiteCorpoBytes (String caminho)
+    {
+        if (caminho != null && caminho.endsWith ("/foto"))
+            return ParceiroHttp.MAXIMO_CORPO_FOTO_EVIDENCIA;
+        return ParceiroHttp.MAXIMO_CORPO;
+    }
 
     private final Socket       conexao;
     private final InputStream  receptor;
@@ -106,6 +118,18 @@ public class ParceiroHttp
         if (cabecalhos.get ("transfer-encoding") != null)
             throw new ErroHttp (501, "Transfer-Encoding not supported");
 
+        // separa caminho e consulta antes do corpo (limite maior em .../foto)
+        String caminho  = alvo;
+        String consulta = "";
+        int    marca    = alvo.indexOf ('?');
+        if (marca >= 0)
+        {
+            caminho  = alvo.substring (0, marca);
+            consulta = alvo.substring (marca + 1);
+        }
+        caminho = ParceiroHttp.decodificarCaminho (caminho);
+        int maxCorpo = ParceiroHttp.limiteCorpoBytes (caminho);
+
         // corpo pelo Content-Length
         int    tamanho = 0;
         String texto   = cabecalhos.get ("content-length");
@@ -115,7 +139,7 @@ public class ParceiroHttp
                 throw new ErroHttp (400, "Invalid Content-Length");
 
             long lido = Long.parseLong (texto);
-            if (lido > ParceiroHttp.MAXIMO_CORPO)
+            if (lido > maxCorpo)
                 throw new ErroHttp (413, "Request body too large");
 
             tamanho = (int) lido;
@@ -125,17 +149,7 @@ public class ParceiroHttp
         if (corpo.length < tamanho)
             throw new ErroHttp (400, "Incomplete request body");
 
-        // separa caminho e consulta (?a=1&b=2)
-        String caminho  = alvo;
-        String consulta = "";
-        int    marca    = alvo.indexOf ('?');
-        if (marca >= 0)
-        {
-            caminho  = alvo.substring (0, marca);
-            consulta = alvo.substring (marca + 1);
-        }
-
-        return new Requisicao (metodo, ParceiroHttp.decodificarCaminho (caminho),
+        return new Requisicao (metodo, caminho,
                                ParceiroHttp.lerConsulta (consulta), cabecalhos, corpo,
                                this.conexao.getInetAddress ().getHostAddress ());
     }
