@@ -25,13 +25,13 @@ async function run(name, callback) {
     sessionStorage.setItem('agro.sessionToken', 'e2e-local');
     sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
   });
-  await context.route('http://127.0.0.1:8080/api/me', async (route) => {
+  await context.route(origin + 'api/me', async (route) => {
     const headers = {'Access-Control-Allow-Origin': origin.slice(0, -1), 'Access-Control-Allow-Headers': 'Authorization',
       'Access-Control-Allow-Methods': 'GET, OPTIONS'};
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
     return route.fulfill({status: 200, headers, contentType: 'application/json', body: '{"usuario":{"id":"e2e-local","propriedadeId":"e2e-property"}}'});
   });
-  const api = await mockApi(context, origin, {activities: name.startsWith('atividades:')});
+  const api = await mockApi(context, origin, {activities: name.startsWith('atividades:') || name.startsWith('dashboard')});
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -77,7 +77,7 @@ let failures = 0;
 (async () => {
   browser = await launchTestBrowser(chromium);
 
-  await run('áreas: criação, edição, filtro e recarga offline', async (page, context) => {
+  await run('áreas: criação, edição, filtro e indisponibilidade offline', async (page, context) => {
     await go(page, 'areas-cultivo.html');
     await page.locator('[data-open-modal="talhao-form"]').click();
     await submit(page, '[data-talhao-form]', { nome: 'Talhão Teste', cultura: 'Soja', hectares: '20', status: 'Ativo' });
@@ -92,8 +92,8 @@ let failures = 0;
     await context.setOffline(true);
     await page.route('**/api/talhoes', route => route.abort());
     await page.reload();
-    assert.equal(await page.locator('[data-plots-table] tbody tr[data-plot="Talhão Revisado"]').count(), 1);
-    assert.equal(await page.locator('[data-metric="hectares"]').textContent(), '585 ha');
+    assert.equal(await page.locator('[data-plots-table] tbody tr[data-plot="Talhão Revisado"]').count(), 0);
+    assert.equal(await page.locator('[data-metric="hectares"]').textContent(), '0 ha');
   });
 
   await run('atividades: criar, editar, lista, arraste, concluir e duplicar', async (page) => {
@@ -168,9 +168,7 @@ let failures = 0;
     await page.locator('[data-preference="weather"]').uncheck({ force: true });
     await page.locator('[data-save-notifications]').click();
     await page.locator('button[data-settings-tab="property"]').click();
-    await page.locator('[data-open-harvest-modal]').click();
-    await page.locator('[data-harvest-option="2026/27"]').click();
-    await page.locator('[data-confirm-harvest]').click();
+    await page.locator('[name=harvest]').fill('2026/27');
     await submit(page, '[data-settings-form="property"]', {});
     await page.waitForFunction(() => !document.querySelector('#property-form').hasAttribute('aria-busy'));
     await page.reload();
@@ -186,23 +184,28 @@ let failures = 0;
     assert.equal(api.preferences.weather, false);
   });
 
-  await run('dashboard: criar, concluir e compartilhar atividade', async (page) => {
+  await run('dashboard: criar, concluir e compartilhar atividade', async (page, context, api) => {
     await go(page, 'dashboard.html');
+    await page.waitForFunction(() => document.querySelector('[name=activity-plot] option[value="T-01 Norte"]'));
     await page.locator('[data-open-new-activity]').click();
     await submit(page, '[data-new-activity-form]', { 'activity-name': 'Atividade painel', 'activity-plot': 'T-01 Norte' });
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').talhao, 'T-01 Norte');
+    await page.locator('[data-activities-table] tr').filter({hasText: 'Atividade painel'}).waitFor();
+    assert.equal(api.activities.find(item => item.nome === 'Atividade painel').talhao, 'T-01 Norte');
+    // Só atividades em andamento podem ser concluídas pelo painel.
+    api.activities.find(item => item.nome === 'Atividade painel').status = 'Em andamento';
     await page.reload();
-    await page.evaluate(() => [...document.querySelectorAll('[data-activities-table] tr')].find((row) => row.textContent.includes('Atividade painel')).querySelector('[data-complete-activity]').click());
+    await page.locator('[data-activities-table] tr').filter({hasText: 'Atividade painel'}).locator('[data-complete-activity]').click();
+    await page.waitForFunction(() => document.querySelector('[data-activities-table] tbody').textContent.includes('Concluída'));
     await go(page, 'atividades.html');
-    assert.equal((await data(page, 'activities')).find((item) => item.activity === 'Atividade painel').status, 'Concluída');
-    assert.equal(await page.locator('.kanban-card[data-activity="Atividade painel"]').count(), 1);
+    await page.locator('.kanban-card[data-activity="Atividade painel"]').waitFor();
+    assert.equal((await data(page, 'activities')).find(item => item.activity === 'Atividade painel').status, 'Concluída');
   });
 
   await run('dashboard continua utilizável com custos locais inválidos', async (page) => {
     await page.addInitScript(() => localStorage.setItem('agro.operational.v1.e2e-local.e2e-property.costs', '{invalido'));
     await go(page, 'dashboard.html');
     assert.equal(await page.locator('[data-metric="cost"]').textContent(), '-');
-    assert.ok(Number(await page.locator('[data-metric="pending"]').textContent()) >= 0);
+    await page.waitForFunction(() => document.querySelector('[data-metric="pending"]').textContent === '0');
   });
 
   await run('notificações: lidas após recarga', async (page) => {

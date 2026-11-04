@@ -16,7 +16,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const API_BASE = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
   const SVG_NS = "http://www.w3.org/2000/svg";
   const LARGURA = 320;
   const ALTURA = 220;

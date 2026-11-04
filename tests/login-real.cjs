@@ -8,7 +8,8 @@ const { spawn } = require("node:child_process");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
 
-const base = "http://127.0.0.1:8080";
+const port = process.env.AUTH_TEST_PORT || "18080";
+const base = `http://127.0.0.1:${port}`;
 const cpSeparator = process.platform === "win32" ? ";" : ":";
 const classpath = `bin${cpSeparator}lib/*`;
 const emptySmtp = {
@@ -29,7 +30,7 @@ function waitAuthPost(page, pathname) {
 (async () => {
   try {
     await fetch(base + "/health");
-    console.error("A porta 8080 já está em uso.");
+    console.error(`A porta ${port} já está em uso.`);
     process.exit(1);
   } catch {
     // livre
@@ -38,7 +39,7 @@ function waitAuthPost(page, pathname) {
   const algo = spawn("java", ["-cp", "bin", "Servidor", "3000"], {
     cwd: path.join(__dirname, "../backend/serversocket"),
   });
-  const server = spawn("java", ["-cp", classpath, "Servidor", "8080", "--memoria"], {
+  const server = spawn("java", ["-cp", classpath, "Servidor", port, "--memoria"], {
     cwd: path.join(__dirname, "../backend/api"),
     env: {
       ...process.env,
@@ -64,10 +65,10 @@ function waitAuthPost(page, pathname) {
       await new Promise((r) => setTimeout(r, 100));
     }
 
-    const api = async (endpoint, body) => {
+    const api = async (endpoint, body, token) => {
       const res = await fetch(base + endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? {Authorization: "Bearer " + token} : {}) },
         body: JSON.stringify(body),
       });
       return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -105,6 +106,26 @@ function waitAuthPost(page, pathname) {
     assert.equal(new URL(loginCall.url()).pathname, "/api/auth/login");
     await page.waitForURL("**/dashboard.html", { timeout: 15000 });
     assert.ok(await page.evaluate(() => Boolean(sessionStorage.getItem("agro.sessionToken"))));
+
+    const sessionToken = await page.evaluate(() => sessionStorage.getItem('agro.sessionToken'));
+    assert.equal((await api('/api/talhoes', {nome:'Talhão painel', cultura:'Soja', hectares:5, safra:'2026/27', status:'Ativo'}, sessionToken)).status,201);
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('[name=activity-plot] option[value="Talhão painel"]'));
+    await page.locator('[data-open-new-activity]').click();
+    await page.locator('[name=activity-name]').fill('Atividade persistida pelo painel');
+    await page.locator('[name=activity-plot]').selectOption('Talhão painel');
+    await page.locator('[data-new-activity-form]').evaluate(form => form.requestSubmit());
+    const activityRow = page.locator('[data-activities-table] tbody tr').filter({hasText:'Atividade persistida pelo painel'});
+    await activityRow.waitFor();
+    const activityId = await activityRow.getAttribute('data-id');
+    assert.equal(await activityRow.locator('[data-complete-activity]').count(),0,'pendente não pode ser concluída diretamente');
+    assert.equal((await api('/api/atividades/'+activityId+'/status',{status:'Agendada'},sessionToken)).status,200);
+    assert.equal((await api('/api/atividades/'+activityId+'/status',{status:'Em andamento'},sessionToken)).status,200);
+    await page.reload();
+    await activityRow.locator('[data-complete-activity]').click();
+    await page.waitForFunction(() => document.querySelector('[data-activities-table] tbody').textContent.includes('Concluída'));
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('[data-activities-table] tbody').textContent.includes('Concluída'));
 
     const forgotReq = waitAuthPost(page, "/api/auth/forgot-password");
     await page.goto(base + "/recuperar-senha.html");

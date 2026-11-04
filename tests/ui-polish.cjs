@@ -219,14 +219,9 @@ async function menu(page, trigger) {
   await screenshot(page, 'dashboard-alertas-ajustados');
   await go(page, 'configuracoes');
   await page.locator('button[data-settings-tab="property"]').click();
-  await page.locator('[data-open-harvest-modal]').click();
-  assert.equal(await page.locator('[data-modal="harvest-form"] .calendar-modal-header').evaluate((header) => {
-    return Math.abs(header.querySelector('button').getBoundingClientRect().top - header.getBoundingClientRect().top) < 1;
-  }), true, 'fechamento da safra desalinhado do título');
-  await reachable(page.locator('[data-harvest-option="2026/27"]'));
-  await screenshot(page, 'configuracoes-seletor-safra');
-  await page.keyboard.press('Escape');
-  assert.equal(await page.locator('[data-open-harvest-modal]').evaluate((element) => element === document.activeElement), true);
+  await reachable(page.locator('[name="harvest"]'));
+  await page.locator('[name="harvest"]').fill('2026/27');
+  assert.equal(await page.locator('[name="harvest"]').inputValue(), '2026/27');
   for (const screen of ['login', 'criar-conta', 'recuperar-senha', 'redefinir-senha']) {
     await go(page, screen);
     await page.locator('[type="submit"]').click();

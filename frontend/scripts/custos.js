@@ -11,7 +11,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
-  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const CATEGORIES = ["Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"];
   const params = new URLSearchParams(location.search);
 
