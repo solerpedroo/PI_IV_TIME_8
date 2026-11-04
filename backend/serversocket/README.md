@@ -61,6 +61,9 @@ Protocolo próprio da disciplina: objetos `Comunicado` serializados em `ObjectOu
 | `PedidoDeValidacaoDeSenha` | `RespostaDeValidacao` | senha forte + confirmação (redefinir senha) |
 | `PedidoDeValidacaoDeTalhao` | `RespostaDeValidacao` | nome, cultura, safra, hectares (0 < h ≤ 1.000.000), status; aplica padrões |
 | `PedidoDeResumoDeTalhoes` | `RespostaDeResumoDeTalhoes` | total de hectares, quantidade total e de ativos |
+| `PedidoDeValidacaoDeLocalizacao` | `RespostaDeValidacao` | localização do talhão: ponto (1) ou polígono (3 a 50 vértices, sem lados cruzados, área > 0); arredonda a 6 casas e devolve área (ha), centro e vértices normalizados |
+| `PedidoDePontoNoTalhao` | `RespostaDeValidacao` | o ponto da ocorrência cai dentro do polígono do talhão (a borda conta como dentro); erro no campo `localizacao` |
+| `PedidoDeGeometriaDoMapa` | `RespostaDeGeometriaDoMapa` | centro e área de cada talhão localizado e os limites do mapa (`null` com a lista vazia) |
 | `PedidoDeMovimentacaoDeEstoque` | `RespostaDeMovimentacaoDeEstoque` | valida a movimentação e calcula novo saldo e custo médio ponderado (`OK`, `INVALIDO` ou `SALDO_INSUFICIENTE`) |
 | `PedidoDeRelatorioDeSafra` | `RespostaDeRelatorioDeSafra` | área, registros no período, pendências com motivo, contagens e total em centavos |
 
