@@ -7,6 +7,7 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { aguardarTokenDeConfirmacao } = require("./token-confirmacao.cjs");
 
 const base = "http://127.0.0.1:8080";
 const cpSeparator = process.platform === "win32" ? ";" : ":";
@@ -74,9 +75,7 @@ function ontemIso() {
       name: "Operador Notificacoes", email: "notif@agro.test", phone: "(19) 98888-2222",
       password: "Senha@123", confirm: "Senha@123", farm: "Fazenda Notif", area: "40 ha", terms: true,
     });
-    for (let i = 0; i < 50 && !/token: ([\w-]+)/.test(log); i++) await new Promise((r) => setTimeout(r, 100));
-    const tokenEmail = log.match(/token: ([\w-]+)/)?.[1];
-    assert.ok(tokenEmail);
+    const tokenEmail = await aguardarTokenDeConfirmacao(() => log);
     assert.equal((await api("/api/auth/confirm-email", { token: tokenEmail })).status, 200);
     const login = await api("/api/auth/login", { email: "notif@agro.test", password: "Senha@123" });
     assert.equal(login.status, 200);
