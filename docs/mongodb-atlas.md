@@ -69,8 +69,12 @@ Se seu `.env` já existe e a URI termina em `.mongodb.net/?...`, acrescente
 `/agrogestao_dev` antes de `?`. A variável `MONGODB_DATABASE` é usada pelo
 `backend/core` e não muda o banco selecionado pela API.
 
-Para usuários Atlas com senha (SCRAM), mantenha `authSource=admin` ao adicionar
-o caminho do banco à URI, pois a autenticação desses usuários ocorre em `admin`.
+Para usuários Atlas com senha (SCRAM), inclua `authSource=admin` ao adicionar
+o caminho do banco à URI **se** o painel **Connect → Drivers** indicar esse
+parâmetro (varia conforme o usuário criado em Database Access).
+
+A API HTTP (`backend/api`) aplica a mesma regra: path na URI, senão
+`MONGODB_DATABASE`, e **recusa subir** se os dois nomes divergirem.
 
 Para `./backend/core/testar.sh --atlas`, altere temporariamente `MONGODB_DATABASE` para um nome terminado em `_teste` (ex.: `agrogestao_ci_teste`). A fábrica `MongoConexao.paraTestes()` recusa qualquer outro nome.
 
