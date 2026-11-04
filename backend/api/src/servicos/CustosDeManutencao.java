@@ -2,6 +2,8 @@
 package servicos;
 
 import dados.RepositorioCustos;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -54,11 +56,16 @@ public class CustosDeManutencao
 
     private static Double valor (Document intervencao)
     {
-        Object  valor = intervencao.get ("valor");
-        Double  ret   = null;
+        Object valor = intervencao.get ("valor");
+        Double ret   = null;
 
-        if (valor instanceof Number && ((Number) valor).doubleValue () >= 0.01)
-            ret = Double.valueOf (Math.round (((Number) valor).doubleValue () * 100) / 100.0);
+        if (valor instanceof Number)
+        {
+            BigDecimal reais = new BigDecimal (((Number) valor).toString ()).setScale (2, RoundingMode.HALF_UP);
+
+            if (reais.compareTo (new BigDecimal ("0.01")) >= 0)
+                ret = Double.valueOf (reais.doubleValue ());
+        }
 
         return ret;
     }
