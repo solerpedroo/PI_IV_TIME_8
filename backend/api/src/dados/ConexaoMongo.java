@@ -23,13 +23,42 @@ public class ConexaoMongo
             throw new Exception ("MONGODB_URI ausente");
 
         ConnectionString endereco = new ConnectionString (uri);
-
-        String nomeDoBanco = endereco.getDatabase ();
-        if (nomeDoBanco == null)
-            nomeDoBanco = "agrogestao";
+        String nomeDoBanco = ConexaoMongo.resolverNomeDoBanco (endereco, System.getenv ("MONGODB_DATABASE"));
 
         this.cliente = MongoClients.create (endereco);
         this.banco   = this.cliente.getDatabase (nomeDoBanco);
+    }
+
+    /*
+        Path da URI tem prioridade (Atlas Connect). Sem path, usa MONGODB_DATABASE (alinhado ao core).
+        Se ambos existirem e divergirem, falha na subida para evitar gravar no banco errado.
+    */
+    public static String resolverNomeDoBanco (ConnectionString endereco, String envDatabase) throws Exception
+    {
+        String naUri = endereco.getDatabase ();
+        String env   = envDatabase == null ? null : envDatabase.trim ();
+
+        if (naUri != null && !naUri.isBlank ())
+        {
+            if (env != null && !env.isEmpty () && !naUri.equals (env))
+                throw new Exception ("MONGODB_URI aponta para o banco \"" + naUri
+                    + "\", mas MONGODB_DATABASE=\"" + env + "\". Use o mesmo nome nos dois.");
+
+            return naUri;
+        }
+
+        if (env != null && !env.isEmpty ())
+            return env;
+
+        return "agrogestao";
+    }
+
+    public static String resolverNomeDoBanco (String uri, String envDatabase) throws Exception
+    {
+        if (uri == null || uri.isBlank ())
+            throw new Exception ("MONGODB_URI ausente");
+
+        return ConexaoMongo.resolverNomeDoBanco (new ConnectionString (uri), envDatabase);
     }
 
     public MongoDatabase getBanco ()
