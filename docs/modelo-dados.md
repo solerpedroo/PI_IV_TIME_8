@@ -86,6 +86,17 @@ Vocabulário e foto opcional seguem o projeto §8.7; se `fotoUrl` for informada,
 `DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.
 
 
+## #230 — Georreferenciamento simplificado (API `backend/api`)
+
+Extensão de `talhoes` e `ocorrencias` da propriedade autenticada (#12/#13, ocorrências #20). Sem satélite, NDVI ou GIS avançado.
+
+- `talhoes.localizacao` (opcional): `{tipo: "ponto"|"poligono", pontos: [{lat, lng}, ...]}`. Ponto = 1 vértice; polígono = 3 a 50 vértices (validação no serversocket `GeometriaDeTalhao`). `PUT/DELETE /api/talhoes/{id}/localizacao` alteram só este campo; o `PUT` geral do talhão preserva a localização. Talhão sem localização **não** entra no desenho do mapa (`semLocalizacao` em `GET /api/mapa`).
+- `ocorrencias.localizacao` (opcional): `{lat, lng}` só quando a ocorrência tem `talhaoId` e o talhão tem **polígono**, com o ponto dentro da área. Sem polígono ou sem posição, a ocorrência aparece no centro do talhão no mapa. A posição é copiada nos eventos da timeline (`dados.localizacao`).
+- `GET /api/mapa`: agrega talhões localizados (com `centro`, `areaCalculadaHectares` calculados no socket), ocorrências por talhão, contagem `semLocalizacao` / `ocorrenciasSemTalhao` e `limites` do viewport. Escopo = **uma propriedade por sessão** (sem paginação nesta entrega; volume típico de talhões/ocorrências da fazenda).
+
+Regras de integridade: não remover nem encolher polígono deixando ocorrência marcada fora (409 com `ocorrenciaId` / `ocorrenciaTitulo`). Contrato e evidências: [georreferenciamento.md](georreferenciamento.md), `TesteGeorreferenciamento`, `TesteGeometria`, `tests/georreferenciamento-real.cjs`.
+
+
 ## #234 — Manutenção de equipamentos (API `backend/api`)
 
 Complementa o módulo de custos (#22/#105). Todo registro carrega `propriedadeId`; consultas e gravações filtram por essa chave (recurso de outra propriedade responde 404).
