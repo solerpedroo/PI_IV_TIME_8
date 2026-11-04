@@ -1,4 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 package dados;
 
 import com.mongodb.client.ClientSession;
@@ -77,6 +78,18 @@ public class RepositorioOcorrenciasMongo implements RepositorioOcorrencias
                 if (this.registros.replaceOne (sessao, filtro, nova).getModifiedCount () != 1) return false;
                 this.eventos.insertOne (sessao, evento);
                 return true;
+            });
+        }
+    }
+
+    public boolean substituirComVersao (Document anterior, Document nova)
+    {
+        try (ClientSession sessao = this.conexao.getCliente ().startSession ())
+        {
+            return sessao.withTransaction (() -> {
+                Bson filtro = Filters.and (escopo (anterior.getString ("usuarioId"), anterior.getString ("propriedadeId")),
+                    Filters.eq ("_id", anterior.get ("_id")), Filters.eq ("versao", anterior.get ("versao")));
+                return this.registros.replaceOne (sessao, filtro, nova).getModifiedCount () == 1;
             });
         }
     }
