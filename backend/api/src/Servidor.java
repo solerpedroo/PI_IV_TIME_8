@@ -26,6 +26,15 @@ import dados.RepositorioTalhoesMongo;
 import dados.RepositorioEstoque;
 import dados.RepositorioEstoqueMemoria;
 import dados.RepositorioEstoqueMongo;
+import dados.RepositorioEquipamentos;
+import dados.RepositorioEquipamentosMemoria;
+import dados.RepositorioEquipamentosMongo;
+import dados.RepositorioIntervencoes;
+import dados.RepositorioIntervencoesMemoria;
+import dados.RepositorioIntervencoesMongo;
+import dados.RepositorioPreventivas;
+import dados.RepositorioPreventivasMemoria;
+import dados.RepositorioPreventivasMongo;
 import dados.RepositorioUsuarios;
 import dados.RepositorioUsuariosMemoria;
 import dados.RepositorioUsuariosMongo;
@@ -36,6 +45,7 @@ import handlers.CalendarioHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
+import handlers.ManutencaoHandler;
 import handlers.OrcamentosHandler;
 import handlers.PropriedadesHandler;
 import handlers.PerfilHandler;
@@ -55,6 +65,7 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import seguranca.Sessoes;
 import servicos.CustosDeConsumo;
+import servicos.CustosDeManutencao;
 import servicos.ServicoEmail;
 
 /*
@@ -162,6 +173,11 @@ public class Servidor
         new RelatorioEstoqueHandler (usuarios, estoque, sessoes).registrar (roteador);
         new RelatorioAtividadesHandler (usuarios, atividades, sessoes).registrar (roteador);
         new CalendarioHandler (atividades).registrar (roteador);
+        RepositorioEquipamentos equipamentos = conexao == null ? new RepositorioEquipamentosMemoria () : new RepositorioEquipamentosMongo (conexao.getBanco ());
+        RepositorioPreventivas  preventivas  = conexao == null ? new RepositorioPreventivasMemoria ()  : new RepositorioPreventivasMongo (conexao.getBanco ());
+        RepositorioIntervencoes intervencoes = conexao == null ? new RepositorioIntervencoesMemoria () : new RepositorioIntervencoesMongo (conexao.getBanco ());
+        new ManutencaoHandler (equipamentos, preventivas, intervencoes, talhoes, safras, custos,
+                               new CustosDeManutencao (custos), sessoes).registrar (roteador);
 
         roteador.setEstaticos (new EstaticosHandler (raiz)::tratar);
 
