@@ -44,6 +44,16 @@ async function clickCardAction(page, name, action) {
   }, { name, action });
 }
 
+async function tokenDeConfirmacao(serverLog) {
+  for (let tentativa = 0; tentativa < 50; tentativa++) {
+    const encontrado = serverLog();
+    const token = encontrado.match(/token: ([a-zA-Z0-9-]+)/);
+    if (token) return token[1];
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("Token de confirmação não chegou ao log do servidor.");
+}
+
 (async () => {
   console.log("Iniciando validação E2E de Atividades com servidor real...");
 
@@ -107,9 +117,7 @@ async function clickCardAction(page, name, action) {
       terms: true,
     });
 
-    const tokenMatch = serverLog.match(/token: ([a-zA-Z0-9-]+)/);
-    assert.ok(tokenMatch, "Token de confirmação entregue no log do servidor.");
-    await api("/api/auth/confirm-email", { token: tokenMatch[1] });
+    await api("/api/auth/confirm-email", { token: await tokenDeConfirmacao(() => serverLog) });
 
     const loginRes = await api("/api/auth/login", {
       email: "miguel.atividades@agro.test",
