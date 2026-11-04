@@ -98,26 +98,22 @@ Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISAB
 
 No Windows, use os scripts `.bat` equivalentes em `backend/api/`.
 
-### 3) (Recomendado) MongoDB local com replica set
+### 3) MongoDB local ou Atlas compartilhado
 
-Na raiz do repositório:
+Para usar o MongoDB local, execute `docker compose up -d --wait mongo` na raiz do repositório. O Atlas não exige Docker.
 
-```bash
-docker compose up -d --wait mongo
-```
-
-Carregue o `.env` (`cp .env.example .env`) e ajuste a `MONGODB_URI`:
-
-- **Docker local:** `rodar.sh` já exporta `mongodb://127.0.0.1:27017/agrogestao?...` (banco `agrogestao`).
-- **Atlas / dev compartilhado:** inclua `/agrogestao_dev` na URI e mantenha `MONGODB_DATABASE=agrogestao_dev` (veja [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md)). Se a URI Atlas vier **sem** path, a API usa `MONGODB_DATABASE`; URI e variável **não podem** apontar para bancos diferentes.
-- **Atlas:** confira `authSource` no painel **Connect → Drivers** (em geral `authSource=admin` para usuários SCRAM).
+Para usar o Atlas compartilhado, copie `.env.example` para `.env` na raiz e preencha a URI individual fornecida pelo responsável pelo cluster. Siga o [guia do Atlas](docs/mongodb-atlas.md) para autorizar seu IP e configurar seu usuário. O arquivo `.env` não é carregado automaticamente: no Linux, macOS ou Git Bash, execute na raiz do projeto:
 
 ```bash
+set -a
+. ./.env
+set +a
 cd backend/api
+bash compilar.sh
 bash rodar.sh
 ```
 
-Credenciais **não** entram no Git.
+Em outro terminal, `curl -i http://127.0.0.1:8080/ready` deve responder HTTP 200. O endpoint consulta o banco configurado; erro ou HTTP 503 indica que a conexão não está pronta. Para usar o Docker local, não carregue o `.env` do Atlas: `rodar.sh` usa `127.0.0.1:27017` por padrão. Se `MONGODB_DATABASE` estiver definida, ela deve coincidir com o banco da URI. Credenciais **não** entram no Git.
 
 ### 4) Frontend estático (opcional, sem API)
 
