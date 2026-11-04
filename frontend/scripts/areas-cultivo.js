@@ -200,6 +200,10 @@
               <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
               <span class="action-menu-label">Ver custos</span>
             </a>
+            ${values.id ? `<button type="button" class="action-menu-item" role="menuitem" data-geo-edit="${values.id}">
+              <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+              <span class="action-menu-label">Localização</span>
+            </button>` : ""}
           </div>
         </div>
       </td>
@@ -337,7 +341,7 @@
     tbody.replaceChildren(...records.map((record, index) => {
       const row = document.createElement("tr");
       Object.assign(row.dataset, record);
-      row.innerHTML = buildRowMarkup("plot-menu-" + index, {nome: record.plot,
+      row.innerHTML = buildRowMarkup("plot-menu-" + index, {id: record.id || "", nome: record.plot,
         cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
       return row;
     }));
