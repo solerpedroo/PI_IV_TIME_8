@@ -40,6 +40,11 @@ public class RepositorioCustosMongo implements RepositorioCustos
         this.custos.createIndex (Indexes.ascending ("propriedadeId", "origem.movimentacaoId"),
                                  new IndexOptions ().unique (true)
                                                     .partialFilterExpression (Filters.exists ("origem.movimentacaoId")));
+
+        // um custo por intervencao de manutencao, pelo mesmo motivo
+        this.custos.createIndex (Indexes.ascending ("propriedadeId", "origem.intervencaoId"),
+                                 new IndexOptions ().unique (true)
+                                                    .partialFilterExpression (Filters.exists ("origem.intervencaoId")));
     }
 
     // filtro por _id que tambem exige a propriedade (um usuario nunca enxerga custo de outro)
@@ -102,6 +107,20 @@ public class RepositorioCustosMongo implements RepositorioCustos
                                               Filters.eq ("origem.movimentacaoId", movimentacaoId))).first ();
     }
 
+    public Document buscarPorIntervencao (String propriedadeId, String intervencaoId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        Document ret = null;
+
+        if (intervencaoId != null && !intervencaoId.isBlank ())
+            ret = this.custos.find (Filters.and (Filters.eq ("propriedadeId", propriedadeId),
+                                                 Filters.eq ("origem.intervencaoId", intervencaoId))).first ();
+
+        return ret;
+    }
+
     public void criar (Document custo) throws Exception
     {
         if (custo == null)
@@ -116,6 +135,7 @@ public class RepositorioCustosMongo implements RepositorioCustos
         if (custo == null || custo.get ("origem", Document.class) == null)
             throw new Exception ("Custo sem origem");
 
+        // os indices unicos parciais (origem.movimentacaoId e origem.intervencaoId) recusam a duplicata
         boolean ret = true;
 
         try

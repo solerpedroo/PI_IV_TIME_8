@@ -93,6 +93,25 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         return ret;
     }
 
+    public synchronized Document buscarPorIntervencao (String propriedadeId, String intervencaoId) throws Exception
+    {
+        if (propriedadeId == null)
+            throw new Exception ("Propriedade ausente");
+
+        Document ret = null;
+
+        if (intervencaoId != null && !intervencaoId.isBlank ())
+            for (Document custo : this.custos.values ())
+            {
+                Document origem = custo.get ("origem", Document.class);
+                if (ret == null && propriedadeId.equals (custo.getString ("propriedadeId")) && origem != null &&
+                    intervencaoId.equals (origem.getString ("intervencaoId")))
+                    ret = new Document (custo);
+            }
+
+        return ret;
+    }
+
     public synchronized void criar (Document custo) throws Exception
     {
         if (custo == null)
@@ -108,9 +127,16 @@ public class RepositorioCustosMemoria implements RepositorioCustos
         if (custo == null || custo.get ("origem", Document.class) == null)
             throw new Exception ("Custo sem origem");
 
-        String origem = custo.get ("origem", Document.class).getString ("movimentacaoId");
+        // a chave e a movimentacao de estoque (consumo) ou a intervencao (manutencao)
+        Document origem         = custo.get ("origem", Document.class);
+        String   movimentacaoId = origem.getString ("movimentacaoId");
+        String   intervencaoId  = origem.getString ("intervencaoId");
 
-        if (this.buscarPorMovimentacao (custo.getString ("propriedadeId"), origem) != null)
+        if (movimentacaoId != null && this.buscarPorMovimentacao (custo.getString ("propriedadeId"), movimentacaoId) != null)
+            return false;
+
+        if (movimentacaoId == null && intervencaoId != null &&
+            this.buscarPorIntervencao (custo.getString ("propriedadeId"), intervencaoId) != null)
             return false;
 
         this.criar (custo);
