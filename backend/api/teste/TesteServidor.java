@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -249,6 +250,7 @@ public class TesteServidor
         conferir ("Content-Length nao numerico -> 400",       400, bruto ("POST /api/auth/login HTTP/1.1\r\nHost: x\r\nContent-Length: abc\r\n\r\n"));
         conferir ("Content-Length duplicado -> 400",          400, bruto ("POST /api/auth/login HTTP/1.1\r\nHost: x\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\nab"));
         conferir ("corpo maior que 1 MB -> 413",              413, bruto ("POST /api/auth/login HTTP/1.1\r\nHost: x\r\nContent-Length: 2000000\r\n\r\n"));
+        conferir ("limite /foto maior que demais rotas", http.ParceiroHttp.limiteCorpoBytes ("/api/ocorrencias/x/foto") > http.ParceiroHttp.MAXIMO_CORPO);
         conferir ("cabecalhos maiores que 16 KB -> 431",      431, bruto ("GET /health HTTP/1.1\r\nHost: x\r\nX-Grande: " + "a".repeat (17000) + "\r\n\r\n"));
         conferir ("Transfer-Encoding chunked -> 501",         501, bruto ("POST /api/auth/login HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n"));
         conferir ("percent-encoding invalido -> 400",         400, bruto ("GET /%zz HTTP/1.1\r\nHost: x\r\n\r\n"));
@@ -735,6 +737,24 @@ public class TesteServidor
         conferir ("cancelamento com motivo pela rota unica", 200,
                   post ("/api/atividades/" + idCancelada + "/status", "{\"status\":\"Cancelada\",\"motivo\":\"Chuva forte\"}", token));
         conferir ("historico preserva motivo", get ("/api/atividades/" + idCancelada + "/historico", token).corpo.contains ("Chuva forte"));
+
+        Resp paraFoto = post ("/api/atividades", "{\"nome\":\"Foto campo\",\"tipo\":\"Aplicação\",\"talhao\":\"T-01 Norte\",\"data\":\"10 ago\"}", token);
+        String idFoto = paraFoto.json ().getString ("id");
+        long versaoFoto = ((Number) paraFoto.json ().get ("versao")).longValue ();
+        String png1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        conferir ("POST foto atividade sem versao -> 400", 400, post ("/api/atividades/" + idFoto + "/foto", "{\"conteudoBase64\":\"" + png1x1 + "\"}", token));
+        conferir ("foto atividade com MIME incompatível -> 400", 400, post ("/api/atividades/" + idFoto + "/foto",
+            "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + png1x1 + "\",\"tipoMime\":\"image/jpeg\"}", token));
+        String maiorQueCincoMiB = Base64.getEncoder ().encodeToString (new byte[5 * 1024 * 1024 + 1]);
+        conferir ("foto atividade acima de 5 MiB -> 400", 400, post ("/api/atividades/" + idFoto + "/foto",
+            "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + maiorQueCincoMiB + "\",\"tipoMime\":\"image/png\"}", token));
+        Resp comFoto = post ("/api/atividades/" + idFoto + "/foto",
+            "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + png1x1 + "\",\"tipoMime\":\"image/png\"}", token);
+        conferir ("atividade com temFoto apos upload", comFoto.status == 200 && Boolean.TRUE.equals (comFoto.json ().getBoolean ("temFoto")));
+        Resp binFoto = get ("/api/atividades/" + idFoto + "/foto", token);
+        conferir ("GET binario foto atividade", binFoto.status == 200 && "image/png".equals (binFoto.cabecalho ("Content-Type")));
+        conferir ("foto em atividade concluida rejeitada", 409,
+            post ("/api/atividades/" + id + "/foto", "{\"versao\":1,\"conteudoBase64\":\"" + png1x1 + "\"}", token));
     }
 
     /* Exercita o contrato do estoque, inclusive a saída concorrente que não pode negativar saldo. */

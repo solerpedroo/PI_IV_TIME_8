@@ -17,6 +17,7 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { aguardarTokenDeConfirmacao } = require("./token-confirmacao.cjs");
 
 const base = "http://127.0.0.1:8080";
 const cpSeparator = process.platform === "win32" ? ";" : ":";
@@ -107,9 +108,7 @@ async function clickCardAction(page, name, action) {
       terms: true,
     });
 
-    const tokenMatch = serverLog.match(/token: ([a-zA-Z0-9-]+)/);
-    assert.ok(tokenMatch, "Token de confirmação entregue no log do servidor.");
-    await api("/api/auth/confirm-email", { token: tokenMatch[1] });
+    await api("/api/auth/confirm-email", { token: await aguardarTokenDeConfirmacao(() => serverLog) });
 
     const loginRes = await api("/api/auth/login", {
       email: "miguel.atividades@agro.test",

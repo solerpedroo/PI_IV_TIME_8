@@ -578,6 +578,11 @@
           </select>
           <p class="field-error" data-error-for="prioridade"></p>
         </div>
+        <div class="input-group">
+          <label for="activity-foto">Evidência fotográfica (opcional)</label>
+          <input id="activity-foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-activity-foto>
+          <p class="field-hint">Enviada após o cadastro ser confirmado pela API (#175).</p>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
           <button class="btn btn-primary" type="submit">Salvar atividade</button>
@@ -592,6 +597,10 @@
       <h2 id="activity-detail-title" data-detail-title>Atividade</h2>
       <p data-detail-subtitle>Talhão · Data</p>
       <div class="meta-grid" data-detail-meta></div>
+      <div data-activity-photo-wrap hidden style="margin-top: 16px;">
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Evidência de campo</h3>
+        <img alt="Evidência da atividade" data-activity-detail-photo style="max-width: 100%; max-height: 280px; border-radius: 8px;">
+      </div>
       <div class="detail-section" style="margin-top: 20px;">
         <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Histórico e Linha do Tempo</h3>
         <div class="timeline" data-detail-timeline></div>

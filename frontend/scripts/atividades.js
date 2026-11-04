@@ -1,5 +1,6 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Tomas de Paula Michelon Toniato - RA: 25004211 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — interações da tela Atividades (híbrido com API e persistência local)
  * --------------------------------------------------------------------------
@@ -44,6 +45,7 @@
   let activeCard = null;
   let formMode = "create"; // "create" | "edit"
   let cardSeq = 100;
+  let detailPhotoObjectUrl = null;
 
   let persist = () => true;
   function toast(type, title, description) {
@@ -54,6 +56,33 @@
    * Comunicação centralizada com a API REST do backend.
    * Envia o token de autenticação se disponível e trata respostas JSON e erros amigáveis.
    */
+  async function lerArquivoBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function enviarFotoAtividade(atividadeId, versao, file) {
+    if (!file || !getSessionToken() || versao == null) return;
+    const conteudoBase64 = await lerArquivoBase64(file);
+    try {
+      await apiRequest(`/api/atividades/${encodeURIComponent(atividadeId)}/foto`, {
+        method: "POST",
+        body: JSON.stringify({
+          versao,
+          conteudoBase64,
+          tipoMime: file.type || "image/jpeg",
+          nomeArquivo: file.name,
+        }),
+      });
+    } catch (err) {
+      toast("warning", "Atividade salva; foto não enviada", err.message);
+    }
+  }
+
   async function apiRequest(path, options = {}) {
     const token = getSessionToken();
     if (!token) return null;
@@ -827,6 +856,29 @@
       <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.status)}</span></div>
     `;
 
+    const photoWrap = $("[data-activity-photo-wrap]", modal);
+    const photoImg = $("[data-activity-detail-photo]", modal);
+    if (detailPhotoObjectUrl) URL.revokeObjectURL(detailPhotoObjectUrl);
+    detailPhotoObjectUrl = null;
+    if (photoWrap && photoImg && card.dataset.id && getSessionToken()) {
+      try {
+        const detalhe = await apiRequest(`/api/atividades/${encodeURIComponent(card.dataset.id)}`);
+        card.dataset.versao = detalhe?.versao != null ? String(detalhe.versao) : "1";
+        if (detalhe?.temFoto) {
+          const response = await fetch(`${apiBase}/api/atividades/${encodeURIComponent(card.dataset.id)}/foto`, {
+            headers: { Authorization: "Bearer " + getSessionToken() },
+          });
+          if (response.ok) {
+            detailPhotoObjectUrl = URL.createObjectURL(await response.blob());
+            photoImg.src = detailPhotoObjectUrl;
+            photoWrap.hidden = false;
+          } else photoWrap.hidden = true;
+        } else photoWrap.hidden = true;
+      } catch {
+        photoWrap.hidden = true;
+      }
+    } else if (photoWrap) photoWrap.hidden = true;
+
     const timelineContainer = $("[data-detail-timeline]", modal);
     if (timelineContainer) {
       timelineContainer.innerHTML = `<p style="font-size: 12px; color: var(--text-muted); padding: 8px 0;">Consultando histórico da atividade...</p>`;
@@ -1173,6 +1225,9 @@
         return;
       }
 
+      let idParaFoto = null;
+      let versaoParaFoto = null;
+
       if (formMode === "edit" && activeCard) {
         if (isTerminalStatus(activeCard.dataset.status)) {
           toast("error", "Edição bloqueada", "Atividades concluídas ou canceladas não podem ser alteradas.");
@@ -1181,11 +1236,13 @@
         }
 
         const cardId = activeCard.dataset.id;
+        idParaFoto = cardId;
         if (getSessionToken() && cardId) {
           try {
-            await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
+            const editada = await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
               method: "PUT", body: JSON.stringify(valores),
             });
+            versaoParaFoto = editada?.versao;
           } catch (err) {
             showApiFieldErrors(form, err.fields);
             toast("error", "Edição não confirmada", err.message);
@@ -1220,6 +1277,8 @@
               method: "POST", body: JSON.stringify(valores),
             });
             idConfirmado = String(criada.id);
+            idParaFoto = idConfirmado;
+            versaoParaFoto = criada.versao;
           } catch (err) {
             showApiFieldErrors(form, err.fields);
             toast("error", "Atividade não criada", err.message);
@@ -1232,6 +1291,9 @@
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
 
       }
+
+      const fotoArquivo = form.querySelector("[data-activity-foto]")?.files?.[0] || null;
+      if (fotoArquivo && idParaFoto) await enviarFotoAtividade(idParaFoto, versaoParaFoto ?? 1, fotoArquivo);
 
       document.dispatchEvent(new CustomEvent("agro:operation-saved", { detail: { tipo: "atividade", descricao: nome, talhao } }));
       closeModal(modal);

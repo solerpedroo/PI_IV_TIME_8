@@ -12,5 +12,12 @@ public interface RepositorioOcorrencias
     List<Document> timeline (String usuarioId, String propriedadeId, String id) throws Exception;
     void criar (Document ocorrencia, Document evento) throws Exception;
     boolean salvar (Document anterior, Document nova, Document evento) throws Exception;
+
+    /*
+        Atualiza o registro com controle de versão sem inserir evento na timeline
+        (ex.: anexo de foto #175, que não altera o texto do cadastro).
+    */
+    boolean substituirComVersao (Document anterior, Document nova) throws Exception;
+
     boolean temRegistros (String propriedadeId) throws Exception;
 }

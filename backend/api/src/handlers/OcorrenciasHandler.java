@@ -21,6 +21,7 @@ import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import servicos.AlgoritmosDeGeo;
+import util.FotoEvidencia;
 import util.Json;
 import util.Validacao;
 
@@ -60,11 +61,23 @@ public class OcorrenciasHandler
         roteador.adicionar ("PUT", "/api/ocorrencias/{id}", r -> this.mutar (r, "editar"));
         roteador.adicionar ("POST", "/api/ocorrencias/{id}/timeline", r -> this.mutar (r, "evento"));
         roteador.adicionar ("DELETE", "/api/ocorrencias/{id}", r -> this.mutar (r, "excluir"));
+        roteador.adicionar ("GET",  "/api/ocorrencias/{id}/foto", this::obterFoto);
+        roteador.adicionar ("POST", "/api/ocorrencias/{id}/foto", r -> this.enviarFoto (r));
+        roteador.adicionar ("DELETE", "/api/ocorrencias/{id}/foto", r -> this.removerFoto (r));
     }
 
+    /*
+        JSON público: id + campos de negócio + metadados da foto, nunca os bytes BSON.
+    */
     private static Document publico (Document registro)
     {
-        return Json.publico (registro, "usuarioId");
+        Document ret = FotoEvidencia.publicoSemBytes (registro, "usuarioId");
+        Object id = registro.get ("_id");
+        if (id != null)
+            ret.put ("id", id instanceof ObjectId ? ((ObjectId) id).toHexString () : id.toString ());
+        ret.remove ("_id");
+        ret.remove ("usuarioId");
+        return ret;
     }
 
     private Document buscar (Requisicao r) throws Exception
@@ -190,8 +203,9 @@ public class OcorrenciasHandler
             }
         }
         // A safra é o vínculo já existente no talhão desta branch, nunca texto livre do cliente.
-        if (corpo.containsKey ("foto") || corpo.containsKey ("safraId"))
-            v.erro ("vinculos", "Foto e vínculo por safraId não estão disponíveis nesta versão.");
+        if (corpo.containsKey ("safraId"))
+            v.erro ("vinculos", "Vínculo por safraId não está disponível nesta versão.");
+        FotoEvidencia.rejeitarCamposDeUploadNoCadastro (corpo, v);
         if (v.temErros ()) return null;
         return new Document ("titulo", titulo).append ("tipo", tipo).append ("prioridade", prioridade)
             .append ("data", data).append ("descricao", descricao)
@@ -294,6 +308,69 @@ public class OcorrenciasHandler
             nova.append ("versao", versao (anterior) + 1).append ("atualizadaEm", agora);
             if (!this.ocorrencias.salvar (anterior, nova, evento (nova, acao, descricao)))
                 return Resposta.erro (409, "Outra atualização foi salva. Reabra o detalhe para continuar.");
+            return Resposta.json (200, publico (nova));
+        }
+    }
+
+    /** GET /api/ocorrencias/{id}/foto — devolve image/* autenticado (#176). */
+    private Resposta obterFoto (Requisicao r) throws Exception
+    {
+        Document registro = this.buscar (r);
+        if (!FotoEvidencia.possuiFoto (registro))
+            return Resposta.erro (404, "Nenhuma foto anexada a esta ocorrência.");
+        return Resposta.binario (200, FotoEvidencia.extrairMime (registro), FotoEvidencia.extrairBytes (registro));
+    }
+
+    /*
+        POST /api/ocorrencias/{id}/foto — grava Binary no documento da ocorrência.
+        Exige versao igual ao cadastro para evitar sobrescrever foto de uma revisão antiga.
+        Incrementa versao sem evento na timeline (foto é complemento, não alteração de texto).
+    */
+    private Resposta enviarFoto (Requisicao r) throws Exception
+    {
+        synchronized (this.sessoes)
+        {
+            Sessao atual = this.sessoes.buscar (r.getToken ());
+            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            Document corpo = r.getCorpoJson ();
+            Document anterior = this.buscar (r);
+            if (Boolean.TRUE.equals (anterior.getBoolean ("excluida")))
+                return Resposta.erro (409, "Ocorrência excluída: somente consulta disponível.");
+            Object esperada = corpo.get ("versao");
+            if (!(esperada instanceof Number) || ((Number) esperada).doubleValue () != versao (anterior))
+                return Resposta.erro (409, "O registro mudou. Reabra o detalhe antes de anexar a foto.");
+            Validacao v = new Validacao (corpo);
+            String agora = this.relogio.instant ().toString ();
+            Document bloco = FotoEvidencia.montarSubdocumento (corpo, v, agora);
+            if (v.temErros ()) return v.resposta ();
+            Document nova = new Document (anterior);
+            nova.put (FotoEvidencia.CAMPO_RAIZ, bloco);
+            nova.append ("versao", versao (anterior) + 1).append ("atualizadaEm", agora);
+            if (!this.ocorrencias.substituirComVersao (anterior, nova))
+                return Resposta.erro (409, "Outra atualização foi salva. Reabra o detalhe para anexar a foto.");
+            return Resposta.json (200, publico (nova));
+        }
+    }
+
+    /** DELETE /api/ocorrencias/{id}/foto — remove o subdocumento fotoEvidencia. */
+    private Resposta removerFoto (Requisicao r) throws Exception
+    {
+        synchronized (this.sessoes)
+        {
+            if (this.sessoes.buscar (r.getToken ()) == null) return Resposta.erro (401, "Unauthorized");
+            Document corpo = r.getCorpoJson ();
+            Document anterior = this.buscar (r);
+            if (Boolean.TRUE.equals (anterior.getBoolean ("excluida")))
+                return Resposta.erro (409, "Ocorrência excluída: somente consulta disponível.");
+            Object esperada = corpo.get ("versao");
+            if (!(esperada instanceof Number) || ((Number) esperada).doubleValue () != versao (anterior))
+                return Resposta.erro (409, "O registro mudou. Reabra o detalhe antes de remover a foto.");
+            Document nova = new Document (anterior);
+            nova.remove (FotoEvidencia.CAMPO_RAIZ);
+            String agora = this.relogio.instant ().toString ();
+            nova.append ("versao", versao (anterior) + 1).append ("atualizadaEm", agora);
+            if (!this.ocorrencias.substituirComVersao (anterior, nova))
+                return Resposta.erro (409, "Outra atualização foi salva. Reabra o detalhe.");
             return Resposta.json (200, publico (nova));
         }
     }

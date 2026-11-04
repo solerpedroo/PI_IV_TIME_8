@@ -6,6 +6,20 @@
  * largo reaproveitado de modules.css: .modal-lg, .meta-grid, .timeline).
  */
 
+/* Evidência binária carregada via GET autenticado (#176). */
+.occ-evidence-photo {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  margin-top: 8px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+}
+
+.occ-photo-block {
+  margin-top: 16px;
+}
+
 .occ-table-card {
   flex: 1 1 auto;
   min-height: 0;

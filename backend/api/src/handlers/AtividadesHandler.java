@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 package handlers;
 
 import dados.RepositorioAtividades;
@@ -14,6 +15,8 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
+import java.time.Instant;
+import util.FotoEvidencia;
 import util.Json;
 import util.Validacao;
 
@@ -64,11 +67,23 @@ public class AtividadesHandler
         roteador.adicionar ("POST", "/api/atividades/{id}/cancelar",    r -> { synchronized (this.sessoes) { return this.cancelar (r); } });
         roteador.adicionar ("POST", "/api/atividades/{id}/status",      r -> { synchronized (this.sessoes) { return this.alterarStatus (r); } });
         roteador.adicionar ("GET",  "/api/atividades/{id}/historico",   this::historico);
+        roteador.adicionar ("GET",  "/api/atividades/{id}/foto",        this::obterFoto);
+        roteador.adicionar ("POST", "/api/atividades/{id}/foto",      r -> { synchronized (this.sessoes) { return this.enviarFoto (r); } });
+        roteador.adicionar ("DELETE", "/api/atividades/{id}/foto",    r -> { synchronized (this.sessoes) { return this.removerFoto (r); } });
     }
 
     private static Document publico (Document atividade)
     {
-        return Json.publico (atividade, "propriedadeId", "usuarioId");
+        Document ret = FotoEvidencia.publicoSemBytes (atividade, "propriedadeId", "usuarioId");
+        Object id = atividade.get ("_id");
+        if (id == null)
+            id = atividade.get ("id");
+        if (id != null)
+            ret.put ("id", id instanceof ObjectId ? ((ObjectId) id).toHexString () : id.toString ());
+        ret.remove ("_id");
+        ret.remove ("propriedadeId");
+        ret.remove ("usuarioId");
+        return ret;
     }
 
     private static boolean statusEquivalente (String s1, String s2)
@@ -288,6 +303,7 @@ public class AtividadesHandler
             v.erro ("talhao", "Selecione um talhão da propriedade ativa.");
 
         Document safra = talhao == null ? null : this.safraDoTalhao (requisicao.getSessao ().getPropriedadeId (), safraId, talhao, v);
+        FotoEvidencia.rejeitarCamposDeUploadNoCadastro (corpo, v);
 
         if (v.temErros ())
             return v.resposta ();
@@ -336,6 +352,7 @@ public class AtividadesHandler
 
         Document corpo = requisicao.getCorpoJson ();
         Validacao v = new Validacao (corpo);
+        FotoEvidencia.rejeitarCamposDeUploadNoCadastro (corpo, v);
 
         String nome   = v.texto ("nome",   "Informe o nome da atividade.", 100);
         String tipo   = v.texto ("tipo",   "Selecione o tipo.",            50);
@@ -522,5 +539,67 @@ public class AtividadesHandler
             return Resposta.json (404, new Document ("error", "Atividade não encontrada."));
 
         return Resposta.json (200, Json.escrever (eventos));
+    }
+
+    private Document buscarAtividade (Requisicao requisicao) throws Exception
+    {
+        String id = requisicao.getParametro ("id");
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        Document a = this.atividades.buscarPorId (propriedadeId, id);
+        if (a == null)
+            throw new http.ErroHttp (404, "Atividade não encontrada.");
+        return a;
+    }
+
+    private Resposta obterFoto (Requisicao requisicao) throws Exception
+    {
+        Document a = this.buscarAtividade (requisicao);
+        if (!FotoEvidencia.possuiFoto (a))
+            return Resposta.erro (404, "Nenhuma foto anexada a esta atividade.");
+        return Resposta.binario (200, FotoEvidencia.extrairMime (a), FotoEvidencia.extrairBytes (a));
+    }
+
+    private Resposta enviarFoto (Requisicao requisicao) throws Exception
+    {
+        Document corpo = requisicao.getCorpoJson ();
+        Validacao v = new Validacao (corpo);
+        Object esperada = corpo.get ("versao");
+        if (!(esperada instanceof Number))
+            v.erro ("versao", "Informe a versão atual da atividade.");
+        Document bloco = FotoEvidencia.montarSubdocumento (corpo, v, Instant.now ().toString ());
+        if (v.temErros ())
+            return v.resposta ();
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        String id = requisicao.getParametro ("id");
+        long versao = ((Number) esperada).longValue ();
+        try
+        {
+            if (!this.atividades.salvarFotoEvidencia (propriedadeId, id, versao, bloco))
+                return Resposta.erro (409, "O registro mudou. Reabra a atividade antes de anexar a foto.");
+        }
+        catch (IllegalStateException estado)
+        {
+            return Resposta.erro (409, estado.getMessage ());
+        }
+        Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
+        return Resposta.json (200, AtividadesHandler.publico (atualizado));
+    }
+
+    private Resposta removerFoto (Requisicao requisicao) throws Exception
+    {
+        Document corpo = requisicao.getCorpoJson ();
+        Validacao v = new Validacao (corpo);
+        Object esperada = corpo.get ("versao");
+        if (!(esperada instanceof Number))
+        {
+            v.erro ("versao", "Informe a versão atual da atividade.");
+            return v.resposta ();
+        }
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        String id = requisicao.getParametro ("id");
+        if (!this.atividades.removerFotoEvidencia (propriedadeId, id, ((Number) esperada).longValue ()))
+            return Resposta.erro (409, "O registro mudou. Reabra a atividade antes de remover a foto.");
+        Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
+        return Resposta.json (200, AtividadesHandler.publico (atualizado));
     }
 }
