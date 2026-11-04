@@ -22,6 +22,10 @@ resolução. Detalhes do contrato, decisões e testes em [docs/ocorrencias.md](.
 MongoDB: `java -cp 'bin:lib/*' TesteOcorrencias --mongo`, com banco dedicado `_teste`.
 Uma propriedade com histórico de ocorrências é preservada contra exclusão.
 
+## Evidências fotográficas (#29)
+
+Upload separado em `POST .../foto` (Base64 → BSON `Binary` em `fotoEvidencia`). Corpo HTTP até **8 MiB** em URLs que terminam em `/foto`; demais rotas, 1 MiB. Contrato completo: [docs/fotos-evidencia.md](../../docs/fotos-evidencia.md).
+
 ## Propriedades e contexto autenticado
 
 `GET/POST /api/propriedades`, `GET/PUT/DELETE /api/propriedades/{id}` e
