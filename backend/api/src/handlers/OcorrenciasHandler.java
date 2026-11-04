@@ -1,4 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundario: Pedro Andre do Carmo Chavier - RA: 25018639 (posicao da ocorrencia no talhao, #232) */
 package handlers;
 
 import dados.RepositorioOcorrencias;
@@ -19,6 +20,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
+import servicos.AlgoritmosDeGeo;
 import util.Json;
 import util.Validacao;
 
@@ -168,6 +170,25 @@ public class OcorrenciasHandler
                 if (talhao == null) v.erro ("talhaoId", "O talhão não pertence à propriedade atual.");
             }
         }
+        // Georreferenciamento (#232): posicao opcional, aceita so dentro do poligono do talhao (conta no socket).
+        Object posicao = corpo.get ("localizacao");
+        Document localizacao = null;
+        if (posicao != null)
+        {
+            Document area = talhao == null ? null : talhao.get ("localizacao", Document.class);
+            if (talhao == null)
+                v.erro ("localizacao", "Selecione um talh\u00e3o com pol\u00edgono para marcar a posi\u00e7\u00e3o da ocorr\u00eancia.");
+            else if (!AlgoritmosDeGeo.ehPoligono (area))
+                v.erro ("localizacao", "Cadastre o pol\u00edgono do talh\u00e3o para marcar a posi\u00e7\u00e3o da ocorr\u00eancia.");
+            else
+            {
+                AlgoritmosDeGeo.ResultadoPonto ponto = AlgoritmosDeGeo.pontoNoTalhao (posicao, area);
+                if (ponto.erro != null)
+                    v.erro ("localizacao", ponto.erro);
+                else
+                    localizacao = ponto.ponto;
+            }
+        }
         // A safra é o vínculo já existente no talhão desta branch, nunca texto livre do cliente.
         if (corpo.containsKey ("foto") || corpo.containsKey ("safraId"))
             v.erro ("vinculos", "Foto e vínculo por safraId não estão disponíveis nesta versão.");
@@ -176,7 +197,8 @@ public class OcorrenciasHandler
             .append ("data", data).append ("descricao", descricao)
             .append ("talhaoId", talhao == null ? null : talhao.getObjectId ("_id").toHexString ())
             .append ("talhaoNome", talhao == null ? null : talhao.getString ("nome"))
-            .append ("safra", talhao == null ? null : talhao.getString ("safra"));
+            .append ("safra", talhao == null ? null : talhao.getString ("safra"))
+            .append ("localizacao", localizacao);
     }
 
     private static long versao (Document registro)
@@ -195,7 +217,8 @@ public class OcorrenciasHandler
             .append ("dados", new Document ("titulo", registro.getString ("titulo")).append ("tipo", registro.getString ("tipo"))
                 .append ("data", registro.getString ("data")).append ("prioridade", registro.getString ("prioridade"))
                 .append ("descricao", registro.getString ("descricao")).append ("talhaoId", registro.getString ("talhaoId"))
-                .append ("talhaoNome", registro.getString ("talhaoNome")).append ("safra", registro.getString ("safra")));
+                .append ("talhaoNome", registro.getString ("talhaoNome")).append ("safra", registro.getString ("safra"))
+                .append ("localizacao", registro.get ("localizacao")));
     }
 
     private Resposta mutar (Requisicao r, String acao) throws Exception

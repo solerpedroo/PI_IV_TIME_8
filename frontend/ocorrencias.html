@@ -252,6 +252,21 @@
           <select id="occ-talhao" name="talhaoId"><option value="">Ocorrência geral da propriedade</option></select>
           <p class="field-error" data-error-for="talhaoId"></p>
         </div>
+        <!-- Georreferenciamento (#232), Pedro André do Carmo Chavier - RA: 25018639: posição opcional dentro do polígono do talhão -->
+        <div class="input-group" data-occ-geo hidden>
+          <p class="field-hint" data-occ-geo-hint>Este talhão não tem polígono: a ocorrência fica no talhão.</p>
+          <div data-occ-geo-fields hidden>
+            <div class="input-group">
+              <label for="occ-lat">Latitude da ocorrência (opcional)</label>
+              <input id="occ-lat" type="number" step="any" inputmode="decimal" placeholder="Ex.: -22.906000" data-occ-lat>
+            </div>
+            <div class="input-group">
+              <label for="occ-lng">Longitude da ocorrência (opcional)</label>
+              <input id="occ-lng" type="number" step="any" inputmode="decimal" placeholder="Ex.: -47.059000" data-occ-lng>
+            </div>
+          </div>
+          <p class="field-error" data-error-for="localizacao"></p>
+        </div>
         <div class="input-group">
           <label for="occ-data">Data da ocorrência *</label>
           <input id="occ-data" type="date" name="data" required>
@@ -293,6 +308,7 @@
       </div>
       <div class="modal-body-scroll">
         <div class="meta-grid" data-detail-meta></div>
+        <p class="field-hint" data-detail-geo hidden><span data-detail-geo-text></span> <a href="areas-cultivo.html" data-detail-geo-link>Ver no mapa</a></p>
         <h3 class="occ-detail-subhead">Descrição informada</h3>
         <p class="occ-text" data-detail-description></p>
         <div>

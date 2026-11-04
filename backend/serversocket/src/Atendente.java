@@ -1,6 +1,7 @@
 import algoritmos.CalculadoraDeEstoque;
 import algoritmos.CalculadoraDeTalhoes;
 import algoritmos.ConsolidadorDeSafra;
+import algoritmos.GeometriaDeTalhao;
 import algoritmos.ValidadorDeConta;
 import algoritmos.ValidadorDeTalhao;
 import algoritmos.AgendaDeManutencao;
@@ -10,6 +11,9 @@ import protocolo.Protocolo;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
 import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.PedidoDePontoNoTalhao;
+import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
 import protocolo.mensagens.PedidoDePing;
 import protocolo.mensagens.PedidoDeRelatorioDeSafra;
 import protocolo.mensagens.PedidoDeResumoDeTalhoes;
@@ -50,6 +54,15 @@ public class Atendente
 
             if (pedido instanceof PedidoDeResumoDeTalhoes)
                 return CalculadoraDeTalhoes.resumir ((PedidoDeResumoDeTalhoes) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDeLocalizacao)
+                return GeometriaDeTalhao.validarLocalizacao ((PedidoDeValidacaoDeLocalizacao) pedido);
+
+            if (pedido instanceof PedidoDePontoNoTalhao)
+                return GeometriaDeTalhao.pontoNoTalhao ((PedidoDePontoNoTalhao) pedido);
+
+            if (pedido instanceof PedidoDeGeometriaDoMapa)
+                return GeometriaDeTalhao.geometriaDoMapa ((PedidoDeGeometriaDoMapa) pedido);
 
             if (pedido instanceof PedidoDeMovimentacaoDeEstoque)
                 return CalculadoraDeEstoque.movimentar ((PedidoDeMovimentacaoDeEstoque) pedido);

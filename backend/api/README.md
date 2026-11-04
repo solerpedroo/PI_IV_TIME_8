@@ -296,6 +296,31 @@ Campos do talhão:
 Cada usuário só vê e edita os talhões da própria propriedade. Talhão de outra
 propriedade responde 404. Não há DELETE nesta entrega.
 
+### Georreferenciamento
+
+Localização simplificada do talhão (ponto ou polígono leve), ocorrência marcada dentro
+do polígono e mapa dos talhões. Validação, área, centro e ponto no polígono são
+calculados no serversocket (`GeometriaDeTalhao`). Detalhes em
+[docs/georreferenciamento.md](../../docs/georreferenciamento.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `PUT /api/talhoes/{id}/localizacao` | 200 com o talhão, `areaCalculadaHectares` (só polígono) e `centro` · 400 · 404 · 409 contexto mudou ou ocorrência marcada ficaria fora |
+| `DELETE /api/talhoes/{id}/localizacao` | 204 · 404 · 409 há ocorrências marcadas no polígono |
+| `GET /api/mapa?cultura=&ocorrencias=abertas\|todas` | 200 `{talhoes, semLocalizacao, ocorrenciasSemTalhao, limites}` · 400 `ocorrencias` inválido · 503 servidor de algoritmos fora |
+
+Corpo do `PUT`: `{"tipo": "ponto"|"poligono", "pontos": [{"lat": -22.9056, "lng": -47.0608}]}`.
+
+- `ponto`: exatamente 1 ponto; `poligono`: 3 a 50 vértices, sem lados cruzados, com área maior que zero
+  (o último vértice igual ao primeiro é descartado);
+- `lat` entre -90 e 90, `lng` entre -180 e 180, gravados com 6 casas;
+- a área calculada é informativa: não substitui os `hectares` do cadastro;
+- `PUT /api/talhoes/{id}` (edição normal) preserva a localização.
+
+Ocorrência: `localizacao: {lat, lng}` opcional em `POST`/`PUT /api/ocorrencias`. Só é aceita
+com `talhaoId` de um talhão com polígono e dentro dele (a borda conta como dentro); senão 400 no
+campo `localizacao`. No mapa, `posicao` é `propria` (tem `localizacao`) ou `talhao` (usa o centro).
+
 ### Estoque
 
 | Método e rota | Respostas |
