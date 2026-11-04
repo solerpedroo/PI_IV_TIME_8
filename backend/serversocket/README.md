@@ -63,6 +63,11 @@ Protocolo próprio da disciplina: objetos `Comunicado` serializados em `ObjectOu
 | `PedidoDeResumoDeTalhoes` | `RespostaDeResumoDeTalhoes` | total de hectares, quantidade total e de ativos |
 | `PedidoDeMovimentacaoDeEstoque` | `RespostaDeMovimentacaoDeEstoque` | valida a movimentação e calcula novo saldo e custo médio ponderado (`OK`, `INVALIDO` ou `SALDO_INSUFICIENTE`) |
 | `PedidoDeRelatorioDeSafra` | `RespostaDeRelatorioDeSafra` | área, registros no período, pendências com motivo, contagens e total em centavos |
+| `PedidoDeValidacaoDeEquipamento` | `RespostaDeValidacao` | nome, tipo, marca, modelo, identificação, ano (1950 até `anoAtual` + 1), horímetro ≥ 0 e status; aplica o status padrão |
+| `PedidoDeValidacaoDePreventiva` | `RespostaDeValidacao` | descrição, data prevista (recusa data impossível) e intervalo de 1 a 3650 dias |
+| `PedidoDeValidacaoDeIntervencao` | `RespostaDeValidacao` | tipo, data (não pode passar de `hoje`), descrição, responsável, horímetro e valor em `BigDecimal` com 2 casas (sem valor, sem custo) |
+| `PedidoDeAgendaDeManutencao` | `RespostaDeAgendaDeManutencao` | situação de cada preventiva programada (`atrasada`, `proxima` até `diasDeAviso` dias, `futura`), dias até a data e totais |
+| `PedidoDeProximaPreventiva` | `RespostaDeProximaPreventiva` | data realizada + intervalo em dias (`null` sem intervalo) |
 
 Falha de **validação de campo** não é erro: volta como `RespostaDeValidacao` com `getErros()`
 (chaves = nomes dos campos do front; a confirmação de senha é `password-confirm`).
