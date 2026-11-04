@@ -48,8 +48,10 @@ A intervenção com valor vira um custo em Custos, na categoria Maquinário, lig
   próxima gerada; se a próxima já foi realizada, responde 409.
 - Horímetro maior que o do equipamento atualiza o equipamento.
 - Ordem das gravações: tudo é validado antes (socket, equipamento, preventiva, talhão, safra e a próxima data)
-  e só então gravado. Se o custo falhar depois da intervenção gravada, a resposta é 201 (ou 200) com
-  `custoPendente: true`; editar a intervenção de novo recria o custo que faltou.
+  e só então gravado. A preventiva passa a `realizada` com update condicional (`status = programada`); se outra
+  requisição já a realizou, a intervenção recém-criada é desfeita e a API responde 409. Falha ao gerar a próxima
+  preventiva desfaz a intervenção e reverte a preventiva. Se o custo falhar depois da intervenção gravada, a resposta
+  é 201 (ou 200) com `custoPendente: true`; editar a intervenção de novo recria o custo que faltou.
 - O equipamento e a preventiva de uma intervenção não são trocados por `PUT` (400): exclua e registre de novo.
 - Registro de outra propriedade responde 404 em todas as rotas, nunca 403.
 
@@ -77,10 +79,11 @@ A intervenção com valor vira um custo em Custos, na categoria Maquinário, lig
   ano limite, horímetro negativo e NaN, valor com 3 casas arredondado, valor 0,004, data futura com `hoje` fixo, data
   impossível, agenda com atrasada, próxima, futura, realizada e cancelada ignoradas, `diasDeAviso` 2 e 30, próxima
   preventiva com e sem intervalo, virada de ano e 29/02). `TesteAlgoritmos` 73 e `TesteProtocolo` 29 continuam.
-- `sh backend/api/testar.sh`: `TesteManutencao` com 57 verificações em memória (401, recusas de equipamento, preventiva
+- `sh backend/api/testar.sh`: `TesteManutencao` com 61 verificações em memória (401, recusas de equipamento, preventiva
   e intervenção, nome repetido com maiúsculas, isolamento 404 em todas as rotas, contexto trocado, agenda relativa a hoje,
-  intervenção sem valor sem custo, custo de 350,50 em Maquinário com talhão e safra, sem duplicar, 409 no `PUT`/`DELETE`
-  do custo, editar/remover/recriar o valor, safra finalizada, próxima preventiva gerada e desfeita, 409 quando a próxima já
+  intervenção sem valor sem custo, `marcarRealizadaSeProgramada` atômico, `custoPendente` e recuperação no `PUT`, custo
+  de 350,50 em Maquinário com talhão e safra, sem duplicar, 409 no `PUT`/`DELETE` do custo, editar/remover/recriar o valor,
+  safra finalizada, próxima preventiva gerada e desfeita, 409 quando a próxima já
   foi realizada, horímetro e resumo). Com `--mongo`, também o índice único de nome, o índice parcial de
   `origem.intervencaoId` e a leitura por repositórios novos (reinício).
 - `node tests/manutencao-real.cjs` (com o serversocket na porta 3000): métricas "-" até a API, estados vazios, cadastro e
