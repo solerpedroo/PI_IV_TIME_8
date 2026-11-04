@@ -6,6 +6,7 @@ const {spawn, spawnSync} = require('node:child_process');
 const {once} = require('node:events');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const {launchTestBrowser} = require('./browser-launch.cjs');
+const {aguardarTokenDeConfirmacao} = require('./token-confirmacao.cjs');
 const base = 'http://127.0.0.1:8080';
 const cwd = path.join(__dirname, '../backend/api');
 const mongo = process.argv.includes('--mongo');
@@ -54,8 +55,7 @@ const openRow = async (page, id) => {
   await start();
   try {
     await api('/api/auth/register', 'POST', {name: 'Pedro Teste Ocorrências', email, phone: '(19) 99999-1234', password, confirm: password, farm: 'Fazenda de Teste', area: '50 ha', terms: true}, null, 201);
-    const confirmation = log.match(/token: ([a-zA-Z0-9-]+)/); assert.ok(confirmation);
-    await api('/api/auth/confirm-email', 'POST', {token: confirmation[1]});
+    await api('/api/auth/confirm-email', 'POST', {token: await aguardarTokenDeConfirmacao(() => log)});
     let session = await api('/api/auth/login', 'POST', {email, password});
     const plot = await api('/api/talhoes', 'POST', {nome: 'Norte Real', cultura: 'Soja', hectares: 12, safra: '2025/26'}, session.token, 201);
     const south = await api('/api/talhoes', 'POST', {nome: 'Sul Real', cultura: 'Milho', hectares: 8, safra: '2026/27'}, session.token, 201);
