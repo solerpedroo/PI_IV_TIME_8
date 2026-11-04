@@ -4,5 +4,6 @@ set -eu
 cd "$(dirname "$0")"
 : "${MONGODB_URI:?Informe um banco de teste terminado em _teste}"
 mkdir -p bin
-javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin $(find src teste -name '*.java')
+PROTO=$(find ../serversocket/src/protocolo -name '*.java')
+javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin $(find src teste -name '*.java') $PROTO
 java -cp 'bin:lib/*' TesteEstoqueMongo
