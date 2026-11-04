@@ -178,6 +178,15 @@ curl -i -X PUT -H "Authorization: Bearer $T" -H "Content-Type: application/json"
 curl -i -X POST -H "Authorization: Bearer $T" $B/api/auth/logout
 ```
 
+### Formulários de autenticação (frontend)
+
+Telas em `frontend/*.html` que usam `data-auth-form` devem declarar **`data-auth-route`**
+com um destes valores: `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot-password`,
+`/api/auth/reset-password`. O `scripts/auth.js` usa esse atributo no submit; sem ele,
+cai num fallback legado por campos do formulário (frágil — evite em telas novas).
+
+Regressão de rota: `node tests/login-real.cjs` (servidor em memória + Playwright).
+
 ### E-mail: SMTP ou modo local
 
 Com `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` e `SMTP_FROM` configurados,
