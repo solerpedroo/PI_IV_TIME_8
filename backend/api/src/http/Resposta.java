@@ -1,4 +1,5 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 package http;
 
@@ -46,6 +47,14 @@ public class Resposta
     public static Resposta semConteudo ()
     {
         return new Resposta (204, null, null);
+    }
+
+    /** Resposta binária para GET .../foto (#176) com Content-Type da evidência. */
+    public static Resposta binario (int status, String tipoMime, byte[] bytes)
+    {
+        Resposta ret = new Resposta (status, tipoMime, bytes);
+        ret.setCabecalho ("Cache-Control", "private, no-store");
+        return ret;
     }
 
     public static Resposta redirecionar (String destino)
