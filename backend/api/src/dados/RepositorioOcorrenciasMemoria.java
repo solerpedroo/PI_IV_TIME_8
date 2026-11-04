@@ -67,6 +67,16 @@ public class RepositorioOcorrenciasMemoria implements RepositorioOcorrencias
         return true;
     }
 
+    public synchronized boolean substituirComVersao (Document anterior, Document nova)
+    {
+        String id = anterior.getObjectId ("_id").toHexString ();
+        Document atual = this.registros.get (id);
+        if (!pertence (atual, anterior.getString ("usuarioId"), anterior.getString ("propriedadeId")) ||
+            !atual.get ("versao").equals (anterior.get ("versao"))) return false;
+        this.registros.put (id, copiar (nova));
+        return true;
+    }
+
     public synchronized boolean temRegistros (String propriedade)
     {
         return this.registros.values ().stream ().anyMatch (r -> propriedade.equals (r.getString ("propriedadeId")));
