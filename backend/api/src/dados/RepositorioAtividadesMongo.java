@@ -60,6 +60,23 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         return Filters.and (Filters.eq ("_id", new ObjectId (id)), Filters.eq ("propriedadeId", propriedadeId));
     }
 
+    /* Atividades criadas antes da versão otimista não têm o campo no Mongo.
+       Elas fazem parte do contrato como versão inicial 1, sem exigir migração
+       bloqueante antes de o usuário poder anexar uma evidência. */
+    private static void aplicarVersaoPadrao (Document atividade)
+    {
+        if (atividade != null && !(atividade.get ("versao") instanceof Number))
+            atividade.put ("versao", 1L);
+    }
+
+    private static Bson filtroVersao (String propriedadeId, String id, long versaoEsperada)
+    {
+        Bson atual = Filters.eq ("versao", versaoEsperada);
+        if (versaoEsperada == 1L)
+            atual = Filters.or (atual, Filters.exists ("versao", false));
+        return Filters.and (filtro (propriedadeId, id), atual);
+    }
+
     @Override
     public List<Document> listar (String propriedadeId) throws Exception
     {
@@ -70,6 +87,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         for (Document d : this.atividades.find (Filters.eq ("propriedadeId", propriedadeId)).sort (Sorts.descending ("_id")))
         {
             d.put ("id", d.getObjectId ("_id").toHexString ());
+            RepositorioAtividadesMongo.aplicarVersaoPadrao (d);
             ret.add (d);
         }
 
@@ -94,6 +112,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         for (Document d : this.atividades.find (filtro).sort (Sorts.descending ("_id")))
         {
             d.put ("id", d.getObjectId ("_id").toHexString ());
+            RepositorioAtividadesMongo.aplicarVersaoPadrao (d);
             ret.add (d);
         }
 
@@ -109,7 +128,10 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
 
         Document d = this.atividades.find (f).first ();
         if (d != null)
+        {
             d.put ("id", d.getObjectId ("_id").toHexString ());
+            RepositorioAtividadesMongo.aplicarVersaoPadrao (d);
+        }
 
         return d;
     }
@@ -283,8 +305,8 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
             throw new IllegalStateException ("Atividade finalizada não permite novo anexo.");
         if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
             return false;
-        return this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("versao", versaoEsperada)),
-            Updates.combine (Updates.set (util.FotoEvidencia.CAMPO_RAIZ, subdocumento), Updates.inc ("versao", 1))).getModifiedCount () == 1;
+        return this.atividades.updateOne (filtroVersao (propriedadeId, id, versaoEsperada),
+            Updates.combine (Updates.set (util.FotoEvidencia.CAMPO_RAIZ, subdocumento), Updates.set ("versao", versaoEsperada + 1))).getModifiedCount () == 1;
     }
 
     @Override
@@ -295,7 +317,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
             return false;
         if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
             return false;
-        return this.atividades.updateOne (Filters.and (filtro (propriedadeId, id), Filters.eq ("versao", versaoEsperada)),
-            Updates.combine (Updates.unset (util.FotoEvidencia.CAMPO_RAIZ), Updates.inc ("versao", 1))).getMatchedCount () == 1;
+        return this.atividades.updateOne (filtroVersao (propriedadeId, id, versaoEsperada),
+            Updates.combine (Updates.unset (util.FotoEvidencia.CAMPO_RAIZ), Updates.set ("versao", versaoEsperada + 1))).getMatchedCount () == 1;
     }
 }
