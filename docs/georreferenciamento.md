@@ -48,8 +48,8 @@ O contrato da API está no [README do servidor](../backend/api/README.md#georref
 - O `PUT` da ocorrência substitui os campos do cadastro, como antes: a tela reenvia a posição ao
   editar.
 - Trocar o polígono deixando alguma ocorrência não excluída fora dele, ou trocar por um ponto, responde
-  409 citando a ocorrência (`ocorrenciaId`). Remover a localização com ocorrência marcada responde
-  409 "Há ocorrências marcadas neste polígono.". Assim nunca sobra ponto fora da área.
+  409 com mensagem genérica e os campos `ocorrenciaId` / `ocorrenciaTitulo`. Remover a localização com
+  ocorrência marcada responde 409 "Há ocorrências marcadas neste polígono.". Assim nunca sobra ponto fora da área.
 
 ## Visualizar talhões no mapa (#233)
 
@@ -57,6 +57,9 @@ O contrato da API está no [README do servidor](../backend/api/README.md#georref
   `localizacao`, `centro`, `areaCalculadaHectares` e as ocorrências), os `semLocalizacao` (com o
   número de ocorrências abertas), `ocorrenciasSemTalhao` e os `limites` (`null` sem nenhum talhão
   localizado). Padrão: `abertas` (status diferente de `RESOLVIDA`); excluídas nunca entram.
+  A consulta carrega **todos** os talhões e ocorrências não excluídas da propriedade (filtro opcional
+  por `cultura`); não há paginação — adequado ao escopo PI/fazenda única; propriedades muito grandes
+  precisarão de recorte ou paginação futura.
 - Áreas de Cultivo desenha um SVG simples (`viewBox` 320 x 220): projeção equirretangular dentro
   dos limites, com margem de 8%, escala horizontal corrigida pelo cosseno da latitude média e caixa
   mínima de ±0,002° em volta de um único ponto. Polígono = `polygon` com a cor da cultura; ponto =
