@@ -25,6 +25,7 @@ import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -45,6 +46,26 @@ import servicos.CustosDeManutencao;
 public class TesteManutencao
 {
     private static final ZoneId FUSO = ZoneId.of ("America/Sao_Paulo");
+
+    /** Simula falha na primeira gravacao de custo de manutencao (custoPendente). */
+    private static final class RepositorioCustosFalhaMemoria extends RepositorioCustosMemoria
+    {
+        private boolean falharManutencao = true;
+
+        @Override
+        public synchronized boolean criarSeAusente (Document custo) throws Exception
+        {
+            Document origem = custo.get ("origem", Document.class);
+
+            if (this.falharManutencao && origem != null && "manutencao".equals (origem.getString ("tipo")))
+            {
+                this.falharManutencao = false;
+                throw new Exception ("Falha simulada na gravacao do custo");
+            }
+
+            return super.criarSeAusente (custo);
+        }
+    }
 
     private static int total  = 0;
     private static int falhas = 0;
@@ -358,6 +379,33 @@ public class TesteManutencao
             Resposta semValor = TesteManutencao.chamar (roteador, a, "POST", rotaI, TesteManutencao.intervencao (pulverizadorId, "corretiva", TesteManutencao.dia (0), "Ajuste dos bicos").toJson ());
             TesteManutencao.conferir ("intervencao sem valor -> 201 e nenhum custo (GET /api/custos vazio)",
                                       semValor.getStatus () == 201 && TesteManutencao.json (semValor).get ("custoId") == null &&
+                                      TesteManutencao.lista (TesteManutencao.chamar (roteador, a, "GET", "/api/custos", null)).isEmpty ());
+
+            String agoraAtomico = Instant.now ().toString ();
+            TesteManutencao.conferir ("marcarRealizadaSeProgramada: segunda chamada recusa (TOCTOU)",
+                                      preventivas.marcarRealizadaSeProgramada (propriedade, proximaId, "000000000000000000000001", TesteManutencao.dia (0), agoraAtomico) &&
+                                      !preventivas.marcarRealizadaSeProgramada (propriedade, proximaId, "000000000000000000000002", TesteManutencao.dia (0), agoraAtomico));
+            preventivas.atualizar (propriedade, proximaId, new Document ("status", "programada").append ("intervencaoId", null)
+                                       .append ("realizadaEm", null).append ("atualizadoEm", agoraAtomico));
+
+            RepositorioCustos custosPendentes = new TesteManutencao.RepositorioCustosFalhaMemoria ();
+            Roteador          roteadorPendente = TesteManutencao.roteador (equipamentos, preventivas, intervencoes, talhoes, safras, custosPendentes, sessoes);
+            Document          corpoPendente    = TesteManutencao.intervencao (pulverizadorId, "corretiva", TesteManutencao.dia (0), "Peca com falha de custo")
+                                                     .append ("valor", 80);
+            Resposta          comPendente       = TesteManutencao.chamar (roteadorPendente, a, "POST", rotaI, corpoPendente.toJson ());
+            Document          jsonPendente       = TesteManutencao.json (comPendente);
+            String            pendenteId         = jsonPendente.getString ("id");
+            TesteManutencao.conferir ("custo pendente -> 201 com custoPendente e sem custoId",
+                                      comPendente.getStatus () == 201 && Boolean.TRUE.equals (jsonPendente.get ("custoPendente")) &&
+                                      jsonPendente.get ("custoId") == null &&
+                                      TesteManutencao.lista (TesteManutencao.chamar (roteadorPendente, a, "GET", "/api/custos", null)).isEmpty ());
+            Resposta recupera = TesteManutencao.chamar (roteadorPendente, a, "PUT", rotaI + "/" + pendenteId, corpoPendente.toJson ());
+            TesteManutencao.conferir ("editar intervencao recria o custo pendente",
+                                      recupera.getStatus () == 200 && TesteManutencao.json (recupera).getString ("custoId") != null &&
+                                      !TesteManutencao.json (recupera).containsKey ("custoPendente") &&
+                                      TesteManutencao.lista (TesteManutencao.chamar (roteadorPendente, a, "GET", "/api/custos", null)).size () == 1);
+            TesteManutencao.conferir ("limpar intervencao do teste de custo pendente",
+                                      TesteManutencao.status (roteadorPendente, a, "DELETE", rotaI + "/" + pendenteId, null) == 204 &&
                                       TesteManutencao.lista (TesteManutencao.chamar (roteador, a, "GET", "/api/custos", null)).isEmpty ());
 
             // a preventiva vencida e realizada com valor, talhao e safra: gera custo e a proxima preventiva
