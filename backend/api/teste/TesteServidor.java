@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -742,6 +743,11 @@ public class TesteServidor
         long versaoFoto = ((Number) paraFoto.json ().get ("versao")).longValue ();
         String png1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
         conferir ("POST foto atividade sem versao -> 400", 400, post ("/api/atividades/" + idFoto + "/foto", "{\"conteudoBase64\":\"" + png1x1 + "\"}", token));
+        conferir ("foto atividade com MIME incompatível -> 400", 400, post ("/api/atividades/" + idFoto + "/foto",
+            "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + png1x1 + "\",\"tipoMime\":\"image/jpeg\"}", token));
+        String maiorQueCincoMiB = Base64.getEncoder ().encodeToString (new byte[5 * 1024 * 1024 + 1]);
+        conferir ("foto atividade acima de 5 MiB -> 400", 400, post ("/api/atividades/" + idFoto + "/foto",
+            "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + maiorQueCincoMiB + "\",\"tipoMime\":\"image/png\"}", token));
         Resp comFoto = post ("/api/atividades/" + idFoto + "/foto",
             "{\"versao\":" + versaoFoto + ",\"conteudoBase64\":\"" + png1x1 + "\",\"tipoMime\":\"image/png\"}", token);
         conferir ("atividade com temFoto apos upload", comFoto.status == 200 && Boolean.TRUE.equals (comFoto.json ().getBoolean ("temFoto")));
