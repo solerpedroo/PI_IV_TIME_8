@@ -174,14 +174,15 @@ public class GeorreferenciamentoHandler implements Manipulador
             {
                 if (!AlgoritmosDeGeo.ehPoligono (nova.localizacao))
                     return GeorreferenciamentoHandler.conflito (
-                        "A ocorr\u00eancia \"" + ocorrencia.getString ("titulo") + "\" est\u00e1 marcada no pol\u00edgono. " +
-                        "Mantenha um pol\u00edgono que a contenha ou exclua a marca\u00e7\u00e3o antes.", ocorrencia);
+                        "H\u00e1 ocorr\u00eancia marcada neste pol\u00edgono. Mantenha um pol\u00edgono que a contenha ou exclua a marca\u00e7\u00e3o antes.",
+                        ocorrencia);
 
                 AlgoritmosDeGeo.ResultadoPonto ponto = AlgoritmosDeGeo.pontoNoTalhao (ocorrencia.get ("localizacao"), nova.localizacao);
 
                 if (ponto.erro != null)
                     return GeorreferenciamentoHandler.conflito (
-                        "A ocorr\u00eancia \"" + ocorrencia.getString ("titulo") + "\" ficaria fora do novo pol\u00edgono.", ocorrencia);
+                        "H\u00e1 ocorr\u00eancia que ficaria fora do novo pol\u00edgono. Ajuste a \u00e1rea ou remova a marca\u00e7\u00e3o antes.",
+                        ocorrencia);
             }
 
             this.talhoes.atualizar (propriedadeId, id, new Document ("localizacao",  nova.localizacao)
