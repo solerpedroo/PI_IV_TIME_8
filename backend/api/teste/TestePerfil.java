@@ -64,7 +64,8 @@ public class TestePerfil
     public static String uriTeste () throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
-        String banco = uri == null ? null : new com.mongodb.ConnectionString (uri).getDatabase ();
+        String banco = uri == null ? null
+            : ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
         if (banco == null || !banco.endsWith ("_teste")) throw new Exception ("Use um banco dedicado terminado em _teste.");
         return uri;
     }
