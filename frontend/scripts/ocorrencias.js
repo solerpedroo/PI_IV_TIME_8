@@ -1,5 +1,6 @@
 /* Miguel — RA: 25003110 */
 /* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundário: Pedro André do Carmo Chavier - RA: 25018639 (posição da ocorrência no polígono do talhão, #232) */
 /* Ocorrências: a API é a fonte dos dados. Nenhum registro mock é importado. */
 (() => {
   "use strict";
@@ -9,6 +10,7 @@
   const labels = { ABERTA: "Aberta", EM_ACOMPANHAMENTO: "Em acompanhamento", RESOLVIDA: "Resolvida" };
   const titles = { registro: "Ocorrência registrada", editar: "Cadastro editado", acompanhamento: "Acompanhamento iniciado", atualizacao: "Atualização publicada", resolucao: "Ocorrência resolvida", excluir: "Ocorrência excluída" };
   let propertyId = "", active = null, editing = null, busy = false, ready = false, loadNumber = 0;
+  let polygons = new Set(), polygonsFailed = false; // talhões com polígono (GET /api/mapa, uma vez)
   const form = $("[data-occ-form]");
   const field = (name) => form.elements.namedItem(name);
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -100,6 +102,8 @@
     $("[data-detail-title]").textContent = record.titulo; $("[data-detail-subtitle]").textContent = `${record.talhaoNome || "Geral da propriedade"} · ${date(record.data)}`;
     $("[data-detail-description]").textContent = record.descricao || "Sem descrição informada.";
     $("[data-detail-badges]").replaceChildren(badge(record.prioridade), badge(record.status, "status"));
+    $("[data-detail-geo]").hidden = !record.talhaoId;
+    $("[data-detail-geo-text]").textContent = record.localizacao ? `Posição: ${Number(record.localizacao.lat).toFixed(6)}, ${Number(record.localizacao.lng).toFixed(6)}.` : "Posição: no talhão (sem ponto marcado).";
     const metadata = { Tipo: record.tipo, Propriedade: $(".sidebar-user-property").textContent, Talhão: record.talhaoNome || "Geral da propriedade", Safra: record.safra || "Sem vínculo", "Data da ocorrência": date(record.data), "Registrada em": timestamp(record.criadaEm), "Resolvida em": timestamp(record.resolvidaEm), Status: record.excluida ? "Excluída (consulta)" : labels[record.status] };
     $("[data-detail-meta]").replaceChildren(...Object.entries(metadata).map(([key, value]) => {
       const cell = node("div", null, "meta-cell"); cell.append(node("span", key, "meta-cell-label"), node("span", value, "meta-cell-value")); return cell;
@@ -122,6 +126,14 @@
     $("[data-update-text]").closest(".textarea-group").hidden = readonly;
     $("[data-occ-detail-error]").textContent = ""; openModal("occ-detail");
   }
+  // A posição só existe dentro do polígono do talhão; sem polígono, a ocorrência fica no talhão.
+  function geoBlock() {
+    const plot = field("talhaoId").value, hasPolygon = polygons.has(plot);
+    $("[data-occ-geo]").hidden = !plot; $("[data-occ-geo-fields]").hidden = !hasPolygon;
+    $("[data-occ-geo-hint]").textContent = hasPolygon ? "Marque a posição dentro do polígono do talhão (opcional)."
+      : polygonsFailed ? "Não foi possível consultar os polígonos agora: a ocorrência fica no talhão." : "Este talhão não tem polígono: a ocorrência fica no talhão.";
+    if (!hasPolygon) { $("[data-occ-lat]").value = ""; $("[data-occ-lng]").value = ""; }
+  }
   function priority(value) {
     field("prioridade").value = value;
     $$("[data-priority]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.priority === value)));
@@ -131,6 +143,7 @@
     $$("[aria-invalid]", form).forEach((el) => el.removeAttribute("aria-invalid"));
     for (const key of ["titulo", "tipo", "talhaoId", "data", "descricao"]) field(key).value = record?.[key] || "";
     if (!record) { field("data").value = today(); field("talhaoId").value = $("[data-occ-plot-filter]").value; }
+    $("[data-occ-lat]").value = record?.localizacao?.lat ?? ""; $("[data-occ-lng]").value = record?.localizacao?.lng ?? ""; geoBlock();
     priority(record?.prioridade || "Baixa"); $("#occ-form-title").textContent = record ? "Editar ocorrência" : "Registrar ocorrência";
     $("button[type=submit]", form).textContent = record ? "Salvar alterações" : "Registrar ocorrência"; openModal("occ-form");
   }
@@ -170,6 +183,10 @@
       $(".sidebar-user-name").textContent = me.usuario.name || me.usuario.nome || "Usuário"; $(".sidebar-user-property").textContent = property;
       $(".sidebar-avatar").textContent = (me.usuario.name || me.usuario.nome || "U").split(/\s+/).slice(0, 2).map((s) => s[0]).join("");
       field("talhaoId").replaceChildren(new Option("Geral da propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
+      try {
+        const map = await request("/api/mapa?ocorrencias=todas");
+        polygons = new Set(map.talhoes.filter((p) => p.localizacao?.tipo === "poligono").map((p) => p.id)); polygonsFailed = false;
+      } catch { polygons = new Set(); polygonsFailed = true; }
       $("[data-occ-plot-filter]").replaceChildren(new Option("Toda a propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
       const params = new URLSearchParams(location.search), requested = params.get("talhaoId") || params.get("talhao");
       if (requested) {
@@ -193,9 +210,15 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !busy) closeModals(); });
     $("[data-open-modal='occ-form']").addEventListener("click", () => edit(null));
     $$("[data-priority]").forEach((b) => b.addEventListener("click", () => priority(b.dataset.priority)));
+    field("talhaoId").addEventListener("change", geoBlock);
     form.addEventListener("submit", (e) => {
       e.preventDefault(); $$(".field-error", form).forEach((el) => { el.textContent = ""; });
       const payload = Object.fromEntries(new FormData(form)); if (editing) payload.versao = editing.versao;
+      const lat = $("[data-occ-lat]").value.trim(), lng = $("[data-occ-lng]").value.trim();
+      if (!$("[data-occ-geo-fields]").hidden && (lat || lng)) {
+        if (!lat || !lng) { $("[data-error-for='localizacao']", form).textContent = "Preencha latitude e longitude, ou deixe as duas em branco."; return; }
+        payload.localizacao = { lat: Number(lat), lng: Number(lng) };
+      }
       write("/api/ocorrencias" + (editing ? "/" + editing.id : ""), editing ? "PUT" : "POST", payload, $("[data-occ-form-error]"), async (saved) => { closeModals(); await showDetail(saved.id); });
     });
     $("[data-detail-edit]").addEventListener("click", () => edit(active));
