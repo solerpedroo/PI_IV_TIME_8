@@ -5,6 +5,7 @@ const { spawn, execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const net = require('node:net');
 const path = require('node:path');
+const { aguardarTokenDeConfirmacao } = require('./token-confirmacao.cjs');
 const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
 const base = 'http://127.0.0.1:18081';
 const cwd = path.join(__dirname, '../backend/api');
@@ -49,9 +50,7 @@ async function api(url, body, token, method) {
     criado = true; await iniciar();
     const email = 'i135@agro.test', password = 'Senha@123';
     assert.equal((await api('/api/auth/register', {name:'Operador Teste',email,phone:'(19) 98888-1111',password,confirm:password,farm:'Fazenda Teste',area:'120 ha',terms:true})).status, 201);
-    for (let i = 0; i < 50 && !/token: ([\w-]+)/.test(log); i++) await pausa(100);
-    const tokenEmail = log.match(/token: ([\w-]+)/)?.[1];
-    assert.ok(tokenEmail, 'Token de confirmação não encontrado');
+    const tokenEmail = await aguardarTokenDeConfirmacao(() => log);
     assert.equal((await api('/api/auth/confirm-email', {token: tokenEmail})).status, 200);
     let login = await api('/api/auth/login', {email,password});
     assert.equal(login.status, 200); let token = login.data.token;
