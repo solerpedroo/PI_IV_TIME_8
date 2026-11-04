@@ -267,7 +267,12 @@
           <textarea id="occ-descricao" name="descricao" maxlength="6000" placeholder="Descreva o que foi observado, área afetada e ações já tomadas..."></textarea>
           <p class="field-error" data-error-for="descricao"></p>
         </div>
-        <p class="field-hint">Anexo de foto ainda não está disponível.</p>
+        <div class="input-group">
+          <label for="occ-foto">Evidência fotográfica (opcional)</label>
+          <input id="occ-foto" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-occ-foto-input>
+          <p class="field-hint">Salve o cadastro primeiro; a foto é enviada em seguida, sem misturar com os campos de texto (#175).</p>
+          <p class="field-error" data-error-for="conteudoBase64"></p>
+        </div>
         <p class="field-error" data-occ-form-error role="alert"></p>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
@@ -291,6 +296,16 @@
         <div class="meta-grid" data-detail-meta></div>
         <h3 class="occ-detail-subhead">Descrição informada</h3>
         <p class="occ-text" data-detail-description></p>
+        <div class="occ-photo-block" data-detail-photo-wrap hidden>
+          <h3 class="occ-detail-subhead">Evidência de campo</h3>
+          <img alt="Evidência fotográfica da ocorrência" data-detail-photo class="occ-evidence-photo">
+          <p class="field-hint" data-detail-photo-meta></p>
+        </div>
+        <div class="input-group" data-detail-photo-upload>
+          <label for="occ-foto-detail">Anexar ou trocar foto</label>
+          <input id="occ-foto-detail" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-occ-foto-detail>
+          <p class="field-error" data-occ-photo-error role="alert"></p>
+        </div>
         <div>
           <h3 class="occ-detail-subhead">Linha do tempo</h3>
           <div class="timeline" data-detail-timeline></div>
