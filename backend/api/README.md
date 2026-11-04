@@ -103,15 +103,16 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_ALGORITMOS_PORT` | `3000` | Porta TCP do ServerSocket. `testar.sh` usa **30100**. |
 | `SERVIDOR_ALGORITMOS_DISABLED` | — | Se definida, `rodar.sh` não sobe o ServerSocket (rotas delegadas falham com 503). |
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
-| `MONGODB_DATABASE` | — | Usada apenas por `backend/core`; esta API seleciona o banco pelo caminho da `MONGODB_URI`. |
+| `MONGODB_DATABASE` | — | Usada pelo `backend/core`. Na API, fallback quando a URI **não** traz nome de banco; se URI e variável divergirem, o processo **não sobe**. |
 | `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/api/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
-No Atlas, inclua `/agrogestao_dev` antes de `?` na `MONGODB_URI` para que esta
-API use o mesmo banco configurado para `backend/core` no `.env.example`.
-Para usuários Atlas com senha (SCRAM), inclua também `authSource=admin` nos
-parâmetros da URI para manter o banco de autenticação correto.
+**Local vs Atlas:** `rodar.sh` usa o banco **`agrogestao`** na URI (Docker de desenvolvimento).
+No Atlas, inclua `/agrogestao_dev` antes de `?` na `MONGODB_URI` para alinhar com
+`MONGODB_DATABASE` do `.env.example`. URI sem path + `MONGODB_DATABASE=agrogestao_dev`
+também funciona na API. Confira `authSource` em **Atlas → Connect → Drivers**
+(em geral `authSource=admin` para usuários SCRAM).
 
 Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/register`, `POST /api/auth/reset-password`, `PUT /api/perfil/senha`, `POST`/`PUT /api/talhoes`, `GET /api/talhoes/resumo`, `POST /api/insumos/{id}/movimentacoes` e `GET /api/relatorios/safras/{id}` (colheitas ainda mescladas na API).
 
