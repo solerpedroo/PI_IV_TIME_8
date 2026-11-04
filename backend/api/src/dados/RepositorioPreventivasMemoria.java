@@ -81,6 +81,27 @@ public class RepositorioPreventivasMemoria implements RepositorioPreventivas
         return ret;
     }
 
+    public synchronized boolean marcarRealizadaSeProgramada (String propriedadeId, String id, String intervencaoId,
+                                                             String realizadaEm, String atualizadoEm) throws Exception
+    {
+        if (intervencaoId == null || realizadaEm == null || atualizadoEm == null)
+            throw new Exception ("Parametros ausentes");
+
+        boolean  ret      = false;
+        Document registro = this.daPropriedade (propriedadeId, id);
+
+        if (registro != null && "programada".equals (registro.getString ("status")))
+        {
+            registro.append ("status",        "realizada")
+                    .append  ("intervencaoId", intervencaoId)
+                    .append  ("realizadaEm",   realizadaEm)
+                    .append  ("atualizadoEm",  atualizadoEm);
+            ret = true;
+        }
+
+        return ret;
+    }
+
     public synchronized boolean excluir (String propriedadeId, String id) throws Exception
     {
         boolean ret = false;
