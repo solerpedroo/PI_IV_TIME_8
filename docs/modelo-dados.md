@@ -86,6 +86,18 @@ Vocabulário e foto opcional seguem o projeto §8.7; se `fotoUrl` for informada,
 `DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.
 
 
+## #234 — Manutenção de equipamentos (API `backend/api`)
+
+Complementa o módulo de custos (#22/#105). Todo registro carrega `propriedadeId`; consultas e gravações filtram por essa chave (recurso de outra propriedade responde 404).
+
+- `equipamentos`: `_id`, `propriedadeId`, `nome`, `nomeNormalizado` (único por propriedade), `tipo`, `marca`, `modelo`, `identificacao`, `ano`, `horimetro`, `status` (Ativo, Em manutenção, Inativo), `criadoEm`, `atualizadoEm`. Não há exclusão física nesta entrega.
+- `preventivas`: `_id`, `propriedadeId`, `equipamentoId`, `descricao`, `dataPrevista`, `intervaloDias` opcional, `status` (`programada`, `realizada`, `cancelada`), `intervencaoId` quando realizada, `realizadaEm`, `geradaPorIntervencaoId` opcional, timestamps. A realização de uma preventiva programada usa update condicional (`status = programada`) para evitar duas intervenções na mesma preventiva.
+- `intervencoes`: `_id`, `propriedadeId`, `equipamentoId`, `preventivaId` opcional, `proximaPreventivaId` opcional (preventiva gerada ao concluir uma programada com intervalo), `tipo` (`preventiva`/`corretiva`), `data`, `descricao`, `responsavel`, `horimetro`, `valor` opcional (≥ R$ 0,01 para gerar custo), `talhaoId`/`safraId` opcionais, `custoId` quando houver lançamento, timestamps. Índice `(propriedadeId, equipamentoId, data)` para histórico.
+- `custos` (extensão da #105): lançamentos gerados pela manutenção usam `category = Maquinário`, `origem: {tipo: "manutencao", intervencaoId, equipamentoId}` e índice único parcial `(propriedadeId, origem.intervencaoId)`. Sem valor informado na intervenção **não** se cria despesa zerada. `PUT`/`DELETE` direto no custo de manutenção respondem 409; a correção é pela intervenção.
+
+Validações de campo e situação da agenda (`atrasada`/`proxima`/`futura`) ficam no serversocket (`ValidadorDeManutencao`, `AgendaDeManutencao`). Contrato HTTP e evidências: [manutencao.md](manutencao.md), `TesteManutencao` e `tests/manutencao-real.cjs`.
+
+
 ## #105 — Custos e origem do gasto
 
 `custos`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, `culturaId`, `atividadeId`, `consumoId` opcionais, categoria, descrição, data, valor (Decimal128 com centavos exatos), `moeda=BRL`. Categorias do projeto §8.8: INSUMOS, COMBUSTIVEL, MANUTENCAO, MAO_DE_OBRA, OUTROS.
