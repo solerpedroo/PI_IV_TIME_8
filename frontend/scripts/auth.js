@@ -338,8 +338,20 @@
     });
   }
 
-  /** Determina a rota pública a partir dos campos que cada formulário possui. */
+  const AUTH_ROUTES = new Set([
+    "/api/auth/register",
+    "/api/auth/login",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+  ]);
+
+  /** Rota explícita em data-auth-route; fallback legado só se o atributo faltar. */
   function authRoute(form) {
+    const explicit = form.getAttribute("data-auth-route");
+    if (explicit) {
+      if (!AUTH_ROUTES.has(explicit)) throw new Error("data-auth-route inválida: " + explicit);
+      return explicit;
+    }
     if (form.elements.name) return "/api/auth/register";
     if (form.elements.token) return "/api/auth/reset-password";
     if (form.querySelector("[data-password]")) return "/api/auth/login";
@@ -419,7 +431,14 @@
           return;
         }
 
-        const route = authRoute(form);
+        let route;
+        try {
+          route = authRoute(form);
+        } catch (error) {
+          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
+          console.error(error);
+          return;
+        }
         let result;
 
         setLoading(form, true);
