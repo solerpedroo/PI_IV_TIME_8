@@ -12,7 +12,7 @@ if [ -z "$MONGODB_URI" ]; then
 fi
 
 if [ -z "$SERVIDOR_ALGORITMOS_DISABLED" ]; then
-    . ./iniciar-algoritmos.sh
+    . ./iniciar-algoritmos.sh 3000
     trap 'kill "$ALGORITMOS_PID" 2>/dev/null' EXIT INT TERM
 fi
 
