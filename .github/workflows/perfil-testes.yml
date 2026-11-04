@@ -47,7 +47,10 @@ jobs:
           exit 1
       - name: Perfil com Mongo e reinício
         working-directory: backend/api
-        run: java -cp 'bin:lib/*' TestePerfil --mongo
+        run: |
+          . ./iniciar-algoritmos.sh 30100
+          trap 'kill "$ALGORITMOS_PID" 2>/dev/null' EXIT INT TERM
+          java -cp 'bin:lib/*' TestePerfil --mongo
       - name: Instalar navegador de testes
         run: |
           npm install --no-save playwright@1.49.1
