@@ -1,6 +1,6 @@
 /* Autor: Vinicius Panutti Salgado - RA: 25007329 */
 
-async function aguardarTokenDeConfirmacao (lerLog, tentativas = 50)
+async function aguardarTokenDeConfirmacao (lerLog, tentativas = 150)
 {
   for (let tentativa = 0; tentativa < tentativas; tentativa++)
   {
