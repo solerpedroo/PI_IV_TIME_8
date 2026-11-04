@@ -1,4 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 import dados.*;
 import handlers.OcorrenciasHandler;
 import handlers.PropriedadesHandler;
@@ -18,6 +19,8 @@ public class TesteOcorrencias
 {
     private static int total;
     private static final String PREFIXO = "/api/ocorrencias";
+    /** PNG 1×1 px válido para testes de evidência (#175/#176). */
+    private static final String PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
     private static class Relogio extends Clock
     {
         Instant agora = Instant.parse ("2026-02-01T02:59:59Z");
@@ -46,6 +49,16 @@ public class TesteOcorrencias
         Map<String, String> headers = new HashMap<> ();
         if (token != null) headers.put ("authorization", "Bearer " + token);
         Resposta ret = router.tratar (new Requisicao (metodo, partes[0], query, headers,
+            corpo == null ? new byte[0] : corpo.toJson ().getBytes (StandardCharsets.UTF_8), "127.0.0.1"));
+        verificar (metodo + " " + caminho + " -> " + esperado + " (veio " + ret.getStatus () + ")", ret.getStatus () == esperado);
+        return ret;
+    }
+
+    private static Resposta chamadaRaw (Roteador router, String token, String metodo, String caminho, Document corpo, int esperado) throws Exception
+    {
+        Map<String, String> headers = new HashMap<> ();
+        if (token != null) headers.put ("authorization", "Bearer " + token);
+        Resposta ret = router.tratar (new Requisicao (metodo, caminho, Map.of (), headers,
             corpo == null ? new byte[0] : corpo.toJson ().getBytes (StandardCharsets.UTF_8), "127.0.0.1"));
         verificar (metodo + " " + caminho + " -> " + esperado + " (veio " + ret.getStatus () + ")", ret.getStatus () == esperado);
         return ret;
@@ -117,25 +130,33 @@ public class TesteOcorrencias
             Document registro = json (chamada (router, token, "POST", PREFIXO, dados (plotId), 201));
             String id = registro.getString ("id"), path = PREFIXO + "/" + id;
             verificar ("descrição literal e vínculo persistidos", registro.getString ("descricao").equals (dados (plotId).getString ("descricao")) && plotId.equals (registro.getString ("talhaoId")) && "2025/26".equals (registro.getString ("safra")));
+            chamada (router, token, "GET", path + "/foto", null, 404);
+            chamada (router, token, "POST", path + "/foto", new Document ("versao", 1).append ("conteudoBase64", "!!!"), 400);
+            registro = json (chamada (router, token, "POST", path + "/foto",
+                new Document ("versao", 1).append ("conteudoBase64", PNG_1X1).append ("tipoMime", "image/png").append ("nomeArquivo", "campo.png"), 200));
+            verificar ("metadado temFoto após upload", Boolean.TRUE.equals (registro.getBoolean ("temFoto")));
+            byte[] bytesFoto = chamadaRaw (router, token, "GET", path + "/foto", null, 200).getCorpo ();
+            verificar ("bytes PNG recuperados", bytesFoto.length > 8 && bytesFoto[0] == (byte) 0x89);
+            verificar ("cadastro intacto após foto", json (chamada (router, token, "GET", path, null, 200)).getString ("descricao").equals (dados (plotId).getString ("descricao")));
             chamada (router, tokenOutra, "GET", path, null, 404);
             chamada (router, intruso, "GET", path + "/timeline", null, 404);
-            chamada (router, intruso, "PUT", path, dados (plotId).append ("versao", 1), 404);
+            chamada (router, intruso, "PUT", path, dados (plotId).append ("versao", 2), 404);
             chamada (router, tokenOutra, "POST", path + "/timeline", acao (1, "resolucao"), 404);
             chamada (router, token, "GET", PREFIXO + "?talhaoId=" + estrangeiro.getObjectId ("_id"), null, 400);
             chamada (router, token, "GET", PREFIXO + "/resumo?mes=2026-13", null, 400);
             chamada (router, token, "PUT", path, dados (plotId), 409);
-            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 1).append ("status", "RESOLVIDA"), 400);
-            registro = json (chamada (router, token, "PUT", path, dados (plotId).append ("versao", 1).append ("descricao", "Descrição editada"), 200));
-            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 1), 409);
-            chamada (router, token, "POST", path + "/timeline", acao (2, "atualizacao"), 409);
-            chamada (router, token, "POST", path + "/timeline", acao (2, "reabrir"), 400);
-            chamada (router, token, "POST", path + "/timeline", acao (2, "acompanhamento").append ("descricao", " "), 400);
-            chamada (router, token, "POST", path + "/timeline", acao (2, "acompanhamento"), 200);
-            chamada (router, token, "POST", path + "/timeline", acao (3, "acompanhamento"), 409);
-            chamada (router, token, "POST", path + "/timeline", acao (3, "atualizacao"), 200);
-            chamada (router, token, "POST", path + "/timeline", acao (4, "resolucao"), 200);
-            chamada (router, token, "POST", path + "/timeline", acao (5, "acompanhamento"), 409);
-            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 5), 409);
+            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 2).append ("status", "RESOLVIDA"), 400);
+            registro = json (chamada (router, token, "PUT", path, dados (plotId).append ("versao", 2).append ("descricao", "Descrição editada"), 200));
+            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 2), 409);
+            chamada (router, token, "POST", path + "/timeline", acao (3, "atualizacao"), 409);
+            chamada (router, token, "POST", path + "/timeline", acao (3, "reabrir"), 400);
+            chamada (router, token, "POST", path + "/timeline", acao (3, "acompanhamento").append ("descricao", " "), 400);
+            chamada (router, token, "POST", path + "/timeline", acao (3, "acompanhamento"), 200);
+            chamada (router, token, "POST", path + "/timeline", acao (4, "acompanhamento"), 409);
+            chamada (router, token, "POST", path + "/timeline", acao (4, "atualizacao"), 200);
+            chamada (router, token, "POST", path + "/timeline", acao (5, "resolucao"), 200);
+            chamada (router, token, "POST", path + "/timeline", acao (6, "acompanhamento"), 409);
+            chamada (router, token, "PUT", path, dados (plotId).append ("versao", 6), 409);
             verificar ("janeiro conta resolução pelo fuso de Brasília", json (chamada (router, token, "GET", PREFIXO + "/resumo?mes=2026-01", null, 200)).getInteger ("resolvidasMes") == 1);
             relogio.agora = Instant.parse ("2026-02-01T03:00:00Z");
             Document geral = json (chamada (router, token, "POST", PREFIXO, dados (null), 201));
@@ -147,11 +168,11 @@ public class TesteOcorrencias
             verificar ("outra propriedade sem contaminação", lista (chamada (router, tokenOutra, "GET", PREFIXO, null, 200)).isEmpty ());
             List<Document> eventos = lista (chamada (router, token, "GET", path + "/timeline", null, 200));
             verificar ("cinco eventos completos, descrição original preservada", eventos.size () == 5 && eventos.get (0).getString ("descricao").equals (dados (plotId).getString ("descricao")) && eventos.get (1).get ("dados", Document.class).getString ("descricao").equals ("Descrição editada"));
-            chamada (router, token, "DELETE", path, new Document ("versao", 5), 200);
+            chamada (router, token, "DELETE", path, new Document ("versao", 6), 200);
             verificar ("excluída sai da lista ativa", lista (chamada (router, token, "GET", PREFIXO, null, 200)).size () == 1);
             verificar ("excluída continua consultável", lista (chamada (router, token, "GET", PREFIXO + "?incluirExcluidas=true", null, 200)).size () == 2);
             verificar ("histórico após exclusão preserva resolução", lista (chamada (router, token, "GET", path + "/timeline", null, 200)).size () == 6);
-            chamada (router, token, "DELETE", path, new Document ("versao", 6), 409);
+            chamada (router, token, "DELETE", path, new Document ("versao", 7), 409);
             verificar ("propriedade com histórico mantém vínculo", repo.temRegistros (propriedade));
 
             // Dois clientes leem a mesma versão antes de concorrerem pela próxima ordem.
