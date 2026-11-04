@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 package dados;
 
 import java.util.List;
@@ -37,4 +38,10 @@ public interface RepositorioAtividades
 
     /** Retorna a timeline completa de eventos registrados para a atividade. */
     public List<Document> listarHistorico (String propriedadeId, String atividadeId) throws Exception;
+
+    /** Persiste subdocumento fotoEvidencia (bytes BSON) no registro da atividade (#175). */
+    public boolean salvarFotoEvidencia (String propriedadeId, String id, long versaoEsperada, Document subdocumento) throws Exception;
+
+    /** Remove fotoEvidencia sem alterar status ou histórico (controle otimista por versao). */
+    public boolean removerFotoEvidencia (String propriedadeId, String id, long versaoEsperada) throws Exception;
 }
