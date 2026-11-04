@@ -1,5 +1,8 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 package dados;
+
+import util.FotoEvidencia;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -105,6 +108,8 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
 
         Instant agora = Instant.now ();
         atividade.put ("criadaEm", agora.toString ());
+        if (!(atividade.get ("versao") instanceof Number))
+            atividade.put ("versao", 1L);
 
         this.atividades.put (idStr, new Document (atividade));
 
@@ -137,28 +142,37 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
             throw new IllegalStateException ("Atividades concluídas ou canceladas não podem ser alteradas.");
 
         Document atividade = this.atividades.get (id);
+        boolean mudou = false;
         if (campos.containsKey ("nome"))
-            atividade.put ("nome", campos.getString ("nome"));
+        { atividade.put ("nome", campos.getString ("nome")); mudou = true; }
         if (campos.containsKey ("tipo"))
-            atividade.put ("tipo", campos.getString ("tipo"));
+        { atividade.put ("tipo", campos.getString ("tipo")); mudou = true; }
         if (campos.containsKey ("talhao"))
-            atividade.put ("talhao", campos.getString ("talhao"));
+        { atividade.put ("talhao", campos.getString ("talhao")); mudou = true; }
         if (campos.containsKey ("data"))
-            atividade.put ("data", campos.getString ("data"));
+        { atividade.put ("data", campos.getString ("data")); mudou = true; }
         if (campos.containsKey ("horario"))
-            atividade.put ("horario", campos.getString ("horario"));
+        { atividade.put ("horario", campos.getString ("horario")); mudou = true; }
         if (campos.containsKey ("responsavel"))
-            atividade.put ("responsavel", campos.getString ("responsavel"));
+        { atividade.put ("responsavel", campos.getString ("responsavel")); mudou = true; }
         if (campos.containsKey ("prioridade"))
-            atividade.put ("prioridade", campos.getString ("prioridade"));
+        { atividade.put ("prioridade", campos.getString ("prioridade")); mudou = true; }
         if (campos.containsKey ("safraId"))
-            atividade.put ("safraId", campos.getString ("safraId"));
+        { atividade.put ("safraId", campos.getString ("safraId")); mudou = true; }
         if (campos.containsKey ("safra"))
-            atividade.put ("safra", campos.getString ("safra"));
+        { atividade.put ("safra", campos.getString ("safra")); mudou = true; }
         if (campos.containsKey ("cultura"))
-            atividade.put ("cultura", campos.getString ("cultura"));
+        { atividade.put ("cultura", campos.getString ("cultura")); mudou = true; }
 
+        if (mudou)
+            atividade.put ("versao", versaoAtual (atividade) + 1);
         return true;
+    }
+
+    private static long versaoAtual (Document atividade)
+    {
+        Object v = atividade.get ("versao");
+        return v instanceof Number ? ((Number) v).longValue () : 1L;
     }
 
     @Override
@@ -179,6 +193,7 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
 
         Document atividade = this.atividades.get (id);
         atividade.put ("status", novoStatus);
+        atividade.put ("versao", versaoAtual (atividade) + 1);
 
         ArrayList<Document> lista = this.historicos.computeIfAbsent (id, k -> new ArrayList<Document> ());
         Instant agora = Instant.now ();
@@ -214,5 +229,36 @@ public class RepositorioAtividadesMemoria implements RepositorioAtividades
         }
 
         return ret;
+    }
+
+    @Override
+    public synchronized boolean salvarFotoEvidencia (String propriedadeId, String id, long versaoEsperada, Document subdocumento) throws Exception
+    {
+        Document atual = this.buscarPorId (propriedadeId, id);
+        if (atual == null)
+            return false;
+        String status = atual.getString ("status");
+        if ("Concluída".equalsIgnoreCase (status) || "Cancelada".equalsIgnoreCase (status))
+            throw new IllegalStateException ("Atividade finalizada não permite novo anexo.");
+        Document atividade = this.atividades.get (id);
+        if (versaoAtual (atividade) != versaoEsperada)
+            return false;
+        atividade.put (FotoEvidencia.CAMPO_RAIZ, new Document (subdocumento));
+        atividade.put ("versao", versaoEsperada + 1);
+        return true;
+    }
+
+    @Override
+    public synchronized boolean removerFotoEvidencia (String propriedadeId, String id, long versaoEsperada) throws Exception
+    {
+        Document atual = this.buscarPorId (propriedadeId, id);
+        if (atual == null)
+            return false;
+        Document atividade = this.atividades.get (id);
+        if (versaoAtual (atividade) != versaoEsperada)
+            return false;
+        atividade.remove (FotoEvidencia.CAMPO_RAIZ);
+        atividade.put ("versao", versaoEsperada + 1);
+        return true;
     }
 }
