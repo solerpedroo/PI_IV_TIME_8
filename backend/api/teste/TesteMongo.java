@@ -21,9 +21,9 @@ public class TesteMongo
     public static void main (String[] args) throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
-        String banco = uri == null ? null : new ConnectionString (uri).getDatabase ();
-        if (banco == null || !banco.endsWith ("_teste"))
-            throw new Exception ("Use MONGODB_URI com banco terminado em _teste");
+        String banco = ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
+        if (!banco.endsWith ("_teste"))
+            throw new Exception ("Use MONGODB_URI ou MONGODB_DATABASE com banco terminado em _teste");
 
         ConexaoMongo conexao = new ConexaoMongo (uri);
         try

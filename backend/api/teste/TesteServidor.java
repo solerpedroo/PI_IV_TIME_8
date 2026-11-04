@@ -2,6 +2,8 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
+import dados.ConexaoMongo;
+import com.mongodb.ConnectionString;
 import dados.RepositorioCustosMemoria;
 import dados.RepositorioSafrasMemoria;
 import dados.RepositorioTalhoesMemoria;
@@ -53,6 +55,29 @@ public class TesteServidor
     private static RepositorioSafrasMemoria safras;
 
     // ------------------------------------------------------------------ auxiliares
+
+    private static void testarResolucaoMongoBanco () throws Exception
+    {
+        String atlasSemPath = "mongodb+srv://u:p@cluster.mongodb.net/?retryWrites=true";
+        TesteServidor.conferir ("uri sem path usa MONGODB_DATABASE",
+            "agrogestao_dev".equals (ConexaoMongo.resolverNomeDoBanco (atlasSemPath, "agrogestao_dev")));
+        TesteServidor.conferir ("uri sem path cai em agrogestao sem env",
+            "agrogestao".equals (ConexaoMongo.resolverNomeDoBanco (atlasSemPath, null)));
+        TesteServidor.conferir ("path da uri tem prioridade",
+            "agrogestao_dev".equals (ConexaoMongo.resolverNomeDoBanco (
+                "mongodb://127.0.0.1:27017/agrogestao_dev?replicaSet=rs0", null)));
+        boolean divergiu = false;
+        try
+        {
+            ConexaoMongo.resolverNomeDoBanco (new ConnectionString (
+                "mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0"), "agrogestao_dev");
+        }
+        catch (Exception erro)
+        {
+            divergiu = erro.getMessage ().contains ("MONGODB_DATABASE");
+        }
+        TesteServidor.conferir ("uri e MONGODB_DATABASE divergentes falham", divergiu);
+    }
 
     private static void conferir (String nome, boolean condicao)
     {
@@ -1464,6 +1489,7 @@ public class TesteServidor
 
         try
         {
+            TesteServidor.testarResolucaoMongoBanco ();
             TesteServidor.testarHttp ();
             TesteServidor.testarSaudeEEstaticos ();
             TesteServidor.testarCadastro ();

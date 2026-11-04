@@ -14,8 +14,9 @@ public class CenarioEstoqueTeste
     public static String uriSegura () throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
-        if (uri == null || new ConnectionString (uri).getDatabase () == null ||
-            !new ConnectionString (uri).getDatabase ().endsWith ("_teste"))
+        String banco = uri == null ? null
+            : ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
+        if (banco == null || !banco.endsWith ("_teste"))
             throw new Exception ("Informe MONGODB_URI com banco terminado em _teste.");
         return uri;
     }

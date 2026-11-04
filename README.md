@@ -106,14 +106,18 @@ Na raiz do repositório:
 docker compose up -d --wait mongo
 ```
 
-Carregue `MONGODB_URI` (ex.: `mongodb://127.0.0.1:27017/agrogestao_dev?replicaSet=rs0`) e execute:
+Carregue o `.env` (`cp .env.example .env`) e ajuste a `MONGODB_URI`:
+
+- **Docker local:** `rodar.sh` já exporta `mongodb://127.0.0.1:27017/agrogestao?...` (banco `agrogestao`).
+- **Atlas / dev compartilhado:** inclua `/agrogestao_dev` na URI e mantenha `MONGODB_DATABASE=agrogestao_dev` (veja [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md)). Se a URI Atlas vier **sem** path, a API usa `MONGODB_DATABASE`; URI e variável **não podem** apontar para bancos diferentes.
+- **Atlas:** confira `authSource` no painel **Connect → Drivers** (em geral `authSource=admin` para usuários SCRAM).
 
 ```bash
 cd backend/api
 bash rodar.sh
 ```
 
-Guia Atlas e `.env` local: [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md). Credenciais **não** entram no Git.
+Credenciais **não** entram no Git.
 
 ### 4) Frontend estático (opcional, sem API)
 

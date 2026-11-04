@@ -10,7 +10,6 @@ import java.util.concurrent.*;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessoes;
-import com.mongodb.ConnectionString;
 import com.mongodb.client.model.Filters;
 
 /* Testa o contrato HTTP e as regras sem JUnit. --mongo repete os casos com o
@@ -68,10 +67,11 @@ public class TesteOcorrencias
         return new Document ("versao", versao).append ("acao", acao).append ("descricao", "Texto de " + acao);
     }
 
-    private static String uriTeste ()
+    private static String uriTeste () throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
-        String banco = uri == null ? null : new ConnectionString (uri).getDatabase ();
+        String banco = uri == null ? null
+            : ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
         if (banco == null || !banco.endsWith ("_teste")) throw new IllegalArgumentException ("Use um banco dedicado com nome terminado em _teste.");
         return uri;
     }

@@ -102,12 +102,19 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_ALGORITMOS_HOST` | `127.0.0.1` | Host do ServerSocket de validações (`backend/serversocket`, porta **3000**). |
 | `SERVIDOR_ALGORITMOS_PORT` | `3000` | Porta TCP do ServerSocket. `testar.sh` usa **30100**. |
 | `SERVIDOR_ALGORITMOS_DISABLED` | — | Se definida, `rodar.sh` não sobe o ServerSocket (rotas delegadas falham com 503). |
-
-Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/register`, `POST /api/auth/reset-password`, `PUT /api/perfil/senha`, `POST`/`PUT /api/talhoes`, `GET /api/talhoes/resumo`, `POST /api/insumos/{id}/movimentacoes` e `GET /api/relatorios/safras/{id}` (colheitas ainda mescladas na API).
 | `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
+| `MONGODB_DATABASE` | — | Usada pelo `backend/core`. Na API, fallback quando a URI **não** traz nome de banco; se URI e variável divergirem, o processo **não sobe**. |
 | `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/api/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
+
+**Local vs Atlas:** `rodar.sh` usa o banco **`agrogestao`** na URI (Docker de desenvolvimento).
+No Atlas, inclua `/agrogestao_dev` antes de `?` na `MONGODB_URI` para alinhar com
+`MONGODB_DATABASE` do `.env.example`. URI sem path + `MONGODB_DATABASE=agrogestao_dev`
+também funciona na API. Confira `authSource` em **Atlas → Connect → Drivers**
+(em geral `authSource=admin` para usuários SCRAM).
+
+Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/register`, `POST /api/auth/reset-password`, `PUT /api/perfil/senha`, `POST`/`PUT /api/talhoes`, `GET /api/talhoes/resumo`, `POST /api/insumos/{id}/movimentacoes` e `GET /api/relatorios/safras/{id}` (colheitas ainda mescladas na API).
 
 Se o MongoDB estiver fora do ar na partida, o servidor não sobe e mostra
 `MongoDB indisponivel`. Se cair depois, `/ready` responde 503.
