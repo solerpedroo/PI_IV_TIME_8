@@ -222,37 +222,50 @@
 
       <!-- Conteúdo: visão geral (mapa ilustrativo) + tabela de talhões -->
       <div class="plots-content-row">
+        <!-- Autor do mapa (#233): Pedro André do Carmo Chavier - RA: 25018639 -->
         <section class="card plots-map-card" aria-labelledby="map-title">
           <div class="card-header">
             <div>
               <h2 class="card-title" id="map-title">Visão Geral dos Talhões</h2>
-              <p class="plots-map-subtitle">Mapa ilustrativo da propriedade por cultura</p>
+              <p class="plots-map-subtitle">Talhões com localização cadastrada</p>
             </div>
           </div>
           <div class="plots-map-body">
-            <!-- Mapa esquemático: cada retângulo representa um talhão, cor = cultura.
-                 Substitua por integração de mapas/geolocalização real quando a API existir
-                 (ver seção "Georreferenciamento" em AgroGestao_Projeto.md §16). -->
-            <svg class="plots-map-svg" viewBox="0 0 320 220" role="img" aria-label="Mapa esquemático dos talhões da Fazenda Santa Rita">
-              <rect x="8" y="8" width="140" height="90" rx="6" class="plot-shape crop-soja"/>
-              <text x="16" y="28" class="plot-shape-label">T-01 Norte</text>
-              <rect x="156" y="8" width="156" height="60" rx="6" class="plot-shape crop-milho"/>
-              <text x="164" y="28" class="plot-shape-label">T-02 Sul</text>
-              <rect x="8" y="106" width="96" height="106" rx="6" class="plot-shape crop-soja"/>
-              <text x="16" y="126" class="plot-shape-label">T-03 Leste</text>
-              <rect x="112" y="76" width="90" height="70" rx="6" class="plot-shape crop-trigo"/>
-              <text x="120" y="96" class="plot-shape-label">T-04 Oeste</text>
-              <rect x="210" y="76" width="102" height="136" rx="6" class="plot-shape crop-soja"/>
-              <text x="218" y="96" class="plot-shape-label">T-05 Centro</text>
-              <rect x="112" y="154" width="90" height="58" rx="6" class="plot-shape crop-vazio"/>
-              <text x="120" y="174" class="plot-shape-label">Reserva</text>
-            </svg>
-            <ul class="plots-map-legend">
+            <!-- Desenhado por scripts/georreferenciamento.js a partir de GET /api/mapa.
+                 Sem biblioteca nem camada de mapa: só o ponto ou o polígono que o produtor cadastrou. -->
+            <svg class="plots-map-svg" data-geo-map viewBox="0 0 320 220" role="img" aria-label="Mapa dos talhões"></svg>
+            <div class="geo-status">
+              <p class="geo-message" data-geo-message role="status">Carregando mapa…</p>
+              <button class="btn btn-outline" type="button" data-geo-retry hidden>Tentar novamente</button>
+            </div>
+            <div class="geo-panel" data-geo-panel hidden aria-live="polite">
+              <div class="geo-panel-header">
+                <h3 class="geo-panel-title" data-geo-panel-title>Talhão</h3>
+                <button class="icon-btn icon-btn--sm" type="button" data-geo-panel-close aria-label="Fechar detalhes do talhão">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <dl class="geo-panel-meta" data-geo-panel-meta></dl>
+              <div class="geo-panel-actions">
+                <a class="btn btn-outline" data-geo-panel-occurrences href="ocorrencias.html">Ver ocorrências</a>
+                <a class="btn btn-ghost" data-geo-panel-osm href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">Ver no OpenStreetMap</a>
+                <button class="btn btn-ghost" type="button" data-geo-panel-edit>Editar localização</button>
+              </div>
+            </div>
+            <ul class="plots-map-legend" aria-label="Legenda do mapa">
               <li><span class="legend-dot crop-soja" aria-hidden="true"></span>Soja</li>
               <li><span class="legend-dot crop-milho" aria-hidden="true"></span>Milho</li>
               <li><span class="legend-dot crop-trigo" aria-hidden="true"></span>Trigo</li>
-              <li><span class="legend-dot crop-vazio" aria-hidden="true"></span>Área livre</li>
+              <li><span class="legend-dot crop-cafe" aria-hidden="true"></span>Café</li>
+              <li><span class="legend-dot crop-algodao" aria-hidden="true"></span>Algodão</li>
+              <li><span class="geo-legend-marker geo-marker-alta" aria-hidden="true"></span>Ocorrência alta</li>
+              <li><span class="geo-legend-marker geo-marker-media" aria-hidden="true"></span>Média</li>
+              <li><span class="geo-legend-marker geo-marker-baixa" aria-hidden="true"></span>Baixa</li>
             </ul>
+            <div class="geo-missing">
+              <h3 class="geo-missing-title">Sem localização</h3>
+              <ul class="geo-missing-list" data-geo-missing></ul>
+            </div>
           </div>
         </section>
 
@@ -500,6 +513,49 @@
     </div>
   </div>
 
+  <!-- Modal: Localização do talhão (#231): validação e área calculadas no servidor -->
+  <div class="modal-backdrop" data-modal="geo-form" aria-hidden="true" role="presentation">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="geo-form-title">
+      <h2 id="geo-form-title">Localização do talhão</h2>
+      <p data-geo-form-plot>Marque um ponto ou desenhe um polígono simples com os vértices do talhão.</p>
+      <form class="stack-form" data-geo-form novalidate>
+        <div class="input-group">
+          <span class="geo-field-label" id="geo-tipo-label">Tipo de localização *</span>
+          <div class="segmented geo-type" role="group" aria-labelledby="geo-tipo-label">
+            <button type="button" class="segmented-option" data-geo-type="ponto" aria-pressed="true">Ponto</button>
+            <button type="button" class="segmented-option" data-geo-type="poligono" aria-pressed="false">Polígono</button>
+          </div>
+          <input type="hidden" name="tipo" value="ponto">
+          <p class="field-error" data-error-for="tipo"></p>
+        </div>
+        <div class="geo-point-fields" data-geo-point-fields>
+          <div class="input-group">
+            <label for="geo-lat">Latitude *</label>
+            <input id="geo-lat" name="lat" type="number" step="any" inputmode="decimal" placeholder="Ex.: -22.905600">
+          </div>
+          <div class="input-group">
+            <label for="geo-lng">Longitude *</label>
+            <input id="geo-lng" name="lng" type="number" step="any" inputmode="decimal" placeholder="Ex.: -47.060800">
+          </div>
+          <button class="btn btn-ghost geo-locate" type="button" data-geo-locate>Usar minha localização</button>
+        </div>
+        <div class="input-group" data-geo-polygon-fields hidden>
+          <label for="geo-pontos">Vértices do polígono * <span class="field-hint">(um por linha: latitude, longitude)</span></label>
+          <textarea id="geo-pontos" name="pontos" rows="6" placeholder="-22.905000, -47.061000&#10;-22.905000, -47.058000&#10;-22.908000, -47.058000&#10;-22.908000, -47.061000"></textarea>
+          <p class="field-hint">De 3 a 50 vértices, sem lados cruzados. Não é preciso repetir o primeiro no final.</p>
+        </div>
+        <p class="field-error" data-error-for="pontos"></p>
+        <p class="geo-area" data-geo-area hidden></p>
+        <p class="field-error" data-geo-form-error role="alert"></p>
+        <div class="modal-actions geo-form-actions">
+          <button class="btn btn-destructive" type="button" data-geo-remove hidden>Remover localização</button>
+          <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar localização</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Logout (padrão de todas as telas do shell) -->
   <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
@@ -520,6 +576,7 @@
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/areas-cultivo.js" defer></script>
+  <script src="scripts/georreferenciamento.js" defer></script>
   <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>
