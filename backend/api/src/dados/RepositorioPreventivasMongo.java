@@ -91,6 +91,29 @@ public class RepositorioPreventivasMongo implements RepositorioPreventivas
         return ret;
     }
 
+    public boolean marcarRealizadaSeProgramada (String propriedadeId, String id, String intervencaoId,
+                                                String realizadaEm, String atualizadoEm) throws Exception
+    {
+        if (propriedadeId == null || intervencaoId == null || realizadaEm == null || atualizadoEm == null)
+            throw new Exception ("Parametros ausentes");
+
+        boolean ret    = false;
+        Bson    filtro = RepositorioPreventivasMongo.filtro (propriedadeId, id);
+
+        if (filtro != null)
+        {
+            Document campos = new Document ("status",        "realizada")
+                                  .append  ("intervencaoId", intervencaoId)
+                                  .append  ("realizadaEm",   realizadaEm)
+                                  .append  ("atualizadoEm",  atualizadoEm);
+
+            ret = this.registros.updateOne (Filters.and (filtro, Filters.eq ("status", "programada")),
+                                            new Document ("$set", campos)).getModifiedCount () == 1;
+        }
+
+        return ret;
+    }
+
     public boolean excluir (String propriedadeId, String id) throws Exception
     {
         if (propriedadeId == null)
