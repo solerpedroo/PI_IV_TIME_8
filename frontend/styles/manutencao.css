@@ -1,0 +1,127 @@
+/* Autor: Pedro André do Carmo Chavier - RA: 25018639 */
+/**
+ * Agro: Manutenção de Equipamentos (#237).
+ * Só a composição desta tela; cards, tabelas, chips, badges e modais vêm de
+ * base.css, shell.css e modules.css.
+ */
+.maint-main { gap: 20px; }
+
+.maint-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.maint-metrics .metric-card-value { font-size: 24px; }
+
+.maint-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.maint-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.maint-message:empty { display: none; }
+
+.maint-content-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.maint-agenda-card,
+.maint-equipment-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.maint-agenda-card .card-header {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.maint-subtitle {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.maint-agenda-card .table-wrap,
+.maint-equipment-card .table-wrap {
+  overflow: auto;
+}
+
+.maint-agenda-card .empty-state,
+.maint-equipment-card .empty-state {
+  margin: 16px 20px;
+  border: 1px dashed var(--border);
+}
+
+.maint-strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.maint-muted {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.maint-block { display: block; margin-top: 2px; }
+
+.maint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.maint-action {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.maint-danger { color: var(--error); }
+
+.maint-grid-2,
+.maint-grid-3 {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.maint-grid-2 { grid-template-columns: 1fr 1fr; }
+.maint-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+[data-modal="equipment-history"] .table-wrap { margin-top: 10px; }
+
+/* historico e intervencao tem mais colunas que o modal padrao (feedback.css vem depois: mais especifico) */
+.modal.maint-modal-wide { width: min(860px, 100%); }
+
+/* no celular as tabelas rolam na horizontal dentro do card em vez de espremer o texto */
+.maint-agenda-card .data-table { min-width: 680px; }
+.maint-equipment-card .data-table { min-width: 920px; }
+[data-modal="equipment-history"] .data-table { min-width: 640px; }
+
+@media (max-width: 1100px) {
+  .maint-metrics { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 720px) {
+  .maint-grid-3 { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 560px) {
+  .maint-metrics,
+  .maint-grid-2,
+  .maint-grid-3 { grid-template-columns: 1fr; }
+
+  .maint-actions { justify-content: flex-start; }
+}

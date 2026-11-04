@@ -146,7 +146,7 @@ public class ClienteDeAlgoritmos
         }
     }
 
-    private static Resposta chamar (protocolo.Pedido pedido) throws Exception
+    public static Resposta chamar (protocolo.Pedido pedido) throws Exception
     {
         try
         {

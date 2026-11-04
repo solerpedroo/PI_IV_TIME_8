@@ -162,3 +162,216 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Georreferenciamento (#233) - Autor: Pedro André do Carmo Chavier            */
+/* RA: 25018639. Mapa real (SVG desenhado a partir de GET /api/mapa), painel   */
+/* do talhão, lista "Sem localização" e modal de localização.                 */
+/* -------------------------------------------------------------------------- */
+.plot-shape.crop-cafe { fill: #d9c2b0; }
+.plot-shape.crop-algodao { fill: #e3e6ef; }
+.legend-dot.crop-cafe { background: #d9c2b0; }
+.legend-dot.crop-algodao { background: #e3e6ef; border: 1px solid var(--border); }
+
+.plot-shape.geo-plot {
+  cursor: pointer;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.plot-shape.geo-plot:hover,
+.plot-shape.geo-plot:focus-visible,
+.plot-shape.geo-plot.is-selected {
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  outline: none;
+}
+
+.geo-label {
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.geo-marker {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.geo-marker-alta { fill: var(--error); background: var(--error); }
+.geo-marker-media { fill: var(--warning); background: var(--warning); }
+.geo-marker-baixa { fill: var(--text-secondary); background: var(--text-secondary); }
+
+.geo-occurrence:focus-visible .geo-marker,
+.geo-occurrence:hover .geo-marker {
+  stroke: var(--text-primary);
+}
+
+.geo-legend-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.geo-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.geo-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.geo-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.geo-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.geo-panel-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.geo-panel-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 10px 0 12px;
+  font-size: 12px;
+}
+
+.geo-panel-meta dt {
+  color: var(--text-secondary);
+}
+
+.geo-panel-meta dd {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.geo-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.geo-missing-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.geo-missing-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.geo-missing-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.geo-missing-item > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.geo-missing-name {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.geo-missing-meta,
+.geo-missing-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.geo-missing-btn {
+  flex-shrink: 0;
+}
+
+/* Modal de localização */
+.geo-field-label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.geo-type .segmented-option[aria-pressed="true"] {
+  background: var(--success-bg);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.geo-point-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.geo-locate {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.geo-area {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.geo-form-actions {
+  flex-wrap: wrap;
+}
+
+.geo-form-actions [data-geo-remove] {
+  margin-right: auto;
+}
+
+@media (max-width: 560px) {
+  .geo-point-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .geo-missing-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

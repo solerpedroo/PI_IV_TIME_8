@@ -56,6 +56,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="m7.5 4.2 9 5.2"/></svg>
           <span>Insumos</span>
         </a>
+        <a class="sidebar-link" href="manutencao.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <span>Manutenção</span>
+        </a>
         <a class="sidebar-link is-active" href="ocorrencias.html" aria-current="page">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
           <span>Ocorrências</span>
@@ -248,6 +252,21 @@
           <select id="occ-talhao" name="talhaoId"><option value="">Ocorrência geral da propriedade</option></select>
           <p class="field-error" data-error-for="talhaoId"></p>
         </div>
+        <!-- Georreferenciamento (#232), Pedro André do Carmo Chavier - RA: 25018639: posição opcional dentro do polígono do talhão -->
+        <div class="input-group" data-occ-geo hidden>
+          <p class="field-hint" data-occ-geo-hint>Este talhão não tem polígono: a ocorrência fica no talhão.</p>
+          <div data-occ-geo-fields hidden>
+            <div class="input-group">
+              <label for="occ-lat">Latitude da ocorrência (opcional)</label>
+              <input id="occ-lat" type="number" step="any" inputmode="decimal" placeholder="Ex.: -22.906000" data-occ-lat>
+            </div>
+            <div class="input-group">
+              <label for="occ-lng">Longitude da ocorrência (opcional)</label>
+              <input id="occ-lng" type="number" step="any" inputmode="decimal" placeholder="Ex.: -47.059000" data-occ-lng>
+            </div>
+          </div>
+          <p class="field-error" data-error-for="localizacao"></p>
+        </div>
         <div class="input-group">
           <label for="occ-data">Data da ocorrência *</label>
           <input id="occ-data" type="date" name="data" required>
@@ -294,6 +313,7 @@
       </div>
       <div class="modal-body-scroll">
         <div class="meta-grid" data-detail-meta></div>
+        <p class="field-hint" data-detail-geo hidden><span data-detail-geo-text></span> <a href="areas-cultivo.html" data-detail-geo-link>Ver no mapa</a></p>
         <h3 class="occ-detail-subhead">Descrição informada</h3>
         <p class="occ-text" data-detail-description></p>
         <div class="occ-photo-block" data-detail-photo-wrap hidden>

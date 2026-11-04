@@ -88,6 +88,29 @@ Vocabulário e foto opcional seguem o projeto §8.7. Na API HTTP desta branch, a
 `DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.
 
 
+## #230 — Georreferenciamento simplificado (API `backend/api`)
+
+Extensão de `talhoes` e `ocorrencias` da propriedade autenticada (#12/#13, ocorrências #20). Sem satélite, NDVI ou GIS avançado.
+
+- `talhoes.localizacao` (opcional): `{tipo: "ponto"|"poligono", pontos: [{lat, lng}, ...]}`. Ponto = 1 vértice; polígono = 3 a 50 vértices (validação no serversocket `GeometriaDeTalhao`). `PUT/DELETE /api/talhoes/{id}/localizacao` alteram só este campo; o `PUT` geral do talhão preserva a localização. Talhão sem localização **não** entra no desenho do mapa (`semLocalizacao` em `GET /api/mapa`).
+- `ocorrencias.localizacao` (opcional): `{lat, lng}` só quando a ocorrência tem `talhaoId` e o talhão tem **polígono**, com o ponto dentro da área. Sem polígono ou sem posição, a ocorrência aparece no centro do talhão no mapa. A posição é copiada nos eventos da timeline (`dados.localizacao`).
+- `GET /api/mapa`: agrega talhões localizados (com `centro`, `areaCalculadaHectares` calculados no socket), ocorrências por talhão, contagem `semLocalizacao` / `ocorrenciasSemTalhao` e `limites` do viewport. Escopo = **uma propriedade por sessão** (sem paginação nesta entrega; volume típico de talhões/ocorrências da fazenda).
+
+Regras de integridade: não remover nem encolher polígono deixando ocorrência marcada fora (409 com `ocorrenciaId` / `ocorrenciaTitulo`). Contrato e evidências: [georreferenciamento.md](georreferenciamento.md), `TesteGeorreferenciamento`, `TesteGeometria`, `tests/georreferenciamento-real.cjs`.
+
+
+## #234 — Manutenção de equipamentos (API `backend/api`)
+
+Complementa o módulo de custos (#22/#105). Todo registro carrega `propriedadeId`; consultas e gravações filtram por essa chave (recurso de outra propriedade responde 404).
+
+- `equipamentos`: `_id`, `propriedadeId`, `nome`, `nomeNormalizado` (único por propriedade), `tipo`, `marca`, `modelo`, `identificacao`, `ano`, `horimetro`, `status` (Ativo, Em manutenção, Inativo), `criadoEm`, `atualizadoEm`. Não há exclusão física nesta entrega.
+- `preventivas`: `_id`, `propriedadeId`, `equipamentoId`, `descricao`, `dataPrevista`, `intervaloDias` opcional, `status` (`programada`, `realizada`, `cancelada`), `intervencaoId` quando realizada, `realizadaEm`, `geradaPorIntervencaoId` opcional, timestamps. A realização de uma preventiva programada usa update condicional (`status = programada`) para evitar duas intervenções na mesma preventiva.
+- `intervencoes`: `_id`, `propriedadeId`, `equipamentoId`, `preventivaId` opcional, `proximaPreventivaId` opcional (preventiva gerada ao concluir uma programada com intervalo), `tipo` (`preventiva`/`corretiva`), `data`, `descricao`, `responsavel`, `horimetro`, `valor` opcional (≥ R$ 0,01 para gerar custo), `talhaoId`/`safraId` opcionais, `custoId` quando houver lançamento, timestamps. Índice `(propriedadeId, equipamentoId, data)` para histórico.
+- `custos` (extensão da #105): lançamentos gerados pela manutenção usam `category = Maquinário`, `origem: {tipo: "manutencao", intervencaoId, equipamentoId}` e índice único parcial `(propriedadeId, origem.intervencaoId)`. Sem valor informado na intervenção **não** se cria despesa zerada. `PUT`/`DELETE` direto no custo de manutenção respondem 409; a correção é pela intervenção.
+
+Validações de campo e situação da agenda (`atrasada`/`proxima`/`futura`) ficam no serversocket (`ValidadorDeManutencao`, `AgendaDeManutencao`). Contrato HTTP e evidências: [manutencao.md](manutencao.md), `TesteManutencao` e `tests/manutencao-real.cjs`.
+
+
 ## #105 — Custos e origem do gasto
 
 `custos`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, `culturaId`, `atividadeId`, `consumoId` opcionais, categoria, descrição, data, valor (Decimal128 com centavos exatos), `moeda=BRL`. Categorias do projeto §8.8: INSUMOS, COMBUSTIVEL, MANUTENCAO, MAO_DE_OBRA, OUTROS.

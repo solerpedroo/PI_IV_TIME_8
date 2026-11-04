@@ -61,8 +61,16 @@ Protocolo próprio da disciplina: objetos `Comunicado` serializados em `ObjectOu
 | `PedidoDeValidacaoDeSenha` | `RespostaDeValidacao` | senha forte + confirmação (redefinir senha) |
 | `PedidoDeValidacaoDeTalhao` | `RespostaDeValidacao` | nome, cultura, safra, hectares (0 < h ≤ 1.000.000), status; aplica padrões |
 | `PedidoDeResumoDeTalhoes` | `RespostaDeResumoDeTalhoes` | total de hectares, quantidade total e de ativos |
+| `PedidoDeValidacaoDeLocalizacao` | `RespostaDeValidacao` | localização do talhão: ponto (1) ou polígono (3 a 50 vértices, sem lados cruzados, área > 0); arredonda a 6 casas e devolve área (ha), centro e vértices normalizados |
+| `PedidoDePontoNoTalhao` | `RespostaDeValidacao` | o ponto da ocorrência cai dentro do polígono do talhão (a borda conta como dentro); erro no campo `localizacao` |
+| `PedidoDeGeometriaDoMapa` | `RespostaDeGeometriaDoMapa` | centro e área de cada talhão localizado e os limites do mapa (`null` com a lista vazia) |
 | `PedidoDeMovimentacaoDeEstoque` | `RespostaDeMovimentacaoDeEstoque` | valida a movimentação e calcula novo saldo e custo médio ponderado (`OK`, `INVALIDO` ou `SALDO_INSUFICIENTE`) |
 | `PedidoDeRelatorioDeSafra` | `RespostaDeRelatorioDeSafra` | área, registros no período, pendências com motivo, contagens e total em centavos |
+| `PedidoDeValidacaoDeEquipamento` | `RespostaDeValidacao` | nome, tipo, marca, modelo, identificação, ano (1950 até `anoAtual` + 1), horímetro ≥ 0 e status; aplica o status padrão |
+| `PedidoDeValidacaoDePreventiva` | `RespostaDeValidacao` | descrição, data prevista (recusa data impossível) e intervalo de 1 a 3650 dias |
+| `PedidoDeValidacaoDeIntervencao` | `RespostaDeValidacao` | tipo, data (não pode passar de `hoje`), descrição, responsável, horímetro e valor em `BigDecimal` com 2 casas (sem valor, sem custo) |
+| `PedidoDeAgendaDeManutencao` | `RespostaDeAgendaDeManutencao` | situação de cada preventiva programada (`atrasada`, `proxima` até `diasDeAviso` dias, `futura`), dias até a data e totais |
+| `PedidoDeProximaPreventiva` | `RespostaDeProximaPreventiva` | data realizada + intervalo em dias (`null` sem intervalo) |
 
 Falha de **validação de campo** não é erro: volta como `RespostaDeValidacao` com `getErros()`
 (chaves = nomes dos campos do front; a confirmação de senha é `password-confirm`).

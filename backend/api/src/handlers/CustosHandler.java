@@ -40,8 +40,8 @@ import util.Validacao;
     O lancamento pode ficar na propriedade toda (sem talhao) ou num talhao, e pode
     pertencer a uma safra. Com talhao e safra juntos, o talhao precisa ser da safra.
     Custo de safra finalizada nao e criado, alterado nem excluido (o historico fica fechado).
-    Custo gerado por consumo de estoque (campo origem) so muda pela movimentacao do insumo:
-    PUT e DELETE devolvem 409. A sincronizacao dos custos faltantes nao roda em GET:
+    Custo gerado por consumo de estoque ou por manutencao (campo origem) so muda pela operacao de
+    origem (movimentacao do insumo ou intervencao do equipamento): PUT e DELETE devolvem 409. A sincronizacao dos custos faltantes nao roda em GET:
     ocorre na propria baixa (ou em POST /api/custos/sincronizar-consumo).
     Os nomes dos campos sao os "name" do formulario de custos.html.
 */
@@ -250,9 +250,16 @@ public class CustosHandler implements Manipulador
         return safra != null && "Finaliza\u00e7\u00e3o".equals (safra.getString ("etapa"));
     }
 
-    private static Resposta deConsumo ()
+    // a mensagem depende da origem: consumo de estoque ou manutencao de equipamento
+    private static Resposta deConsumo (Document custo)
     {
-        return Resposta.json (409, new Document ("error", "Custo gerado pelo consumo de estoque. Corrija pela movimenta\u00e7\u00e3o do insumo."));
+        Document origem   = custo.get ("origem", Document.class);
+        String   mensagem = "Custo gerado pelo consumo de estoque. Corrija pela movimenta\u00e7\u00e3o do insumo.";
+
+        if (origem != null && "manutencao".equals (origem.getString ("tipo")))
+            mensagem = "Custo gerado pela manuten\u00e7\u00e3o do equipamento. Corrija pela interven\u00e7\u00e3o.";
+
+        return Resposta.json (409, new Document ("error", mensagem));
     }
 
     private static Resposta safraFechada ()
@@ -565,7 +572,7 @@ public class CustosHandler implements Manipulador
                 return Resposta.erro (404, "Not found");
 
             if (atual.get ("origem") != null)
-                return CustosHandler.deConsumo ();
+                return CustosHandler.deConsumo (atual);
 
             Document                        corpo     = requisicao.getCorpoJson ();
             Validacao                       validacao = new Validacao (corpo);
@@ -607,7 +614,7 @@ public class CustosHandler implements Manipulador
             if (custo == null)
                 ret = Resposta.erro (404, "Not found");
             else if (custo.get ("origem") != null)
-                ret = CustosHandler.deConsumo ();
+                ret = CustosHandler.deConsumo (custo);
             else if (CustosHandler.emSafraFinalizada (custo.getString ("safraId"),
                                                       CustosHandler.porId (this.safras.listar (propriedadeId))))
                 ret = CustosHandler.safraFechada ();

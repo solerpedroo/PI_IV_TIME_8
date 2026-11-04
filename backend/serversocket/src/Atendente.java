@@ -1,19 +1,30 @@
 import algoritmos.CalculadoraDeEstoque;
 import algoritmos.CalculadoraDeTalhoes;
 import algoritmos.ConsolidadorDeSafra;
+import algoritmos.GeometriaDeTalhao;
 import algoritmos.ValidadorDeConta;
 import algoritmos.ValidadorDeTalhao;
+import algoritmos.AgendaDeManutencao;
+import algoritmos.ValidadorDeManutencao;
 import protocolo.Pedido;
 import protocolo.Protocolo;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
 import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.PedidoDePontoNoTalhao;
+import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
 import protocolo.mensagens.PedidoDePing;
 import protocolo.mensagens.PedidoDeRelatorioDeSafra;
 import protocolo.mensagens.PedidoDeResumoDeTalhoes;
 import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
 import protocolo.mensagens.PedidoDeValidacaoDeSenha;
 import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.PedidoDeAgendaDeManutencao;
+import protocolo.mensagens.PedidoDeProximaPreventiva;
+import protocolo.mensagens.PedidoDeValidacaoDeEquipamento;
+import protocolo.mensagens.PedidoDeValidacaoDeIntervencao;
+import protocolo.mensagens.PedidoDeValidacaoDePreventiva;
 import protocolo.mensagens.RespostaDePing;
 
 /*
@@ -44,11 +55,35 @@ public class Atendente
             if (pedido instanceof PedidoDeResumoDeTalhoes)
                 return CalculadoraDeTalhoes.resumir ((PedidoDeResumoDeTalhoes) pedido);
 
+            if (pedido instanceof PedidoDeValidacaoDeLocalizacao)
+                return GeometriaDeTalhao.validarLocalizacao ((PedidoDeValidacaoDeLocalizacao) pedido);
+
+            if (pedido instanceof PedidoDePontoNoTalhao)
+                return GeometriaDeTalhao.pontoNoTalhao ((PedidoDePontoNoTalhao) pedido);
+
+            if (pedido instanceof PedidoDeGeometriaDoMapa)
+                return GeometriaDeTalhao.geometriaDoMapa ((PedidoDeGeometriaDoMapa) pedido);
+
             if (pedido instanceof PedidoDeMovimentacaoDeEstoque)
                 return CalculadoraDeEstoque.movimentar ((PedidoDeMovimentacaoDeEstoque) pedido);
 
             if (pedido instanceof PedidoDeRelatorioDeSafra)
                 return ConsolidadorDeSafra.consolidar ((PedidoDeRelatorioDeSafra) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDeEquipamento)
+                return ValidadorDeManutencao.validarEquipamento ((PedidoDeValidacaoDeEquipamento) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDePreventiva)
+                return ValidadorDeManutencao.validarPreventiva ((PedidoDeValidacaoDePreventiva) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDeIntervencao)
+                return ValidadorDeManutencao.validarIntervencao ((PedidoDeValidacaoDeIntervencao) pedido);
+
+            if (pedido instanceof PedidoDeAgendaDeManutencao)
+                return AgendaDeManutencao.agenda ((PedidoDeAgendaDeManutencao) pedido);
+
+            if (pedido instanceof PedidoDeProximaPreventiva)
+                return AgendaDeManutencao.proxima ((PedidoDeProximaPreventiva) pedido);
 
             return new RespostaDeErro (pedido.getId (), RespostaDeErro.PEDIDO_DESCONHECIDO,
                                        "Pedido desconhecido: " + pedido.getClass ().getSimpleName ());

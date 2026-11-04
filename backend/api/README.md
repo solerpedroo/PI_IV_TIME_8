@@ -300,6 +300,31 @@ Campos do talhão:
 Cada usuário só vê e edita os talhões da própria propriedade. Talhão de outra
 propriedade responde 404. Não há DELETE nesta entrega.
 
+### Georreferenciamento
+
+Localização simplificada do talhão (ponto ou polígono leve), ocorrência marcada dentro
+do polígono e mapa dos talhões. Validação, área, centro e ponto no polígono são
+calculados no serversocket (`GeometriaDeTalhao`). Detalhes em
+[docs/georreferenciamento.md](../../docs/georreferenciamento.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `PUT /api/talhoes/{id}/localizacao` | 200 com o talhão, `areaCalculadaHectares` (só polígono) e `centro` · 400 · 404 · 409 contexto mudou ou ocorrência marcada ficaria fora |
+| `DELETE /api/talhoes/{id}/localizacao` | 204 · 404 · 409 há ocorrências marcadas no polígono |
+| `GET /api/mapa?cultura=&ocorrencias=abertas\|todas` | 200 `{talhoes, semLocalizacao, ocorrenciasSemTalhao, limites}` · 400 `ocorrencias` inválido · 503 servidor de algoritmos fora |
+
+Corpo do `PUT`: `{"tipo": "ponto"|"poligono", "pontos": [{"lat": -22.9056, "lng": -47.0608}]}`.
+
+- `ponto`: exatamente 1 ponto; `poligono`: 3 a 50 vértices, sem lados cruzados, com área maior que zero
+  (o último vértice igual ao primeiro é descartado);
+- `lat` entre -90 e 90, `lng` entre -180 e 180, gravados com 6 casas;
+- a área calculada é informativa: não substitui os `hectares` do cadastro;
+- `PUT /api/talhoes/{id}` (edição normal) preserva a localização.
+
+Ocorrência: `localizacao: {lat, lng}` opcional em `POST`/`PUT /api/ocorrencias`. Só é aceita
+com `talhaoId` de um talhão com polígono e dentro dele (a borda conta como dentro); senão 400 no
+campo `localizacao`. No mapa, `posicao` é `propria` (tem `localizacao`) ou `talhao` (usa o centro).
+
 ### Estoque
 
 | Método e rota | Respostas |
@@ -533,6 +558,56 @@ Safra sem orçamento não ganha meta inventada: planejado, desvio e percentuais
 ficam `null`. `TesteOrcamentos` roda no `testar` em memória e, com banco
 `_teste`, em `java -cp 'bin:lib/*' TesteOrcamentos --mongo`.
 
+### Manutenção
+
+Equipamentos agrícolas, preventivas programadas e intervenções com custo vinculado
+(#234). Validações de campo e a agenda são calculadas no serversocket
+(`ValidadorDeManutencao` e `AgendaDeManutencao`). Detalhes e evidências em
+[docs/manutencao.md](../../docs/manutencao.md).
+
+| Método e rota | Respostas |
+|---|---|
+| `GET /api/equipamentos?status=&tipo=&q=` | 200 com `proximaPreventiva` e `ultimaIntervencao` de cada um |
+| `POST /api/equipamentos` | 201 · 400 · 409 nome repetido |
+| `GET /api/equipamentos/{id}` | 200 · 404 |
+| `PUT /api/equipamentos/{id}` | 200 · 400 · 404 · 409 |
+| `GET /api/equipamentos/{id}/historico` | 200 intervenções, da mais recente para a mais antiga, com `custoId`/`valor` · 404 |
+| `GET /api/preventivas?equipamentoId=&de=&ate=&situacao=` | 200 agenda (`situacao` e `diasAte` calculados no socket) · 400 · 404 equipamento |
+| `POST /api/preventivas` | 201 · 400 · 404 equipamento |
+| `PUT /api/preventivas/{id}` | 200 · 400 · 404 · 409 já realizada (cancelar = `status: cancelada`) |
+| `DELETE /api/preventivas/{id}` | 204 · 404 · 409 já realizada |
+| `GET /api/intervencoes?equipamentoId=&tipo=&de=&ate=` | 200 · 400 · 404 equipamento |
+| `POST /api/intervencoes` | 201 (com `custoId` e `custoValor` quando gerou custo) · 400 · 404 · 409 safra finalizada |
+| `PUT /api/intervencoes/{id}` | 200 · 400 · 404 · 409 |
+| `DELETE /api/intervencoes/{id}` | 204 (exclui o custo junto) · 404 · 409 |
+| `GET /api/manutencao/resumo` | 200 `{equipamentos, ativos, emManutencao, preventivasAtrasadas, preventivasProximas, gastoNoAno, ano}` |
+
+- Equipamento: `nome` (até 80, único por propriedade sem diferenciar maiúsculas), `tipo`
+  (Trator, Colheitadeira, Pulverizador, Plantadeira, Implemento, Veículo, Outro), `marca`,
+  `modelo` e `identificacao` opcionais (até 60), `ano` (1950 até o ano atual + 1), `horimetro`
+  (≥ 0) e `status` (Ativo, Em manutenção, Inativo; padrão Ativo). Não há exclusão: sai de uso
+  com `Inativo`.
+- Preventiva: `equipamentoId`, `descricao` (até 120), `dataPrevista` e `intervaloDias` opcional
+  (1 a 3650). Situação: `atrasada` (antes de hoje), `proxima` (até 7 dias) ou `futura`.
+- Intervenção: `equipamentoId`, `tipo` (`preventiva`/`corretiva`), `preventivaId` opcional
+  (programada e do mesmo equipamento), `data` (não pode estar no futuro, fuso
+  America/Sao_Paulo), `descricao` (até 240), `responsavel`, `horimetro` (maior que o do
+  equipamento atualiza o equipamento), `valor` (0,01 até 1 bilhão) e `talhaoId`/`safraId` com as
+  regras do custo.
+- **Sem valor, não há custo.** Com valor, o custo nasce em Maquinário com
+  `origem: {tipo: "manutencao", intervencaoId, equipamentoId}`, a data, o talhão e a safra da
+  intervenção; editar a intervenção atualiza o custo, tirar o valor exclui e excluir a intervenção
+  exclui o custo junto. `PUT`/`DELETE /api/custos/{id}` desse custo respondem 409 ("Corrija pela
+  intervenção").
+- Intervenção ligada a preventiva: a preventiva vira `realizada` e, com intervalo, nasce a
+  próxima. Excluir a intervenção devolve a preventiva para `programada` e apaga a próxima (409 se
+  a próxima já foi realizada).
+- Se o custo falhar depois da intervenção gravada, a resposta traz `custoPendente: true`; editar a
+  intervenção de novo recria o custo.
+
+`TesteManutencao` roda no `testar` em memória e, com banco `_teste`, em
+`java -cp 'bin:lib/*' TesteManutencao --mongo`.
+
 ### Saúde
 
 - `GET /health` → `{"status":"UP"}`
@@ -602,6 +677,10 @@ backend/api/
 - `safras`: índice único em `(propriedadeId, nomeNormalizado)`.
 - `custos`: índice em `(propriedadeId, date)`.
 - `orcamentos`: índice único em `(propriedadeId, safraId)`.
+- `equipamentos`: índice único em `(propriedadeId, nomeNormalizado)`.
+- `preventivas`: índice em `(propriedadeId, dataPrevista)`.
+- `intervencoes`: índice em `(propriedadeId, equipamentoId, data)`; o custo de cada uma fica em
+  `custos` com índice único parcial em `(propriedadeId, origem.intervencaoId)`.
 
 Os índices garantem as regras de unicidade mesmo com requisições simultâneas.
 
