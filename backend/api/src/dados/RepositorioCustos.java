@@ -24,11 +24,14 @@ public interface RepositorioCustos
     // custo de consumo pela movimentacao de estoque; null se ainda nao existir
     public Document buscarPorMovimentacao (String propriedadeId, String movimentacaoId) throws Exception;
 
+    // custo gerado por uma intervencao de manutencao (origem.intervencaoId); null se ainda nao existir
+    public Document buscarPorIntervencao (String propriedadeId, String intervencaoId) throws Exception;
+
     // grava e preenche o _id
     public void criar (Document custo) throws Exception;
 
-    // custo gerado por uma operacao (origem.movimentacaoId): grava so se ainda nao
-    // existe um da mesma origem na propriedade; false se ja existia (sem duplicidade)
+    // custo gerado por uma operacao (origem.movimentacaoId ou origem.intervencaoId): grava so se
+    // ainda nao existe um da mesma origem na propriedade; false se ja existia (sem duplicidade)
     public boolean criarSeAusente (Document custo) throws Exception;
 
     // $set dos campos; false se o lancamento nao existir na propriedade

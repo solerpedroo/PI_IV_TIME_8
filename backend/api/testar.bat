@@ -6,4 +6,4 @@ cd /d "%~dp0"
 rem TesteOrcamentos e TesteColheitas rodam quando existem nesta versao (cada um chega por um PR).
 if exist bin rmdir /s /q bin
 mkdir bin
-javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin src\*.java src\http\*.java src\handlers\*.java src\dados\*.java src\seguranca\*.java src\servicos\*.java src\util\*.java teste\*.java && java -cp "bin;lib/*" TesteServidor && java -cp "bin;lib/*" TestePerfil && java -cp "bin;lib/*" TesteOcorrencias && java -cp "bin;lib/*" TesteRelatorioSafra && (for %%t in (TesteOrcamentos TesteColheitas) do @if exist bin\%%t.class java -cp "bin;lib/*" %%t || exit /b 1)
+javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin src\*.java src\http\*.java src\handlers\*.java src\dados\*.java src\seguranca\*.java src\servicos\*.java src\util\*.java teste\*.java && java -cp "bin;lib/*" TesteServidor && java -cp "bin;lib/*" TestePerfil && java -cp "bin;lib/*" TesteOcorrencias && java -cp "bin;lib/*" TesteRelatorioSafra && (for %%t in (TesteOrcamentos TesteColheitas TesteGeorreferenciamento TesteManutencao) do @if exist bin\%%t.class java -cp "bin;lib/*" %%t || exit /b 1)

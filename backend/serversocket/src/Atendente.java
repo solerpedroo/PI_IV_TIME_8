@@ -3,6 +3,8 @@ import algoritmos.CalculadoraDeTalhoes;
 import algoritmos.ConsolidadorDeSafra;
 import algoritmos.ValidadorDeConta;
 import algoritmos.ValidadorDeTalhao;
+import algoritmos.AgendaDeManutencao;
+import algoritmos.ValidadorDeManutencao;
 import protocolo.Pedido;
 import protocolo.Protocolo;
 import protocolo.Resposta;
@@ -14,6 +16,11 @@ import protocolo.mensagens.PedidoDeResumoDeTalhoes;
 import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
 import protocolo.mensagens.PedidoDeValidacaoDeSenha;
 import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.PedidoDeAgendaDeManutencao;
+import protocolo.mensagens.PedidoDeProximaPreventiva;
+import protocolo.mensagens.PedidoDeValidacaoDeEquipamento;
+import protocolo.mensagens.PedidoDeValidacaoDeIntervencao;
+import protocolo.mensagens.PedidoDeValidacaoDePreventiva;
 import protocolo.mensagens.RespostaDePing;
 
 /*
@@ -49,6 +56,21 @@ public class Atendente
 
             if (pedido instanceof PedidoDeRelatorioDeSafra)
                 return ConsolidadorDeSafra.consolidar ((PedidoDeRelatorioDeSafra) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDeEquipamento)
+                return ValidadorDeManutencao.validarEquipamento ((PedidoDeValidacaoDeEquipamento) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDePreventiva)
+                return ValidadorDeManutencao.validarPreventiva ((PedidoDeValidacaoDePreventiva) pedido);
+
+            if (pedido instanceof PedidoDeValidacaoDeIntervencao)
+                return ValidadorDeManutencao.validarIntervencao ((PedidoDeValidacaoDeIntervencao) pedido);
+
+            if (pedido instanceof PedidoDeAgendaDeManutencao)
+                return AgendaDeManutencao.agenda ((PedidoDeAgendaDeManutencao) pedido);
+
+            if (pedido instanceof PedidoDeProximaPreventiva)
+                return AgendaDeManutencao.proxima ((PedidoDeProximaPreventiva) pedido);
 
             return new RespostaDeErro (pedido.getId (), RespostaDeErro.PEDIDO_DESCONHECIDO,
                                        "Pedido desconhecido: " + pedido.getClass ().getSimpleName ());
