@@ -21,6 +21,13 @@ public interface RepositorioPreventivas
     // $set dos campos; false se a preventiva nao existir na propriedade
     public boolean atualizar (String propriedadeId, String id, Document campos) throws Exception;
 
+    /*
+        Marca como realizada so se ainda estiver programada (evita TOCTOU ao registrar duas
+        intervencoes na mesma preventiva). false se nao existir ou nao estiver programada.
+    */
+    public boolean marcarRealizadaSeProgramada (String propriedadeId, String id, String intervencaoId,
+                                                String realizadaEm, String atualizadoEm) throws Exception;
+
     // false se a preventiva nao existir na propriedade
     public boolean excluir (String propriedadeId, String id) throws Exception;
 }
