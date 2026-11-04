@@ -147,6 +147,7 @@ public class Servidor
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
         propriedades.setAtividades (atividades);
+        propriedades.setSafras (safras);
         propriedades.registrar (roteador);
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, sessoes);
         handlerTalhoes.registrar (roteador);
@@ -178,6 +179,7 @@ public class Servidor
         RepositorioEquipamentos equipamentos = conexao == null ? new RepositorioEquipamentosMemoria () : new RepositorioEquipamentosMongo (conexao.getBanco ());
         RepositorioPreventivas  preventivas  = conexao == null ? new RepositorioPreventivasMemoria ()  : new RepositorioPreventivasMongo (conexao.getBanco ());
         RepositorioIntervencoes intervencoes = conexao == null ? new RepositorioIntervencoesMemoria () : new RepositorioIntervencoesMongo (conexao.getBanco ());
+        propriedades.setEquipamentos (equipamentos);
         new ManutencaoHandler (equipamentos, preventivas, intervencoes, talhoes, safras, custos,
                                new CustosDeManutencao (custos), sessoes).registrar (roteador);
 

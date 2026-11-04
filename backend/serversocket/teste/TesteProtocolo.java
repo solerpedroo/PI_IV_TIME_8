@@ -83,10 +83,12 @@ public class TesteProtocolo
     // espera uma condicao que depende de outra thread do servidor (ate 3 s)
     private static boolean aguardar (java.util.function.BooleanSupplier condicao) throws Exception
     {
-        for (int i = 0; i < 60 && !condicao.getAsBoolean (); i++)
+        for (int i = 0; i < 60; i++)
+        {
+            if (condicao.getAsBoolean ()) return true;
             Thread.sleep (50);
-
-        return condicao.getAsBoolean ();
+        }
+        return false;
     }
 
     private static PedidoDeMovimentacaoDeEstoque entrada (int saldo)
