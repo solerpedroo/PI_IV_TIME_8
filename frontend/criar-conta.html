@@ -111,6 +111,7 @@
                   data-password-meter
                   autocomplete="new-password"
                   placeholder="••••••••"
+                  maxlength="128"
                   required
                   data-required-message="Crie uma senha."
                 >
@@ -137,6 +138,7 @@
                   data-password-confirm
                   autocomplete="new-password"
                   placeholder="••••••••"
+                  maxlength="128"
                   required
                   data-required-message="Confirme sua senha."
                 >
@@ -160,13 +162,14 @@
               <span class="password-meter-label" data-meter-label data-level="0">—</span>
             </div>
             <div class="password-meter-bar" aria-hidden="true">
-              <i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i>
             </div>
             <div class="password-rules">
               <span data-rule="length">Mínimo de 8 caracteres</span>
               <span data-rule="upper">Pelo menos uma letra maiúscula</span>
               <span data-rule="number">Pelo menos um número</span>
               <span data-rule="symbol">Pelo menos um caractere especial</span>
+              <span data-rule="max">No máximo 128 caracteres</span>
             </div>
           </div>
 
@@ -226,6 +229,7 @@
   </main>
 
   <script src="scripts/fetch-timeout.js" defer></script>
+  <script src="scripts/senha-regras.js" defer></script>
   <script src="scripts/auth.js" defer></script>
 </body>
 </html>
