@@ -7,8 +7,38 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const base = window.location.origin;
   let user = null;
-
   const toast = (type, title, description) => window.AgroToast?.show({type, title, description});
+  const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
+
+  function passwordChecks(value) {
+    return {
+      length: value.length >= 8,
+      upper: /[A-ZÀ-Ý]/.test(value),
+      number: /\d/.test(value),
+      symbol: /[^A-Za-zÀ-ÿ\d]/.test(value),
+    };
+  }
+
+  function initPasswordMeter() {
+    const input = $("[data-password-meter]");
+    const meter = $("[data-meter]");
+    if (!input || !meter) return;
+    const rules = $$("[data-rule]", meter);
+    const label = $("[data-meter-label]", meter);
+    const update = () => {
+      const checks = passwordChecks(input.value);
+      const level = Object.values(checks).filter(Boolean).length;
+      meter.dataset.level = String(level);
+      if (label) {
+        label.dataset.level = String(level);
+        label.textContent = STRENGTH_LABELS[level];
+      }
+      rules.forEach((rule) => rule.classList.toggle("is-valid", Boolean(checks[rule.dataset.rule])));
+    };
+    input.addEventListener("input", update);
+    update();
+  }
+
   async function api(path, options = {}) {
     const response = await fetch(base + path, {...options, signal: AbortSignal.timeout(15000),
       headers: {Authorization: "Bearer " + sessionStorage.getItem("agro.sessionToken"), "Content-Type": "application/json"}});
@@ -122,6 +152,7 @@
   }
 
   function init() {
+    initPasswordMeter();
     unavailable("Carregando perfil…");
     $("[data-profile-retry]").addEventListener("click", () => load().catch(() => {}));
     $("#profile-email").addEventListener("input", updateEmailPassword);
