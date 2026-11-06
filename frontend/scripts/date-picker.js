@@ -9,6 +9,33 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   let sequence = 0;
 
+  function publish(input) {
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function mirrorValue(input, sync) {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    Object.defineProperty(input, "value", {
+      configurable: true,
+      enumerable: true,
+      get() { return descriptor.get.call(this); },
+      set(next) {
+        descriptor.set.call(this, next);
+        sync();
+      },
+    });
+  }
+
+  function bindEscape(modal, close) {
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !modal.classList.contains("is-open")) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      close();
+    });
+  }
+
   function dateToISO(date) {
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
   }
@@ -36,12 +63,14 @@
     trigger.setAttribute("aria-controls", modalId);
     trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span data-date-label>Selecione a data</span>';
     input.parentNode.insertBefore(trigger, input);
+    input.focus = () => trigger.focus();
 
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     modal.id = modalId;
     modal.dataset.modal = modalId;
     modal.dataset.datePicker = "";
+    modal.dataset.pickerLayer = "";
     modal.setAttribute("aria-hidden", "true");
     modal.setAttribute("role", "presentation");
     const hint = input.id === "cost-date" ? "Escolha uma data para o lançamento." : "Escolha uma data.";
@@ -74,8 +103,7 @@
         if (dateToISO(date) === dateToISO(new Date())) button.classList.add("is-today");
         button.addEventListener("click", () => {
           input.value = button.dataset.calendarDate;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          syncLabel();
+          publish(input);
           closeCalendar();
         });
         grid.appendChild(button);
@@ -101,19 +129,19 @@
     $("[data-calendar-next]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
     $("[data-calendar-clear]", modal)?.addEventListener("click", () => {
       input.value = "";
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      syncLabel();
+      publish(input);
       closeCalendar();
     });
     $("[data-calendar-today]", modal).addEventListener("click", () => {
       input.value = dateToISO(new Date());
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      syncLabel();
+      publish(input);
       closeCalendar();
     });
     $("[data-calendar-close]", modal).addEventListener("click", closeCalendar);
     modal.addEventListener("click", (event) => { if (event.target === modal) closeCalendar(); });
+    bindEscape(modal, closeCalendar);
     input.addEventListener("change", syncLabel);
+    mirrorValue(input, syncLabel);
     syncLabel();
   }
 
@@ -133,11 +161,13 @@
     trigger.setAttribute("aria-label", input.getAttribute("aria-label") || "Selecionar mês");
     trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span data-month-label>Selecione o mês</span>';
     input.parentNode.insertBefore(trigger, input);
+    input.focus = () => trigger.focus();
     const names = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     modal.id = modalId;
     modal.dataset.modal = modalId;
+    modal.dataset.pickerLayer = "";
     modal.setAttribute("aria-hidden", "true");
     modal.setAttribute("role", "presentation");
     modal.innerHTML = `<div class="modal calendar-modal" role="dialog" aria-modal="true" aria-labelledby="${modalId}-title"><div class="calendar-modal-header"><div><h2 id="${modalId}-title">Selecionar mês</h2><p data-month-selected>Escolha o mês.</p></div><button class="icon-btn icon-btn--sm" type="button" data-month-close aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="calendar-toolbar"><button class="icon-btn icon-btn--sm" type="button" data-month-prev aria-label="Ano anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><strong data-month-year></strong><button class="icon-btn icon-btn--sm" type="button" data-month-next aria-label="Próximo ano"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div><div class="month-grid" data-month-grid></div><div class="calendar-footer"><button class="btn btn-ghost" type="button" data-month-clear>Limpar</button></div></div>`;
@@ -162,8 +192,7 @@
         if (input.value === value) button.classList.add("is-selected");
         button.addEventListener("click", () => {
           input.value = value;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          sync();
+          publish(input);
           close();
         });
         grid.appendChild(button);
@@ -192,13 +221,14 @@
     $("[data-month-next]", modal).addEventListener("click", () => { year += 1; render(); });
     $("[data-month-clear]", modal).addEventListener("click", () => {
       input.value = "";
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      sync();
+      publish(input);
       close();
     });
     $("[data-month-close]", modal).addEventListener("click", close);
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+    bindEscape(modal, close);
     input.addEventListener("change", sync);
+    mirrorValue(input, sync);
     sync();
   }
 
