@@ -159,14 +159,14 @@ public class PropriedadesHandler
         propriedade.append ("criadaEm", propriedade.getString ("atualizadoEm"));
         Document criada = this.usuarios.criarPropriedade (requisicao.getSessao ().getUsuarioId (), propriedade);
         if (criada == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         return Resposta.json (201, PropriedadesHandler.publico (criada));
     }
 
     private Resposta consultar (Requisicao requisicao) throws Exception
     {
         Document propriedade = this.propriedadeDoUsuario (requisicao, requisicao.getParametro ("id"));
-        return propriedade == null ? Resposta.erro (404, "Not found") : Resposta.json (200, PropriedadesHandler.publico (propriedade));
+        return propriedade == null ? Resposta.erro (404, "Não encontrado.") : Resposta.json (200, PropriedadesHandler.publico (propriedade));
     }
 
     private Resposta atualizar (Requisicao requisicao) throws Exception
@@ -178,7 +178,7 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         Document corpo = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
         Document campos = PropriedadesHandler.lerPropriedade (corpo, validacao);
@@ -197,7 +197,7 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         if (this.propriedadesDoUsuario (requisicao).size () <= 1)
             return Resposta.json (409, new Document ("error", "A última propriedade não pode ser excluída."));
         if (id.equals (requisicao.getSessao ().getPropriedadeId ()))
@@ -217,7 +217,7 @@ public class PropriedadesHandler
         if (this.atividades != null && !this.atividades.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua as atividades antes de excluir a propriedade."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         return Resposta.semConteudo ();
     }
 
@@ -230,9 +230,9 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         if (!this.sessoes.selecionarPropriedade (requisicao.getToken (), id))
-            return Resposta.erro (401, "Unauthorized");
+            return Resposta.erro (401, "Não autorizado.");
         return Resposta.json (200, new Document ("propriedadeId", id));
     }
 }
