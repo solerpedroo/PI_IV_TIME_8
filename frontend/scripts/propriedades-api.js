@@ -28,10 +28,8 @@
 
   let currentId = null;
   let properties = [];
-  const selector = document.createElement("select");
-  selector.className = "property-context-select";
-  selector.setAttribute("aria-label", "Propriedade ativa");
-  form.closest(".settings-card")?.querySelector(".settings-card-header div")?.append(selector);
+  const selector = document.querySelector("#property-context");
+  if (!selector) return;
 
   function fill(property) {
     currentId = property.id;
@@ -44,10 +42,10 @@
   }
 
   function renderSelector() {
-    selector.replaceChildren(...properties.map((property) => {
-      const option = new Option(property.nome, property.id, false, property.id === currentId);
-      return option;
-    }));
+    selector.replaceChildren(...properties.map((property) => new Option(property.nome, property.id)));
+    if (currentId) selector.value = currentId;
+    else selector.selectedIndex = -1;
+    if (selector.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(selector);
   }
 
   async function load() {
@@ -80,7 +78,7 @@
     form.reset();
     for (const field of ["farm", "area", "location", "city", "harvest"]) form.elements[field].value = "";
     form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
-    selector.selectedIndex = -1;
+    renderSelector();
     form.elements.farm.focus();
   });
 
