@@ -98,8 +98,8 @@
       <form class="stack-form" data-equipment-form novalidate>
         <div class="input-group"><label for="equipment-nome">Nome *</label><input id="equipment-nome" name="nome" maxlength="80" placeholder="Ex.: Trator 01" required><p class="field-error" data-error-for="nome"></p></div>
         <div class="maint-grid-2">
-          <div class="input-group"><label for="equipment-tipo">Tipo *</label><select id="equipment-tipo" name="tipo" required><option value="">Selecione</option><option>Trator</option><option>Colheitadeira</option><option>Pulverizador</option><option>Plantadeira</option><option>Implemento</option><option>Veículo</option><option>Outro</option></select><p class="field-error" data-error-for="tipo"></p></div>
-          <div class="input-group"><label for="equipment-status">Status</label><select id="equipment-status" name="status"><option>Ativo</option><option>Em manutenção</option><option>Inativo</option></select><p class="field-error" data-error-for="status"></p></div>
+          <div class="input-group"><label for="equipment-tipo">Tipo *</label><select id="equipment-tipo" name="tipo" required data-enhance-select data-placeholder="Selecione"><option value="">Selecione</option><option>Trator</option><option>Colheitadeira</option><option>Pulverizador</option><option>Plantadeira</option><option>Implemento</option><option>Veículo</option><option>Outro</option></select><p class="field-error" data-error-for="tipo"></p></div>
+          <div class="input-group"><label for="equipment-status">Status</label><select id="equipment-status" name="status" data-enhance-select data-placeholder="Ativo"><option>Ativo</option><option>Em manutenção</option><option>Inativo</option></select><p class="field-error" data-error-for="status"></p></div>
         </div>
         <div class="maint-grid-2">
           <div class="input-group"><label for="equipment-marca">Marca</label><input id="equipment-marca" name="marca" maxlength="60"><p class="field-error" data-error-for="marca"></p></div>
@@ -122,7 +122,7 @@
       <h2 id="preventive-form-title">Programar preventiva</h2>
       <p>Com intervalo, a próxima preventiva é programada sozinha quando esta for registrada como feita.</p>
       <form class="stack-form" data-preventive-form novalidate>
-        <div class="input-group"><label for="preventive-equipamento">Equipamento *</label><select id="preventive-equipamento" name="equipamentoId" required><option value="">Selecione</option></select><p class="field-error" data-error-for="equipamentoId"></p></div>
+        <div class="input-group"><label for="preventive-equipamento">Equipamento *</label><select id="preventive-equipamento" name="equipamentoId" required data-enhance-select data-placeholder="Selecione"><option value="">Selecione</option></select><p class="field-error" data-error-for="equipamentoId"></p></div>
         <div class="input-group"><label for="preventive-descricao">Descrição *</label><input id="preventive-descricao" name="descricao" maxlength="120" placeholder="Ex.: Troca de óleo do motor" required><p class="field-error" data-error-for="descricao"></p></div>
         <div class="maint-grid-2">
           <div class="input-group"><label for="preventive-data">Data prevista *</label><input id="preventive-data" name="dataPrevista" type="date" required><p class="field-error" data-error-for="dataPrevista"></p></div>
@@ -142,8 +142,8 @@
       <form class="stack-form" data-intervention-form novalidate>
         <input type="hidden" name="preventivaId" value="">
         <div class="maint-grid-2">
-          <div class="input-group"><label for="intervention-equipamento">Equipamento *</label><select id="intervention-equipamento" name="equipamentoId" required><option value="">Selecione</option></select><p class="field-error" data-error-for="equipamentoId"></p></div>
-          <div class="input-group"><label for="intervention-tipo">Tipo *</label><select id="intervention-tipo" name="tipo" required><option value="corretiva">Corretiva</option><option value="preventiva">Preventiva</option></select><p class="field-error" data-error-for="tipo"></p></div>
+          <div class="input-group"><label for="intervention-equipamento">Equipamento *</label><select id="intervention-equipamento" name="equipamentoId" required data-enhance-select data-placeholder="Selecione"><option value="">Selecione</option></select><p class="field-error" data-error-for="equipamentoId"></p></div>
+          <div class="input-group"><label for="intervention-tipo">Tipo *</label><select id="intervention-tipo" name="tipo" required data-enhance-select data-placeholder="Corretiva"><option value="corretiva">Corretiva</option><option value="preventiva">Preventiva</option></select><p class="field-error" data-error-for="tipo"></p></div>
         </div>
         <p class="field-error" data-error-for="preventivaId"></p>
         <div class="input-group"><label for="intervention-descricao">Descrição *</label><textarea id="intervention-descricao" name="descricao" maxlength="240" rows="3" placeholder="Ex.: Troca da correia do alternador" required></textarea><p class="field-error" data-error-for="descricao"></p></div>
@@ -154,8 +154,8 @@
         </div>
         <div class="maint-grid-3">
           <div class="input-group"><label for="intervention-valor">Valor (R$)</label><input id="intervention-valor" name="valor" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Deixe vazio se não houve gasto"><p class="field-hint">Sem valor, nenhum custo é lançado.</p><p class="field-error" data-error-for="valor"></p></div>
-          <div class="input-group"><label for="intervention-talhao">Talhão</label><select id="intervention-talhao" name="talhaoId"><option value="">Propriedade (sem talhão)</option></select><p class="field-error" data-error-for="talhaoId"></p></div>
-          <div class="input-group"><label for="intervention-safra">Safra</label><select id="intervention-safra" name="safraId"><option value="">Sem safra</option></select><p class="field-error" data-error-for="safraId"></p></div>
+          <div class="input-group"><label for="intervention-talhao">Talhão</label><select id="intervention-talhao" name="talhaoId" data-enhance-select data-placeholder="Propriedade (sem talhão)"><option value="">Propriedade (sem talhão)</option></select><p class="field-error" data-error-for="talhaoId"></p></div>
+          <div class="input-group"><label for="intervention-safra">Safra</label><select id="intervention-safra" name="safraId" data-enhance-select data-placeholder="Sem safra"><option value="">Sem safra</option></select><p class="field-error" data-error-for="safraId"></p></div>
         </div>
         <p class="field-error" data-form-error role="alert"></p>
         <div class="modal-actions"><button class="btn btn-outline" type="button" data-close-modal>Cancelar</button><button class="btn btn-primary" type="submit">Salvar intervenção</button></div>
@@ -201,6 +201,6 @@
   <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title"><h2 id="logout-title">Sair da conta?</h2><p>Sua sessão será encerrada e você voltará para a tela de login.</p><div class="modal-actions"><button class="btn btn-outline" type="button" data-close-modal>Cancelar</button><button class="btn btn-destructive" type="button" data-confirm-logout>Sair</button></div></div></div>
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
   <script src="scripts/fetch-timeout.js" defer></script>
-  <script src="scripts/toast.js" defer></script><script src="scripts/select.js" defer></script><script src="scripts/data/operational-defaults.js" defer></script><script src="scripts/agro-local.js" defer></script><script src="scripts/shell.js" defer></script><script src="scripts/manutencao.js" defer></script>
+  <script src="scripts/toast.js" defer></script><script src="scripts/select.js" defer></script><script src="scripts/date-picker.js" defer></script><script src="scripts/data/operational-defaults.js" defer></script><script src="scripts/agro-local.js" defer></script><script src="scripts/shell.js" defer></script><script src="scripts/manutencao.js" defer></script>
 </body>
 </html>
