@@ -1,0 +1,355 @@
+package handlers;
+
+/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
+
+import dados.RepositorioUsuarios;
+import http.Requisicao;
+import http.Resposta;
+import http.Roteador;
+import java.time.Instant;
+import java.util.UUID;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import seguranca.Senhas;
+import seguranca.Sessao;
+import seguranca.Sessoes;
+import seguranca.LimitadorDeTaxa;
+import servicos.ServicoEmail;
+import servicos.ClienteDeAlgoritmos;
+import util.Validacao;
+
+/*
+    Cadastro, login, sessao, confirmacao de e-mail e redefinicao de senha.
+    E-mail e simulado: os tokens sao impressos no console do servidor.
+*/
+public class AuthHandler
+{
+    private static final long INTERVALO_REENVIO   = 30L * 1000;      // 30 s
+    private static final long VALIDADE_REDEFINICAO = 30L * 60 * 1000; // 30 min
+    private static final long JANELA_TAXA = 60L * 1000;
+    private static final int  MAXIMO_TENTATIVAS = 60;
+
+    private final RepositorioUsuarios usuarios;
+    private final Sessoes             sessoes;
+    private final ServicoEmail        email;
+    private final LimitadorDeTaxa     limitador = new LimitadorDeTaxa ();
+
+    // protege as operacoes que leem e depois gravam tokens (reenvio, confirmacao, redefinicao)
+    private final Object trava = new Object ();
+
+    public AuthHandler (RepositorioUsuarios usuarios, Sessoes sessoes, ServicoEmail email) throws Exception
+    {
+        if (usuarios == null)
+            throw new Exception ("Repositorio de usuarios ausente");
+
+        if (sessoes == null)
+            throw new Exception ("Sessoes ausentes");
+
+        if (email == null)
+            throw new Exception ("Servico de e-mail ausente");
+
+        this.usuarios = usuarios;
+        this.sessoes  = sessoes;
+        this.email    = email;
+    }
+
+    public void registrar (Roteador roteador) throws Exception
+    {
+        roteador.adicionarPublica ("POST", "/api/auth/register",            this::cadastrar);
+        roteador.adicionarPublica ("POST", "/api/auth/login",               this::entrar);
+        roteador.adicionarPublica ("POST", "/api/auth/logout",              this::sair);
+        roteador.adicionarPublica ("POST", "/api/auth/confirm-email",       this::confirmarEmail);
+        roteador.adicionarPublica ("POST", "/api/auth/resend-confirmation", this::reenviarConfirmacao);
+        roteador.adicionarPublica ("POST", "/api/auth/forgot-password",     this::esqueciSenha);
+        roteador.adicionarPublica ("POST", "/api/auth/reset-password",      this::redefinirSenha);
+        roteador.adicionar        ("GET",  "/api/me",                       this::eu);
+    }
+
+    // so o que pode sair do servidor (nada de hash ou token)
+    private static Document usuarioPublico (Document usuario)
+    {
+        return util.PerfilUsuario.publico (usuario);
+    }
+
+    private static Resposta mensagem (String texto)
+    {
+        return Resposta.json (200, new Document ("message", texto));
+    }
+
+    private Resposta limitar (Requisicao requisicao, String rota) throws Exception
+    {
+        if (this.limitador.permitir (rota + ":" + requisicao.getEnderecoRemoto (),
+                                    AuthHandler.MAXIMO_TENTATIVAS, AuthHandler.JANELA_TAXA))
+            return null;
+
+        Resposta ret = Resposta.erro (429, "Muitas requisições. Aguarde e tente novamente.");
+        ret.setCabecalho ("Retry-After", "60");
+        return ret;
+    }
+
+    // POST /api/auth/register
+    private Resposta cadastrar (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "register");
+        if (limitada != null)
+            return limitada;
+
+        Document corpo = requisicao.getCorpoJson ();
+
+        // Validação de campos no ServerSocket (ValidadorDeConta); persistência continua aqui.
+        ClienteDeAlgoritmos.ResultadoCadastro remoto = ClienteDeAlgoritmos.validarCadastro (corpo);
+
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
+
+        String name     = remoto.normalizados.getString ("name");
+        String email    = remoto.normalizados.getString ("email");
+        String phone    = remoto.normalizados.getString ("phone");
+        String password = remoto.password;
+        String farm     = remoto.normalizados.getString ("farm");
+        String area     = remoto.normalizados.getString ("area");
+
+        String agora = Instant.now ().toString ();
+        String token = UUID.randomUUID ().toString ();
+
+        Document usuario = new Document ("name",                   name)
+                               .append  ("email",                  email)
+                               .append  ("phone",                  phone)
+                               .append  ("senhaHash",              Senhas.gerar (password))
+                               .append  ("emailConfirmado",        false)
+                               .append  ("tokenConfirmacao",       token)
+                               .append  ("ultimoEnvioConfirmacao", System.currentTimeMillis ())
+                               .append  ("criadoEm",               agora);
+
+        Document propriedade = new Document ("farm", farm).append ("area", area).append ("criadaEm", agora);
+
+        Document criado = this.usuarios.criar (usuario, propriedade);
+        if (criado == null)
+            return Resposta.json (409, new Document ("error", "E-mail já cadastrado.")
+                                           .append ("fields", new Document ("email", "Este e-mail já está cadastrado.")));
+
+        this.email.enviarCodigo (email, "Confirmação de e-mail", token);
+
+        return Resposta.json (201, new Document ("usuario", AuthHandler.usuarioPublico (criado)));
+    }
+
+    // POST /api/auth/login
+    private Resposta entrar (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "login");
+        if (limitada != null)
+            return limitada;
+
+        Document corpo    = requisicao.getCorpoJson ();
+        Object   email    = corpo.get ("email");
+        Object   password = corpo.get ("password");
+
+        Validacao validacao = new Validacao (corpo);
+        if (!(email instanceof String) || ((String) email).isBlank ())
+            validacao.erro ("email", "Informe seu e-mail.");
+        if (!(password instanceof String) || ((String) password).isEmpty ())
+            validacao.erro ("password", "Informe sua senha.");
+        if (validacao.temErros ())
+            return validacao.resposta ();
+
+        Document usuario = this.usuarios.buscarPor ("email", ((String) email).trim ().toLowerCase ());
+
+        // mesma resposta para e-mail inexistente e senha errada
+        if (!Senhas.conferir ((String) password, usuario == null ? null : usuario.getString ("senhaHash")))
+            return Resposta.erro (401, "E-mail ou senha inválidos.");
+
+        // A senha correta identifica o próprio titular; só então informamos
+        // que falta ativar a conta. Assim não há enumeração de e-mails.
+        if (!Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")))
+            return Resposta.erro (403, "Confirme o e-mail antes de entrar.");
+
+        String token;
+        synchronized (this.sessoes)
+        {
+            String hashConferido = usuario.getString ("senhaHash");
+            String emailConferido = usuario.getString ("email");
+            // Uma exclusão pode ter alterado a propriedade padrão durante o hash.
+            usuario = this.usuarios.buscarPorId (((ObjectId) usuario.get ("_id")).toHexString ());
+            if (usuario == null || !hashConferido.equals (usuario.getString ("senhaHash")) ||
+                !emailConferido.equals (usuario.getString ("email")) || !Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")) ||
+                this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
+                return Resposta.erro (401, "E-mail ou senha inválidos.");
+            token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                        usuario.getString ("propriedadeId"));
+        }
+
+        return Resposta.json (200, new Document ("token", token).append ("usuario", AuthHandler.usuarioPublico (usuario)));
+    }
+
+    // POST /api/auth/logout
+    private Resposta sair (Requisicao requisicao)
+    {
+        this.sessoes.encerrar (requisicao.getToken ());
+        return Resposta.semConteudo ();
+    }
+
+    // GET /api/me
+    private Resposta eu (Requisicao requisicao) throws Exception
+    {
+        Sessao   sessao  = requisicao.getSessao ();
+        Document usuario = this.usuarios.buscarPorId (sessao.getUsuarioId ());
+
+        if (usuario == null)
+            return Resposta.erro (401, "Não autorizado.");
+
+        Document propriedade = this.usuarios.buscarPropriedade (sessao.getPropriedadeId ());
+        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario)
+                                         .append ("propriedadeId", sessao.getPropriedadeId ()));
+
+        if (propriedade != null)
+            ret.append ("propriedade", new Document ("id",   sessao.getPropriedadeId ())
+                                           .append ("farm", propriedade.getString ("nome") == null ? propriedade.getString ("farm") : propriedade.getString ("nome"))
+                                           .append ("area", propriedade.containsKey ("areaHectares") ? propriedade.get ("areaHectares") : propriedade.get ("area")));
+
+        return Resposta.json (200, ret);
+    }
+
+    // POST /api/auth/confirm-email  {token}
+    private Resposta confirmarEmail (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "confirm-email");
+        if (limitada != null)
+            return limitada;
+
+        Validacao validacao = new Validacao (requisicao.getCorpoJson ());
+        String    token     = validacao.texto ("token", "Informe o código de confirmação.", 64);
+        if (validacao.temErros ())
+            return validacao.resposta ();
+
+        synchronized (this.trava)
+        {
+            Document usuario = this.usuarios.buscarPor ("tokenConfirmacao", token);
+            if (usuario == null)
+                return Resposta.erro (400, "Código inválido ou expirado.");
+
+            this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                     new Document ("emailConfirmado", true).append ("tokenConfirmacao", null));
+        }
+
+        return AuthHandler.mensagem ("E-mail confirmado.");
+    }
+
+    // POST /api/auth/resend-confirmation  {email}
+    private Resposta reenviarConfirmacao (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "resend-confirmation");
+        if (limitada != null)
+            return limitada;
+
+        Validacao validacao = new Validacao (requisicao.getCorpoJson ());
+        String    email     = validacao.email ("email");
+        if (validacao.temErros ())
+            return validacao.resposta ();
+
+        synchronized (this.trava)
+        {
+            Document usuario = this.usuarios.buscarPor ("email", email);
+
+            if (usuario != null && !usuario.getBoolean ("emailConfirmado"))
+            {
+                long agora    = System.currentTimeMillis ();
+                long ultimo   = usuario.get ("ultimoEnvioConfirmacao", 0L);
+                long esperado = ultimo + AuthHandler.INTERVALO_REENVIO;
+
+                if (agora < esperado)
+                {
+                    long segundos = (esperado - agora + 999) / 1000;
+
+                    Resposta ret = Resposta.json (429, new Document ("error", "Aguarde antes de reenviar.")
+                                                           .append ("retryAfter", segundos));
+                    ret.setCabecalho ("Retry-After", "" + segundos);
+                    return ret;
+                }
+
+                String token = UUID.randomUUID ().toString ();
+                this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                         new Document ("tokenConfirmacao", token).append ("ultimoEnvioConfirmacao", agora));
+
+                this.email.enviarCodigo (email, "Confirmação de e-mail (reenvio)", token);
+            }
+        }
+
+        return AuthHandler.mensagem ("Se o e-mail estiver pendente de confirmação, um novo código foi enviado.");
+    }
+
+    // POST /api/auth/forgot-password  {email} -> sempre 200
+    private Resposta esqueciSenha (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "forgot-password");
+        if (limitada != null)
+            return limitada;
+
+        Validacao validacao = new Validacao (requisicao.getCorpoJson ());
+        String    email     = validacao.email ("email");
+        if (validacao.temErros ())
+            return validacao.resposta ();
+
+        synchronized (this.trava)
+        {
+            Document usuario = this.usuarios.buscarPor ("email", email);
+
+            if (usuario != null)
+            {
+                String token = UUID.randomUUID ().toString ();
+                this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
+                                         new Document ("tokenRedefinicao", token)
+                                             .append ("redefinicaoExpiraEm", System.currentTimeMillis () + AuthHandler.VALIDADE_REDEFINICAO));
+
+                this.email.enviarCodigo (email, "Redefinição de senha", token);
+            }
+        }
+
+        return AuthHandler.mensagem ("Se o e-mail estiver cadastrado, um código de redefinição foi enviado.");
+    }
+
+    // POST /api/auth/reset-password  {token, password, password-confirm}
+    private Resposta redefinirSenha (Requisicao requisicao) throws Exception
+    {
+        Resposta limitada = this.limitar (requisicao, "reset-password");
+        if (limitada != null)
+            return limitada;
+
+        Document  corpo     = requisicao.getCorpoJson ();
+        Validacao validacao = new Validacao (corpo);
+        String    token     = validacao.texto ("token", "Informe o código de redefinição.", 64);
+
+        if (validacao.temErros ())
+            return validacao.resposta ();
+
+        // Regras de senha no ServerSocket (ValidadorDeConta); token e persistência aqui.
+        ClienteDeAlgoritmos.ResultadoSenha remoto = ClienteDeAlgoritmos.validarSenha (corpo, "password");
+
+        if (remoto.respostaErro != null)
+            return remoto.respostaErro;
+
+        String password = remoto.password;
+        String hash     = Senhas.gerar (password);
+        String id;
+
+        synchronized (this.trava)
+        {
+            synchronized (this.sessoes)
+            {
+                Document usuario = this.usuarios.buscarPor ("tokenRedefinicao", token);
+                if (usuario == null || usuario.get ("redefinicaoExpiraEm", 0L) < System.currentTimeMillis ())
+                    return Resposta.erro (400, "Código inválido ou expirado.");
+                id = ((ObjectId) usuario.get ("_id")).toHexString ();
+                // O token não pode ressuscitar depois de uma troca de senha/perfil.
+                if (!this.usuarios.atualizarCondicional (id, new Document ("tokenRedefinicao", token)
+                    .append ("senhaHash", usuario.getString ("senhaHash")), new Document ("senhaHash", hash)
+                    .append ("tokenRedefinicao", null).append ("redefinicaoExpiraEm", null)
+                    .append ("emailPendente", null).append ("tokenTrocaEmail", null).append ("trocaEmailExpiraEm", null)))
+                    return Resposta.erro (400, "Código inválido ou expirado.");
+                this.sessoes.encerrarDoUsuario (id);
+            }
+        }
+
+        return AuthHandler.mensagem ("Senha redefinida.");
+    }
+}

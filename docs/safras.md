@@ -4,7 +4,7 @@
 
 | Frente | Issues | Onde vive | Papel |
 |---|---|---|---|
-| **API HTTP** | #14, #129–#131 | `backend/servidor` (`SafrasHandler`) | CRUD autenticado (Bearer), avanço de etapa, histórico, isolamento por propriedade |
+| **API HTTP** | #14, #129–#131 | `backend/api` (`SafrasHandler`) | CRUD autenticado (Bearer), avanço de etapa, histórico, isolamento por propriedade |
 | **UI** | #15, #132–#134 | `frontend/safras.html` + `frontend/scripts/safras.js` | Criar ciclo, acompanhar etapas, consultar registros/custos |
 | **Modelo de dados** | #100–#105 (core) | `backend/core` | Domínio, índices, regras de vínculo/overlap/`historicoEtapas`; só `/health` e `/ready` na HTTP |
 
@@ -18,7 +18,7 @@ talhões/safras do usuário. Não há lista fixa no HTML.
 
 ## Referências
 
-- Contrato HTTP: [backend/servidor/README.md](../backend/servidor/README.md) (seção Safras)
+- Contrato HTTP: [backend/api/README.md](../backend/api/README.md) (seção Safras)
 - Modelo acadêmico: [modelo-dados.md](modelo-dados.md) (#101)
 - Visão do servidor: [servidor-java.md](servidor-java.md) §7.3
 

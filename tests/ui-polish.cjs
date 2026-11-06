@@ -11,6 +11,16 @@ const { mockApi } = require('./mock-api.cjs');
 const root = path.resolve(__dirname, '../frontend');
 const origin = 'http://agro.local';
 const screens = ['dashboard', 'areas-cultivo', 'atividades', 'insumos', 'ocorrencias', 'custos', 'configuracoes', 'login', 'criar-conta', 'recuperar-senha', 'redefinir-senha', 'confirmar-email'];
+const shellScreens = new Set(['dashboard', 'areas-cultivo', 'atividades', 'insumos', 'ocorrencias', 'custos', 'configuracoes']);
+const sidebarActivePage = {
+  dashboard: 'dashboard',
+  'areas-cultivo': 'areas-cultivo',
+  atividades: 'atividades',
+  insumos: 'insumos',
+  ocorrencias: 'ocorrencias',
+  custos: 'custos',
+  configuracoes: 'configuracoes',
+};
 const sizes = [[1024, 768], [1100, 700], [1200, 768], [1280, 720], [1366, 768], [1440, 900], [1920, 1080]];
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const shots = process.env.UI_SCREENSHOTS;
@@ -40,6 +50,17 @@ async function reachable(locator, scroll = true) {
     const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
     return element === hit || element.contains(hit);
   }), true, 'controle cortado ou encoberto');
+}
+
+async function assertSidebarActive(page, screen) {
+  const expected = sidebarActivePage[screen];
+  if (!expected) return;
+  await page.waitForSelector('[data-app-sidebar-nav]', { timeout: 10000 });
+  const mountStill = await page.locator('[data-app-sidebar-mount]').count();
+  assert.equal(mountStill, 0, 'sidebar parcial ainda não substituiu o mount: ' + screen);
+  const active = page.locator(`[data-sidebar-page="${expected}"].sidebar-link.is-active`);
+  assert.equal(await active.count(), 1, 'item ativo da sidebar: ' + screen);
+  assert.equal(await active.getAttribute('aria-current'), 'page');
 }
 
 async function menu(page, trigger) {
@@ -134,6 +155,7 @@ async function menu(page, trigger) {
         return problems;
       });
       assert.deepEqual(issues, [], `${screen} em ${width}x${height}`);
+      if (shellScreens.has(screen) && width === sizes[0][0]) await assertSidebarActive(page, screen);
       if (width === 1024) await screenshot(page, screen + '-topo');
       const actions = page.locator('main [data-popover-trigger]:visible');
       if (await actions.count()) {
@@ -149,6 +171,11 @@ async function menu(page, trigger) {
         await reachable(page.locator('.crop-cost-item').last());
         await screenshot(page, `custos-${width}-resumo`);
       }
+    }
+    if (screen === 'atividades') {
+      await page.goto(`${origin}/atividades.html?talhao=e2e`, { waitUntil: 'load' });
+      await waitForMotion(page);
+      await assertSidebarActive(page, 'atividades');
     }
     console.log(`OK ${screen} nas sete dimensões desktop`);
   }
@@ -173,7 +200,7 @@ async function menu(page, trigger) {
   assert.equal(await page.locator('[data-modal="date-form"]').getAttribute('aria-hidden'), 'true');
   assert.equal(await page.locator('[data-modal="cost-form"]').getAttribute('aria-hidden'), 'false');
   await page.locator('[data-open-date-modal]').click();
-  await page.locator('[data-calendar-today]').click();
+  await page.locator('#date-form [data-calendar-today]').click();
   await form.locator('[name="description"]').fill('Lançamento de revisão visual com descrição longa para conferir quebra de texto na tabela');
   await form.locator('[name="value"]').fill('123.45');
   const save = form.locator('[type="submit"]');
@@ -225,6 +252,10 @@ async function menu(page, trigger) {
   }), true, 'fechamento da safra desalinhado do título');
   await reachable(page.locator('[data-harvest-option="2026/27"]'));
   await screenshot(page, 'configuracoes-seletor-safra');
+  await page.locator('[data-harvest-option="2026/27"]').click();
+  await page.locator('[data-confirm-harvest]').click();
+  assert.equal(await page.locator('#property-harvest').evaluate((el) => el.value), '2026/27');
+  await page.locator('[data-open-harvest-modal]').click();
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-open-harvest-modal]').evaluate((element) => element === document.activeElement), true);
   for (const screen of ['login', 'criar-conta', 'recuperar-senha', 'redefinir-senha']) {

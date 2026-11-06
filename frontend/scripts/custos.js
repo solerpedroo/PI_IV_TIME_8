@@ -11,7 +11,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
-  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const CATEGORIES = ["Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"];
   const params = new URLSearchParams(location.search);
 
@@ -60,95 +60,6 @@
 
   function dateToISO(date) {
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
-  }
-
-  function displayDate(value) {
-    if (!value) return "Selecione a data";
-    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
-  }
-
-  function initDatePicker() {
-    const input = $("#cost-date");
-    if (!input || $("[data-open-date-modal]")) return;
-    input.type = "hidden";
-    const trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.id = `${input.id}-trigger`;
-    // O rótulo continua acionando o controle visível após trocar o input nativo.
-    document.querySelector(`label[for="${input.id}"]`)?.setAttribute('for', trigger.id);
-    trigger.className = "date-picker-trigger";
-    trigger.dataset.openDateModal = "";
-    trigger.setAttribute("aria-haspopup", "dialog");
-    trigger.setAttribute("aria-controls", "date-form");
-    trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span data-date-label>Selecione a data</span>';
-    input.parentNode.insertBefore(trigger, input);
-
-    const modal = document.createElement("div");
-    modal.className = "modal-backdrop";
-    modal.id = "date-form";
-    modal.dataset.modal = "date-form";
-    modal.setAttribute("aria-hidden", "true");
-    modal.setAttribute("role", "presentation");
-    modal.innerHTML = '<div class="modal calendar-modal" role="dialog" aria-modal="true" aria-labelledby="date-form-title"><div class="calendar-modal-header"><div><h2 id="date-form-title">Selecionar data</h2><p data-calendar-selected>Escolha uma data para o lançamento.</p></div><button class="icon-btn icon-btn--sm" type="button" data-calendar-close aria-label="Fechar calendário"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="calendar-toolbar"><button class="icon-btn icon-btn--sm" type="button" data-calendar-prev aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><strong data-calendar-month></strong><button class="icon-btn icon-btn--sm" type="button" data-calendar-next aria-label="Próximo mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div><div class="calendar-weekdays" aria-hidden="true"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div><div class="calendar-grid" data-calendar-grid role="grid" aria-label="Calendário"></div><div class="calendar-footer"><button class="btn btn-ghost" type="button" data-calendar-clear>Limpar</button><button class="btn btn-outline" type="button" data-calendar-today>Hoje</button></div></div>';
-    document.body.appendChild(modal);
-    let viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
-
-    function syncLabel() {
-      $("[data-date-label]", trigger).textContent = displayDate(input.value);
-      $("[data-calendar-selected]", modal).textContent = input.value ? `Data selecionada: ${displayDate(input.value)}` : "Escolha uma data para o lançamento.";
-    }
-
-    function renderCalendar() {
-      const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(viewDate);
-      $("[data-calendar-month]", modal).textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-      const grid = $("[data-calendar-grid]", modal);
-      const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-      grid.innerHTML = "";
-      for (let index = 0; index < 42; index += 1) {
-        const offset = index - first.getDay() + 1;
-        const date = new Date(viewDate.getFullYear(), viewDate.getMonth(), offset);
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "calendar-day";
-        button.textContent = String(date.getDate());
-        button.dataset.calendarDate = dateToISO(date);
-        button.setAttribute("role", "gridcell");
-        if (date.getMonth() !== viewDate.getMonth()) button.classList.add("is-outside");
-        if (dateToISO(date) === input.value) button.classList.add("is-selected");
-        if (dateToISO(date) === dateToISO(new Date())) button.classList.add("is-today");
-        button.addEventListener("click", () => {
-          input.value = button.dataset.calendarDate;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          syncLabel();
-          closeCalendar();
-        });
-        grid.appendChild(button);
-      }
-    }
-
-    function openCalendar() {
-      viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
-      renderCalendar();
-      syncLabel();
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
-    }
-
-    function closeCalendar() {
-      modal.classList.remove("is-open");
-      modal.setAttribute("aria-hidden", "true");
-      trigger.focus();
-    }
-
-    trigger.addEventListener("click", openCalendar);
-    $("[data-calendar-prev]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
-    $("[data-calendar-next]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
-    $("[data-calendar-clear]", modal).addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("change", { bubbles: true })); syncLabel(); closeCalendar(); });
-    $("[data-calendar-today]", modal).addEventListener("click", () => { input.value = dateToISO(new Date()); input.dispatchEvent(new Event("change", { bubbles: true })); syncLabel(); closeCalendar(); });
-    $("[data-calendar-close]", modal).addEventListener("click", closeCalendar);
-    modal.addEventListener("click", (event) => { if (event.target === modal) closeCalendar(); });
-    input.addEventListener("change", syncLabel);
-    syncLabel();
   }
 
   function formatDate(value) {
@@ -400,17 +311,24 @@
     return `<div class="action-menu-wrap"><button class="icon-btn icon-btn--sm" type="button" data-popover-trigger aria-controls="cost-menu-${id}" aria-expanded="false" aria-label="Ações de ${window.AgroLocal.escape(entry.description)}"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="action-menu" id="cost-menu-${id}" data-popover role="menu"><button class="action-menu-item" type="button" role="menuitem" data-edit-cost="${id}"><span class="action-menu-icon tone-primary"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button><button class="action-menu-item is-danger" type="button" role="menuitem" data-delete-cost="${id}"><span class="action-menu-icon tone-error"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg></span><span class="action-menu-label">Excluir</span></button></div></div>`;
   }
 
-  // Custo de consumo (#156) só muda pela movimentação do insumo: no lugar do menu,
-  // um atalho para o produto no estoque.
+  // Custo de consumo (#156) só muda pela movimentação do insumo e custo de manutenção
+  // só muda pela intervenção do equipamento: no lugar do menu, um atalho para a origem.
+  const isMaintenance = (entry) => entry.origem?.tipo === "manutencao";
+  const originLabel = (entry) => isMaintenance(entry) ? "Manutenção" : "Consumo";
   function originMarkup(entry) {
+    const description = window.AgroLocal.escape(entry.description);
+    if (isMaintenance(entry)) {
+      const equipamento = encodeURIComponent(entry.origem.equipamentoId || "");
+      return `<a class="icon-btn icon-btn--sm cost-origin-link" href="manutencao.html?equipamentoId=${equipamento}" title="Gerado pela manutenção do equipamento. Corrija pela intervenção." aria-label="Ver a manutenção de ${description}" data-cost-origin="manutencao"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></a>`;
+    }
     const insumo = encodeURIComponent(entry.origem.insumoId || "");
-    return `<a class="icon-btn icon-btn--sm cost-origin-link" href="insumos.html?insumoId=${insumo}" title="Gerado pelo consumo de estoque. Corrija pela movimentação do insumo." aria-label="Ver consumo de ${window.AgroLocal.escape(entry.description)} no estoque"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg></a>`;
+    return `<a class="icon-btn icon-btn--sm cost-origin-link" href="insumos.html?insumoId=${insumo}" title="Gerado pelo consumo de estoque. Corrija pela movimentação do insumo." aria-label="Ver consumo de ${description} no estoque" data-cost-origin="consumo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg></a>`;
   }
 
   function renderTable() {
     const escape = window.AgroLocal.escape;
     const entries = state.entries;
-    $("[data-cost-table] tbody").innerHTML = entries.map((entry) => `<tr data-cost-id="${escape(entry.id)}"><td><span class="cost-row-description">${escape(entry.description)}</span></td><td><span class="badge badge-neutral">${escape(entry.category)}</span>${entry.origem ? ' <span class="badge badge-info cost-origin">Consumo</span>' : ""}</td><td><span class="cost-row-muted">${escape(entry.talhaoNome || "Propriedade")}</span></td><td><span class="cost-row-muted">${escape(entry.safraNome || "-")}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${entry.origem ? originMarkup(entry) : actionMarkup(entry)}</td></tr>`).join("");
+    $("[data-cost-table] tbody").innerHTML = entries.map((entry) => `<tr data-cost-id="${escape(entry.id)}"><td><span class="cost-row-description">${escape(entry.description)}</span></td><td><span class="badge badge-neutral">${escape(entry.category)}</span>${entry.origem ? ` <span class="badge badge-info cost-origin">${originLabel(entry)}</span>` : ""}</td><td><span class="cost-row-muted">${escape(entry.talhaoNome || "Propriedade")}</span></td><td><span class="cost-row-muted">${escape(entry.safraNome || "-")}</span></td><td><span class="cost-row-muted">${formatDate(entry.date)}</span></td><td class="cost-value">${money.format(entry.value)}</td><td>${entry.origem ? originMarkup(entry) : actionMarkup(entry)}</td></tr>`).join("");
     $("[data-cost-table]").hidden = entries.length === 0;
     $("[data-cost-empty]").hidden = entries.length > 0 || !state.summary;
     $("[data-cost-count]").textContent = state.summary ? `${entries.length} lançamento${entries.length === 1 ? "" : "s"}` : "-";
@@ -803,7 +721,7 @@
       if (!state.summary) { toast("error", "Nada para exportar", "A consulta atual não foi confirmada pelo servidor."); return; }
       const { de, ate } = periodRange();
       const rows = [["Descrição", "Categoria", "Talhão", "Safra", "Cultura", "Data", "Valor", "Origem"],
-        ...state.entries.map((entry) => [entry.description, entry.category, entry.talhaoNome || "Propriedade", entry.safraNome || "", entry.cultura || "", entry.date, entry.value.toFixed(2), entry.origem ? "Consumo de estoque" : "Lançamento manual"])];
+        ...state.entries.map((entry) => [entry.description, entry.category, entry.talhaoNome || "Propriedade", entry.safraNome || "", entry.cultura || "", entry.date, entry.value.toFixed(2), entry.origem ? (isMaintenance(entry) ? "Manutenção de equipamento" : "Consumo de estoque") : "Lançamento manual"])];
       const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")).join("\n");
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([String.fromCharCode(0xFEFF) + csv], { type: "text/csv;charset=utf-8" }));
@@ -841,7 +759,6 @@
     persist = window.AgroLocal.connect("costs", () => ({ budget: state.legacyBudget, period: periodToken(), entries: [] }),
       (records) => { state.legacyBudget = records.budget; readPeriod(records.period); },
       initial, { budget: initial.budget, period: "todo", entries: [] });
-    initDatePicker();
     initForm();
     initBudgetModal();
     initPeriodModal();

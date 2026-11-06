@@ -6,6 +6,7 @@ const {spawn, spawnSync} = require('node:child_process');
 const {once} = require('node:events');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const {launchTestBrowser} = require('./browser-launch.cjs');
+const {aguardarTokenDeConfirmacao} = require('./token-confirmacao.cjs');
 const base = 'http://127.0.0.1:8080';
 const mongo = process.env.PROFILE_MONGO === '1';
 let server, browser, logs = '';
@@ -13,7 +14,7 @@ const ids = [];
 
 async function start() {
   server = spawn('java', ['-cp', 'bin:lib/*', 'Servidor', '8080', ...(mongo ? [] : ['--memoria'])], {
-    cwd: path.join(__dirname, '../backend/servidor'),
+    cwd: path.join(__dirname, '../backend/api'),
     env: {...process.env, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '', SMTP_PORT: ''},
   });
   server.stdout.on('data', chunk => { logs += chunk.toString(); });
@@ -36,11 +37,11 @@ async function api(path, token, method = 'GET', data, expected = 200) {
 }
 const login = (email, password = 'Senha@123') => api('/api/auth/login', null, 'POST', {email, password});
 async function register(email) {
+  const inicioDoLog = logs.length;
   const registered = await api('/api/auth/register', null, 'POST', {name: 'Perfil E2E', email,
     phone: '(19) 99999-1234', password: 'Senha@123', confirm: 'Senha@123', farm: 'Fazenda Perfil E2E', area: '10 ha', terms: true}, 201);
   ids.push(registered.usuario.id);
-  const code = [...logs.matchAll(/token: ([a-zA-Z0-9-]+)/g)].at(-1)?.[1];
-  assert.ok(code, 'código local de confirmação deve existir');
+  const code = await aguardarTokenDeConfirmacao(() => logs.slice(inicioDoLog));
   await api('/api/auth/confirm-email', null, 'POST', {token: code});
   return login(email);
 }
@@ -126,10 +127,11 @@ async function submit(page, selector, endpoint, method = 'PUT', expected = 200) 
   // Troca de e-mail usa senha atual e código real do fluxo local de e-mail.
   await page.locator('#profile-email').fill(nextEmail);
   await page.locator('#profile-current').fill('Senha@123');
+  const inicioDoLog = logs.length;
   await submit(page, '#profile-form', '/api/perfil');
   await page.locator('[data-email-pending]').waitFor();
   assert.equal((await api('/api/perfil', session.token)).usuario.email, email);
-  const code = [...logs.matchAll(/token: ([a-zA-Z0-9-]+)/g)].at(-1)[1];
+  const code = await aguardarTokenDeConfirmacao(() => logs.slice(inicioDoLog));
   await page.locator('[name=codigo]').fill(code);
   await submit(page, '[data-email-confirm-form]', '/api/perfil/email/confirmar', 'POST');
   await page.waitForURL('**/login.html');
@@ -177,7 +179,7 @@ async function submit(page, selector, endpoint, method = 'PUT', expected = 200) 
 })().catch(e => { console.error(e); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close(); await stop();
   if (mongo && ids.length) {
-    const cleanup = spawnSync('java', ['-cp', 'bin:lib/*', 'TestePerfil', '--limpar-e2e', ...ids], {cwd: path.join(__dirname, '../backend/servidor'), env: process.env, encoding: 'utf8'});
+    const cleanup = spawnSync('java', ['-cp', 'bin:lib/*', 'TestePerfil', '--limpar-e2e', ...ids], {cwd: path.join(__dirname, '../backend/api'), env: process.env, encoding: 'utf8'});
     if (cleanup.status !== 0) { console.error('Falha na limpeza dos fixtures de perfil.'); process.exitCode = 1; }
   }
 });

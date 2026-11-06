@@ -1,0 +1,156 @@
+/* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+
+import dados.ConexaoMongo;
+import dados.RepositorioCustosMongo;
+import dados.RepositorioAtividadesMongo;
+import dados.RepositorioSafrasMongo;
+import dados.RepositorioUsuariosMongo;
+import com.mongodb.ConnectionString;
+import org.bson.Document;
+
+/* Integracao contra MongoDB real; exige banco cujo nome contenha _teste. */
+public class TesteMongo
+{
+    private static void conferir (boolean condicao, String mensagem) throws Exception
+    {
+        if (!condicao)
+            throw new Exception (mensagem);
+    }
+
+    public static void main (String[] args) throws Exception
+    {
+        String uri = System.getenv ("MONGODB_URI");
+        String banco = ConexaoMongo.resolverNomeDoBanco (uri, System.getenv ("MONGODB_DATABASE"));
+        if (!banco.endsWith ("_teste"))
+            throw new Exception ("Use MONGODB_URI ou MONGODB_DATABASE com banco terminado em _teste");
+
+        ConexaoMongo conexao = new ConexaoMongo (uri);
+        try
+        {
+            conexao.getBanco ().drop ();
+            RepositorioUsuariosMongo usuarios = new RepositorioUsuariosMongo (conexao);
+            Document usuario = new Document ("email", "integracao@agro.com").append ("name", "Integração");
+            Document propriedade = new Document ("farm", "Fazenda teste").append ("area", "1 ha");
+            Document criado = usuarios.criar (usuario, propriedade);
+
+            conferir (criado != null, "cadastro Mongo deveria criar o usuario");
+            conferir (usuarios.buscarPropriedade (criado.getString ("propriedadeId")) != null,
+                      "a propriedade deve existir junto com o usuario");
+            Document segunda = usuarios.criarPropriedade (((org.bson.types.ObjectId) criado.get ("_id")).toHexString (),
+                                                          new Document ("nome", "Fazenda dois"));
+            conferir (segunda != null && usuarios.listarPropriedades (((org.bson.types.ObjectId) criado.get ("_id")).toHexString ()).size () == 2,
+                      "CRUD Mongo deve listar a segunda propriedade do mesmo usuario");
+            conferir (usuarios.atualizarPropriedade (((org.bson.types.ObjectId) criado.get ("_id")).toHexString (),
+                                                     ((org.bson.types.ObjectId) segunda.get ("_id")).toHexString (), new Document ("nome", "Fazenda alterada")),
+                      "CRUD Mongo deve atualizar propriedade do dono");
+            conferir (usuarios.excluirPropriedade (((org.bson.types.ObjectId) criado.get ("_id")).toHexString (),
+                                                   ((org.bson.types.ObjectId) segunda.get ("_id")).toHexString ()),
+                      "CRUD Mongo deve excluir propriedade sem vinculos");
+            conferir (usuarios.criar (usuario, propriedade) == null,
+                      "indice unico deve rejeitar e-mail duplicado");
+            conferir (conexao.getBanco ().getCollection ("usuarios").countDocuments () == 1,
+                      "a transacao nao deve duplicar usuario");
+            conferir (conexao.getBanco ().getCollection ("propriedades").countDocuments () == 1,
+                      "a transacao nao deve deixar propriedade orfa");
+            String uid = criado.getObjectId ("_id").toHexString ();
+            String principal = criado.getString ("propriedadeId");
+            conexao.getBanco ().getCollection ("propriedades").updateOne (
+                new Document ("_id", new org.bson.types.ObjectId (principal)),
+                new Document ("$unset", new Document ("usuarioId", "")));
+            conferir (usuarios.listarPropriedades (uid).size () == 1,
+                      "propriedade legada deve ser vinculada somente ao usuario comprovado");
+            Document alternativa = usuarios.criarPropriedade (uid, new Document ("nome", "Alternativa"));
+            conferir (usuarios.excluirPropriedade (uid, principal), "padrao sem vinculos pode ser excluida");
+            conferir (usuarios.buscarPorId (uid).getString ("propriedadeId").equals (alternativa.getObjectId ("_id").toHexString ()),
+                      "exclusao deve atualizar referencia padrao na mesma transacao");
+            conferir (!usuarios.excluirPropriedade (uid, alternativa.getObjectId ("_id").toHexString ()),
+                      "repositorio deve preservar ultima propriedade");
+            System.out.println ("MongoDB: testes de cadastro, propriedades, legado e transacao ok");
+            RepositorioSafrasMongo safras = new RepositorioSafrasMongo (conexao.getBanco ());
+            Document safra = new Document ("nome", "Soja").append ("nomeNormalizado", "soja").append ("propriedadeId", principal)
+                .append ("talhoes", java.util.List.of ("t1", "t2")).append ("etapa", "Planejamento");
+            conferir (safras.criar (safra), "safra Mongo deve ser criada");
+            String sid = safra.getObjectId ("_id").toHexString ();
+            conferir (!safras.criar (new Document ("nome", "SOJA").append ("nomeNormalizado", "soja").append ("propriedadeId", principal)),
+                      "indice unico deve recusar nome de safra repetido na propriedade");
+            conferir (safras.criar (new Document ("nome", "Soja").append ("nomeNormalizado", "soja").append ("propriedadeId", "outra")),
+                      "o mesmo nome e aceito em outra propriedade");
+            conferir (safras.buscarPorId ("outra", sid) == null, "safra de outra propriedade nao e encontrada");
+            safras.atualizar (principal, sid, new Document ("etapa", "Plantio").append ("talhoes", java.util.List.of ("t1")));
+            Document lida = safras.buscarPorId (principal, sid);
+            conferir ("Plantio".equals (lida.getString ("etapa")) && lida.getList ("talhoes", String.class).size () == 1,
+                      "atualizacao da safra deve persistir etapa e talhoes");
+            conferir (safras.listar (principal).size () == 1, "listar safras filtra pela propriedade");
+            conferir (!safras.excluir ("outra", sid) && safras.excluir (principal, sid) && safras.listar (principal).isEmpty (),
+                      "excluir safra respeita a propriedade");
+            System.out.println ("MongoDB: safras ok");
+            RepositorioAtividadesMongo atividades = new RepositorioAtividadesMongo (conexao);
+            Document atividade = new Document ("propriedadeId", principal).append ("usuarioId", uid)
+                .append ("nome", "Atividade Mongo").append ("tipo", "Aplicação")
+                .append ("talhao", "T-01").append ("data", "2026-08-01").append ("status", "Pendente");
+            atividades.criar (atividade);
+            String atividadeId = atividade.getString ("id");
+            conferir (atividades.mudarStatus (principal, atividadeId, "Pendente", "Agendada", "mudanca_status", "Agendada para teste"),
+                      "atividade Mongo deve registrar a transição");
+            conferir (atividades.listarHistorico (principal, atividadeId).size () == 2 &&
+                      "Agendada".equals (atividades.buscarPorId (principal, atividadeId).getString ("status")),
+                      "atividade e histórico devem ser gravados juntos");
+            ConexaoMongo reconexao = new ConexaoMongo (uri);
+            try
+            {
+                RepositorioAtividadesMongo relidas = new RepositorioAtividadesMongo (reconexao);
+                conferir (relidas.buscarPorId (principal, atividadeId) != null &&
+                          relidas.listarHistorico (principal, atividadeId).size () == 2,
+                          "atividade e histórico persistem após reconexão Mongo");
+            }
+            finally
+            {
+                reconexao.fechar ();
+            }
+            System.out.println ("MongoDB: atividades, histórico e reconexão ok");
+            RepositorioCustosMongo custos = new RepositorioCustosMongo (conexao.getBanco ());
+            Document custo = new Document ("description", "Diesel").append ("category", "Outros").append ("value", 10.5)
+                .append ("date", "2026-08-01").append ("talhaoId", null).append ("propriedadeId", principal);
+            custos.criar (custo);
+            String cid = custo.getObjectId ("_id").toHexString ();
+            conferir (custos.buscarPorId (principal, cid) != null && custos.buscarPorId ("outra", cid) == null,
+                      "custo Mongo so e encontrado na propria propriedade");
+            conferir (!custos.atualizar ("outra", cid, new Document ("value", 1)), "outra propriedade nao altera o custo");
+            conferir (custos.atualizar (principal, cid, new Document ("value", 20.25).append ("talhaoId", "t1")),
+                      "atualizacao do custo deve encontrar o lancamento");
+            Document lido = custos.buscarPorId (principal, cid);
+            conferir (lido.getDouble ("value") == 20.25 && "t1".equals (lido.getString ("talhaoId")),
+                      "atualizacao do custo deve persistir");
+            conferir (custos.listar (principal).size () == 1 && custos.listar ("outra").isEmpty (),
+                      "listar custos filtra pela propriedade");
+            conferir (!custos.excluir ("outra", cid) && custos.excluir (principal, cid) && custos.listar (principal).isEmpty (),
+                      "excluir custo respeita a propriedade");
+            System.out.println ("MongoDB: custos ok");
+
+            // custo de consumo: a chave unica (propriedade, movimentacao) impede duplicidade
+            Document consumo = new Document ("description", "Consumo").append ("category", "Insumos").append ("value", 125.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal)
+                .append ("origem", new Document ("tipo", "consumo").append ("movimentacaoId", "mov-1"));
+            conferir (custos.criarSeAusente (consumo), "primeiro custo da movimentacao e gravado");
+            conferir (!custos.criarSeAusente (new Document (consumo).append ("_id", null)),
+                      "segundo custo da mesma movimentacao e recusado pelo indice unico");
+            conferir (custos.criarSeAusente (new Document (consumo).append ("propriedadeId", "outra")),
+                      "mesma movimentacao em outra propriedade nao conflita");
+            conferir (custos.criarSeAusente (new Document (consumo).append ("origem",
+                          new Document ("tipo", "consumo").append ("movimentacaoId", "mov-2"))),
+                      "outra movimentacao gera outro custo");
+            custos.criar (new Document ("description", "Manual").append ("category", "Outros").append ("value", 1.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal));
+            custos.criar (new Document ("description", "Manual 2").append ("category", "Outros").append ("value", 1.0)
+                .append ("date", "2026-08-01").append ("propriedadeId", principal));
+            conferir (custos.listar (principal).size () == 4, "lancamentos manuais sem origem nao entram no indice unico");
+            System.out.println ("MongoDB: custos de consumo sem duplicidade ok");
+        }
+        finally
+        {
+            conexao.getBanco ().drop ();
+            conexao.fechar ();
+        }
+    }
+}

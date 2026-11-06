@@ -6,6 +6,20 @@
  * largo reaproveitado de modules.css: .modal-lg, .meta-grid, .timeline).
  */
 
+/* Evidência binária carregada via GET autenticado (#176). */
+.occ-evidence-photo {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  margin-top: 8px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+}
+
+.occ-photo-block {
+  margin-top: 16px;
+}
+
 .occ-table-card {
   flex: 1 1 auto;
   min-height: 0;
@@ -92,6 +106,8 @@
 .occ-filters { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 12px; }
 .occ-filters label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 .occ-filters select, .occ-filters input[type="month"] { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface, white); color: var(--text-primary); }
+.occ-filters .date-picker-trigger,
+.occ-filters .select-trigger { min-height: 36px; padding: 6px 10px; }
 .occ-message { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
 .occ-detail-link { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; padding: 4px 0; overflow-wrap: anywhere; }
 .occ-detail-link:hover { text-decoration: underline; }

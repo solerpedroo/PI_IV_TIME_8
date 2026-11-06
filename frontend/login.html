@@ -1,3 +1,4 @@
+<!-- Miguel — RA: 25003110 -->
 <!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
@@ -51,6 +52,7 @@
         <form
           class="auth-form"
           data-auth-form
+          data-auth-route="/api/auth/login"
           data-success-route="dashboard.html"
           data-flash-message="Entrada realizada com sucesso. Bem-vindo ao Agro."
           novalidate
@@ -75,6 +77,7 @@
               <input
                 id="password"
                 name="password"
+                data-password
                 type="password"
                 autocomplete="current-password"
                 placeholder="••••••••"
@@ -111,6 +114,7 @@
     </section>
   </main>
 
+  <script src="scripts/fetch-timeout.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/auth.js" defer></script>
 </body>

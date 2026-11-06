@@ -4,7 +4,7 @@ window.AgroRelatorioOperacional = function iniciar(config) {
   const {escape,context,download}=window.AgroRelatorio;
   const modal=document.querySelector('[data-modal="report-operational"]'), form=modal.querySelector('form');
   const out=modal.querySelector('[data-report-output]'), msg=modal.querySelector('[data-report-message]'), btn=modal.querySelector('[data-report-export]');
-  const base=location.port==='8080' ? location.origin : 'http://127.0.0.1:8080';
+  const base=window.location.origin;
   let snapshot=null, geracao=0, contexto='', opener;
   function limpar(texto) {snapshot=null;btn.disabled=true;out.replaceChildren();msg.textContent=texto;}
   function fechar(){geracao++;limpar('');modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');opener?.focus();}

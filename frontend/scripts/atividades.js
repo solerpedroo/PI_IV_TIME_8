@@ -1,14 +1,15 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Tomas de Paula Michelon Toniato - RA: 25004211 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
- * Agro — interações da tela Atividades (híbrido com API e persistência local)
+ * Agro — interações da tela Atividades (API e cache de leitura)
  * --------------------------------------------------------------------------
  * Fonte única de dados: os cards do Kanban (`.kanban-card`). A visualização
  * em Lista é derivada deles a cada mudança — não existe um segundo estado
  * para manter sincronizado manualmente.
  *
  * Cobre os fluxos de Atividades:
- * - Criação de atividades conectada à API `/api/atividades` e fallback local.
+ * - Criação de atividades conectada à API `/api/atividades` confirmada pelo servidor.
  * - Troca de status por menu, lista e arraste (Kanban Drag and Drop).
  * - Conclusão e cancelamento pela rota unificada `/api/atividades/{id}/status`.
  * - Estados terminais: atividades "Concluída" ou "Cancelada" não podem ter
@@ -22,11 +23,9 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-  const apiBase = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const apiBase = window.location.origin;
   const getSessionToken = () => sessionStorage.getItem("agro.sessionToken");
-  // Depois de uma leitura bem-sucedida, a API é a fonte de verdade. Antes
-  // disso, o modo local continua atendendo a abertura isolada da interface.
-  let apiDisponivel = false;
+  // Toda mutação depende da confirmação do servidor.
   // Todas as mutações aguardam esta consulta para não serem apagadas por uma
   // resposta remota que chegue depois do primeiro clique do usuário.
   let carregamentoRemoto = Promise.resolve();
@@ -44,6 +43,7 @@
   let activeCard = null;
   let formMode = "create"; // "create" | "edit"
   let cardSeq = 100;
+  let detailPhotoObjectUrl = null;
 
   let persist = () => true;
   function toast(type, title, description) {
@@ -54,11 +54,39 @@
    * Comunicação centralizada com a API REST do backend.
    * Envia o token de autenticação se disponível e trata respostas JSON e erros amigáveis.
    */
+  async function lerArquivoBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function enviarFotoAtividade(atividadeId, versao, file) {
+    if (!file || !getSessionToken() || versao == null) return;
+    const conteudoBase64 = await lerArquivoBase64(file);
+    try {
+      await apiRequest(`/api/atividades/${encodeURIComponent(atividadeId)}/foto`, {
+        method: "POST",
+        body: JSON.stringify({
+          versao,
+          conteudoBase64,
+          tipoMime: file.type || "image/jpeg",
+          nomeArquivo: file.name,
+        }),
+      });
+    } catch (err) {
+      toast("warning", "Atividade salva; foto não enviada", err.message);
+    }
+  }
+
   async function apiRequest(path, options = {}) {
     const token = getSessionToken();
-    if (!token) return null;
+    if (!token) throw new Error("Entre novamente para acessar as atividades.");
     const response = await fetch(apiBase + path, {
       ...options,
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: "Bearer " + token,
         "Content-Type": "application/json",
@@ -275,6 +303,7 @@
    */
   async function atualizarStatusAtividade(card, novoStatus, motivo = "", { silentSuccess = false } = {}) {
     await carregamentoRemoto;
+    if (!getSessionToken()) { toast("error", "Sessão ausente", "Entre novamente antes de alterar atividades."); return false; }
     const nomeAtividade = card.dataset.activity;
     const cardId = card.dataset.id;
 
@@ -667,7 +696,7 @@
         ${podeConcluir ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>` : ""}
         ${podeCancelar ? `<button type="button" class="action-menu-item" role="menuitem" data-card-action="cancel"><span class="action-menu-icon tone-neutral" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span><span class="action-menu-label">Cancelar</span></button>` : ""}
         <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-        ${!apiDisponivel ? `<button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>` : ""}
+
       </div>
     `;
   }
@@ -804,7 +833,6 @@
       else if (action === "complete") openCompleteConfirm(card);
       else if (action === "cancel") openCancelConfirm(card);
       else if (action === "duplicate") openDuplicateForm(card);
-      else if (action === "delete") openDeleteConfirm(card);
     });
   }
 
@@ -827,6 +855,29 @@
       <div class="meta-cell"><span class="meta-cell-label">Status</span><span class="meta-cell-value">${window.AgroLocal.escape(card.dataset.status)}</span></div>
     `;
 
+    const photoWrap = $("[data-activity-photo-wrap]", modal);
+    const photoImg = $("[data-activity-detail-photo]", modal);
+    if (detailPhotoObjectUrl) URL.revokeObjectURL(detailPhotoObjectUrl);
+    detailPhotoObjectUrl = null;
+    if (photoWrap && photoImg && card.dataset.id && getSessionToken()) {
+      try {
+        const detalhe = await apiRequest(`/api/atividades/${encodeURIComponent(card.dataset.id)}`);
+        card.dataset.versao = detalhe?.versao != null ? String(detalhe.versao) : "1";
+        if (detalhe?.temFoto) {
+          const response = await fetch(`${apiBase}/api/atividades/${encodeURIComponent(card.dataset.id)}/foto`, {
+            headers: { Authorization: "Bearer " + getSessionToken() },
+          });
+          if (response.ok) {
+            detailPhotoObjectUrl = URL.createObjectURL(await response.blob());
+            photoImg.src = detailPhotoObjectUrl;
+            photoWrap.hidden = false;
+          } else photoWrap.hidden = true;
+        } else photoWrap.hidden = true;
+      } catch {
+        photoWrap.hidden = true;
+      }
+    } else if (photoWrap) photoWrap.hidden = true;
+
     const timelineContainer = $("[data-detail-timeline]", modal);
     if (timelineContainer) {
       timelineContainer.innerHTML = `<p style="font-size: 12px; color: var(--text-muted); padding: 8px 0;">Consultando histórico da atividade...</p>`;
@@ -838,8 +889,7 @@
 
   /**
    * Consulta a API `/api/atividades/{id}/historico` e renderiza a linha do tempo.
-   * Se a chamada falhar ou estiver em modo puramente local, sintetiza os eventos
-   * registrados no ciclo de vida da atividade.
+   * Exibe somente os eventos confirmados pelo servidor.
    */
   async function renderActivityTimeline(card, container) {
     const id = card.dataset.id;
@@ -869,27 +919,9 @@
         container.appendChild(vazio);
         return;
       }
-    } else if (!Array.isArray(eventos) || eventos.length === 0) {
-      eventos = [
-        {
-          versao: 0,
-          dataHora: card.dataset.date || "Data inicial",
-          autor: "Sistema",
-          statusAnterior: "",
-          statusNovo: "Pendente",
-          descricao: `Atividade "${card.dataset.activity}" planejada para o talhão ${card.dataset.talhao}.`,
-        },
-      ];
-      if (card.dataset.status !== "Pendente") {
-        eventos.push({
-          versao: 1,
-          dataHora: new Date().toISOString().replace("T", " ").substring(0, 16),
-          autor: "Operador",
-          statusAnterior: "Pendente",
-          statusNovo: card.dataset.status,
-          descricao: `Status atualizado para ${card.dataset.status}.`,
-        });
-      }
+    } else {
+      container.textContent = "Entre novamente para consultar o histórico.";
+      return;
     }
 
     // Ordenação do mais recente para o mais antigo para leitura imediata do estado atual
@@ -1018,25 +1050,6 @@
     });
   }
 
-  function openDeleteConfirm(card) {
-    activeCard = card;
-    openModal($("[data-modal='activity-delete']"));
-  }
-
-  function initDeleteConfirm() {
-    const modal = $("[data-modal='activity-delete']");
-    $("[data-confirm-delete]", modal)?.addEventListener("click", () => {
-      if (!activeCard) return;
-      const name = activeCard.dataset.activity;
-      activeCard.remove();
-      if (!persist()) return;
-      closeModal(modal);
-      toast("info", "Atividade excluída", `${name} foi removida.`);
-      applyFilters();
-      activeCard = null;
-    });
-  }
-
   /* ---------------------------------------------------------------------- */
   /* Formulário de Criação / Edição / Duplicação                            */
   /* ---------------------------------------------------------------------- */
@@ -1140,6 +1153,7 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       await carregamentoRemoto;
+      if (!getSessionToken()) { toast("error", "Sessão ausente", "Entre novamente antes de salvar."); return; }
       clearErrors(form);
 
       const nome = form.nome.value.trim();
@@ -1173,6 +1187,9 @@
         return;
       }
 
+      let idParaFoto = null;
+      let versaoParaFoto = null;
+
       if (formMode === "edit" && activeCard) {
         if (isTerminalStatus(activeCard.dataset.status)) {
           toast("error", "Edição bloqueada", "Atividades concluídas ou canceladas não podem ser alteradas.");
@@ -1181,11 +1198,13 @@
         }
 
         const cardId = activeCard.dataset.id;
+        idParaFoto = cardId;
         if (getSessionToken() && cardId) {
           try {
-            await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
+            const editada = await apiRequest(`/api/atividades/${encodeURIComponent(cardId)}`, {
               method: "PUT", body: JSON.stringify(valores),
             });
+            versaoParaFoto = editada?.versao;
           } catch (err) {
             showApiFieldErrors(form, err.fields);
             toast("error", "Edição não confirmada", err.message);
@@ -1220,6 +1239,8 @@
               method: "POST", body: JSON.stringify(valores),
             });
             idConfirmado = String(criada.id);
+            idParaFoto = idConfirmado;
+            versaoParaFoto = criada.versao;
           } catch (err) {
             showApiFieldErrors(form, err.fields);
             toast("error", "Atividade não criada", err.message);
@@ -1232,6 +1253,9 @@
         toast("success", "Atividade criada", `${nome} agendada em ${talhao}.`);
 
       }
+
+      const fotoArquivo = form.querySelector("[data-activity-foto]")?.files?.[0] || null;
+      if (fotoArquivo && idParaFoto) await enviarFotoAtividade(idParaFoto, versaoParaFoto ?? 1, fotoArquivo);
 
       document.dispatchEvent(new CustomEvent("agro:operation-saved", { detail: { tipo: "atividade", descricao: nome, talhao } }));
       closeModal(modal);
@@ -1298,13 +1322,12 @@
           cultura: item.cultura || "",
           status: item.status,
         }));
-        apiDisponivel = true;
         restoreActivities(records);
         window.AgroLocal.save("activities", records);
       }
     } catch (err) {
-      // Mantém o cache local se o servidor estiver temporariamente indisponível
-      toast("error", "Atividades sem conexão", `${err.message} Exibindo o último cache confirmado desta propriedade.`);
+      restoreActivities([]);
+      toast("error", "Atividades sem conexão", `${err.message} Recarregue para tentar novamente.`);
     }
   }
 
@@ -1328,7 +1351,9 @@
   }
 
   function init() {
-    persist = window.AgroLocal.connect("activities", () => $$(".kanban-card").map((row) => ({
+    restoreActivities([]);
+    persist = () => {
+      window.AgroLocal.save("activities", $$(".kanban-card").map((row) => ({
       id: row.dataset.id,
       activity: row.dataset.activity,
       tipo: row.dataset.tipo,
@@ -1341,7 +1366,10 @@
       safra: row.dataset.safra || "",
       cultura: row.dataset.cultura || "",
       status: row.dataset.status,
-    })), restoreActivities);
+    })));
+      // O servidor já confirmou a operação; falha do cache não desfaz dados remotos.
+      return true;
+    };
 
     initGenericModals();
     initPrepToasts();
@@ -1354,7 +1382,6 @@
     initActivityForm();
     initCompleteConfirm();
     initCancelConfirm();
-    initDeleteConfirm();
     // O select passa a conter somente talhões confirmados pela API ou cache.
     document.addEventListener("agro:plots-loaded", () => { talhoesCarregados = true; }, { once: true });
     applyFilters();

@@ -1,14 +1,17 @@
 /* Miguel — RA: 25003110 */
-/* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
+/* Autor secundário: Pedro André do Carmo Chavier - RA: 25018639 (posição da ocorrência no polígono do talhão, #232) */
 /* Ocorrências: a API é a fonte dos dados. Nenhum registro mock é importado. */
 (() => {
   "use strict";
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const labels = { ABERTA: "Aberta", EM_ACOMPANHAMENTO: "Em acompanhamento", RESOLVIDA: "Resolvida" };
   const titles = { registro: "Ocorrência registrada", editar: "Cadastro editado", acompanhamento: "Acompanhamento iniciado", atualizacao: "Atualização publicada", resolucao: "Ocorrência resolvida", excluir: "Ocorrência excluída" };
   let propertyId = "", active = null, editing = null, busy = false, ready = false, loadNumber = 0;
+  let detailPhotoObjectUrl = null;
+  let polygons = new Set(), polygonsFailed = false; // talhões com polígono (GET /api/mapa, uma vez)
   const form = $("[data-occ-form]");
   const field = (name) => form.elements.namedItem(name);
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -25,6 +28,52 @@
   function today() {
     const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
     return ["year", "month", "day"].map((key) => parts.find((p) => p.type === key).value).join("-");
+  }
+
+  /** Lê arquivo local como Base64 (sem prefixo data URL) para POST .../foto. */
+  function lerArquivoComoBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Não foi possível ler a imagem selecionada."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /** GET autenticado da imagem binária (#176); retorna object URL ou null. */
+  async function urlDaFoto(ocorrenciaId) {
+    const token = sessionStorage.getItem("agro.sessionToken");
+    if (!token || !ocorrenciaId) return null;
+    const response = await fetch(`${base}/api/ocorrencias/${encodeURIComponent(ocorrenciaId)}/foto`, {
+      headers: { Authorization: "Bearer " + token },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Não foi possível carregar a foto anexada.");
+    return URL.createObjectURL(await response.blob());
+  }
+
+  /** Envia foto após cadastro confirmado; falha aqui não desfaz o registro (#175). */
+  async function enviarFoto(ocorrenciaId, versao, file, errorElement) {
+    if (!file) return null;
+    if (errorElement) errorElement.textContent = "";
+    const conteudoBase64 = await lerArquivoComoBase64(file);
+    try {
+      return await request(`/api/ocorrencias/${encodeURIComponent(ocorrenciaId)}/foto`, {
+        method: "POST",
+        body: JSON.stringify({
+          versao,
+          conteudoBase64,
+          tipoMime: file.type || "image/jpeg",
+          nomeArquivo: file.name,
+          contextoPropriedadeId: propertyId,
+        }),
+      });
+    } catch (error) {
+      if (errorElement) errorElement.textContent = error.message;
+      toast("warning", "Cadastro salvo; foto não enviada", error.message);
+      return null;
+    }
   }
 
   async function request(path, options = {}) {
@@ -97,9 +146,19 @@
   async function showDetail(id) {
     const [record, events] = await Promise.all([request("/api/ocorrencias/" + id), request("/api/ocorrencias/" + id + "/timeline")]);
     active = record;
+    if (detailPhotoObjectUrl) URL.revokeObjectURL(detailPhotoObjectUrl);
+    detailPhotoObjectUrl = null;
+    const photoWrap = $("[data-detail-photo-wrap]");
+    const photoImg = $("[data-detail-photo]");
+    const photoMeta = $("[data-detail-photo-meta]");
+    const photoInput = $("[data-occ-foto-detail]");
+    if (photoInput) photoInput.value = "";
+    $("[data-occ-photo-error]").textContent = "";
     $("[data-detail-title]").textContent = record.titulo; $("[data-detail-subtitle]").textContent = `${record.talhaoNome || "Geral da propriedade"} · ${date(record.data)}`;
     $("[data-detail-description]").textContent = record.descricao || "Sem descrição informada.";
     $("[data-detail-badges]").replaceChildren(badge(record.prioridade), badge(record.status, "status"));
+    $("[data-detail-geo]").hidden = !record.talhaoId;
+    $("[data-detail-geo-text]").textContent = record.localizacao ? `Posição: ${Number(record.localizacao.lat).toFixed(6)}, ${Number(record.localizacao.lng).toFixed(6)}.` : "Posição: no talhão (sem ponto marcado).";
     const metadata = { Tipo: record.tipo, Propriedade: $(".sidebar-user-property").textContent, Talhão: record.talhaoNome || "Geral da propriedade", Safra: record.safra || "Sem vínculo", "Data da ocorrência": date(record.data), "Registrada em": timestamp(record.criadaEm), "Resolvida em": timestamp(record.resolvidaEm), Status: record.excluida ? "Excluída (consulta)" : labels[record.status] };
     $("[data-detail-meta]").replaceChildren(...Object.entries(metadata).map(([key, value]) => {
       const cell = node("div", null, "meta-cell"); cell.append(node("span", key, "meta-cell-label"), node("span", value, "meta-cell-value")); return cell;
@@ -120,7 +179,34 @@
     for (const key of ["resolve", "edit"]) $(`[data-detail-${key}]`).hidden = readonly;
     $("[data-detail-delete]").hidden = record.excluida;
     $("[data-update-text]").closest(".textarea-group").hidden = readonly;
-    $("[data-occ-detail-error]").textContent = ""; openModal("occ-detail");
+    $("[data-occ-detail-error]").textContent = "";
+    if (record.temFoto) {
+      try {
+        detailPhotoObjectUrl = await urlDaFoto(id);
+        photoWrap.hidden = !detailPhotoObjectUrl;
+        if (detailPhotoObjectUrl) {
+          photoImg.src = detailPhotoObjectUrl;
+          photoMeta.textContent = [record.fotoNomeArquivo, record.fotoMime, record.fotoTamanhoBytes ? `${record.fotoTamanhoBytes} bytes` : ""].filter(Boolean).join(" · ");
+        }
+      } catch (error) {
+        photoWrap.hidden = true;
+        toast("warning", "Foto indisponível", error.message);
+      }
+    } else {
+      photoWrap.hidden = true;
+      photoImg.removeAttribute("src");
+      photoMeta.textContent = "";
+    }
+    $("[data-detail-photo-upload]").hidden = record.excluida;
+    openModal("occ-detail");
+  }
+  // A posição só existe dentro do polígono do talhão; sem polígono, a ocorrência fica no talhão.
+  function geoBlock() {
+    const plot = field("talhaoId").value, hasPolygon = polygons.has(plot);
+    $("[data-occ-geo]").hidden = !plot; $("[data-occ-geo-fields]").hidden = !hasPolygon;
+    $("[data-occ-geo-hint]").textContent = hasPolygon ? "Marque a posição dentro do polígono do talhão (opcional)."
+      : polygonsFailed ? "Não foi possível consultar os polígonos agora: a ocorrência fica no talhão." : "Este talhão não tem polígono: a ocorrência fica no talhão.";
+    if (!hasPolygon) { $("[data-occ-lat]").value = ""; $("[data-occ-lng]").value = ""; }
   }
   function priority(value) {
     field("prioridade").value = value;
@@ -131,6 +217,7 @@
     $$("[aria-invalid]", form).forEach((el) => el.removeAttribute("aria-invalid"));
     for (const key of ["titulo", "tipo", "talhaoId", "data", "descricao"]) field(key).value = record?.[key] || "";
     if (!record) { field("data").value = today(); field("talhaoId").value = $("[data-occ-plot-filter]").value; }
+    $("[data-occ-lat]").value = record?.localizacao?.lat ?? ""; $("[data-occ-lng]").value = record?.localizacao?.lng ?? ""; geoBlock();
     priority(record?.prioridade || "Baixa"); $("#occ-form-title").textContent = record ? "Editar ocorrência" : "Registrar ocorrência";
     $("button[type=submit]", form).textContent = record ? "Salvar alterações" : "Registrar ocorrência"; openModal("occ-form");
   }
@@ -170,6 +257,10 @@
       $(".sidebar-user-name").textContent = me.usuario.name || me.usuario.nome || "Usuário"; $(".sidebar-user-property").textContent = property;
       $(".sidebar-avatar").textContent = (me.usuario.name || me.usuario.nome || "U").split(/\s+/).slice(0, 2).map((s) => s[0]).join("");
       field("talhaoId").replaceChildren(new Option("Geral da propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
+      try {
+        const map = await request("/api/mapa?ocorrencias=todas");
+        polygons = new Set(map.talhoes.filter((p) => p.localizacao?.tipo === "poligono").map((p) => p.id)); polygonsFailed = false;
+      } catch { polygons = new Set(); polygonsFailed = true; }
       $("[data-occ-plot-filter]").replaceChildren(new Option("Toda a propriedade", ""), ...plots.map((p) => new Option(p.nome, p.id)));
       const params = new URLSearchParams(location.search), requested = params.get("talhaoId") || params.get("talhao");
       if (requested) {
@@ -193,10 +284,36 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !busy) closeModals(); });
     $("[data-open-modal='occ-form']").addEventListener("click", () => edit(null));
     $$("[data-priority]").forEach((b) => b.addEventListener("click", () => priority(b.dataset.priority)));
+    field("talhaoId").addEventListener("change", geoBlock);
     form.addEventListener("submit", (e) => {
       e.preventDefault(); $$(".field-error", form).forEach((el) => { el.textContent = ""; });
-      const payload = Object.fromEntries(new FormData(form)); if (editing) payload.versao = editing.versao;
-      write("/api/ocorrencias" + (editing ? "/" + editing.id : ""), editing ? "PUT" : "POST", payload, $("[data-occ-form-error]"), async (saved) => { closeModals(); await showDetail(saved.id); });
+      const payload = Object.fromEntries(new FormData(form));
+      const fotoInput = $("[data-occ-foto-input]");
+      const arquivo = fotoInput?.files?.[0] || null;
+      if (editing) payload.versao = editing.versao;
+      const lat = $("[data-occ-lat]").value.trim(), lng = $("[data-occ-lng]").value.trim();
+      if (!$("[data-occ-geo-fields]").hidden && (lat || lng)) {
+        if (!lat || !lng) { $("[data-error-for='localizacao']", form).textContent = "Preencha latitude e longitude, ou deixe as duas em branco."; return; }
+        payload.localizacao = { lat: Number(lat), lng: Number(lng) };
+      }
+      write("/api/ocorrencias" + (editing ? "/" + editing.id : ""), editing ? "PUT" : "POST", payload, $("[data-occ-form-error]"), async (saved) => {
+        let atual = saved;
+        if (arquivo) {
+          const comFoto = await enviarFoto(saved.id, saved.versao, arquivo, $("[data-error-for='conteudoBase64']", form));
+          if (comFoto) atual = comFoto;
+          if (fotoInput) fotoInput.value = "";
+        }
+        closeModals();
+        await showDetail(atual.id);
+      });
+    });
+    $("[data-occ-foto-detail]")?.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file || !active) return;
+      setBusy(true);
+      const atualizado = await enviarFoto(active.id, active.versao, file, $("[data-occ-photo-error]"));
+      setBusy(false);
+      if (atualizado) await showDetail(atualizado.id);
     });
     $("[data-detail-edit]").addEventListener("click", () => edit(active));
     $("[data-detail-follow]").addEventListener("click", () => publish("acompanhamento"));

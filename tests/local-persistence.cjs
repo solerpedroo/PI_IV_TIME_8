@@ -36,7 +36,7 @@ async function context(browser, storageFailure) {
     sessionStorage.setItem('agro.sessionToken', 'e2e-local');
     sessionStorage.setItem('agro.sessionUser', JSON.stringify({id: 'e2e-local', propriedadeId: 'e2e-property'}));
   });
-  await browserContext.route('http://127.0.0.1:8080/api/me', async (route) => {
+  await browserContext.route(origin + '/api/me', async (route) => {
     const headers = {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Headers': 'Authorization',
       'Access-Control-Allow-Methods': 'GET, OPTIONS'};
     if (route.request().method() === 'OPTIONS') return route.fulfill({status: 204, headers});
@@ -156,6 +156,8 @@ async function test(name, run) {
           await page.goto(origin + "/atividades.html");
           await page.evaluate(([key, raw]) => localStorage.setItem(key, raw), [prefix + "activities", value]);
           await page.reload();
+          // A tela consulta a API; o teste lê explicitamente o cache inválido.
+          await page.evaluate(() => window.AgroLocal.read("activities", []));
           assert.equal(await page.locator(".kanban-card").count(), 0);
           assert.equal(await page.locator("[data-storage-error]").count(), 1);
           assert.equal(await page.evaluate((key) => localStorage.getItem(key), prefix + "activities"), value);

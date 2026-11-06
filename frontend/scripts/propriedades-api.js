@@ -3,8 +3,7 @@
 
 /*
   Conecta a aba Propriedade à API Java quando há uma sessão autenticada.
-  Sem token, a tela mantém o modo demonstrativo já existente, sem simular gravação
-  remota. A seleção é enviada ao servidor, portanto Áreas de Cultivo receberá o
+  A seleção é enviada ao servidor, portanto Áreas de Cultivo receberá o
   contexto correto mesmo após recarregar a página.
 */
 (() => {
@@ -14,11 +13,12 @@
   if (!form) return;
 
   const token = () => sessionStorage.getItem("agro.sessionToken");
-  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
   const request = async (path, options = {}) => {
     const response = await fetch(base + path, {
       ...options,
+      signal: AbortSignal.timeout(15000),
       headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json", ...(options.headers || {}) }
     });
     const body = response.status === 204 ? null : await response.json().catch(() => ({}));
@@ -28,10 +28,8 @@
 
   let currentId = null;
   let properties = [];
-  const selector = document.createElement("select");
-  selector.className = "property-context-select";
-  selector.setAttribute("aria-label", "Propriedade ativa");
-  form.closest(".settings-card")?.querySelector(".settings-card-header div")?.append(selector);
+  const selector = document.querySelector("#property-context");
+  if (!selector) return;
 
   function fill(property) {
     currentId = property.id;
@@ -44,10 +42,10 @@
   }
 
   function renderSelector() {
-    selector.replaceChildren(...properties.map((property) => {
-      const option = new Option(property.nome, property.id, false, property.id === currentId);
-      return option;
-    }));
+    selector.replaceChildren(...properties.map((property) => new Option(property.nome, property.id)));
+    if (currentId) selector.value = currentId;
+    else selector.selectedIndex = -1;
+    if (selector.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(selector);
   }
 
   async function load() {
@@ -78,6 +76,9 @@
   document.querySelector("[data-new-property]")?.addEventListener("click", () => {
     currentId = null;
     form.reset();
+    for (const field of ["farm", "area", "location", "city", "harvest"]) form.elements[field].value = "";
+    form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
+    renderSelector();
     form.elements.farm.focus();
   });
 

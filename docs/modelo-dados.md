@@ -16,7 +16,7 @@ MongoDB não oferece chave estrangeira: as escritas da aplicação devem passar 
 
 São coleções separadas: a safra referencia uma cultura e um ou mais talhões, permitindo várias safras ao longo do tempo sem substituir a cultura histórica do talhão. Datas de calendário usam ISO `YYYY-MM-DD`, sem conversão de fuso. O fim não pode anteceder o início; a lista de talhões deve ser não vazia, sem duplicatas. Um talhão não pode entrar em duas safras com períodos sobrepostos. Status da safra: PLANEJAMENTO, PREPARACAO, PLANTIO, MANEJO, COLHEITA, FINALIZADA; o avanço é sequencial e grava cada etapa em `historicoEtapas`. Índices começam pelo titular e propriedade; nome de talhão, cultura e safra é único por propriedade; há índice para consultar safras por talhão e início.
 
-A API HTTP autenticada de safras do produto fica em `backend/servidor` (`SafrasHandler` + Bearer). O `core` valida o modelo e os índices; não expõe CRUD HTTP sem sessão. Ausência de recurso no repositório levanta `RecursoNaoEncontradoException` (distinta de validação com `IllegalArgumentException`). Visão I10/I11: [safras.md](safras.md).
+A API HTTP autenticada de safras do produto fica em `backend/api` (`SafrasHandler` + Bearer). O `core` valida o modelo e os índices; não expõe CRUD HTTP sem sessão. Ausência de recurso no repositório levanta `RecursoNaoEncontradoException` (distinta de validação com `IllegalArgumentException`). Visão I10/I11: [safras.md](safras.md).
 
 ## Validação reproduzível
 
@@ -75,15 +75,40 @@ O exemplo oficial preserva entrada de 500 kg e consumo de 50 kg; a soma das vari
 
 ## #104 — Ocorrências e timeline
 
-`ocorrencias`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, título, tipo, data, prioridade, descrição, foto opcional, `criadaEm`, `statusInicial=ABERTA`. Ocorrências gerais podem pertencer somente à propriedade, conforme §11 do projeto. Os vínculos informados devem estar no mesmo escopo; quando houver safra, ela deve conter o talhão.
+`ocorrencias`: `_id`, titularidade, `talhaoId`/`safraId` opcionais, título, tipo, data, prioridade, descrição, `fotoEvidencia` opcional (subdocumento com `dados` Binary, `mime`, metadados), `criadaEm`, `statusInicial=ABERTA`, `versao`. Ocorrências gerais podem pertencer somente à propriedade, conforme §11 do projeto. Os vínculos informados devem estar no mesmo escopo; quando houver safra, ela deve conter o talhão.
 
 `ocorrencias_timeline`: titularidade, `ocorrenciaId`, ordem, data do registro, status e descrição. Usa a mesma estratégia de eventos separados da atividade. ABERTA admite acompanhamento ou resolução; EM_ACOMPANHAMENTO admite novas anotações e resolução; RESOLVIDA preserva o desfecho. A consulta mantém todos os eventos em ordem depois da resolução. A leitura do estado atual usa apenas o último evento pelo índice, sem carregar toda a timeline. Não há exclusão/cascata nesta frente.
 
-Vocabulário e foto opcional seguem o projeto §8.7; se `fotoUrl` for informada, deve começar com `http://` ou `https://`. As divergências da #5 permanecem naquela frente. Execute também `br.com.agrogestao.core.domain.operacao.DadosOcorrenciaTest` para a validação local. O cenário Atlas inclui dois clientes concorrendo pela mesma ordem e exige exatamente uma atualização aceita.
+Vocabulário e foto opcional seguem o projeto §8.7. Na API HTTP desta branch, a evidência é binária em `fotoEvidencia` (não `fotoUrl` no body JSON). O módulo `backend/core` ainda valida `fotoUrl` http(s) em testes locais (#5). Execute também `br.com.agrogestao.core.domain.operacao.DadosOcorrenciaTest` para a validação local. O cenário Atlas inclui dois clientes concorrendo pela mesma ordem e exige exatamente uma atualização aceita.
+
+`atividades`: inclui `versao` e `fotoEvidencia` opcional com o mesmo formato de ocorrências; upload via `POST /api/atividades/{id}/foto` com controle otimista de `versao`.
 
 ### Evidência da #104 — 23/10/2026
 
 `DadosOcorrenciaTest: OK` e `CicloDadosAtlasTest: OK (#101–#104)`. A ocorrência resolvida manteve quatro eventos consultáveis após reconexão; dois clientes concorrentes pela ordem 2 resultaram em exatamente uma gravação. Referências cruzadas, data regressiva e reabertura após resolução foram rejeitadas. Timeline e estado isolados por produtor/propriedade. Dados fictícios removidos.
+
+
+## #230 — Georreferenciamento simplificado (API `backend/api`)
+
+Extensão de `talhoes` e `ocorrencias` da propriedade autenticada (#12/#13, ocorrências #20). Sem satélite, NDVI ou GIS avançado.
+
+- `talhoes.localizacao` (opcional): `{tipo: "ponto"|"poligono", pontos: [{lat, lng}, ...]}`. Ponto = 1 vértice; polígono = 3 a 50 vértices (validação no serversocket `GeometriaDeTalhao`). `PUT/DELETE /api/talhoes/{id}/localizacao` alteram só este campo; o `PUT` geral do talhão preserva a localização. Talhão sem localização **não** entra no desenho do mapa (`semLocalizacao` em `GET /api/mapa`).
+- `ocorrencias.localizacao` (opcional): `{lat, lng}` só quando a ocorrência tem `talhaoId` e o talhão tem **polígono**, com o ponto dentro da área. Sem polígono ou sem posição, a ocorrência aparece no centro do talhão no mapa. A posição é copiada nos eventos da timeline (`dados.localizacao`).
+- `GET /api/mapa`: agrega talhões localizados (com `centro`, `areaCalculadaHectares` calculados no socket), ocorrências por talhão, contagem `semLocalizacao` / `ocorrenciasSemTalhao` e `limites` do viewport. Escopo = **uma propriedade por sessão** (sem paginação nesta entrega; volume típico de talhões/ocorrências da fazenda).
+
+Regras de integridade: não remover nem encolher polígono deixando ocorrência marcada fora (409 com `ocorrenciaId` / `ocorrenciaTitulo`). Contrato e evidências: [georreferenciamento.md](georreferenciamento.md), `TesteGeorreferenciamento`, `TesteGeometria`, `tests/georreferenciamento-real.cjs`.
+
+
+## #234 — Manutenção de equipamentos (API `backend/api`)
+
+Complementa o módulo de custos (#22/#105). Todo registro carrega `propriedadeId`; consultas e gravações filtram por essa chave (recurso de outra propriedade responde 404).
+
+- `equipamentos`: `_id`, `propriedadeId`, `nome`, `nomeNormalizado` (único por propriedade), `tipo`, `marca`, `modelo`, `identificacao`, `ano`, `horimetro`, `status` (Ativo, Em manutenção, Inativo), `criadoEm`, `atualizadoEm`. Não há exclusão física nesta entrega.
+- `preventivas`: `_id`, `propriedadeId`, `equipamentoId`, `descricao`, `dataPrevista`, `intervaloDias` opcional, `status` (`programada`, `realizada`, `cancelada`), `intervencaoId` quando realizada, `realizadaEm`, `geradaPorIntervencaoId` opcional, timestamps. A realização de uma preventiva programada usa update condicional (`status = programada`) para evitar duas intervenções na mesma preventiva.
+- `intervencoes`: `_id`, `propriedadeId`, `equipamentoId`, `preventivaId` opcional, `proximaPreventivaId` opcional (preventiva gerada ao concluir uma programada com intervalo), `tipo` (`preventiva`/`corretiva`), `data`, `descricao`, `responsavel`, `horimetro`, `valor` opcional (≥ R$ 0,01 para gerar custo), `talhaoId`/`safraId` opcionais, `custoId` quando houver lançamento, timestamps. Índice `(propriedadeId, equipamentoId, data)` para histórico.
+- `custos` (extensão da #105): lançamentos gerados pela manutenção usam `category = Maquinário`, `origem: {tipo: "manutencao", intervencaoId, equipamentoId}` e índice único parcial `(propriedadeId, origem.intervencaoId)`. Sem valor informado na intervenção **não** se cria despesa zerada. `PUT`/`DELETE` direto no custo de manutenção respondem 409; a correção é pela intervenção.
+
+Validações de campo e situação da agenda (`atrasada`/`proxima`/`futura`) ficam no serversocket (`ValidadorDeManutencao`, `AgendaDeManutencao`). Contrato HTTP e evidências: [manutencao.md](manutencao.md), `TesteManutencao` e `tests/manutencao-real.cjs`.
 
 
 ## #105 — Custos e origem do gasto

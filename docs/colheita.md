@@ -4,7 +4,7 @@
 A safra passou a registrar o que foi colhido em cada talhão e a calcular a
 produtividade por hectare com a área real, comparando os ciclos produtivos. É
 controle gerencial: não há previsão de produtividade nem valor estimado. O
-contrato da API está no [README do servidor](../backend/servidor/README.md).
+contrato da API está no [README do servidor](../backend/api/README.md).
 
 ## Persistir a colheita por safra e talhão (#223)
 
@@ -59,7 +59,7 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
 
 ## Evidência
 
-- `backend/servidor/testar.sh`: `TesteColheitas` com 44 verificações em memória
+- `backend/api/testar.sh`: `TesteColheitas` com 44 verificações em memória
   sobre um conjunto conhecido (Soja 24/25 com 150 t em 50 ha = 50 sc/ha e Soja
   25/26 com 186 t = 62 sc/ha, +24%): todas as recusas, etapa antes do plantio,
   conversão de unidades, resumo por safra, talhão, cultura e período (com

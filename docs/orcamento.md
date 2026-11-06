@@ -4,7 +4,7 @@
 O orçamento deixou de ser um número guardado só no navegador (o antigo
 "R$ 520.000" do card de Custos). Agora cada safra pode ter um valor planejado
 gravado no servidor, e o realizado vem dos custos efetivos lançados nela. O
-contrato da API está no [README do servidor](../backend/servidor/README.md).
+contrato da API está no [README do servidor](../backend/api/README.md).
 
 ## Persistir o orçamento por safra (#227)
 
@@ -56,7 +56,7 @@ contrato da API está no [README do servidor](../backend/servidor/README.md).
 
 ## Evidência
 
-- `backend/servidor/testar.sh`: `TesteOrcamentos` com 41 verificações em memória
+- `backend/api/testar.sh`: `TesteOrcamentos` com 41 verificações em memória
   (situação nos limites, todas as recusas, criação 201 e alteração 200,
   realizado igual ao resumo de custos, saldo, desvio e percentuais, proximidade
   e ultrapassagem, custo excluído saindo do realizado, isolamento entre

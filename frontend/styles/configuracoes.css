@@ -7,13 +7,14 @@
 .settings-nav-item:hover { background: var(--surface); color: var(--text-primary); }
 .settings-nav-item.is-active { border-color: var(--border); background: var(--surface); color: var(--primary); font-weight: 600; box-shadow: 0 2px 8px rgba(26,51,36,.05); }
 .settings-panel { min-width: 0; min-height: 0; overflow: auto; padding-right: 2px; }
-.settings-section { max-width: 900px; animation: settings-enter .22s ease both; }
+.settings-section { display: grid; gap: 16px; max-width: 900px; animation: settings-enter .22s ease both; }
 .settings-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-card); }
 .settings-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.settings-card-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .settings-card-header h2 { margin: 0 0 4px; font-family: var(--font-heading); font-size: 18px; font-weight: 600; }
 .settings-card-header p { margin: 0; color: var(--text-secondary); font-size: 12px; }
 .settings-form { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 24px; padding: 24px; }
-.settings-form-single { display: grid; grid-template-columns: 1fr; }
+.settings-form-single { display: grid; grid-template-columns: 1fr; gap: 16px; align-content: start; }
 .profile-avatar-column { display: grid; align-content: start; justify-items: center; gap: 12px; }
 .profile-large-avatar { display: grid; width: 88px; height: 88px; place-items: center; border-radius: 50%; background: var(--primary); color: var(--text-inverse); font-size: 24px; font-weight: 600; }
 .btn-small { min-height: 34px; padding: 8px 11px; font-size: 12px; }
