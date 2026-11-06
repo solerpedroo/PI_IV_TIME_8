@@ -5,6 +5,7 @@ on:
     paths:
       - "frontend/styles/**"
       - "frontend/scripts/**"
+      - "frontend/partials/**"
       - "tests/ui-polish.cjs"
       - "tests/empty-state-origin.cjs"
       - "tests/mock-api.cjs"
@@ -18,6 +19,7 @@ on:
     paths:
       - "frontend/styles/**"
       - "frontend/scripts/**"
+      - "frontend/partials/**"
       - "tests/ui-polish.cjs"
       - "tests/empty-state-origin.cjs"
       - "tests/mock-api.cjs"
