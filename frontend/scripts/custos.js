@@ -62,95 +62,6 @@
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
   }
 
-  function displayDate(value) {
-    if (!value) return "Selecione a data";
-    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
-  }
-
-  function initDatePicker() {
-    const input = $("#cost-date");
-    if (!input || $("[data-open-date-modal]")) return;
-    input.type = "hidden";
-    const trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.id = `${input.id}-trigger`;
-    // O rótulo continua acionando o controle visível após trocar o input nativo.
-    document.querySelector(`label[for="${input.id}"]`)?.setAttribute('for', trigger.id);
-    trigger.className = "date-picker-trigger";
-    trigger.dataset.openDateModal = "";
-    trigger.setAttribute("aria-haspopup", "dialog");
-    trigger.setAttribute("aria-controls", "date-form");
-    trigger.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span data-date-label>Selecione a data</span>';
-    input.parentNode.insertBefore(trigger, input);
-
-    const modal = document.createElement("div");
-    modal.className = "modal-backdrop";
-    modal.id = "date-form";
-    modal.dataset.modal = "date-form";
-    modal.setAttribute("aria-hidden", "true");
-    modal.setAttribute("role", "presentation");
-    modal.innerHTML = '<div class="modal calendar-modal" role="dialog" aria-modal="true" aria-labelledby="date-form-title"><div class="calendar-modal-header"><div><h2 id="date-form-title">Selecionar data</h2><p data-calendar-selected>Escolha uma data para o lançamento.</p></div><button class="icon-btn icon-btn--sm" type="button" data-calendar-close aria-label="Fechar calendário"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="calendar-toolbar"><button class="icon-btn icon-btn--sm" type="button" data-calendar-prev aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><strong data-calendar-month></strong><button class="icon-btn icon-btn--sm" type="button" data-calendar-next aria-label="Próximo mês"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div><div class="calendar-weekdays" aria-hidden="true"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div><div class="calendar-grid" data-calendar-grid role="grid" aria-label="Calendário"></div><div class="calendar-footer"><button class="btn btn-ghost" type="button" data-calendar-clear>Limpar</button><button class="btn btn-outline" type="button" data-calendar-today>Hoje</button></div></div>';
-    document.body.appendChild(modal);
-    let viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
-
-    function syncLabel() {
-      $("[data-date-label]", trigger).textContent = displayDate(input.value);
-      $("[data-calendar-selected]", modal).textContent = input.value ? `Data selecionada: ${displayDate(input.value)}` : "Escolha uma data para o lançamento.";
-    }
-
-    function renderCalendar() {
-      const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(viewDate);
-      $("[data-calendar-month]", modal).textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
-      const grid = $("[data-calendar-grid]", modal);
-      const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-      grid.innerHTML = "";
-      for (let index = 0; index < 42; index += 1) {
-        const offset = index - first.getDay() + 1;
-        const date = new Date(viewDate.getFullYear(), viewDate.getMonth(), offset);
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "calendar-day";
-        button.textContent = String(date.getDate());
-        button.dataset.calendarDate = dateToISO(date);
-        button.setAttribute("role", "gridcell");
-        if (date.getMonth() !== viewDate.getMonth()) button.classList.add("is-outside");
-        if (dateToISO(date) === input.value) button.classList.add("is-selected");
-        if (dateToISO(date) === dateToISO(new Date())) button.classList.add("is-today");
-        button.addEventListener("click", () => {
-          input.value = button.dataset.calendarDate;
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          syncLabel();
-          closeCalendar();
-        });
-        grid.appendChild(button);
-      }
-    }
-
-    function openCalendar() {
-      viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
-      renderCalendar();
-      syncLabel();
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
-    }
-
-    function closeCalendar() {
-      modal.classList.remove("is-open");
-      modal.setAttribute("aria-hidden", "true");
-      trigger.focus();
-    }
-
-    trigger.addEventListener("click", openCalendar);
-    $("[data-calendar-prev]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
-    $("[data-calendar-next]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
-    $("[data-calendar-clear]", modal).addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("change", { bubbles: true })); syncLabel(); closeCalendar(); });
-    $("[data-calendar-today]", modal).addEventListener("click", () => { input.value = dateToISO(new Date()); input.dispatchEvent(new Event("change", { bubbles: true })); syncLabel(); closeCalendar(); });
-    $("[data-calendar-close]", modal).addEventListener("click", closeCalendar);
-    modal.addEventListener("click", (event) => { if (event.target === modal) closeCalendar(); });
-    input.addEventListener("change", syncLabel);
-    syncLabel();
-  }
-
   function formatDate(value) {
     if (!value) return "-";
     return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(`${value}T12:00:00`)).replace(".", "");
@@ -848,7 +759,6 @@
     persist = window.AgroLocal.connect("costs", () => ({ budget: state.legacyBudget, period: periodToken(), entries: [] }),
       (records) => { state.legacyBudget = records.budget; readPeriod(records.period); },
       initial, { budget: initial.budget, period: "todo", entries: [] });
-    initDatePicker();
     initForm();
     initBudgetModal();
     initPeriodModal();

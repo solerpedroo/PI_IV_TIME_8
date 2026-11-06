@@ -42,6 +42,28 @@
   flex-shrink: 0;
 }
 
+/* Calendário e horário compartilhados (date-picker.js / time-picker.js). */
+.date-picker-trigger { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); color: var(--text-secondary); font: inherit; text-align: left; }
+.date-picker-trigger:hover { border-color: var(--primary); color: var(--text-primary); }
+.date-picker-trigger svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.calendar-modal { width: min(420px, calc(100vw - 32px)); }
+.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.calendar-toolbar strong { color: var(--text-primary); font-size: 14px; }
+.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calendar-day { display: grid; aspect-ratio: 1; place-items: center; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); font-size: 12px; }
+.calendar-day:hover { border-color: var(--primary); background: var(--primary-subtle); }
+.calendar-day.is-outside { color: var(--text-muted); }
+.calendar-day.is-today { border-color: var(--accent); font-weight: 700; }
+.calendar-day.is-selected { border-color: var(--primary); background: var(--primary); color: var(--text-inverse); font-weight: 700; }
+.calendar-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.time-modal { width: min(420px, calc(100vw - 32px)); }
+.time-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 8px 0 16px; }
+.time-columns span { display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 12px; }
+.time-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 220px; overflow: auto; }
+.time-option { min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-primary); font: inherit; }
+.time-option.is-selected, .time-option:hover { border-color: var(--primary); background: var(--primary-subtle); }
+.month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
 /* -------------------------------------------------------------------------- */
 /* Sidebar                                                                    */
 /* -------------------------------------------------------------------------- */
