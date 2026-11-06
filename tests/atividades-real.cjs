@@ -349,6 +349,7 @@ async function clickCardAction(page, name, action) {
     await page.locator('.kanban-card[data-activity="Atividade com falha"]').waitFor({ state: "visible" });
     await page.route("**/api/atividades/*/status", (route) => route.abort());
     await page.locator('[data-view-option="list"]').click();
+    const failedStatus = page.waitForEvent('requestfailed', {predicate: request => request.url().endsWith('/status')});
     await page.evaluate(() => {
       const row = [...document.querySelectorAll('[data-list-body] tr')]
         .find((item) => item.cells[0].textContent === "Atividade com falha");
@@ -356,7 +357,8 @@ async function clickCardAction(page, name, action) {
       select.value = "Agendada";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await page.waitForTimeout(150);
+    await failedStatus;
+    await page.waitForFunction(() => [...document.querySelectorAll('.toast')].some(el => el.textContent.includes('Status não alterado')));
     assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente");
     await page.unroute("**/api/atividades/*/status");
 
@@ -367,18 +369,10 @@ async function clickCardAction(page, name, action) {
     });
     await page.route("**/api/atividades/*/status", (route) => route.abort());
     await page.reload();
-    await page.waitForSelector('.kanban-card[data-activity="Atividade com falha"]');
-    await page.locator('[data-view-option="list"]').click();
-    await page.evaluate(() => {
-      const row = [...document.querySelectorAll('[data-list-body] tr')]
-        .find((item) => item.cells[0].textContent === "Atividade com falha");
-      const select = row.querySelector("select");
-      select.value = "Agendada";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    await page.waitForTimeout(150);
-    assert.equal(await page.locator('.kanban-card[data-activity="Atividade com falha"]').getAttribute("data-status"), "Pendente",
-      "Falha de leitura e de status não confirma mudança somente no cache");
+    await page.waitForLoadState('networkidle');
+    assert.equal(await page.locator('.kanban-card').count(), 0,
+      'Falha de leitura não restaura atividades antigas do cache');
+    assert.equal((await api('/api/atividades', null, sessionToken)).data.find(a => a.nome === 'Atividade com falha').status, 'Pendente');
     await page.unroute("**/api/atividades");
     await page.unroute("**/api/atividades/*/status");
     await page.reload();

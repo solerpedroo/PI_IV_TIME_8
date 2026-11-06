@@ -6,7 +6,7 @@
   const content = modal.querySelector('[data-report-content]');
   const message = modal.querySelector('[data-report-message]');
   const exportButton = modal.querySelector('[data-export-report]');
-  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const money = cents => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
   let snapshot = null, generation = 0, loadedContext = "", opener = null;
   const { escape, context } = window.AgroRelatorio;

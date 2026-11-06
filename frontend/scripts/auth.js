@@ -25,11 +25,8 @@
     sessionUser: "agro.sessionUser",
   };
 
-  // Quando o front é servido pelo Java, usa a mesma origem. Em um servidor
-  // estático local, usa a porta padrão do servidor Java para facilitar o desenvolvimento.
-  const API_BASE = window.location.port === "8080"
-    ? window.location.origin
-    : "http://127.0.0.1:8080";
+  // A API acompanha a origem da página, inclusive com HTTPS e portas alternativas.
+  const API_BASE = window.location.origin;
 
   const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
 
@@ -120,6 +117,7 @@
     try {
       response = await fetch(`${API_BASE}${path}`, {
         method: "POST",
+        signal: AbortSignal.timeout(15000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -318,6 +316,7 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (form.getAttribute("aria-busy") === "true") return;
       const token = String(form.elements.token.value || "").trim();
       if (!token) {
         setError(form.elements.token, "Informe o código recebido.");
@@ -381,6 +380,7 @@
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (form.getAttribute("aria-busy") === "true") return;
         clearMessage(form);
         form.classList.remove("is-invalid");
 

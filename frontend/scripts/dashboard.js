@@ -10,9 +10,10 @@
   "use strict";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const local = window.AgroLocal;
+  let refreshQuery = 0;
   const money = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
   let activities = [];
+  let activityState = "loading";
   let occurrenceQuery = 0;
   let costQuery = 0;
 
@@ -38,7 +39,7 @@
           badge.textContent = activity.status;
           cell.appendChild(badge);
         } else cell.textContent = activity[key];
-        if (index === 0 && activity.status !== 'Concluída') {
+        if (index === 0 && activity.status === 'Em andamento') {
           const actions = document.createElement('span');
           actions.className = 'row-actions';
           const button = document.createElement('button');
@@ -53,7 +54,13 @@
       });
       return row;
     }));
-    setMetric('pending', String(activities.filter((record) => ['Pendente', 'Agendada'].includes(record.status)).length));
+    setMetric('pending', activityState === 'ready' ? String(activities.filter((record) => ['Pendente', 'Agendada'].includes(record.status)).length) : '—');
+    const empty = $('[data-dashboard-activities-empty]');
+    if (empty) {
+      empty.hidden = activities.some(item => !search || `${item.activity} ${item.talhao}`.toLowerCase().includes(search));
+      empty.textContent = activityState === 'loading' ? 'Carregando atividades…' : activityState === 'error'
+        ? 'Atividades indisponíveis. Recarregue para tentar novamente.' : search ? 'Nenhuma atividade encontrada.' : 'Nenhuma atividade cadastrada.';
+    }
   }
 
   // Alertas são links para a ocorrência e o talhão que lhes deram origem.
@@ -85,7 +92,7 @@
     try {
       const token = sessionStorage.getItem('agro.sessionToken');
       if (!token) throw new Error('Sessão ausente');
-      const base = location.port === '8080' ? location.origin : 'http://127.0.0.1:8080';
+      const base = window.location.origin;
       const response = await fetch(base + '/api/ocorrencias', {headers: {Authorization: 'Bearer ' + token}, signal: AbortSignal.timeout(15000)});
       if (!response.ok) throw new Error('Consulta indisponível');
       const records = await response.json();
@@ -104,7 +111,7 @@
     try {
       const token = sessionStorage.getItem('agro.sessionToken');
       if (!token) throw new Error('Sessão ausente');
-      const base = location.port === '8080' ? location.origin : 'http://127.0.0.1:8080';
+      const base = window.location.origin;
       const response = await fetch(base + '/api/custos/resumo', {headers: {Authorization: 'Bearer ' + token}, signal: AbortSignal.timeout(15000)});
       if (!response.ok) throw new Error('Consulta indisponível');
       const summary = await response.json();
@@ -137,17 +144,52 @@
     }));
   }
 
-  function refresh() {
-    activities = local.read('activities');
-    const plots = local.read('plots');
-    const stock = local.read('stock');
+  async function api(path, options = {}) {
+    const token = sessionStorage.getItem('agro.sessionToken');
+    if (!token) throw new Error('Entre novamente para acessar o painel.');
+    const response = await fetch(location.origin + path, {
+      ...options, signal: AbortSignal.timeout(15000),
+      headers: {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'},
+    });
+    const data = response.status === 204 ? null : await response.json();
+    if (!response.ok) throw new Error(data?.error || 'Consulta indisponível.');
+    return data;
+  }
 
-    setMetric('areas', String(plots.filter((record) => record.status === 'Ativo').length));
-    setMetric('stock', String(stock.filter((record) => record.qty < record.min).length));
+  async function refresh() {
+    const query = ++refreshQuery;
+    activities = [];
+    activityState = "loading";
+    render();
+    ['pending', 'areas', 'stock'].forEach(name => setMetric(name, '—'));
+    renderCultures([]);
     loadOccurrences();
     loadCosts();
-    renderCultures(plots);
+    const select = document.querySelector('[name="activity-plot"]');
+    if (select) select.replaceChildren(new Option('Carregando talhões…', ''));
+    const results = await Promise.allSettled([
+      api('/api/atividades'), api('/api/talhoes'), api('/api/insumos'),
+    ]);
+    if (query !== refreshQuery) return;
+    const [activityResult, plotResult, stockResult] = results;
+    activityState = activityResult.status === 'fulfilled' ? 'ready' : 'error';
+    if (activityResult.status === 'fulfilled') {
+      activities = activityResult.value.map(item => ({...item, activity: item.nome, date: item.data}));
+    }
     render();
+    if (plotResult.status === 'fulfilled') {
+      const plots = plotResult.value;
+      setMetric('areas', String(plots.filter(record => record.status === 'Ativo').length));
+      renderCultures(plots.map(plot => ({crop: plot.cultura || 'Sem cultura', hectares: plot.hectares})));
+      if (select) select.replaceChildren(new Option('Selecione um talhão', ''), ...plots.map(plot => new Option(plot.nome, plot.nome)));
+    } else if (select) select.replaceChildren(new Option('Talhões indisponíveis', ''));
+    select?.dispatchEvent(new Event('change', {bubbles: true}));
+    if (stockResult.status === 'fulfilled') {
+      setMetric('stock', String(stockResult.value.filter(record => record.saldo < record.minimo || record.status === "Crítico").length));
+    }
+    if (results.some(result => result.status === 'rejected')) {
+      window.AgroToast?.show({type: 'error', title: 'Painel parcialmente indisponível', description: 'Não foi possível consultar todos os indicadores. Recarregue para tentar novamente.'});
+    }
   }
 
   // Os quatro cards são atalhos de contexto e funcionam por mouse e teclado.
@@ -167,7 +209,6 @@
   function init() {
     refresh();
     initMetricNavigation();
-    const persist = () => local.save('activities', activities);
     const modal = $('[data-modal="new-activity"]');
     const close = () => { modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); };
     $('[data-open-new-activity]')?.addEventListener('click', () => {
@@ -176,39 +217,49 @@
     });
     $$('[data-close-modal]', modal).forEach((button) => button.addEventListener('click', close));
     modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
-    $('[data-new-activity-form]').addEventListener('submit', (event) => {
+    $('[data-new-activity-form]').addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const name = form.elements['activity-name'].value.trim();
-      const plot = form.elements['activity-plot'].selectedOptions[0]?.textContent.trim() || '';
+      const plot = form.elements['activity-plot'].value;
       if (!name || !form.elements['activity-plot'].value) {
         window.AgroToast?.show({type: 'error', title: 'Falha ao salvar', description: 'Preencha o nome e o talhão da atividade.'});
         return;
       }
-      const previous = activities.slice();
-      activities.push({id: local.id(), activity: name, tipo: 'Manutenção', talhao: plot,
-        date: new Date().toLocaleDateString('pt-BR'), status: 'Pendente'});
-      if (!persist()) { activities = previous; render(); return; }
-      document.dispatchEvent(new CustomEvent('agro:operation-saved', {detail: {tipo: 'atividade', descricao: name, talhao: plot}}));
-      render(); close(); form.reset();
-      window.AgroToast?.show({type: 'success', title: 'Atividade registrada', description: name + ' salva neste navegador.'});
+      if (form.getAttribute('aria-busy') === 'true') return;
+      form.setAttribute('aria-busy', 'true');
+      try {
+        const today = new Date();
+        const date = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+        await api('/api/atividades', {method: 'POST', body: JSON.stringify({nome: name, tipo: 'Manutenção', talhao: plot, data: date})});
+        close(); form.reset();
+        document.dispatchEvent(new CustomEvent('agro:operation-saved', {detail: {tipo: 'atividade', descricao: name, talhao: plot}}));
+        window.AgroToast?.show({type: 'success', title: 'Atividade registrada', description: name + ' salva no servidor.'});
+        await refresh();
+      } catch (error) {
+        window.AgroToast?.show({type: 'error', title: 'Atividade não confirmada', description: error.message});
+      } finally { form.removeAttribute('aria-busy'); }
     });
-    $('[data-activities-table]').addEventListener('click', (event) => {
+    $('[data-activities-table]').addEventListener('click', async (event) => {
       const button = event.target.closest('[data-complete-activity]');
-      if (!button) return;
-      const record = activities.find((activity) => activity.id === button.closest('tr').dataset.id);
-      if (!record) return;
-      const previous = record.status;
-      record.status = 'Concluída';
-      if (!persist()) { record.status = previous; render(); return; }
-      render();
-      window.AgroToast?.show({type: 'success', title: 'Status atualizado', description: record.activity + ' marcada como concluída.'});
+      if (!button || button.disabled) return;
+      const record = activities.find(activity => activity.id === button.closest('tr').dataset.id);
+      if (!record || record.status !== 'Em andamento') return;
+      button.disabled = true;
+      try {
+        await api('/api/atividades/' + encodeURIComponent(record.id) + '/status', {method: 'POST', body: JSON.stringify({status: 'Concluída'})});
+        window.AgroToast?.show({type: 'success', title: 'Status atualizado', description: record.activity + ' marcada como concluída.'});
+        document.dispatchEvent(new CustomEvent('agro:operation-saved'));
+        await refresh();
+      } catch (error) {
+        button.disabled = false;
+        window.AgroToast?.show({type: 'error', title: 'Conclusão não confirmada', description: error.message});
+      }
     });
     $('[data-dashboard-search]')?.addEventListener('input', render);
     // Outra aba pode alterar os dados enquanto o painel estiver aberto.
     window.addEventListener('storage', refresh);
     window.addEventListener('pageshow', refresh);
-    document.addEventListener('agro:plots-loaded', refresh);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

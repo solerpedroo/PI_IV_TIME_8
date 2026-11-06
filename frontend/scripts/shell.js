@@ -21,9 +21,7 @@
   };
 
   // Mantém a mesma origem do servidor Java e permite desenvolvimento local.
-  const API_BASE = window.location.port === "8080"
-    ? window.location.origin
-    : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
 
   /** Remove qualquer dado de sessão que não possa mais ser usado. */
   function clearSession() {
@@ -45,13 +43,19 @@
     try {
       const response = await fetch(`${API_BASE}/api/me`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(15000),
       });
-      if (!response.ok) throw new Error("Sessão inválida");
+      if (!response.ok) throw Object.assign(new Error("Sessão não verificada"), {status: response.status});
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
       fillProfile(data.usuario, data.propriedade?.farm);
       return true;
-    } catch {
+    } catch (error) {
+      if (error.status !== 401 && error.status !== 403) {
+        window.AgroToast?.show({type: "error", title: "Servidor indisponível",
+          description: "Não foi possível verificar sua sessão. Recarregue a página para tentar novamente."});
+        return false;
+      }
       clearSession();
       sessionStorage.setItem(STORAGE.flashSuccess, "Sua sessão expirou. Entre novamente.");
       window.location.replace("login.html");

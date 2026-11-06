@@ -49,7 +49,7 @@ Este projeto **não** implementa no MVP:
 
 ### Frontend
 - **HTML / CSS / JavaScript** estáticos (sem framework SPA)
-- Design system **Forest Sage** (`docs/design/`)
+- Design system **Forest Sage** (`docs/design/`), com Geist local no aplicativo e nos slides
 - Persistência local de apoio (`agro-local.js`), escopada por usuário/propriedade — **não** substitui a API
 
 ### Backend / API
@@ -123,7 +123,7 @@ Só para inspecionar as páginas sem o servidor Java:
 python -m http.server 5500 --directory frontend
 ```
 
-Acesse `http://localhost:5500/login.html`. Fluxos autenticados e persistentes exigem o servidor na porta **8080**.
+Acesse `http://localhost:5500/login.html`. Fluxos autenticados e persistentes exigem a API na mesma origem da página. O servidor Java entrega ambos; portas alternativas e HTTPS via proxy preservam essa origem.
 
 ### 5) Saúde do serviço
 
@@ -220,7 +220,7 @@ Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/e
 ## 🛟 Troubleshooting
 
 ### Porta 8080 ocupada
-Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (ajuste o front se necessário).
+Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (abra `http://127.0.0.1:9000/login.html`).
 
 ### `/ready` falha com Mongo
 Confirme o Compose (`docker compose ps`), o `replicaSet=rs0` na URI e que o healthcheck iniciou o RS. Veja também [`docs/servidor-java.md`](docs/servidor-java.md).
@@ -228,7 +228,10 @@ Confirme o Compose (`docker compose ps`), o `replicaSet=rs0` na URI e que o heal
 ### Cadastro sem e-mail real
 Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/api/README.md`](backend/api/README.md).
 
-### Cache local vs API
+### Dados iniciais e cache local vs API
+
+Contas e propriedades começam sem registros operacionais de exemplo. Painel, talhões e atividades consultam a API; falhas de consulta não restauram demonstrações antigas. Fixtures fictícias ficam exclusivamente em `tests/`, fora dos arquivos servidos pelo aplicativo.
+
 Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é cópia de leitura escopada; falha de rede não deve confirmar mutações só no `localStorage`.
 
 ## 🔗 Materiais de apoio

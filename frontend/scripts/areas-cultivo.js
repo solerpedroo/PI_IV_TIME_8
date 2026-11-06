@@ -1,6 +1,6 @@
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
- * Agro — interações da tela Áreas de Cultivo (dados mock híbridos)
+ * Agro — interações da tela Áreas de Cultivo (dados confirmados pela API)
  * --------------------------------------------------------------------------
  * - Busca por nome + filtro por cultura (chips), com contagem de resultados
  *   e empty state (G8 "Espécime de filtros" / E "Empty states").
@@ -18,7 +18,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const API_BASE = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
 
   /** Estado local — calculado dinamicamente a partir da tabela no load. */
   const state = {
@@ -240,7 +240,7 @@
       form.cultura.value = row.dataset.crop.charAt(0).toUpperCase() + row.dataset.crop.slice(1);
       form.cultura.dispatchEvent(new Event("change"));
       form.hectares.value = row.dataset.hectares;
-      form.safra.value = row.dataset.safra || "2025/26";
+      form.safra.value = row.dataset.safra || "";
       form.status.value = row.dataset.status;
       form.status.dispatchEvent(new Event("change"));
       openModal(modal);
@@ -358,14 +358,14 @@
     initFilters();
     initPlotForm();
     // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
-    restorePlots(window.AgroLocal.read("plots", []));
+    restorePlots([]);
     api("/api/talhoes").then((records) => {
       restorePlots(records.map((record) => ({
       id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
       hectares: record.hectares, status: record.status, safra: record.safra,
       })));
       persist();
-    }).catch((error) => toast("error", "Visualização do cache local", error.message + " Alterações exigem conexão com o servidor."));
+    }).catch((error) => toast("error", "Talhões indisponíveis", error.message + " Recarregue para tentar novamente."));
   }
 
   if (document.readyState === "loading") {
