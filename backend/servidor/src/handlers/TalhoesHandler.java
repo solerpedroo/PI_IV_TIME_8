@@ -152,7 +152,7 @@ public class TalhoesHandler
 
     private static Resposta nomeRepetido ()
     {
-        return Resposta.json (409, new Document ("error", "Plot name already exists")
+        return Resposta.json (409, new Document ("error", "Já existe um talhão com esse nome.")
                                        .append ("fields", new Document ("nome", "Já existe um talhão com esse nome.")));
     }
 
@@ -164,9 +164,9 @@ public class TalhoesHandler
         synchronized (this.sessoes)
         {
             seguranca.Sessao atual = this.sessoes.buscar (requisicao.getToken ());
-            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (atual == null) return Resposta.erro (401, "Não autorizado.");
             if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-                return Resposta.erro (409, "Property context changed; reload before saving");
+                return Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
             return this.criarProtegido (requisicao);
         }
     }
@@ -199,7 +199,7 @@ public class TalhoesHandler
 
         Document anterior = this.talhoes.buscarPorId (propriedadeId, id);
         if (anterior == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         Document  corpo     = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
@@ -227,7 +227,7 @@ public class TalhoesHandler
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
         String id = requisicao.getParametro ("id");
-        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Not found");
+        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Não encontrado.");
         ArrayList<Document> ret = new ArrayList<Document> ();
         for (Document evento : this.talhoes.listarHistorico (propriedadeId, id))
             ret.add (Json.publico (evento, "propriedadeId", "talhaoId"));
@@ -239,7 +239,7 @@ public class TalhoesHandler
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
         String id = requisicao.getParametro ("id");
-        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Not found");
+        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Não encontrado.");
         Document corpo = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
         String tipo = validacao.texto ("tipo", "Informe o tipo.", 20);
