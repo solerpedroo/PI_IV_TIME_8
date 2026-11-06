@@ -16,7 +16,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const API_BASE = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
   const FINALIZACAO = "Finalização";
   const SITUACOES = { atrasada: ["Atrasada", "badge-error"], proxima: ["Próxima", "badge-warning"], futura: ["Futura", "badge-neutral"] };

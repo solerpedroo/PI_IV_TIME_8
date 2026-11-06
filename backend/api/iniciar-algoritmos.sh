@@ -1,7 +1,8 @@
 #!/bin/sh
 # Sobe o ServerSocket de algoritmos (backend/serversocket) em segundo plano para a API HTTP usar.
 # Uso: . ./iniciar-algoritmos.sh [porta]   (define ALGORITMOS_PID)
-cd "$(dirname "$0")"
+# Este arquivo é carregado com "." pelos scripts já posicionados em backend/api.
+# $0 pertence ao chamador; usá-lo aqui repetia o caminho relativo e falhava.
 PORTA="${1:-${SERVIDOR_ALGORITMOS_PORT:-3000}}"
 DIR="../serversocket"
 

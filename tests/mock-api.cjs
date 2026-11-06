@@ -1,9 +1,6 @@
 /* Miguel - RA: 25003110 */
 /* Autor Secundário: Pedro Henrique Contardi Soler - 25005592 */
-const fs = require('node:fs');
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
-const path = require('node:path');
-const vm = require('node:vm');
 
 function calendar(url, activities) {
   const de = url.searchParams.get('de'), ate = url.searchParams.get('ate');
@@ -19,9 +16,7 @@ function calendar(url, activities) {
 
 // Contrato HTTP compartilhado pelas suítes de UI; os testes Java usam servidor real.
 async function mockApi(context, origin, options = {}) {
-  const sandbox = {window: {}};
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../frontend/scripts/data/operational-defaults.js'), 'utf8'), sandbox);
-  const plots = sandbox.window.AgroOperationalDefaults.plots.map(item => ({id: item.id, nome: item.plot,
+  const plots = require('./fixtures/plots.cjs').map(item => ({id: item.id, nome: item.plot,
     cultura: item.crop.charAt(0).toUpperCase() + item.crop.slice(1), hectares: item.hectares,
     status: item.status, safra: '2025/26'}));
   const history = [];
@@ -38,7 +33,7 @@ async function mockApi(context, origin, options = {}) {
     {id: 'custo-4', description: 'Diesel - 500 L', category: 'Combustível', talhaoId: null, date: '2026-07-25', value: 3100},
     {id: 'custo-5', description: 'Sementes de soja - 2 t', category: 'Insumos', talhaoId: plotId('T-01 Norte'), date: '2026-07-20', value: 8400}];
   const preferences = {stock: true, weather: true, activities: true, occurrences: true, reports: false};
-  await context.route('http://127.0.0.1:8080/api/**', async route => {
+  await context.route(origin.replace(/\/$/, '') + '/api/**', async route => {
     const req = route.request();
     const url = new URL(req.url());
     const headers = {'Access-Control-Allow-Origin': origin.replace(/\/$/, ''),
@@ -133,7 +128,7 @@ async function mockApi(context, origin, options = {}) {
     }
     return reply(404, {error: 'Not found'});
   });
-  return {plots, history, properties, user, preferences};
+  return {plots, activities, history, properties, user, preferences};
 }
 
 const CATEGORIES = ['Insumos', 'Mão de Obra', 'Maquinário', 'Combustível', 'Outros'];

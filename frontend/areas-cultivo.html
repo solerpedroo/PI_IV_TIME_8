@@ -26,7 +26,7 @@
       construídos (Painel, Atividades, Insumos, Ocorrências) navegáveis de
       verdade; Custos/Configurações seguem como "em preparação" (fora desta
       entrega, igual ao Dashboard).
-    - CRUD mock de talhão: criar (modal "Novo Talhão"), editar (mesmo modal
+    - Cadastro de talhão: criar (modal "Novo Talhão"), editar (mesmo modal
       reaproveitado, pré-preenchido), com validação inline (G3) e toasts de
       sucesso/erro (Flow E).
     - Filtro por cultura (chips) + busca por nome, com contagem de resultados
@@ -51,7 +51,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Áreas de Cultivo</h1>
-          <p>Safra 2025/26 · Fazenda Santa Rita · Gestão de talhões</p>
+          <p>Carregando propriedade…</p>
         </div>
         <div class="page-header-actions">
           <label class="search-box">
@@ -76,10 +76,10 @@
             </span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="hectares">1.284 ha</p>
-            <span class="metric-card-change">+8%</span>
+            <p class="metric-card-value" data-metric="hectares">—</p>
+
           </div>
-          <p class="metric-card-desc">vs. safra anterior</p>
+          <p class="metric-card-desc">Área cadastrada</p>
         </article>
 
         <article class="metric-card">
@@ -90,8 +90,8 @@
             </span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="active-plots">12</p>
-            <span class="metric-card-change">100%</span>
+            <p class="metric-card-value" data-metric="active-plots">—</p>
+
           </div>
           <p class="metric-card-desc">em produção</p>
         </article>
@@ -104,10 +104,10 @@
             </span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value">58 sc/ha</p>
-            <span class="metric-card-change">+5%</span>
+            <p class="metric-card-value">—</p>
+
           </div>
-          <p class="metric-card-desc">vs. meta da safra</p>
+          <p class="metric-card-desc">Consulte o relatório da safra</p>
         </article>
       </section>
 
@@ -120,7 +120,7 @@
         <button type="button" class="filter-chip" data-filter-crop="trigo">Trigo</button>
         <button type="button" class="filter-chip" data-filter-crop="em preparo">Em preparo</button>
         <span class="filter-spacer"></span>
-        <span class="filter-results" data-plots-count>5 talhões encontrados</span>
+        <span class="filter-results" data-plots-count>Carregando talhões…</span>
       </div>
 
       <!-- Conteúdo: visão geral (mapa ilustrativo) + tabela de talhões -->
@@ -176,7 +176,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title" id="plots-table-title">Lista de Talhões</h2>
-              <p class="plots-map-subtitle">Atualizado em 06/08/2025</p>
+              <p class="plots-map-subtitle">Dados da propriedade ativa</p>
             </div>
           </div>
           <div class="table-wrap">
@@ -191,163 +191,7 @@
                   <th><span class="visually-hidden">Ações</span></th>
                 </tr>
               </thead>
-              <tbody>
-                <tr data-plot="T-01 Norte" data-crop="soja" data-hectares="124" data-status="Ativo">
-                  <td class="col-plot-name">T-01 Norte</td>
-                  <td><span class="badge badge-neutral">Soja</span></td>
-                  <td>124 ha</td>
-                  <td><span class="badge badge-success" data-status-badge>Ativo</span></td>
-                  <td class="col-muted">Pulverização · 02/08</td>
-                  <td class="col-actions">
-                    <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar T-01 Norte">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <div class="action-menu-wrap">
-                      <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-t01" aria-expanded="false" aria-label="Mais ações — T-01 Norte">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                      </button>
-                      <div class="action-menu" id="menu-t01" data-popover role="menu">
-                        <a class="action-menu-item" role="menuitem" href="atividades.html?talhao=T-01%20Norte">
-                          <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
-                          <span class="action-menu-label">Ver atividades</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="ocorrencias.html?talhao=T-01%20Norte">
-                          <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-                          <span class="action-menu-label">Ver ocorrências</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="custos.html?talhao=T-01%20Norte">
-                          <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
-                          <span class="action-menu-label">Ver custos</span>
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr data-plot="T-02 Sul" data-crop="milho" data-hectares="98" data-status="Irrigação pendente">
-                  <td class="col-plot-name">T-02 Sul</td>
-                  <td><span class="badge badge-neutral">Milho</span></td>
-                  <td>98 ha</td>
-                  <td><span class="badge badge-warning" data-status-badge>Irrigação pendente</span></td>
-                  <td class="col-muted">Plantio · 28/07</td>
-                  <td class="col-actions">
-                    <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar T-02 Sul">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <div class="action-menu-wrap">
-                      <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-t02" aria-expanded="false" aria-label="Mais ações — T-02 Sul">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                      </button>
-                      <div class="action-menu" id="menu-t02" data-popover role="menu">
-                        <a class="action-menu-item" role="menuitem" href="atividades.html?talhao=T-02%20Sul">
-                          <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
-                          <span class="action-menu-label">Ver atividades</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="ocorrencias.html?talhao=T-02%20Sul">
-                          <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-                          <span class="action-menu-label">Ver ocorrências</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="custos.html?talhao=T-02%20Sul">
-                          <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
-                          <span class="action-menu-label">Ver custos</span>
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr data-plot="T-03 Leste" data-crop="soja" data-hectares="156" data-status="Ativo">
-                  <td class="col-plot-name">T-03 Leste</td>
-                  <td><span class="badge badge-neutral">Soja</span></td>
-                  <td>156 ha</td>
-                  <td><span class="badge badge-success" data-status-badge>Ativo</span></td>
-                  <td class="col-muted">Adubação · 01/08</td>
-                  <td class="col-actions">
-                    <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar T-03 Leste">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <div class="action-menu-wrap">
-                      <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-t03" aria-expanded="false" aria-label="Mais ações — T-03 Leste">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                      </button>
-                      <div class="action-menu" id="menu-t03" data-popover role="menu">
-                        <a class="action-menu-item" role="menuitem" href="atividades.html?talhao=T-03%20Leste">
-                          <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
-                          <span class="action-menu-label">Ver atividades</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="ocorrencias.html?talhao=T-03%20Leste">
-                          <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-                          <span class="action-menu-label">Ver ocorrências</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="custos.html?talhao=T-03%20Leste">
-                          <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
-                          <span class="action-menu-label">Ver custos</span>
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr data-plot="T-04 Oeste" data-crop="trigo" data-hectares="72" data-status="Em preparo">
-                  <td class="col-plot-name">T-04 Oeste</td>
-                  <td><span class="badge badge-neutral">Trigo</span></td>
-                  <td>72 ha</td>
-                  <td><span class="badge badge-neutral" data-status-badge>Em preparo</span></td>
-                  <td class="col-muted">Preparo solo · 30/07</td>
-                  <td class="col-actions">
-                    <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar T-04 Oeste">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <div class="action-menu-wrap">
-                      <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-t04" aria-expanded="false" aria-label="Mais ações — T-04 Oeste">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                      </button>
-                      <div class="action-menu" id="menu-t04" data-popover role="menu">
-                        <a class="action-menu-item" role="menuitem" href="atividades.html?talhao=T-04%20Oeste">
-                          <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
-                          <span class="action-menu-label">Ver atividades</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="ocorrencias.html?talhao=T-04%20Oeste">
-                          <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-                          <span class="action-menu-label">Ver ocorrências</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="custos.html?talhao=T-04%20Oeste">
-                          <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
-                          <span class="action-menu-label">Ver custos</span>
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                <tr data-plot="T-05 Centro" data-crop="soja" data-hectares="110" data-status="Ativo">
-                  <td class="col-plot-name">T-05 Centro</td>
-                  <td><span class="badge badge-neutral">Soja</span></td>
-                  <td>110 ha</td>
-                  <td><span class="badge badge-success" data-status-badge>Ativo</span></td>
-                  <td class="col-muted">Monitoramento · 03/08</td>
-                  <td class="col-actions">
-                    <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar T-05 Centro">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    </button>
-                    <div class="action-menu-wrap">
-                      <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="menu-t05" aria-expanded="false" aria-label="Mais ações — T-05 Centro">
-                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                      </button>
-                      <div class="action-menu" id="menu-t05" data-popover role="menu">
-                        <a class="action-menu-item" role="menuitem" href="atividades.html?talhao=T-05%20Centro">
-                          <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
-                          <span class="action-menu-label">Ver atividades</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="ocorrencias.html?talhao=T-05%20Centro">
-                          <span class="action-menu-icon" style="background:var(--warning-bg);color:var(--warning)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
-                          <span class="action-menu-label">Ver ocorrências</span>
-                        </a>
-                        <a class="action-menu-item" role="menuitem" href="custos.html?talhao=T-05%20Centro">
-                          <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
-                          <span class="action-menu-label">Ver custos</span>
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
+              <tbody></tbody>
             </table>
             <!-- Empty state (E — Estados do Sistema): visível somente quando busca/filtro zera as linhas -->
             <div class="empty-state" data-plots-empty hidden>
@@ -393,11 +237,7 @@
         </div>
         <div class="input-group">
           <label for="talhao-safra">Safra *</label>
-          <select id="talhao-safra" name="safra" required>
-            <option value="2025/26">2025/26</option>
-            <option value="2024/25">2024/25</option>
-            <option value="2026/27">2026/27</option>
-          </select>
+          <input id="talhao-safra" name="safra" placeholder="Informe a safra" maxlength="100" required>
           <p class="field-error" data-error-for="safra"></p>
         </div>
         <div class="input-group">
@@ -473,6 +313,7 @@
 
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
+  <script src="scripts/fetch-timeout.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
   <script src="scripts/data/operational-defaults.js" defer></script>

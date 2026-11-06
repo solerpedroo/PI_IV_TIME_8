@@ -7,14 +7,14 @@
  */
 
 /* -------------------------------------------------------------------------- */
-/* Tipografia Geist (Fontsource CDN)                                          */
+/* Tipografia Geist (arquivo local)                                          */
 /* -------------------------------------------------------------------------- */
 @font-face {
   font-family: "Geist";
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
+  src: url("../Assets/fonts/geist-latin-variable.woff2") format("woff2-variations");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -56,7 +56,7 @@
   /* Tipografia (Geist via @font-face acima) */
   --font-heading: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "Cascadia Code", monospace;
+  --font-mono: var(--font-body);
 
   /* Raios */
   --radius-sm: 6px;
@@ -828,3 +828,6 @@ a:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Elementos de código também seguem a tipografia do projeto. */
+code, pre, kbd, samp { font-family: var(--font-body); }

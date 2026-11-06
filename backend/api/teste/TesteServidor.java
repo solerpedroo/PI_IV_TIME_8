@@ -861,6 +861,12 @@ public class TesteServidor
         post ("/api/propriedades/" + principal + "/selecionar", "{}", a);
         conferir ("nao exclui contexto usado em outra sessao", 409, requisitar ("DELETE", "/api/propriedades/" + id, null, a));
         post ("/api/auth/logout", null, outraSessao);
+        Document safraDaPropriedade = new Document ("propriedadeId", id).append ("nome", "Safra sem talhões")
+            .append ("nomeNormalizado", "safra sem talhões");
+        safras.criar (safraDaPropriedade);
+        conferir ("nao exclui propriedade com safra sem talhoes", 409,
+            requisitar ("DELETE", "/api/propriedades/" + id, null, a));
+        safras.excluir (id, safraDaPropriedade.getObjectId ("_id").toHexString ());
         conferir ("exclui propriedade sem vinculos -> 204", 204, requisitar ("DELETE", "/api/propriedades/" + id, null, a));
         conferir ("propriedade excluida -> 404", 404, get ("/api/propriedades/" + id, a));
         conferir ("nao exclui ultima propriedade", 409, requisitar ("DELETE", "/api/propriedades/" + principal, null, a));
@@ -1470,6 +1476,21 @@ public class TesteServidor
         for (int i = 0; i < 5; i++)
             sessoes.criar ("usuario", "propriedade");
         conferir ("sexta sessao derruba a mais antiga", sessoes.buscar (primeira) == null);
+
+        // Disputa real entre logins da mesma conta não pode ultrapassar cinco tokens.
+        try (ExecutorService grupo = Executors.newFixedThreadPool (32))
+        {
+            CountDownLatch inicio = new CountDownLatch (1);
+            ArrayList<Future<String>> tokens = new ArrayList<> ();
+            for (int i = 0; i < 64; i++)
+                tokens.add (grupo.submit (() -> { inicio.await (); return sessoes.criar ("concorrente", "propriedade"); }));
+            inicio.countDown ();
+            ArrayList<String> criados = new ArrayList<> ();
+            for (Future<String> token : tokens)
+                criados.add (token.get ());
+            long ativos = criados.stream ().filter (token -> sessoes.buscar (token) != null).count ();
+            conferir ("logins simultaneos preservam limite de cinco sessoes", ativos == 5);
+        }
 
         Path raiz = Files.createTempDirectory ("agrogestao-estaticos-");
         Path grande = raiz.resolve ("grande.js");

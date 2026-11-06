@@ -7,7 +7,7 @@
   "use strict";
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   let products = [], activities = [], active = null, category = "todas", ready = false;
   const qty = value => Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 6 });
   const money = value => Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

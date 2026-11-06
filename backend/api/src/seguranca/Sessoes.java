@@ -21,7 +21,7 @@ public class Sessoes
     private final AtomicLong sequencia = new AtomicLong ();
 
     // cria a sessao e devolve o token
-    public String criar (String usuarioId, String propriedadeId) throws Exception
+    public synchronized String criar (String usuarioId, String propriedadeId) throws Exception
     {
         this.removerExpiradas ();
 
@@ -104,7 +104,7 @@ public class Sessoes
     }
 
     // usado quando a senha muda: derruba todos os logins do usuario
-    public void encerrarDoUsuario (String usuarioId)
+    public synchronized void encerrarDoUsuario (String usuarioId)
     {
         for (Map.Entry<String, Sessao> sessao : this.sessoes.entrySet ())
             if (sessao.getValue ().getUsuarioId ().equals (usuarioId))

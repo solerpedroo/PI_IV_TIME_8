@@ -11,7 +11,7 @@
   const ROTULOS_TIPO = { atividade: "Atividade", ocorrencia: "Ocorrência", custo: "Custo" };
   const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const state = { safras: [], talhoes: [], culturas: [...CULTURAS_OFICIAIS], historySafra: null, historyRecords: [], historyFilter: "" };
-  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
   const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);

@@ -5,15 +5,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
-}
-
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist-mono:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
+  src: url("../brand/fonts/geist-latin-variable.woff2") format("woff2-variations");
 }
 
 :root {
@@ -38,7 +30,7 @@
   --shadow-sm: 0 12px 28px -16px rgba(26, 51, 36, 0.18);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.85);
   --font: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --mono: "Geist Mono", ui-monospace, monospace;
+  --mono: var(--font);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --slide-pad-x: clamp(40px, 5.2vw, 84px);
   --slide-pad-y: clamp(32px, 3.8vw, 56px);
@@ -2170,3 +2162,5 @@ body.is-fullscreen #slideCounter {
   .tile-card:hover, .member-card:hover { transform: none; }
   .slide.active .impact-seg { animation: none; opacity: 1; }
 }
+
+button, input, textarea, select, code, pre, kbd, samp { font-family: inherit; }

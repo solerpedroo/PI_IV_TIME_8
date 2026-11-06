@@ -12,9 +12,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-  const API_BASE = window.location.port === "8080"
-    ? window.location.origin
-    : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
 
   const MESES = {
     jan: 0, fev: 1, mar: 2, abr: 3, mai: 4, jun: 5,

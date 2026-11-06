@@ -252,6 +252,10 @@ async function menu(page, trigger) {
   }), true, 'fechamento da safra desalinhado do título');
   await reachable(page.locator('[data-harvest-option="2026/27"]'));
   await screenshot(page, 'configuracoes-seletor-safra');
+  await page.locator('[data-harvest-option="2026/27"]').click();
+  await page.locator('[data-confirm-harvest]').click();
+  assert.equal(await page.locator('#property-harvest').evaluate((el) => el.value), '2026/27');
+  await page.locator('[data-open-harvest-modal]').click();
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-open-harvest-modal]').evaluate((element) => element === document.activeElement), true);
   for (const screen of ['login', 'criar-conta', 'recuperar-senha', 'redefinir-senha']) {

@@ -87,7 +87,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="total">-</p>
+            <p class="metric-card-value" data-metric="total">—</p>
           </div>
           <p class="metric-card-desc" data-metric-total-desc>atividades do calendário</p>
         </article>
@@ -97,7 +97,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="pending">11</p>
+            <p class="metric-card-value" data-metric="pending">—</p>
             <span class="metric-card-change is-flat">requer ação</span>
           </div>
           <p class="metric-card-desc">Pendente + Agendada</p>
@@ -108,7 +108,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="in-progress">5</p>
+            <p class="metric-card-value" data-metric="in-progress">—</p>
             <span class="metric-card-change is-flat">em execução</span>
           </div>
           <p class="metric-card-desc">operações no campo</p>
@@ -119,7 +119,7 @@
             <span class="metric-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span>
           </div>
           <div class="metric-card-value-row">
-            <p class="metric-card-value" data-metric="done">8</p>
+            <p class="metric-card-value" data-metric="done">—</p>
             <span class="metric-card-change is-flat" data-metric-done-share>0% do quadro</span>
           </div>
           <p class="metric-card-desc">no quadro</p>
@@ -182,208 +182,36 @@
           <div class="kanban-column" data-column="Pendente">
             <div class="kanban-column-header">
               <span class="kanban-column-title"><span class="kanban-dot tone-warning" aria-hidden="true"></span>Pendente</span>
-              <span class="kanban-count tone-warning" data-column-count>2</span>
+              <span class="kanban-count tone-warning" data-column-count>0</span>
             </div>
             <div class="kanban-cards" data-column-cards>
-              <article class="kanban-card" draggable="true" data-activity="Aplicação de fungicida" data-tipo="Aplicação" data-talhao="T-01 Norte" data-date="08 ago" data-status="Pendente" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Aplicação de fungicida</span>
-                  <span class="badge badge-warning">Aplicação</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-01 Norte</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>08 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-1" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-1" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-              <article class="kanban-card" draggable="true" data-activity="Calagem do solo" data-tipo="Manutenção" data-talhao="T-02 Sul" data-date="09 ago" data-status="Pendente" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Calagem do solo</span>
-                  <span class="badge badge-neutral">Manutenção</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-02 Sul</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>09 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-2" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-2" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
             </div>
           </div>
 
           <div class="kanban-column" data-column="Agendada">
             <div class="kanban-column-header">
               <span class="kanban-column-title"><span class="kanban-dot tone-info" aria-hidden="true"></span>Agendada</span>
-              <span class="kanban-count tone-info" data-column-count>2</span>
+              <span class="kanban-count tone-info" data-column-count>0</span>
             </div>
             <div class="kanban-cards" data-column-cards>
-              <article class="kanban-card" draggable="true" data-activity="Irrigação por gotejamento" data-tipo="Irrigação" data-talhao="T-03 Leste" data-date="06 ago" data-status="Agendada" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Irrigação por gotejamento</span>
-                  <span class="badge badge-info">Irrigação</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-03 Leste</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>06 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-3" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-3" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-              <article class="kanban-card" draggable="true" data-activity="Análise foliar" data-tipo="Aplicação" data-talhao="T-04 Oeste" data-date="07 ago" data-status="Agendada" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Análise foliar</span>
-                  <span class="badge badge-info">Aplicação</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-04 Oeste</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>07 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-4" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-4" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
             </div>
           </div>
 
           <div class="kanban-column" data-column="Em andamento">
             <div class="kanban-column-header">
               <span class="kanban-column-title"><span class="kanban-dot tone-secondary" aria-hidden="true"></span>Em andamento</span>
-              <span class="kanban-count tone-secondary" data-column-count>2</span>
+              <span class="kanban-count tone-secondary" data-column-count>0</span>
             </div>
             <div class="kanban-cards" data-column-cards>
-              <article class="kanban-card" draggable="true" data-activity="Colheita parcial soja" data-tipo="Colheita" data-talhao="T-05 Centro" data-date="05 ago" data-status="Em andamento" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Colheita parcial soja</span>
-                  <span class="badge badge-warning">Colheita</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-05 Centro</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>05 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-5" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-5" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-              <article class="kanban-card" draggable="true" data-activity="Manutenção trator JD" data-tipo="Manutenção" data-talhao="T-05 Centro" data-date="04 ago" data-status="Em andamento" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Manutenção trator JD</span>
-                  <span class="badge badge-warning">Manutenção</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-05 Centro</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>04 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-6" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-6" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="edit"><span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span><span class="action-menu-label">Editar</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="complete"><span class="action-menu-icon tone-success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span><span class="action-menu-label">Concluir</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
             </div>
           </div>
 
           <div class="kanban-column" data-column="Concluída">
             <div class="kanban-column-header">
               <span class="kanban-column-title"><span class="kanban-dot tone-success" aria-hidden="true"></span>Concluída</span>
-              <span class="kanban-count tone-success" data-column-count>2</span>
+              <span class="kanban-count tone-success" data-column-count>0</span>
             </div>
             <div class="kanban-cards" data-column-cards>
-              <article class="kanban-card" draggable="true" data-activity="Aplicação herbicida" data-tipo="Aplicação" data-talhao="T-01 Norte" data-date="03 ago" data-status="Concluída" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Aplicação herbicida</span>
-                  <span class="badge badge-success">Aplicação</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-01 Norte</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>03 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-7" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-7" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-              <article class="kanban-card" draggable="true" data-activity="Irrigação pivô central" data-tipo="Irrigação" data-talhao="T-03 Leste" data-date="02 ago" data-status="Concluída" tabindex="0">
-                <div class="kanban-card-top">
-                  <span class="kanban-card-title">Irrigação pivô central</span>
-                  <span class="badge badge-success">Irrigação</span>
-                </div>
-                <span class="kanban-card-meta"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>T-03 Leste</span>
-                <div class="kanban-card-footer">
-                  <span class="kanban-card-date"><svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>02 ago</span>
-                  <div class="action-menu-wrap">
-                    <button type="button" class="icon-btn icon-btn--sm" data-popover-trigger aria-controls="card-menu-8" aria-expanded="false" aria-label="Mais ações">
-                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                    <div class="action-menu" id="card-menu-8" data-popover role="menu">
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="detail"><span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-menu-label">Ver detalhes</span></button>
-                      <button type="button" class="action-menu-item" role="menuitem" data-card-action="duplicate"><span class="action-menu-icon tone-primary" aria-hidden="true"><svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span><span class="action-menu-label">Duplicar</span></button>
-                      <button type="button" class="action-menu-item is-danger" role="menuitem" data-card-action="delete"><span class="action-menu-icon tone-error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span><span class="action-menu-label">Excluir</span></button>
-                    </div>
-                  </div>
-                </div>
-              </article>
             </div>
           </div>
                   <div class="kanban-column" data-column="Cancelada">
@@ -447,12 +275,7 @@
           <select id="activity-talhao" name="talhao" required data-enhance-select data-placeholder="Selecione o talhão">
             <option value="">Selecione o talhão</option>
             <!-- Os valores são os mesmos nomes usados em Áreas de Cultivo. -->
-            <option value="T-01 Norte">T-01 Norte</option>
-            <option value="T-02 Sul">T-02 Sul</option>
-            <option value="T-03 Leste">T-03 Leste</option>
-            <option value="T-04 Oeste">T-04 Oeste</option>
-            <option value="T-05 Centro">T-05 Centro</option>
-          </select>
+            </select>
           <p class="field-error" data-error-for="talhao"></p>
         </div>
         <div class="input-group">
@@ -580,6 +403,7 @@
     <p data-report-message role="status" aria-live="polite"></p><div data-report-output class="report-operational-output"></div><div class="modal-actions"><button type="button" class="btn btn-outline" data-report-close>Fechar</button><button type="button" class="btn btn-primary" data-report-export disabled>Exportar CSV</button></div>
   </div></div>
   <style>.report-operational-modal{width:min(800px,100%)} .report-operational-output{max-height:55vh;overflow:auto;overflow-wrap:anywhere} [data-modal="report-operational"] form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px} [data-modal="report-operational"] label{display:grid;gap:4px}</style>
+  <script src="scripts/fetch-timeout.js" defer></script>
   <script src="scripts/relatorio-util.js" defer></script><script src="scripts/relatorio-operacional.js" defer></script><script src="scripts/relatorio-atividades.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>

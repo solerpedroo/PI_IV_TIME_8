@@ -7,7 +7,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const base = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const ETAPAS_ABERTAS = ["Plantio", "Manejo", "Colheita"];
   const UNIDADES = { kg: "kg", t: "t", sc: "sc" };
   const state = { safras: [], talhoes: [], lista: [], resumo: null, ciclos: [], cultura: "", safraId: "", excluindo: null, busy: false };

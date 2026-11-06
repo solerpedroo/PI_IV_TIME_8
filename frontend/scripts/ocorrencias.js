@@ -6,7 +6,7 @@
   "use strict";
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-  const base = location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base = window.location.origin;
   const labels = { ABERTA: "Aberta", EM_ACOMPANHAMENTO: "Em acompanhamento", RESOLVIDA: "Resolvida" };
   const titles = { registro: "Ocorrência registrada", editar: "Cadastro editado", acompanhamento: "Acompanhamento iniciado", atualizacao: "Atualização publicada", resolucao: "Ocorrência resolvida", excluir: "Ocorrência excluída" };
   let propertyId = "", active = null, editing = null, busy = false, ready = false, loadNumber = 0;
