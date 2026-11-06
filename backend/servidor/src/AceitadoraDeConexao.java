@@ -19,13 +19,13 @@ import java.util.concurrent.Semaphore;
 public class AceitadoraDeConexao extends Thread
 {
     private static final String LOTADO =
-        "HTTP/1.1 503 Service Unavailable\r\n" +
+        "HTTP/1.1 503 Serviço indisponível\r\n" +
         "Content-Type: application/json; charset=utf-8\r\n" +
         "Content-Length: 34\r\n" +
         "Retry-After: 1\r\n" +
         "Connection: close\r\n" +
         "\r\n" +
-        "{\"error\":\"Server too busy, retry\"}";
+        "{\"error\":\"Servidor ocupado. Tente novamente.\"}";
 
     private final ServerSocket              pedido;
     private final Roteador                  roteador;
