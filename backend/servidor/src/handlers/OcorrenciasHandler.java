@@ -204,7 +204,7 @@ public class OcorrenciasHandler
         synchronized (this.sessoes)
         {
             Sessao atual = this.sessoes.buscar (r.getToken ());
-            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (atual == null) return Resposta.erro (401, "Não autorizado.");
             Document corpo = r.getCorpoJson ();
             String propriedade = atual.getPropriedadeId ();
             if (!propriedade.equals (r.getSessao ().getPropriedadeId ()) ||
