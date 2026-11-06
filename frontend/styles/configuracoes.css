@@ -53,7 +53,24 @@
 .empty-settings-card p { max-width: 440px; margin: 0 0 8px; color: var(--text-secondary); }
 .settings-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); }
 .settings-empty-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.plan-status { display: flex; align-items: center; gap: 12px; color: var(--text-secondary); font-size: 12px; }
+.password-meter { display: grid; gap: 8px; margin-top: 4px; }
+.password-meter-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+.password-meter-label[data-level="0"] { color: var(--text-muted); }
+.password-meter-label[data-level="1"] { color: var(--error); }
+.password-meter-label[data-level="2"] { color: var(--warning); }
+.password-meter-label[data-level="3"] { color: var(--accent); }
+.password-meter-label[data-level="4"] { color: var(--success); }
+.password-meter-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.password-meter-bar i { height: 4px; border-radius: 2px; background: var(--border); }
+.password-meter[data-level="1"] i:nth-child(1) { background: var(--error); }
+.password-meter[data-level="2"] i:nth-child(-n+2) { background: var(--warning); }
+.password-meter[data-level="3"] i:nth-child(-n+3) { background: var(--accent); }
+.password-meter[data-level="4"] i { background: var(--success); }
+.password-rules { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; }
+.password-rules span { display: flex; align-items: center; gap: 6px; }
+.password-rules span::before { content: ""; width: 14px; height: 14px; flex: 0 0 auto; border: 1.5px solid var(--text-muted); border-radius: 50%; }
+.password-rules span.is-valid { color: var(--text-secondary); }
+.password-rules span.is-valid::before { border-color: var(--success); background: radial-gradient(circle at center, var(--success) 0 35%, transparent 36%); }
 @keyframes settings-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 900px) { .settings-content { grid-template-columns: 1fr; } .settings-nav { display: grid; grid-template-columns: repeat(3, 1fr); } .settings-nav-item { justify-content: center; } }
