@@ -194,7 +194,7 @@ e tem pool próprio. O nome do banco vem da URI (padrão `agrogestao`).
 | `seguranca.Senhas` | PBKDF2WithHmacSHA256 do JDK, 120 000 iterações, salt de 16 bytes, formato `pbkdf2$iter$salt$hash`. Comparação em tempo constante. |
 | `seguranca.Sessoes` / `Sessao` | Token UUID → (usuário, propriedade, expiração de 12 h) em `ConcurrentHashMap`. `Sessao` é imutável. |
 | `util.Json` | JSON só com `org.bson.Document` (`Document.parse` e `toJson` em modo RELAXED). `_id` é exposto como `id` (texto). Sem outra biblioteca JSON. |
-| `util.Validacao` | Junta erros por campo e monta `400 {"error":"Validation failed","fields":{...}}` com as mesmas mensagens do front. |
+| `util.Validacao` | Junta erros por campo e monta `400 {"error":"Dados inválidos.","fields":{...}}` com as mesmas mensagens do front. |
 
 ## 7. Contrato da API
 
@@ -284,7 +284,7 @@ modelo/índices e `/health`/`/ready`.
 | Esgotamento de recursos | Cabeça ≤ 16 KB, corpo ≤ 1 MB, timeout de 10 s, até 100 conexões simultâneas |
 | CORS aberto | Só `localhost` e `127.0.0.1`, com `Vary: Origin` |
 | Sniffing de tipo | `X-Content-Type-Options: nosniff` em todas as respostas |
-| Vazamento de erro interno | Exceções viram `500 {"error":"Internal server error"}`; o detalhe vai só para o log do servidor |
+| Vazamento de erro interno | Exceções viram `500 {"error":"Erro interno do servidor."}`; o detalhe vai só para o log do servidor |
 | Reuso de token | Os tokens de confirmação e de redefinição são apagados ao serem usados |
 
 O servidor escuta em `127.0.0.1` por padrão (`SERVIDOR_HOST`), adequado ao
