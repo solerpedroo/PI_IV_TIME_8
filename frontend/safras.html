@@ -1,4 +1,5 @@
-<!-- Miguel — RA: 25003110 -->
+<!-- Autor principal: Miguel — RA: 25003110 -->
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -41,22 +42,8 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="app-sidebar" aria-label="Navegação principal">
-      <div class="sidebar-brand"><span class="sidebar-brand-icon" aria-hidden="true">🌱</span><span><span class="sidebar-brand-name">Agro</span><span class="sidebar-brand-caption">Gestão Agrícola</span></span></div>
-      <nav class="sidebar-nav">
-        <a class="sidebar-link" href="dashboard.html"><span>Painel</span></a>
-        <a class="sidebar-link" href="areas-cultivo.html"><span>Áreas de Cultivo</span></a>
-        <a class="sidebar-link is-active" href="safras.html" aria-current="page"><span>Safras</span></a>
-        <a class="sidebar-link" href="atividades.html"><span>Atividades</span></a>
-        <a class="sidebar-link" href="insumos.html"><span>Insumos</span></a>
-        <a class="sidebar-link" href="manutencao.html"><span>Manutenção</span></a>
-        <a class="sidebar-link" href="ocorrencias.html"><span>Ocorrências</span></a>
-        <a class="sidebar-link" href="custos.html"><span>Custos</span></a>
-        <a class="sidebar-link" href="configuracoes.html"><span>Configurações</span></a>
-      </nav>
-      <div class="sidebar-spacer" aria-hidden="true"></div>
-      <div class="sidebar-user"><span class="sidebar-avatar" aria-hidden="true">AG</span><span class="sidebar-user-meta"><span class="sidebar-user-name">Usuário</span><span class="sidebar-user-property">Propriedade ativa</span></span></div>
-    </aside>
+    <div data-app-sidebar-mount></div>
+
     <main class="app-main">
       <header class="page-header"><div class="page-header-copy"><h1>Safras</h1><p>Acompanhe ciclos produtivos, etapas e registros da propriedade.</p></div><div class="page-header-actions"><button class="btn btn-primary" type="button" data-new-safra>Nova safra</button></div></header>
       <section class="card" aria-labelledby="safras-list-title"><div class="card-header"><h2 class="card-title" id="safras-list-title">Ciclos produtivos</h2><label class="filter-select"><span class="visually-hidden">Filtrar etapa</span><select data-filter-stage aria-label="Filtrar etapa"><option value="">Todas as etapas</option><option>Planejamento</option><option>Preparação</option><option>Plantio</option><option>Manejo</option><option>Colheita</option><option>Finalização</option></select></label></div><div data-safras-list></div><div class="empty-state" data-safras-empty hidden><h3>Nenhuma safra encontrada</h3><p>Crie um ciclo para acompanhar a produção.</p></div></section>
