@@ -30,6 +30,8 @@
   function bindEscape(modal, close) {
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !modal.classList.contains("is-open")) return;
+      const topo = [...document.querySelectorAll("[data-picker-layer].is-open")].at(-1);
+      if (topo !== modal) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       close();
