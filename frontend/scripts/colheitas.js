@@ -259,7 +259,7 @@
     } catch (error) {
       if (error?.fields) mostrarErros(form, error.fields);
       if (!error?.fields || error.status === 409) $("[data-harvest-form-error]", form).textContent = error?.error || "Servidor indisponível. Confira a lista antes de repetir o envio.";
-      toast("error", "Colheita não salva", error?.error === "Validation failed" ? "Revise os campos destacados." : error?.error || "Servidor indisponível.");
+      toast("error", "Colheita não salva", error?.error === "Dados inválidos." ? "Revise os campos destacados." : error?.error || "Servidor indisponível.");
     }
     state.busy = false;
     $$("button", form).forEach((button) => { button.disabled = false; });
