@@ -48,7 +48,6 @@
           class="auth-form"
           data-auth-form
           data-auth-route="/api/auth/reset-password"
-          data-require-strong-password
           data-success-route="login.html"
           data-flash-message="Senha redefinida com sucesso. Faça login com a nova senha."
           novalidate
@@ -78,6 +77,7 @@
                 data-password-meter
                 autocomplete="new-password"
                 placeholder="Digite sua nova senha"
+                maxlength="128"
                 required
                 data-required-message="Crie uma nova senha."
               >
@@ -94,20 +94,21 @@
             <span class="field-error" aria-live="polite"></span>
           </div>
 
-          <!-- Força da senha (4 segmentos + regras) -->
+          <!-- Força da senha (5 segmentos + regras do servidor) -->
           <div class="password-meter" data-meter data-level="0" aria-live="polite">
             <div class="password-meter-header">
               <span>Força da senha</span>
               <span class="password-meter-label" data-meter-label data-level="0">—</span>
             </div>
             <div class="password-meter-bar" aria-hidden="true">
-              <i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i>
             </div>
             <div class="password-rules">
               <span data-rule="length">Mínimo de 8 caracteres</span>
               <span data-rule="upper">Pelo menos uma letra maiúscula</span>
               <span data-rule="number">Pelo menos um número</span>
               <span data-rule="symbol">Pelo menos um caractere especial</span>
+              <span data-rule="max">No máximo 128 caracteres</span>
             </div>
           </div>
 
@@ -121,6 +122,7 @@
                 data-password-confirm
                 autocomplete="new-password"
                 placeholder="Digite novamente sua nova senha"
+                maxlength="128"
                 required
                 data-required-message="Confirme sua senha."
               >
@@ -154,6 +156,7 @@
   </main>
 
   <script src="scripts/fetch-timeout.js" defer></script>
+  <script src="scripts/senha-regras.js" defer></script>
   <script src="scripts/auth.js" defer></script>
 </body>
 </html>

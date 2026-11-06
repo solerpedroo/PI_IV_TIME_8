@@ -337,6 +337,8 @@ public class TesteServidor
         conferir ("senha sem simbolo",   camposComErro (post ("/api/auth/register", new Document (base).append ("password", "Senha1234").append ("password-confirm", "Senha1234").toJson (), null)).containsKey ("password"));
         conferir ("senha sem maiuscula", camposComErro (post ("/api/auth/register", new Document (base).append ("password", "senha@123").append ("password-confirm", "senha@123").toJson (), null)).containsKey ("password"));
         conferir ("senha curta",         camposComErro (post ("/api/auth/register", new Document (base).append ("password", "Se@1").append ("password-confirm", "Se@1").toJson (), null)).containsKey ("password"));
+        String senhaLonga = "A1!" + "b".repeat (130);
+        conferir ("senha acima de 128", "Valor inválido.".equals (camposComErro (post ("/api/auth/register", new Document (base).append ("password", senhaLonga).append ("password-confirm", senhaLonga).toJson (), null)).get ("password")));
         conferir ("confirmacao diferente", camposComErro (post ("/api/auth/register", new Document (base).append ("password-confirm", "Outra@123").toJson (), null)).containsKey ("password-confirm"));
         conferir ("telefone fixo recusado", camposComErro (post ("/api/auth/register", new Document (base).append ("phone", "(11) 3456-7890").toJson (), null)).containsKey ("phone"));
         conferir ("telefone sem mascara recusado", camposComErro (post ("/api/auth/register", new Document (base).append ("phone", "11987654321").toJson (), null)).containsKey ("phone"));

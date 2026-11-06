@@ -28,8 +28,6 @@
   // A API acompanha a origem da página, inclusive com HTTPS e portas alternativas.
   const API_BASE = window.location.origin;
 
-  const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
-
   /**
    * Exibe mensagem acessível no formulário (erro ou sucesso).
    */
@@ -78,22 +76,6 @@
       }
     });
     return firstInvalid;
-  }
-
-  /**
-   * Avalia regras de força da senha (espelha o meter do pen).
-   */
-  function getPasswordChecks(value) {
-    return {
-      length: value.length >= 8,
-      upper: /[A-ZÀ-Ý]/.test(value),
-      number: /\d/.test(value),
-      symbol: /[^A-Za-zÀ-ÿ\d]/.test(value),
-    };
-  }
-
-  function passwordLevel(checks) {
-    return Object.values(checks).filter(Boolean).length;
   }
 
   function setLoading(form, loading) {
@@ -191,33 +173,10 @@
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Medidor de força                                                         */
+  /* Medidor de força: regras únicas em senha-regras.js                      */
   /* ------------------------------------------------------------------------ */
   function initPasswordMeter() {
-    const passwordInput = $("[data-password-meter]");
-    if (!passwordInput) return;
-
-    const meter = $("[data-meter]");
-    if (!meter) return;
-
-    const rules = $$("[data-rule]", meter);
-    const label = $("[data-meter-label]", meter);
-
-    const update = () => {
-      const checks = getPasswordChecks(passwordInput.value);
-      const level = passwordLevel(checks);
-      meter.dataset.level = String(level);
-      if (label) {
-        label.dataset.level = String(level);
-        label.textContent = STRENGTH_LABELS[level];
-      }
-      rules.forEach((rule) => {
-        rule.classList.toggle("is-valid", Boolean(checks[rule.dataset.rule]));
-      });
-    };
-
-    passwordInput.addEventListener("input", update);
-    update();
+    window.AgroSenha?.iniciar();
   }
 
   /* ------------------------------------------------------------------------ */
@@ -403,24 +362,23 @@
 
         const password = $("[data-password]", form);
         const confirmation = $("[data-password-confirm]", form);
-        const requiresStrong = form.hasAttribute("data-require-strong-password");
+        let route;
+        try {
+          route = authRoute(form);
+        } catch (error) {
+          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
+          console.error(error);
+          return;
+        }
+        // Cadastro e redefinição: o ServerSocket (ValidadorDeConta) decide a senha.
+        const senhaNoSocket = route === "/api/auth/register" || route === "/api/auth/reset-password";
 
-        if (password) {
-          const checks = getPasswordChecks(password.value);
-          if (requiresStrong && passwordLevel(checks) < 4) {
-            setError(password, "Atenda a todas as regras de senha.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha que cumpra todas as regras.");
-            password.focus();
-            return;
-          }
-          if (!requiresStrong && password.value.length < 8) {
-            setError(password, "A senha deve ter pelo menos 8 caracteres.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha mais segura.");
-            password.focus();
-            return;
-          }
+        if (password && !senhaNoSocket && password.value.length < 8) {
+          setError(password, "A senha deve ter pelo menos 8 caracteres.");
+          form.classList.add("is-invalid");
+          showMessage(form, "Escolha uma senha mais segura.");
+          password.focus();
+          return;
         }
 
         if (password && confirmation && password.value !== confirmation.value) {
@@ -431,14 +389,6 @@
           return;
         }
 
-        let route;
-        try {
-          route = authRoute(form);
-        } catch (error) {
-          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
-          console.error(error);
-          return;
-        }
         let result;
 
         setLoading(form, true);

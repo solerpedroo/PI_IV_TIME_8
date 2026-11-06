@@ -1,4 +1,5 @@
 /* Miguel — RA: 25003110 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — Select / Dropdown do design system (Forest Sage)
  * --------------------------------------------------------------------------
@@ -186,6 +187,16 @@
     root.appendChild(native);
 
     native.addEventListener("change", syncFromNative);
+    const valueDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    Object.defineProperty(native, "value", {
+      configurable: true,
+      enumerable: true,
+      get() { return valueDescriptor.get.call(this); },
+      set(next) {
+        valueDescriptor.set.call(this, next);
+        syncFromNative();
+      },
+    });
     // A API substitui as opções após o carregamento inicial da página.
     new MutationObserver(() => { renderOptions(); syncFromNative(); })
       .observe(native, {childList: true, subtree: true, characterData: true});
