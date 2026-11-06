@@ -31,8 +31,73 @@
 
   // Dados pessoais, preferências e senha são tratados em perfil-api.js.
 
+  function initHarvestPicker() {
+    const native = $("#property-harvest");
+    if (!native || $("[data-open-harvest-modal]")) return;
+    const enhancedRoot = native.closest(".select");
+    enhancedRoot?.setAttribute("hidden", "true");
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "harvest-picker-trigger";
+    trigger.dataset.openHarvestModal = "";
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.setAttribute("aria-controls", "harvest-form");
+    trigger.innerHTML = '<span><strong data-harvest-label></strong></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    enhancedRoot?.parentNode.insertBefore(trigger, enhancedRoot);
+    const label = $("label[for='property-harvest-trigger']");
+    if (label) label.htmlFor = trigger.id = "property-harvest-custom-trigger";
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    // Mantém o vínculo aria-controls do botão de safra com o diálogo criado.
+    modal.id = "harvest-form";
+    modal.dataset.modal = "harvest-form";
+    modal.setAttribute("aria-hidden", "true");
+    modal.setAttribute("role", "presentation");
+    modal.innerHTML = '<div class="modal harvest-modal" role="dialog" aria-modal="true" aria-labelledby="harvest-form-title"><div class="calendar-modal-header"><div><h2 id="harvest-form-title">Selecionar safra</h2><p>Escolha a safra principal da propriedade.</p></div><button class="icon-btn icon-btn--sm" type="button" data-harvest-close aria-label="Fechar seletor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="harvest-options" data-harvest-options role="listbox" aria-label="Safras disponíveis"></div><div class="modal-actions"><button class="btn btn-outline" type="button" data-harvest-close>Cancelar</button><button class="btn btn-primary" type="button" data-confirm-harvest>Aplicar safra</button></div></div>';
+    document.body.appendChild(modal);
+    let pending = native.value;
+
+    function syncLabel() {
+      $("[data-harvest-label]", trigger).textContent = native.value || "Selecione a safra";
+    }
+
+    function renderOptions() {
+      const options = $("[data-harvest-options]", modal);
+      options.innerHTML = [...native.options].map((option) => `<button class="harvest-option ${option.value === pending ? "is-selected" : ""}" type="button" data-harvest-option="${option.value}" role="option" aria-selected="${option.value === pending}"><span><strong>${option.textContent}</strong><small>${option.value === "2025/26" ? "Safra em acompanhamento" : "Período disponível"}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>`).join("");
+      $$('[data-harvest-option]', modal).forEach((option) => option.addEventListener("click", () => {
+        pending = option.dataset.harvestOption;
+        renderOptions();
+      }));
+    }
+
+    function close() {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      trigger.focus();
+    }
+
+    trigger.addEventListener("click", () => {
+      pending = native.value;
+      renderOptions();
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    });
+    $$('[data-harvest-close]', modal).forEach((button) => button.addEventListener("click", close));
+    modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+    $("[data-confirm-harvest]", modal).addEventListener("click", () => {
+      native.value = pending;
+      native.dispatchEvent(new Event("change", { bubbles: true }));
+      syncLabel();
+      close();
+      toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
+    });
+    native.addEventListener("change", syncLabel);
+    syncLabel();
+  }
+
   function init() {
     initTabs();
+    initHarvestPicker();
   }
 
   document.addEventListener("DOMContentLoaded", init);
