@@ -46,7 +46,7 @@ async function mockApi(context, origin, options = {}) {
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'};
     const reply = (status, body) => route.fulfill({status, headers, contentType: 'application/json', body: JSON.stringify(body)});
     if (req.method() === 'OPTIONS') return route.fulfill({status: 204, headers});
-    if (req.headers().authorization !== 'Bearer e2e-local') return reply(401, {error: 'Unauthorized'});
+    if (req.headers().authorization !== 'Bearer e2e-local') return reply(401, {error: 'Não autorizado.'});
     // A revisão visual usa respostas vazias válidas para telas já integradas.
     if (options.visual && req.method() === 'GET') {
       if (['/api/atividades', '/api/safras', '/api/insumos', '/api/insumos/atividades'].includes(url.pathname)) return reply(200, []);
@@ -106,7 +106,7 @@ async function mockApi(context, origin, options = {}) {
     }
     if (url.pathname.startsWith('/api/propriedades/')) {
       const item = properties.find(property => property.id === url.pathname.split('/')[3]);
-      if (!item) return reply(404, {error: 'Not found'});
+      if (!item) return reply(404, {error: 'Não encontrado.'});
       if (req.method() === 'PUT') { Object.assign(item, req.postDataJSON()); return reply(200, item); }
       if (req.method() === 'POST' && url.pathname.endsWith('/selecionar')) {
         properties.forEach(property => { property.selecionada = property === item; });
@@ -128,7 +128,7 @@ async function mockApi(context, origin, options = {}) {
       if (index < 0) plots.push(item); else plots[index] = item;
       return reply(req.method() === 'POST' ? 201 : 200, item);
     }
-    return reply(404, {error: 'Not found'});
+    return reply(404, {error: 'Não encontrado.'});
   });
   return {plots, history, properties, user, preferences};
 }
@@ -147,7 +147,7 @@ function costsRoute(req, url, reply, costs, plots) {
   }
   if (id && id !== 'resumo') {
     const index = costs.findIndex(item => item.id === id);
-    if (index < 0) return reply(404, {error: 'Not found'});
+    if (index < 0) return reply(404, {error: 'Não encontrado.'});
     if (req.method() === 'PUT') { Object.assign(costs[index], req.postDataJSON()); return reply(200, publicCost(costs[index])); }
     if (req.method() === 'DELETE') { costs.splice(index, 1); return reply(200, {ok: true}); }
     return reply(200, publicCost(costs[index]));
