@@ -17,8 +17,8 @@ public class TesteGateway
 {
     private static final String UP        = "{\"status\":\"UP\"}";
     private static final String DOWN      = "{\"status\":\"DOWN\"}";
-    private static final String NOT_FOUND = "{\"error\":\"Not found\"}";
-    private static final String ERRO      = "{\"error\":\"Internal server error\"}";
+    private static final String NOT_FOUND = "{\"error\":\"Não encontrado.\"}";
+    private static final String ERRO      = "{\"error\":\"Erro interno do servidor.\"}";
     private static final String CORE_DOWN = "{\"error\":\"Core unavailable\"}";
 
     private static int falhas = 0;
@@ -186,7 +186,7 @@ public class TesteGateway
             r = TesteGateway.requisitar ("POST", TesteGateway.endereco (gw) + "/api/parcelas",
                                          "{\"payload\":\"" + "x".repeat (ClienteCore.MAXIMO_CORPO) + "\"}");
             TesteGateway.conferir ("corpo acima do limite e rejeitado", 413,
-                                   "{\"error\":\"Request body too large\"}", Integer.parseInt (r[0]), r[1]);
+                                   "{\"error\":\"Corpo da requisição grande demais.\"}", Integer.parseInt (r[0]), r[1]);
 
             r = TesteGateway.requisitar ("GET", TesteGateway.endereco (gw) + "/api/erro");
             TesteGateway.conferir ("erro de negocio preservado", 422, "{\"error\":\"Business rule\"}",

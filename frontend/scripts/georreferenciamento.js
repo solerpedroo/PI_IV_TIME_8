@@ -45,7 +45,7 @@
     });
     const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(data.error === "Validation failed" ? "Revise os campos destacados." : data.error || "Falha na comunicação com o servidor.");
+      const error = new Error(data.error === "Dados inválidos." ? "Revise os campos destacados." : data.error || "Falha na comunicação com o servidor.");
       error.fields = data.fields || {};
       error.status = response.status;
       throw error;

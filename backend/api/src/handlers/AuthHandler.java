@@ -83,7 +83,7 @@ public class AuthHandler
                                     AuthHandler.MAXIMO_TENTATIVAS, AuthHandler.JANELA_TAXA))
             return null;
 
-        Resposta ret = Resposta.erro (429, "Too many requests");
+        Resposta ret = Resposta.erro (429, "Muitas requisições. Aguarde e tente novamente.");
         ret.setCabecalho ("Retry-After", "60");
         return ret;
     }
@@ -126,7 +126,7 @@ public class AuthHandler
 
         Document criado = this.usuarios.criar (usuario, propriedade);
         if (criado == null)
-            return Resposta.json (409, new Document ("error", "Email already registered")
+            return Resposta.json (409, new Document ("error", "E-mail já cadastrado.")
                                            .append ("fields", new Document ("email", "Este e-mail já está cadastrado.")));
 
         this.email.enviarCodigo (email, "Confirmação de e-mail", token);
@@ -157,12 +157,12 @@ public class AuthHandler
 
         // mesma resposta para e-mail inexistente e senha errada
         if (!Senhas.conferir ((String) password, usuario == null ? null : usuario.getString ("senhaHash")))
-            return Resposta.erro (401, "Invalid email or password");
+            return Resposta.erro (401, "E-mail ou senha inválidos.");
 
         // A senha correta identifica o próprio titular; só então informamos
         // que falta ativar a conta. Assim não há enumeração de e-mails.
         if (!Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")))
-            return Resposta.erro (403, "Email confirmation required");
+            return Resposta.erro (403, "Confirme o e-mail antes de entrar.");
 
         String token;
         synchronized (this.sessoes)
@@ -174,7 +174,7 @@ public class AuthHandler
             if (usuario == null || !hashConferido.equals (usuario.getString ("senhaHash")) ||
                 !emailConferido.equals (usuario.getString ("email")) || !Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")) ||
                 this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
-                return Resposta.erro (401, "Invalid email or password");
+                return Resposta.erro (401, "E-mail ou senha inválidos.");
             token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
                                         usuario.getString ("propriedadeId"));
         }
@@ -196,7 +196,7 @@ public class AuthHandler
         Document usuario = this.usuarios.buscarPorId (sessao.getUsuarioId ());
 
         if (usuario == null)
-            return Resposta.erro (401, "Unauthorized");
+            return Resposta.erro (401, "Não autorizado.");
 
         Document propriedade = this.usuarios.buscarPropriedade (sessao.getPropriedadeId ());
         Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario)
@@ -226,13 +226,13 @@ public class AuthHandler
         {
             Document usuario = this.usuarios.buscarPor ("tokenConfirmacao", token);
             if (usuario == null)
-                return Resposta.erro (400, "Invalid or expired token");
+                return Resposta.erro (400, "Código inválido ou expirado.");
 
             this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
                                      new Document ("emailConfirmado", true).append ("tokenConfirmacao", null));
         }
 
-        return AuthHandler.mensagem ("Email confirmed");
+        return AuthHandler.mensagem ("E-mail confirmado.");
     }
 
     // POST /api/auth/resend-confirmation  {email}
@@ -261,7 +261,7 @@ public class AuthHandler
                 {
                     long segundos = (esperado - agora + 999) / 1000;
 
-                    Resposta ret = Resposta.json (429, new Document ("error", "Wait before resending")
+                    Resposta ret = Resposta.json (429, new Document ("error", "Aguarde antes de reenviar.")
                                                            .append ("retryAfter", segundos));
                     ret.setCabecalho ("Retry-After", "" + segundos);
                     return ret;
@@ -275,7 +275,7 @@ public class AuthHandler
             }
         }
 
-        return AuthHandler.mensagem ("If the email is pending confirmation, a new code was sent");
+        return AuthHandler.mensagem ("Se o e-mail estiver pendente de confirmação, um novo código foi enviado.");
     }
 
     // POST /api/auth/forgot-password  {email} -> sempre 200
@@ -305,7 +305,7 @@ public class AuthHandler
             }
         }
 
-        return AuthHandler.mensagem ("If the email is registered, a reset code was sent");
+        return AuthHandler.mensagem ("Se o e-mail estiver cadastrado, um código de redefinição foi enviado.");
     }
 
     // POST /api/auth/reset-password  {token, password, password-confirm}
@@ -338,18 +338,18 @@ public class AuthHandler
             {
                 Document usuario = this.usuarios.buscarPor ("tokenRedefinicao", token);
                 if (usuario == null || usuario.get ("redefinicaoExpiraEm", 0L) < System.currentTimeMillis ())
-                    return Resposta.erro (400, "Invalid or expired token");
+                    return Resposta.erro (400, "Código inválido ou expirado.");
                 id = ((ObjectId) usuario.get ("_id")).toHexString ();
                 // O token não pode ressuscitar depois de uma troca de senha/perfil.
                 if (!this.usuarios.atualizarCondicional (id, new Document ("tokenRedefinicao", token)
                     .append ("senhaHash", usuario.getString ("senhaHash")), new Document ("senhaHash", hash)
                     .append ("tokenRedefinicao", null).append ("redefinicaoExpiraEm", null)
                     .append ("emailPendente", null).append ("tokenTrocaEmail", null).append ("trocaEmailExpiraEm", null)))
-                    return Resposta.erro (400, "Invalid or expired token");
+                    return Resposta.erro (400, "Código inválido ou expirado.");
                 this.sessoes.encerrarDoUsuario (id);
             }
         }
 
-        return AuthHandler.mensagem ("Password reset");
+        return AuthHandler.mensagem ("Senha redefinida.");
     }
 }

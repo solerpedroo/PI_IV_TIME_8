@@ -8,7 +8,7 @@ import org.bson.Document;
 
 /*
     Junta os erros de validacao de um corpo JSON, campo a campo,
-    e monta a resposta 400 {"error":"Validation failed","fields":{campo: mensagem}}.
+    e monta a resposta 400 {"error":"Dados inválidos.","fields":{campo: mensagem}}.
     As mensagens sao as mesmas que o front mostra.
 */
 public class Validacao
@@ -38,7 +38,7 @@ public class Validacao
 
     public Resposta resposta ()
     {
-        return Resposta.json (400, new Document ("error", "Validation failed").append ("fields", this.erros));
+        return Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", this.erros));
     }
 
     // texto obrigatorio, sem espacos nas pontas; null se invalido

@@ -261,7 +261,7 @@ são os `name` dos formulários do front. Tudo sob `/api/**` exige
 Erro simples: `{"error": "mensagem"}`. Erro de validação (400) ou conflito (409):
 
 ```json
-{"error": "Validation failed", "fields": {"email": "Digite um e-mail válido."}}
+{"error": "Dados inválidos.", "fields": {"email": "Digite um e-mail válido."}}
 ```
 
 ### Autenticação
@@ -634,7 +634,7 @@ Equipamentos agrícolas, preventivas programadas e intervenções com custo vinc
   - extensões permitidas: html, css, js, jpg, png, svg, ico, woff2;
   - bloqueados: `..`, `\`, `:`, `~`, arquivos e pastas iniciados por ponto (`.env*`, `.git`) e `backend/`.
 - CORS liberado só para `http://localhost:*` e `http://127.0.0.1:*`. `OPTIONS` responde 204.
-- Um erro em uma requisição nunca derruba o servidor: vira `500 {"error":"Internal server error"}`.
+- Um erro em uma requisição nunca derruba o servidor: vira `500 {"error":"Erro interno do servidor."}`.
 
 ## Estrutura
 

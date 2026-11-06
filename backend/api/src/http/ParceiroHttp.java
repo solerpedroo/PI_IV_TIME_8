@@ -67,23 +67,23 @@ public class ParceiroHttp
         // linha de requisicao: METODO ALVO VERSAO
         String[] partes = linhas[0].split (" ", -1);
         if (partes.length != 3)
-            throw new ErroHttp (400, "Malformed request line");
+            throw new ErroHttp (400, "Linha da requisição malformada.");
 
         String metodo = partes[0];
         String alvo   = partes[1];
         String versao = partes[2];
 
         if (!metodo.matches ("[A-Z]{1,16}"))
-            throw new ErroHttp (400, "Malformed request line");
+            throw new ErroHttp (400, "Linha da requisição malformada.");
 
         if (!alvo.startsWith ("/"))
-            throw new ErroHttp (400, "Malformed request target");
+            throw new ErroHttp (400, "Destino da requisição malformado.");
 
         if (!versao.equals ("HTTP/1.1") && !versao.equals ("HTTP/1.0"))
         {
             if (versao.matches ("HTTP/\\d\\.\\d"))
-                throw new ErroHttp (505, "HTTP version not supported");
-            throw new ErroHttp (400, "Malformed request line");
+                throw new ErroHttp (505, "Versão HTTP não suportada.");
+            throw new ErroHttp (400, "Linha da requisição malformada.");
         }
 
         // cabecalhos "Nome: valor"
@@ -94,29 +94,29 @@ public class ParceiroHttp
             int    dois  = linha.indexOf (':');
 
             if (dois <= 0)
-                throw new ErroHttp (400, "Malformed header");
+                throw new ErroHttp (400, "Cabeçalho malformado.");
 
             String nome  = linha.substring (0, dois).toLowerCase ();
             String valor = linha.substring (dois + 1).trim ();
 
             // nome nao pode ter espaco (isso tambem barra cabecalho dobrado em varias linhas)
             if (!nome.matches ("[a-z0-9!#$%&'*+.^_`|~-]+"))
-                throw new ErroHttp (400, "Malformed header");
+                throw new ErroHttp (400, "Cabeçalho malformado.");
 
             String anterior = cabecalhos.get (nome);
             if (anterior == null)
                 cabecalhos.put (nome, valor);
             else if (nome.equals ("content-length") || nome.equals ("host"))
-                throw new ErroHttp (400, "Duplicated " + nome + " header");
+                throw new ErroHttp (400, "Cabeçalho duplicado: " + nome);
             else
                 cabecalhos.put (nome, anterior + ", " + valor);
         }
 
         if (versao.equals ("HTTP/1.1") && cabecalhos.get ("host") == null)
-            throw new ErroHttp (400, "Host header required");
+            throw new ErroHttp (400, "O cabeçalho Host é obrigatório.");
 
         if (cabecalhos.get ("transfer-encoding") != null)
-            throw new ErroHttp (501, "Transfer-Encoding not supported");
+            throw new ErroHttp (501, "Transfer-Encoding não é suportado.");
 
         // separa caminho e consulta antes do corpo (limite maior em .../foto)
         String caminho  = alvo;
@@ -136,18 +136,18 @@ public class ParceiroHttp
         if (texto != null)
         {
             if (!texto.matches ("\\d{1,10}"))
-                throw new ErroHttp (400, "Invalid Content-Length");
+                throw new ErroHttp (400, "Content-Length inválido.");
 
             long lido = Long.parseLong (texto);
             if (lido > maxCorpo)
-                throw new ErroHttp (413, "Request body too large");
+                throw new ErroHttp (413, "Corpo da requisição grande demais.");
 
             tamanho = (int) lido;
         }
 
         byte[] corpo = this.receptor.readNBytes (tamanho);
         if (corpo.length < tamanho)
-            throw new ErroHttp (400, "Incomplete request body");
+            throw new ErroHttp (400, "Corpo da requisição incompleto.");
 
         return new Requisicao (metodo, caminho,
                                ParceiroHttp.lerConsulta (consulta), cabecalhos, corpo,
@@ -168,7 +168,7 @@ public class ParceiroHttp
             {
                 if (cabeca.size () == 0)
                     return null;
-                throw new ErroHttp (400, "Incomplete request");
+                throw new ErroHttp (400, "Requisição incompleta.");
             }
 
             // ignora linhas em branco antes da linha de requisicao
@@ -179,7 +179,7 @@ public class ParceiroHttp
             ultimos = (ultimos << 8) | lido;
 
             if (cabeca.size () > ParceiroHttp.MAXIMO_CABECALHOS)
-                throw new ErroHttp (431, "Request headers too large");
+                throw new ErroHttp (431, "Cabeçalhos da requisição grandes demais.");
 
             if (ultimos == 0x0D0A0D0A || (ultimos & 0xFFFF) == 0x0A0A)
                 break;
@@ -200,12 +200,12 @@ public class ParceiroHttp
             if (c == '%')
             {
                 if (i + 2 >= caminho.length ())
-                    throw new ErroHttp (400, "Malformed request target");
+                    throw new ErroHttp (400, "Destino da requisição malformado.");
 
                 int alto  = Character.digit (caminho.charAt (i + 1), 16);
                 int baixo = Character.digit (caminho.charAt (i + 2), 16);
                 if (alto < 0 || baixo < 0)
-                    throw new ErroHttp (400, "Malformed request target");
+                    throw new ErroHttp (400, "Destino da requisição malformado.");
 
                 bytes.write (alto * 16 + baixo);
                 i += 2;
@@ -225,11 +225,11 @@ public class ParceiroHttp
         }
         catch (CharacterCodingException erro)
         {
-            throw new ErroHttp (400, "Malformed request target");
+            throw new ErroHttp (400, "Destino da requisição malformado.");
         }
 
         if (ret.indexOf ('\0') >= 0)
-            throw new ErroHttp (400, "Malformed request target");
+            throw new ErroHttp (400, "Destino da requisição malformado.");
 
         return ret;
     }
@@ -258,7 +258,7 @@ public class ParceiroHttp
         }
         catch (IllegalArgumentException erro)
         {
-            throw new ErroHttp (400, "Malformed query string");
+            throw new ErroHttp (400, "Consulta malformada.");
         }
 
         return ret;

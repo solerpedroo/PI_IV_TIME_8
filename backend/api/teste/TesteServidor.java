@@ -1315,7 +1315,7 @@ public class TesteServidor
         Resp tirou = put ("/api/safras/" + cafe, safra ("Caf\u00e9 2026", "Caf\u00e9", safraCafe.getString ("dataInicio"),
                                                        safraCafe.getString ("dataFim"), t4), a);
         conferir ("safra nao perde talhao com custo lancado nela",
-                  tirou.status == 409 && "Plot has costs in this crop season".equals (tirou.json ().getString ("error")));
+                  tirou.status == 409 && "O talhão possui custos nesta safra.".equals (tirou.json ().getString ("error")));
 
         for (int i = 0; i < 5; i++)
             post ("/api/safras/" + trig + "/avancar", null, a);
@@ -1411,7 +1411,7 @@ public class TesteServidor
         // erro dentro de um handler vira 500 e o servidor continua de pe
         Resp explodiu = get ("/explodir", null);
         conferir ("excecao no handler -> 500 generico",
-                  explodiu.status == 500 && explodiu.corpo.equals ("{\"error\": \"Internal server error\"}"));
+                  explodiu.status == 500 && explodiu.corpo.equals ("{\"error\": \"Erro interno do servidor.\"}"));
 
         // cliente que manda metade da requisicao e some
         try (Socket conexao = new Socket ("127.0.0.1", TesteServidor.porta))

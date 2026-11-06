@@ -111,7 +111,7 @@ public class CustosHandler implements Manipulador
 
         if (caminho.endsWith ("/sincronizar-consumo"))
             ret = metodo.equals ("POST") ? this.sincronizarConsumo (requisicao)
-                                         : Resposta.erro (405, "Method not allowed");
+                                         : Resposta.erro (405, "Método não permitido.");
         else if (partes == 2)
         {
             if (metodo.equals ("GET"))
@@ -274,9 +274,9 @@ public class CustosHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-            ret = Resposta.erro (409, "Property context changed; reload before saving");
+            ret = Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
 
         return ret;
     }
@@ -515,7 +515,7 @@ public class CustosHandler implements Manipulador
         Document custo         = this.custos.buscarPorId (propriedadeId, requisicao.getParametro ("id"));
 
         if (custo == null)
-            ret = Resposta.erro (404, "Not found");
+            ret = Resposta.erro (404, "Não encontrado.");
         else
             ret = Resposta.json (200, CustosHandler.publico (custo,
                                                              CustosHandler.porId (this.talhoes.listar (propriedadeId)),
@@ -569,7 +569,7 @@ public class CustosHandler implements Manipulador
             Document atual         = this.custos.buscarPorId (propriedadeId, id);
 
             if (atual == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (atual.get ("origem") != null)
                 return CustosHandler.deConsumo (atual);
@@ -592,7 +592,7 @@ public class CustosHandler implements Manipulador
                 return CustosHandler.safraFechada ();
 
             if (!this.custos.atualizar (propriedadeId, id, campos))
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             return Resposta.json (200, CustosHandler.publico (this.custos.buscarPorId (propriedadeId, id), talhoes, safras));
         }
@@ -612,14 +612,14 @@ public class CustosHandler implements Manipulador
             Document custo         = this.custos.buscarPorId (propriedadeId, id);
 
             if (custo == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (custo.get ("origem") != null)
                 ret = CustosHandler.deConsumo (custo);
             else if (CustosHandler.emSafraFinalizada (custo.getString ("safraId"),
                                                       CustosHandler.porId (this.safras.listar (propriedadeId))))
                 ret = CustosHandler.safraFechada ();
             else if (!this.custos.excluir (propriedadeId, id))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
                 ret = Resposta.semConteudo ();
 

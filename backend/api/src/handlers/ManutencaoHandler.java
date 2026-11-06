@@ -227,7 +227,7 @@ public class ManutencaoHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
             ret = Resposta.erro (409, "Property context changed; reload before saving");
 
@@ -622,7 +622,7 @@ public class ManutencaoHandler implements Manipulador
             return invalido;
 
         if (situacao != null && !List.of ("atrasada", "proxima", "futura", "programada", "realizada", "cancelada").contains (situacao))
-            return Resposta.json (400, new Document ("error", "Validation failed")
+            return Resposta.json (400, new Document ("error", "Dados inválidos.")
                                            .append ("fields", new Document ("situacao", "Use atrasada, proxima, futura, programada, realizada ou cancelada.")));
 
         LinkedHashMap<String, Document> equipamentos = ManutencaoHandler.porId (this.equipamentos.listar (propriedadeId));
@@ -711,7 +711,7 @@ public class ManutencaoHandler implements Manipulador
             Document atual         = this.preventivas.buscarPorId (propriedadeId, id);
 
             if (atual == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (ManutencaoHandler.REALIZADA.equals (atual.getString ("status")))
                 return Resposta.erro (409, "Preventiva j\u00e1 realizada: corrija pela interven\u00e7\u00e3o.");
@@ -749,7 +749,7 @@ public class ManutencaoHandler implements Manipulador
                                   .append  ("atualizadoEm",  Instant.now ().toString ());
 
             if (!this.preventivas.atualizar (propriedadeId, id, campos))
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             Document            salva = this.preventivas.buscarPorId (propriedadeId, id);
             ArrayList<Document> lista = new ArrayList<Document> ();
@@ -774,11 +774,11 @@ public class ManutencaoHandler implements Manipulador
             Document preventiva    = this.preventivas.buscarPorId (propriedadeId, id);
 
             if (preventiva == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (ManutencaoHandler.REALIZADA.equals (preventiva.getString ("status")))
                 ret = Resposta.erro (409, "Preventiva realizada faz parte do hist\u00f3rico: exclua a interven\u00e7\u00e3o.");
             else if (!this.preventivas.excluir (propriedadeId, id))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
                 ret = Resposta.semConteudo ();
 
@@ -801,7 +801,7 @@ public class ManutencaoHandler implements Manipulador
             return invalido;
 
         if (tipo != null && !tipo.equals ("preventiva") && !tipo.equals ("corretiva"))
-            return Resposta.json (400, new Document ("error", "Validation failed")
+            return Resposta.json (400, new Document ("error", "Dados inválidos.")
                                            .append ("fields", new Document ("tipo", "Use preventiva ou corretiva.")));
 
         LinkedHashMap<String, Document> equipamentos = ManutencaoHandler.porId (this.equipamentos.listar (propriedadeId));
@@ -1018,7 +1018,7 @@ public class ManutencaoHandler implements Manipulador
             Document atual         = this.intervencoes.buscarPorId (propriedadeId, id);
 
             if (atual == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             LinkedHashMap<String, Document> talhoes = ManutencaoHandler.porId (this.talhoes.listar (propriedadeId));
             LinkedHashMap<String, Document> safras  = ManutencaoHandler.porId (this.safras.listar (propriedadeId));
@@ -1083,7 +1083,7 @@ public class ManutencaoHandler implements Manipulador
                                   .append  ("atualizadoEm", agora);
 
             if (!this.intervencoes.atualizar (propriedadeId, id, campos))
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (vinculada != null)
                 this.preventivas.atualizar (propriedadeId, vinculada, new Document ("realizadaEm", novaData).append ("atualizadoEm", agora));
@@ -1120,7 +1120,7 @@ public class ManutencaoHandler implements Manipulador
             Document intervencao   = this.intervencoes.buscarPorId (propriedadeId, id);
 
             if (intervencao == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (ManutencaoHandler.finalizada (this.safras.buscarPorId (propriedadeId, intervencao.getString ("safraId"))))
                 return ManutencaoHandler.safraFechada ();
@@ -1145,7 +1145,7 @@ public class ManutencaoHandler implements Manipulador
                                                 .append  ("atualizadoEm",  Instant.now ().toString ()));
 
             if (!this.intervencoes.excluir (propriedadeId, id))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
                 ret = Resposta.semConteudo ();
 

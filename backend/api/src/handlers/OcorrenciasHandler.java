@@ -241,7 +241,7 @@ public class OcorrenciasHandler
         synchronized (this.sessoes)
         {
             Sessao atual = this.sessoes.buscar (r.getToken ());
-            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (atual == null) return Resposta.erro (401, "Não autorizado.");
             Document corpo = r.getCorpoJson ();
             String propriedade = atual.getPropriedadeId ();
             if (!propriedade.equals (r.getSessao ().getPropriedadeId ()) ||
@@ -331,7 +331,7 @@ public class OcorrenciasHandler
         synchronized (this.sessoes)
         {
             Sessao atual = this.sessoes.buscar (r.getToken ());
-            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (atual == null) return Resposta.erro (401, "Não autorizado.");
             Document corpo = r.getCorpoJson ();
             Document anterior = this.buscar (r);
             if (Boolean.TRUE.equals (anterior.getBoolean ("excluida")))
@@ -357,7 +357,7 @@ public class OcorrenciasHandler
     {
         synchronized (this.sessoes)
         {
-            if (this.sessoes.buscar (r.getToken ()) == null) return Resposta.erro (401, "Unauthorized");
+            if (this.sessoes.buscar (r.getToken ()) == null) return Resposta.erro (401, "Não autorizado.");
             Document corpo = r.getCorpoJson ();
             Document anterior = this.buscar (r);
             if (Boolean.TRUE.equals (anterior.getBoolean ("excluida")))

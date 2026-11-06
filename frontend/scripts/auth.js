@@ -142,7 +142,7 @@
       const input = form.elements.namedItem(field);
       if (input instanceof HTMLElement) setError(input, message);
     });
-    const message = error.message === "Email confirmation required"
+    const message = error.message === "Confirme o e-mail antes de entrar."
       ? "Confirme seu e-mail antes de entrar. Use o código enviado para sua caixa de entrada."
       : (error.message || "Não foi possível concluir a solicitação.");
     showMessage(form, message);
@@ -447,7 +447,7 @@
         } catch (error) {
           // Permite que o link "Confirmar e-mail" já saiba para qual conta
           // pedir novo código depois de um login bloqueado por confirmação.
-          if (route === "/api/auth/login" && error.message === "Email confirmation required" && email) {
+          if (route === "/api/auth/login" && error.message === "Confirme o e-mail antes de entrar." && email) {
             sessionStorage.setItem(STORAGE.pendingEmail, email.value.trim());
           }
           showApiErrors(form, error);

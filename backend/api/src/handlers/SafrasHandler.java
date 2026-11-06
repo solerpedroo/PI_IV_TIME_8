@@ -271,7 +271,7 @@ public class SafrasHandler implements Manipulador
                     String mensagem = "O talh\u00e3o " + talhoes.get (talhaoId).getString ("nome") +
                                       " j\u00e1 est\u00e1 na safra " + outra.getString ("nome") +
                                       " nesse per\u00edodo.";
-                    ret = Resposta.json (409, new Document ("error", "Plot already in another crop season")
+                    ret = Resposta.json (409, new Document ("error", "O talhão já está em outra safra.")
                                                   .append ("fields", new Document ("talhoes", mensagem)));
                 }
             }
@@ -307,7 +307,7 @@ public class SafrasHandler implements Manipulador
                 Document talhao   = talhoes.get (talhaoId);
                 String   mensagem = "O talh\u00e3o " + (talhao == null ? talhaoId : talhao.getString ("nome")) +
                                     " tem custos lan\u00e7ados nesta safra.";
-                ret = Resposta.json (409, new Document ("error", "Plot has costs in this crop season")
+                ret = Resposta.json (409, new Document ("error", "O talhão possui custos nesta safra.")
                                               .append ("fields", new Document ("talhoes", mensagem)));
             }
         }
@@ -334,12 +334,12 @@ public class SafrasHandler implements Manipulador
                 Document talhao   = talhoes.get (talhaoId);
                 String   mensagem = "O talh\u00e3o " + (talhao == null ? talhaoId : talhao.getString ("nome")) +
                                     " tem colheitas registradas nesta safra.";
-                ret = Resposta.json (409, new Document ("error", "Plot has harvests in this crop season")
+                ret = Resposta.json (409, new Document ("error", "O talhão possui colheitas nesta safra.")
                                               .append ("fields", new Document ("talhoes", mensagem)));
             }
             else if (ret == null && safraId.equals (colheita.getString ("safraId")) &&
                      colheita.getString ("data").compareTo (campos.getString ("dataInicio")) < 0)
-                ret = Resposta.json (409, new Document ("error", "Crop season starts after a registered harvest")
+                ret = Resposta.json (409, new Document ("error", "A safra começa depois de uma colheita já registrada.")
                                               .append ("fields", new Document ("dataInicio",
                                                        "A safra possui colheita em " + colheita.getString ("data") + ".")));
         }
@@ -349,7 +349,7 @@ public class SafrasHandler implements Manipulador
 
     private static Resposta nomeRepetido ()
     {
-        return Resposta.json (409, new Document ("error", "Crop season name already exists")
+        return Resposta.json (409, new Document ("error", "Já existe uma safra com esse nome.")
                                        .append ("fields", new Document ("nome", "J\u00e1 existe uma safra com esse nome.")));
     }
 
@@ -365,9 +365,9 @@ public class SafrasHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-            ret = Resposta.erro (409, "Property context changed; reload before saving");
+            ret = Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
 
         return ret;
     }
@@ -424,7 +424,7 @@ public class SafrasHandler implements Manipulador
         Document safra         = this.safras.buscarPorId (propriedadeId, requisicao.getParametro ("id"));
 
         if (safra == null)
-            ret = Resposta.erro (404, "Not found");
+            ret = Resposta.erro (404, "Não encontrado.");
         else
             ret = Resposta.json (200, SafrasHandler.publico (safra, this.mapaDeTalhoes (propriedadeId)));
 
@@ -482,7 +482,7 @@ public class SafrasHandler implements Manipulador
             Document atual         = this.safras.buscarPorId (propriedadeId, id);
 
             if (atual == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (atual.getString ("etapa").equals (SafrasHandler.FINALIZACAO))
                 return SafrasHandler.finalizada ();
@@ -534,7 +534,7 @@ public class SafrasHandler implements Manipulador
             Document safra         = this.safras.buscarPorId (propriedadeId, id);
 
             if (safra == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (!safra.getString ("etapa").equals (SafrasHandler.PLANEJAMENTO))
                 ret = Resposta.json (409, new Document ("error",
                           "S\u00f3 \u00e9 poss\u00edvel excluir uma safra em planejamento."));
@@ -544,7 +544,7 @@ public class SafrasHandler implements Manipulador
             else if (this.temAtividades (propriedadeId, id))
                 ret = Resposta.json (409, new Document ("error", "Safra possui atividades vinculadas."));
             else if (!this.safras.excluir (propriedadeId, id))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
             {
                 if (this.orcamentos != null)
@@ -570,7 +570,7 @@ public class SafrasHandler implements Manipulador
             Document safra         = this.safras.buscarPorId (propriedadeId, id);
 
             if (safra == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             int posicao = SafrasHandler.ETAPAS.indexOf (safra.getString ("etapa"));
             if (posicao == SafrasHandler.ETAPAS.size () - 1)
@@ -616,7 +616,7 @@ public class SafrasHandler implements Manipulador
         Document safra         = this.safras.buscarPorId (propriedadeId, requisicao.getParametro ("id"));
 
         if (safra == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         LinkedHashMap<String, Document> talhoes = this.mapaDeTalhoes (propriedadeId);
         ArrayList<Document>             ret     = new ArrayList<Document> ();
