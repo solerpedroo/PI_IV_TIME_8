@@ -100,7 +100,7 @@ public class Resposta
             case 204: return "Sem conteúdo";
             case 302: return "Encontrado";
             case 400: return "Requisição inválida";
-            case 401: return "Não autorizado.";
+            case 401: return "Não autorizado";
             case 403: return "Proibido";
             case 404: return "Não encontrado";
             case 405: return "Método não permitido";
