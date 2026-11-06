@@ -1,3 +1,4 @@
+/* Autor principal: Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — chrome do app shell
@@ -31,6 +32,38 @@
     sessionStorage.removeItem(STORAGE.sessionUser);
   }
 
+  /** Marca o item da navegação conforme o arquivo atual (mesma sidebar em todas as telas). */
+  function applySidebarActiveNav() {
+    const nav = $("[data-app-sidebar-nav]");
+    if (!nav) return;
+    const file = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    const page = file.replace(/\.html$/i, "") || "dashboard";
+    $$("[data-sidebar-page]", nav).forEach((link) => {
+      const active = link.dataset.sidebarPage === page;
+      link.classList.toggle("is-active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
+  /**
+   * Sidebar única em partials/app-sidebar.html (ícones iguais a configuracoes.html).
+   * Páginas expõem um placeholder [data-app-sidebar-mount]; fallback: sidebar estática.
+   */
+  async function loadAppSidebar() {
+    const mount = $("[data-app-sidebar-mount]");
+    if (!mount) return;
+    try {
+      const response = await fetch("partials/app-sidebar.html", { cache: "no-store" });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const html = await response.text();
+      mount.outerHTML = html;
+      applySidebarActiveNav();
+    } catch (error) {
+      console.warn("Não foi possível carregar a sidebar global:", error);
+    }
+  }
+
   /**
    * Protege páginas internas também no cliente. A API continua sendo a fonte
    * de verdade: o token é validado em GET /api/me antes de inicializar a tela.
@@ -41,6 +74,8 @@
       window.location.replace("login.html");
       return false;
     }
+
+    await loadAppSidebar();
 
     try {
       const response = await fetch(`${API_BASE}/api/me`, {
@@ -446,6 +481,7 @@
 
   async function init() {
     if (!(await ensureAuthenticated())) return;
+    applySidebarActiveNav();
     // O texto da navegação fica oculto na sidebar compacta, mas preserva seu nome.
     $$(".sidebar-link").forEach((link) => {
       const label = link.textContent.trim();
