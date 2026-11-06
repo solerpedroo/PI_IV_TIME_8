@@ -28,8 +28,6 @@
   // A API acompanha a origem da página, inclusive com HTTPS e portas alternativas.
   const API_BASE = window.location.origin;
 
-  const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
-
   /**
    * Exibe mensagem acessível no formulário (erro ou sucesso).
    */
@@ -78,22 +76,6 @@
       }
     });
     return firstInvalid;
-  }
-
-  /**
-   * Avalia regras de força da senha (espelha o meter do pen).
-   */
-  function getPasswordChecks(value) {
-    return {
-      length: value.length >= 8,
-      upper: /[A-ZÀ-Ý]/.test(value),
-      number: /\d/.test(value),
-      symbol: /[^A-Za-zÀ-ÿ\d]/.test(value),
-    };
-  }
-
-  function passwordLevel(checks) {
-    return Object.values(checks).filter(Boolean).length;
   }
 
   function setLoading(form, loading) {
@@ -191,33 +173,10 @@
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Medidor de força                                                         */
+  /* Medidor de força: regras únicas em senha-regras.js                      */
   /* ------------------------------------------------------------------------ */
   function initPasswordMeter() {
-    const passwordInput = $("[data-password-meter]");
-    if (!passwordInput) return;
-
-    const meter = $("[data-meter]");
-    if (!meter) return;
-
-    const rules = $$("[data-rule]", meter);
-    const label = $("[data-meter-label]", meter);
-
-    const update = () => {
-      const checks = getPasswordChecks(passwordInput.value);
-      const level = passwordLevel(checks);
-      meter.dataset.level = String(level);
-      if (label) {
-        label.dataset.level = String(level);
-        label.textContent = STRENGTH_LABELS[level];
-      }
-      rules.forEach((rule) => {
-        rule.classList.toggle("is-valid", Boolean(checks[rule.dataset.rule]));
-      });
-    };
-
-    passwordInput.addEventListener("input", update);
-    update();
+    window.AgroSenha?.iniciar();
   }
 
   /* ------------------------------------------------------------------------ */
