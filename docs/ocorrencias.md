@@ -31,8 +31,9 @@ O cadastro aceita título (até 160 caracteres), tipo (`Praga`, `Doença`, `Clim
 `Equipamento`, `Outro`), data civil ISO válida, prioridade (`Baixa`, `Média`, `Alta`)
 e descrição opcional de até 6000 caracteres. A descrição mantém suas quebras de
 linha e caracteres literais. O detalhe usa `textContent`, sem interpretar HTML.
-Foto permanece complemento condicionado pelo próprio escopo dos cards: a tela
-informa que o anexo está indisponível e a API rejeita seu envio.
+Evidência fotográfica opcional (#29, #175, #176): upload em `POST /api/ocorrencias/{id}/foto`
+(com `versao` e `conteudoBase64`); bytes em `fotoEvidencia.dados` (BSON Binary); consulta
+via `GET .../foto` e metadados `temFoto` no JSON. Detalhes em [`fotos-evidencia.md`](fotos-evidencia.md).
 
 Editar um cadastro conserva os dados anteriores na timeline, incluindo a descrição
 original. A exclusão é lógica: retira o item da lista ativa e preserva todos os
@@ -102,7 +103,7 @@ aparecer nos alertas ativos.
 Na raiz do repositório, com JDK 21:
 
 ```bash
-sh backend/servidor/testar.sh
+sh backend/api/testar.sh
 npm install --no-save playwright@1.49.1
 npx playwright install chromium
 node tests/ocorrencias-real.cjs
@@ -116,7 +117,7 @@ Com MongoDB em replica set (por exemplo, `docker compose up -d --wait mongo`):
 
 ```bash
 export MONGODB_URI='mongodb://127.0.0.1:27017/agro_ocorrencias_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
-(cd backend/servidor && java -cp 'bin:lib/*' TesteOcorrencias --mongo)
+(cd backend/api && java -cp 'bin:lib/*' TesteOcorrencias --mongo)
 node tests/ocorrencias-real.cjs --mongo
 ```
 

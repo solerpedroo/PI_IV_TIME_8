@@ -5,7 +5,7 @@
 Responsável: Pedro Henrique Contardi Soler — RA 25005592
 Data: 17/10/2026
 Branch: `feat/auth`
-Escopo do PR: novo projeto `backend/servidor/`
+Escopo do PR: novo projeto `backend/api/`
 
 ---
 
@@ -24,7 +24,7 @@ manualmente em Java 21 para atender à exigência da disciplina de um servidor
 - o que ainda está pendente.
 
 As instruções de uso (comandos, variáveis, exemplos com `curl`) estão em
-[`backend/servidor/README.md`](../backend/servidor/README.md).
+[`backend/api/README.md`](../backend/api/README.md).
 
 ## 2. Contexto e motivação
 
@@ -54,6 +54,17 @@ Antes deste trabalho:
 | Estilo do `backend/gateway` | Identificadores e comentários em português, chaves Allman, espaço antes dos parênteses, `throw new Exception ("... ausente")`. |
 
 ## 4. Visão geral da arquitetura
+
+Desde a branch `ServerRefactor`, o AgroGestão mantém **dois** servidores Java alinhados ao material Cliente–Servidor (Fazedor de Continhas):
+
+| Processo | Pasta | Porta | Protocolo |
+|---|---|---|---|
+| API HTTP | `backend/api` | 8080 | HTTP manual (`ParceiroHttp`) |
+| Algoritmos | `backend/serversocket` | 3000 | Objetos `Comunicado` serializados (`protocolo.Parceiro`) |
+
+O navegador fala só com a API HTTP. Rotas como `POST /api/auth/register` delegam validações ao ServerSocket via `servicos/ClienteDeAlgoritmos` (variáveis `SERVIDOR_ALGORITMOS_HOST` / `SERVIDOR_ALGORITMOS_PORT`). Persistência, sessão e autorização permanecem na API.
+
+### 4.1 API HTTP (8080)
 
 ```mermaid
 flowchart LR
@@ -248,7 +259,7 @@ sem filtro, como nos chips do front.
 Contrato HTTP autenticado (`Authorization: Bearer`): listar/criar/editar/excluir
 em planejamento, `POST /api/safras/{id}/avancar` (uma etapa por vez) e
 `GET /api/safras/{id}/historico`. Detalhes e códigos em
-[backend/servidor/README.md](../backend/servidor/README.md).
+[backend/api/README.md](../backend/api/README.md).
 
 A UI está em `frontend/safras.html` + `frontend/scripts/safras.js`, linkada na
 sidebar das telas operacionais. O `core` não publica CRUD de safras — apenas
@@ -305,7 +316,7 @@ um proxy HTTPS.
 
 ## 11. Evidência de testes
 
-`backend/servidor/testar.bat` (ou `testar.sh`) compila e executa
+`backend/api/testar.bat` (ou `testar.sh`) compila e executa
 `teste/TesteServidor.java`. O teste sobe o servidor real numa porta livre, com
 repositórios em memória, e faz requisições HTTP reais por socket, inclusive
 requisições malformadas que um cliente HTTP comum não enviaria.
@@ -333,7 +344,7 @@ Verificação manual feita em modo memória, na porta 8080:
 
 | Item | Situação |
 |---|---|
-| **Validação com MongoDB real** | `backend/servidor/testar-mongo.sh` valida cadastro, índice único e criação transacional contra o banco `agrogestao_teste`. Requer `docker compose up -d mongo`. |
+| **Validação com MongoDB real** | `backend/api/testar-mongo.sh` valida cadastro, índice único e criação transacional contra o banco `agrogestao_teste`. Requer `docker compose up -d mongo`. |
 | Integração do front | Formulários de autenticação integrados por `fetch`, com token em `sessionStorage`. |
 | Demais módulos | Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e Configurações ficam para as próximas entregas. |
 | Sessões em memória | Reiniciar o servidor desloga todos (aceitável nesta fase). |
@@ -344,7 +355,7 @@ Verificação manual feita em modo memória, na porta 8080:
 ## 13. Arquivos incluídos no PR
 
 ```
-backend/servidor/
+backend/api/
   README.md                       instruções de uso
   .gitignore                      ignora bin/
   compilar.sh  compilar.bat
@@ -373,8 +384,8 @@ alterados.
 
 ## 14. Como revisar
 
-1. `backend\servidor\testar.bat`: deve terminar em `137/137 testes ok`.
-2. `backend\servidor\compilar.bat` e `rodar.bat --memoria`; abrir
+1. `backend\api\testar.bat`: deve terminar em `137/137 testes ok`.
+2. `backend\api\compilar.bat` e `rodar.bat --memoria`; abrir
    <http://localhost:8080> e seguir o roteiro com `curl` do README.
 3. Com Docker: `docker compose up -d mongo`, depois `rodar.bat`. Repetir o
    roteiro, reiniciar o servidor e confirmar que os talhões continuam lá.

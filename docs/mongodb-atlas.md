@@ -61,8 +61,17 @@ Não use uma credencial compartilhada. Se alguém sair do grupo, seu acesso pode
 
    ```dotenv
    MONGODB_DATABASE=agrogestao_dev
-   MONGODB_URI='mongodb+srv://dev_vinicius:SENHA@CLUSTER.mongodb.net/?retryWrites=true&w=majority&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000'
+   MONGODB_URI='mongodb+srv://dev_vinicius:SENHA@CLUSTER.mongodb.net/agrogestao_dev?authSource=admin&retryWrites=true&w=majority&serverSelectionTimeoutMS=5000&connectTimeoutMS=5000'
    ```
+
+O servidor HTTP em `backend/api` seleciona o banco pelo caminho da `MONGODB_URI` ou, se ele estiver ausente, por `MONGODB_DATABASE`. Quando ambos estiverem presentes, seus nomes devem coincidir. Para o core, mantenha `MONGODB_DATABASE=agrogestao_dev`.
+
+Para usuários Atlas com senha (SCRAM), inclua `authSource=admin` ao adicionar
+o caminho do banco à URI **se** o painel **Connect → Drivers** indicar esse
+parâmetro (varia conforme o usuário criado em Database Access).
+
+A API HTTP (`backend/api`) aplica a mesma regra: path na URI, senão
+`MONGODB_DATABASE`, e **recusa subir** se os dois nomes divergirem.
 
 Para `./backend/core/testar.sh --atlas`, altere temporariamente `MONGODB_DATABASE` para um nome terminado em `_teste` (ex.: `agrogestao_ci_teste`). A fábrica `MongoConexao.paraTestes()` recusa qualquer outro nome.
 
@@ -89,12 +98,24 @@ mvn -q exec:java -Dexec.mainClass=br.com.agrogestao.core.domain.propriedades.Ace
 
 Esses testes não acessam o Atlas nem precisam de credenciais.
 
-## Etapa 6 — carregar o ambiente e conectar ao Atlas
+## Etapa 6 — iniciar a API com o Atlas
 
-Volte à raiz do repositório, carregue o `.env` no terminal e inicie o core:
+Na raiz do repositório, no Linux, macOS ou Git Bash, carregue o arquivo local no terminal que iniciará a API. Execute apenas arquivos `.env` de confiança, pois o comando `.` interpreta seu conteúdo como comandos de shell:
 
 ```bash
-cd ../..
+set -a
+. ./.env
+set +a
+cd backend/api
+bash compilar.sh
+bash rodar.sh
+```
+
+Em outro terminal, execute `curl -i http://127.0.0.1:8080/ready`. HTTP 200 confirma que a API conseguiu consultar o banco; HTTP 503 indica indisponibilidade. Se a API não iniciar, confira o IP autorizado, usuário, senha, nome do banco e a URI, sem compartilhar a URI completa. Cada novo terminal precisa carregar o `.env` novamente. Sem essa etapa, o script usa o MongoDB local por padrão.
+
+Para validar também o módulo core, volte à raiz do repositório, carregue o `.env` no terminal e inicie o core:
+
+```bash
 set -a
 . ./.env
 set +a
@@ -103,8 +124,6 @@ mvn -q compile exec:java -Dexec.mainClass=br.com.agrogestao.core.CoreApplication
 ```
 
 Na partida, o Java executa `ping` no Atlas e cria os índices das coleções. Se a URI, senha ou IP estiver incorreto, o core encerra com erro e não inicia o servidor.
-
-O conector Atlas desta sessão informou que o acesso por clientes de IA está desabilitado nas organizações da conta. Isso não impede a conexão direta do Java com o Atlas, mas impede que o assistente crie ou inspecione recursos por esse conector. Um Organization Owner pode habilitar esse acesso se o grupo desejar; não é obrigatório para rodar o projeto.
 
 Em outro terminal, verifique:
 

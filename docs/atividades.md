@@ -33,7 +33,7 @@ reabertos. Menu, Lista e arraste passam pela mesma rota de status.
 
 ## Evidência
 
-`backend/servidor/testar.bat` valida criação, edição, vínculo safra-talhão,
+`backend/api/testar.bat` valida criação, edição, vínculo safra-talhão,
 campos inválidos (incluindo data fora do formato do protótipo/ISO), três
 caminhos de status, cancelamento e histórico (335/335 na execução de
 28/10/2026). O repositório Mongo grava atividade e evento de histórico na mesma

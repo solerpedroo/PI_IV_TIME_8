@@ -41,7 +41,7 @@ alertas climáticos nem e-mails sem serviço correspondente.
 ## Evidência
 
 ```bash
-bash backend/servidor/testar.sh
+bash backend/api/testar.sh
 npm install --no-save playwright@1.49.1
 npx playwright install chromium --with-deps
 PLAYWRIGHT_MODULE=playwright node tests/notificacoes-real.cjs

@@ -45,7 +45,7 @@ Propriedades com catálogo ou histórico de estoque ficam protegidas da exclusã
 Na raiz, JDK 21 instalado:
 
 ```bash
-sh backend/servidor/testar.sh
+sh backend/api/testar.sh
 ```
 
 Mongo local com transações (o Compose inicializa `rs0` e aguarda primário):
@@ -53,7 +53,7 @@ Mongo local com transações (o Compose inicializa `rs0` e aguarda primário):
 ```bash
 docker compose up -d --wait mongo
 export MONGODB_URI='mongodb://127.0.0.1:27017/agro_estoque_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
-sh backend/servidor/testar-estoque-mongo.sh
+sh backend/api/testar-estoque-mongo.sh
 node tests/estoque-real.cjs
 ```
 

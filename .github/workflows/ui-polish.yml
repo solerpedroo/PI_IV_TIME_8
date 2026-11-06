@@ -5,7 +5,12 @@ on:
     paths:
       - "frontend/styles/**"
       - "frontend/scripts/**"
+      - "frontend/partials/**"
       - "tests/ui-polish.cjs"
+      - "tests/empty-state-origin.cjs"
+      - "tests/mock-api.cjs"
+      - "tests/fixtures/**"
+      - "frontend/Assets/fonts/**"
       - "frontend/*.html"
       - "docs/polish-ui.md"
       - ".github/workflows/ui-polish.yml"
@@ -14,7 +19,12 @@ on:
     paths:
       - "frontend/styles/**"
       - "frontend/scripts/**"
+      - "frontend/partials/**"
       - "tests/ui-polish.cjs"
+      - "tests/empty-state-origin.cjs"
+      - "tests/mock-api.cjs"
+      - "tests/fixtures/**"
+      - "frontend/Assets/fonts/**"
       - "frontend/*.html"
       - "docs/polish-ui.md"
       - ".github/workflows/ui-polish.yml"
@@ -35,4 +45,6 @@ jobs:
       - name: Testes de layout
         env:
           PLAYWRIGHT_MODULE: playwright
-        run: node tests/ui-polish.cjs
+        run: |
+          node tests/ui-polish.cjs
+          node tests/empty-state-origin.cjs

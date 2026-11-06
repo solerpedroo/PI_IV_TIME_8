@@ -49,11 +49,14 @@ Este projeto **não** implementa no MVP:
 
 ### Frontend
 - **HTML / CSS / JavaScript** estáticos (sem framework SPA)
-- Design system **Forest Sage** (`docs/design/`)
+- Design system **Forest Sage** (`docs/design/`), com Geist local no aplicativo e nos slides
 - Persistência local de apoio (`agro-local.js`), escopada por usuário/propriedade — **não** substitui a API
 
 ### Backend / API
-- **Java 21** puro (`backend/servidor`) com HTTP manual (`ServerSocket`)
+- **Java 21** puro: dois processos complementares
+  - **`backend/api`** — HTTP manual na porta **8080** (rotas `/api/**`, estáticos, MongoDB)
+  - **`backend/serversocket`** — TCP + objetos serializados na porta **3000** (validações e cálculos; padrão Cliente–Servidor da disciplina)
+- A API HTTP delega ao ServerSocket via `servicos/ClienteDeAlgoritmos` (ex.: cadastro). Ver [`backend/serversocket/README.md`](backend/serversocket/README.md).
 - Sem Spring e sem Maven no servidor principal
 - Driver oficial **MongoDB** (`lib/`)
 - Gateway Java opcional (`backend/gateway`)
@@ -80,35 +83,37 @@ git clone https://github.com/solerpedroo/PI_IV_TIME_8.git
 cd PI_IV_TIME_8
 ```
 
-### 2) Compilar e testar o servidor (memória)
+### 2) Compilar e testar (HTTP + ServerSocket)
 
 ```bash
-bash backend/servidor/testar.sh
-cd backend/servidor
+sh backend/serversocket/testar.sh    # algoritmos e protocolo (porta 3000)
+bash backend/api/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
+cd backend/api
 bash compilar.sh
-bash rodar.sh --memoria
+bash rodar.sh --memoria              # sobe o socket na 3000 e a API na 8080
 ```
 
 Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os dados ao encerrar.
+Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh --memoria`.
 
-No Windows, use os scripts `.bat` equivalentes em `backend/servidor/`.
+No Windows, use os scripts `.bat` equivalentes em `backend/api/`.
 
-### 3) (Recomendado) MongoDB local com replica set
+### 3) MongoDB local ou Atlas compartilhado
 
-Na raiz do repositório:
+Para usar o MongoDB local, execute `docker compose up -d --wait mongo` na raiz do repositório. O Atlas não exige Docker.
 
-```bash
-docker compose up -d --wait mongo
-```
-
-Carregue `MONGODB_URI` (ex.: `mongodb://127.0.0.1:27017/agrogestao_dev?replicaSet=rs0`) e execute:
+Para usar o Atlas compartilhado, copie `.env.example` para `.env` na raiz e preencha a URI individual fornecida pelo responsável pelo cluster. Siga o [guia do Atlas](docs/mongodb-atlas.md) para autorizar seu IP e configurar seu usuário. O arquivo `.env` não é carregado automaticamente: no Linux, macOS ou Git Bash, execute na raiz do projeto:
 
 ```bash
-cd backend/servidor
+set -a
+. ./.env
+set +a
+cd backend/api
+bash compilar.sh
 bash rodar.sh
 ```
 
-Guia Atlas e `.env` local: [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md). Credenciais **não** entram no Git.
+Em outro terminal, `curl -i http://127.0.0.1:8080/ready` deve responder HTTP 200. O endpoint consulta o banco configurado; erro ou HTTP 503 indica que a conexão não está pronta. Para usar o Docker local, não carregue o `.env` do Atlas: `rodar.sh` usa `127.0.0.1:27017` por padrão. Se `MONGODB_DATABASE` estiver definida, ela deve coincidir com o banco da URI. Credenciais **não** entram no Git.
 
 ### 4) Frontend estático (opcional, sem API)
 
@@ -118,7 +123,7 @@ Só para inspecionar as páginas sem o servidor Java:
 python -m http.server 5500 --directory frontend
 ```
 
-Acesse `http://localhost:5500/login.html`. Fluxos autenticados e persistentes exigem o servidor na porta **8080**.
+Acesse `http://localhost:5500/login.html`. Fluxos autenticados e persistentes exigem a API na mesma origem da página. O servidor Java entrega ambos; portas alternativas e HTTPS via proxy preservam essa origem.
 
 ### 5) Saúde do serviço
 
@@ -134,7 +139,7 @@ PI_IV_TIME_8/
 │   ├── styles/               # design system e estilos por tela
 │   └── Assets/               # imagens
 ├── backend/
-│   ├── servidor/             # API HTTP + arquivos estáticos (ponto de entrada)
+│   ├── api/                  # API HTTP + arquivos estáticos (ponto de entrada)
 │   ├── gateway/              # proxy Java opcional para /api/**
 │   └── core/                 # modelo Mongo/Atlas e testes de domínio
 ├── docs/                     # produto, contratos por módulo, Atlas, design
@@ -190,7 +195,7 @@ PI_IV_TIME_8/
 ### Servidor Java (memória)
 
 ```bash
-bash backend/servidor/testar.sh
+bash backend/api/testar.sh
 ```
 
 ### Mongo + reinício (exemplos)
@@ -215,15 +220,18 @@ Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/e
 ## 🛟 Troubleshooting
 
 ### Porta 8080 ocupada
-Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (ajuste o front se necessário).
+Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (abra `http://127.0.0.1:9000/login.html`).
 
 ### `/ready` falha com Mongo
 Confirme o Compose (`docker compose ps`), o `replicaSet=rs0` na URI e que o healthcheck iniciou o RS. Veja também [`docs/servidor-java.md`](docs/servidor-java.md).
 
 ### Cadastro sem e-mail real
-Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/servidor/README.md`](backend/servidor/README.md).
+Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/api/README.md`](backend/api/README.md).
 
-### Cache local vs API
+### Dados iniciais e cache local vs API
+
+Contas e propriedades começam sem registros operacionais de exemplo. Painel, talhões e atividades consultam a API; falhas de consulta não restauram demonstrações antigas. Fixtures fictícias ficam exclusivamente em `tests/`, fora dos arquivos servidos pelo aplicativo.
+
 Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é cópia de leitura escopada; falha de rede não deve confirmar mutações só no `localStorage`.
 
 ## 🔗 Materiais de apoio

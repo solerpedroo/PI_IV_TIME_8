@@ -46,7 +46,7 @@
       severity: oneOf("Alta", "Média", "Baixa"), status: oneOf("Aberta", "Em análise", "Resolvida"), timeline}),
     // Custos e orçamento vêm da API; aqui fica só o período escolhido.
     // budget e entries permanecem para aceitar o cache anterior sem descartá-lo.
-    costs: shape({budget: positive, period: text,
+    costs: shape({budget: number, period: text,
       entries: (value) => list(shape({id: positive, description: text,
         category: oneOf("Insumos", "Mão de Obra", "Maquinário", "Combustível", "Outros"),
         plot: string, date: isoDay, value: positive}))(value)
@@ -120,7 +120,7 @@
       known.set(key, raw);
       return true;
     } catch (error) {
-      report("Não foi possível salvar " + labels[key] + ". A alteração foi desfeita. Verifique o espaço ou a permissão do navegador e recarregue a página antes de tentar novamente.");
+      report("Não foi possível salvar " + labels[key] + " no cache local. Operações já confirmadas pelo servidor permanecem salvas. Verifique o espaço ou a permissão do navegador e recarregue a página.");
       return false;
     }
   }

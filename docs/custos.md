@@ -3,7 +3,7 @@
 
 A tela de Custos usa somente a API Java autenticada (`/api/custos` e
 `/api/custos/resumo`, contrato no
-[README do servidor](../backend/servidor/README.md)). Não existem mais lançamentos de exemplo nem totais fixos:
+[README do servidor](../backend/api/README.md)). Não existem mais lançamentos de exemplo nem totais fixos:
 `categoryBase`, a área 1284 e os valores de cultura foram removidos.
 
 ## Confirmação pela API (#157)
@@ -76,7 +76,7 @@ A conclusão da atividade com baixa automática de estoque continua na #24 (#160
   talhão de 50 ha, cultura da safra e do talhão, evolução, filtros de talhão,
   safra e período, CSV do recorte, erro de vínculo no campo, edição, exclusão,
   recarga mantendo o período e o total no Painel.
-- `backend/servidor/testar.sh`: verificações em `testarCustosDeConsumo`
+- `backend/api/testar.sh`: verificações em `testarCustosDeConsumo`
   (50 kg a R$ 2,50 = R$ 125,00 no talhão e na safra da atividade, origem,
   saldo, repetição sem duplicar, GET sem sync + `POST /api/custos/sincronizar-consumo`,
   saída sem atividade e entrada sem custo, safra finalizada, 409 em editar e excluir,

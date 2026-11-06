@@ -5,7 +5,7 @@ name: Estoque Java e MongoDB
 on:
   pull_request:
     paths:
-      - 'backend/servidor/**'
+      - 'backend/api/**'
       - 'frontend/scripts/insumos.js'
       - 'frontend/insumos.html'
       - 'compose.yaml'
@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '22'
       - name: Compilar e testar em memória
-        run: sh backend/servidor/testar.sh
+        run: sh backend/api/testar.sh
       - name: Iniciar MongoDB com transações
         run: |
           docker run -d --name mongo-estoque -p 127.0.0.1:27017:27017 mongo:8.0.32 --replSet rs0 --bind_ip_all
@@ -44,7 +44,7 @@ jobs:
           docker logs mongo-estoque
           exit 1
       - name: Persistência e concorrência com clientes Mongo independentes
-        run: sh backend/servidor/testar-estoque-mongo.sh
+        run: sh backend/api/testar-estoque-mongo.sh
       - name: Instalar navegador de teste
         run: |
           npm install --no-save playwright@1.49.1

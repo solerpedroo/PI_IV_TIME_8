@@ -25,11 +25,8 @@
     sessionUser: "agro.sessionUser",
   };
 
-  // Quando o front é servido pelo Java, usa a mesma origem. Em um servidor
-  // estático local, usa a porta padrão do servidor Java para facilitar o desenvolvimento.
-  const API_BASE = window.location.port === "8080"
-    ? window.location.origin
-    : "http://127.0.0.1:8080";
+  // A API acompanha a origem da página, inclusive com HTTPS e portas alternativas.
+  const API_BASE = window.location.origin;
 
   const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
 
@@ -120,6 +117,7 @@
     try {
       response = await fetch(`${API_BASE}${path}`, {
         method: "POST",
+        signal: AbortSignal.timeout(15000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -318,6 +316,7 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (form.getAttribute("aria-busy") === "true") return;
       const token = String(form.elements.token.value || "").trim();
       if (!token) {
         setError(form.elements.token, "Informe o código recebido.");
@@ -338,8 +337,20 @@
     });
   }
 
-  /** Determina a rota pública a partir dos campos que cada formulário possui. */
+  const AUTH_ROUTES = new Set([
+    "/api/auth/register",
+    "/api/auth/login",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+  ]);
+
+  /** Rota explícita em data-auth-route; fallback legado só se o atributo faltar. */
   function authRoute(form) {
+    const explicit = form.getAttribute("data-auth-route");
+    if (explicit) {
+      if (!AUTH_ROUTES.has(explicit)) throw new Error("data-auth-route inválida: " + explicit);
+      return explicit;
+    }
     if (form.elements.name) return "/api/auth/register";
     if (form.elements.token) return "/api/auth/reset-password";
     if (form.querySelector("[data-password]")) return "/api/auth/login";
@@ -369,6 +380,7 @@
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (form.getAttribute("aria-busy") === "true") return;
         clearMessage(form);
         form.classList.remove("is-invalid");
 
@@ -419,7 +431,14 @@
           return;
         }
 
-        const route = authRoute(form);
+        let route;
+        try {
+          route = authRoute(form);
+        } catch (error) {
+          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
+          console.error(error);
+          return;
+        }
         let result;
 
         setLoading(form, true);

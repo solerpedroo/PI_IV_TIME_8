@@ -5,9 +5,10 @@ const { spawn, execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const net = require('node:net');
 const path = require('node:path');
+const { aguardarTokenDeConfirmacao } = require('./token-confirmacao.cjs');
 const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
 const base = 'http://127.0.0.1:18081';
-const cwd = path.join(__dirname, '../backend/servidor');
+const cwd = path.join(__dirname, '../backend/api');
 const mongo = execFileSync('docker', ['compose', 'ps', '-q', 'mongo'], {encoding: 'utf8'}).trim();
 if (!mongo) throw new Error('Inicie o serviço mongo do Docker Compose.');
 const env = { ...process.env, MONGODB_URI: `mongodb://127.0.0.1:27017/${banco}?replicaSet=rs0`, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '' };
@@ -49,9 +50,7 @@ async function api(url, body, token, method) {
     criado = true; await iniciar();
     const email = 'i135@agro.test', password = 'Senha@123';
     assert.equal((await api('/api/auth/register', {name:'Operador Teste',email,phone:'(19) 98888-1111',password,confirm:password,farm:'Fazenda Teste',area:'120 ha',terms:true})).status, 201);
-    for (let i = 0; i < 50 && !/token: ([\w-]+)/.test(log); i++) await pausa(100);
-    const tokenEmail = log.match(/token: ([\w-]+)/)?.[1];
-    assert.ok(tokenEmail, 'Token de confirmação não encontrado');
+    const tokenEmail = await aguardarTokenDeConfirmacao(() => log);
     assert.equal((await api('/api/auth/confirm-email', {token: tokenEmail})).status, 200);
     let login = await api('/api/auth/login', {email,password});
     assert.equal(login.status, 200); let token = login.data.token;
@@ -65,6 +64,18 @@ async function api(url, body, token, method) {
     const atividade = await api('/api/atividades', valores, token);
     assert.equal(atividade.status, 201);
     const id = atividade.data.id;
+    // Simula atividade criada antes da introdução de versao/foto. A API deve
+    // publicar a versão inicial e permitir o primeiro anexo sem migração manual.
+    execFileSync('docker', ['exec', mongo, 'mongosh', '--quiet', banco, '--eval',
+      `db.atividades.updateOne({_id:ObjectId("${id}")},{$unset:{versao:""}})`], { stdio: 'ignore' });
+    const legado = await api('/api/atividades/' + id, null, token);
+    assert.equal(legado.status, 200); assert.equal(legado.data.versao, 1);
+    const png1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const comFoto = await api('/api/atividades/' + id + '/foto', {
+      versao: legado.data.versao, conteudoBase64: png1x1, tipoMime: 'image/png', nomeArquivo: 'campo.png',
+    }, token);
+    assert.equal(comFoto.status, 200); assert.equal(comFoto.data.versao, 2);
+    assert.equal(comFoto.data.temFoto, true);
     assert.equal((await api('/api/atividades/' + id, {...valores,talhao:'Sul'}, token, 'PUT')).status, 400);
     assert.equal((await api('/api/atividades', {...valores,safraId:'inexistente'}, token)).status, 400);
     assert.equal((await api('/api/atividades/' + id, {...valores,nome:'Plantio revisado',horario:'09:15'}, token, 'PUT')).status, 200);
@@ -74,6 +85,10 @@ async function api(url, body, token, method) {
     assert.equal(consulta.status, 200);
     for (const [campo, esperado] of Object.entries({...valores,nome:'Plantio revisado',horario:'09:15'})) assert.equal(consulta.data[campo], esperado, campo);
     assert.equal(consulta.data.cultura, 'Soja');
+    assert.equal(consulta.data.temFoto, true);
+    const fotoRecuperada = await fetch(base + '/api/atividades/' + id + '/foto', {headers:{Authorization:'Bearer ' + token}});
+    assert.equal(fotoRecuperada.status, 200); assert.equal(fotoRecuperada.headers.get('content-type'), 'image/png');
+    assert.deepEqual([...new Uint8Array(await fotoRecuperada.arrayBuffer())].slice(0, 8), [137,80,78,71,13,10,26,10]);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Concluída'}, token)).status, 409);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Agendada'}, token)).status, 200);
     assert.equal((await api('/api/atividades/' + id + '/status', {status:'Em andamento'}, token)).status, 200);

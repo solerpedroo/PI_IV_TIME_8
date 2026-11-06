@@ -14,6 +14,7 @@ const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { launchTestBrowser } = require("./browser-launch.cjs");
+const { aguardarTokenDeConfirmacao } = require("./token-confirmacao.cjs");
 
 const base = "http://127.0.0.1:8080";
 const classpath = `bin${process.platform === "win32" ? ";" : ":"}lib/*`;
@@ -60,7 +61,7 @@ async function shot(page, name) {
   }
 
   const server = spawn("java", ["-cp", classpath, "Servidor", "8080", "--memoria"], {
-    cwd: path.join(__dirname, "../backend/servidor"),
+    cwd: path.join(__dirname, "../backend/api"),
     env: { ...process.env, SMTP_HOST: "", SMTP_USERNAME: "", SMTP_PASSWORD: "", SMTP_FROM: "", SMTP_PORT: "" },
   });
   let serverLog = "";
@@ -90,7 +91,7 @@ async function shot(page, name) {
       name: "Operador Colheita", email: "colheita@agro.test", phone: "(19) 98888-4444",
       password: "Senha@123", confirm: "Senha@123", farm: "Fazenda Colheita", area: "90 ha", terms: true,
     });
-    await api("/api/auth/confirm-email", { token: serverLog.match(/token: ([a-zA-Z0-9-]+)/)[1] });
+    await api("/api/auth/confirm-email", { token: await aguardarTokenDeConfirmacao(() => serverLog) });
     const login = await api("/api/auth/login", { email: "colheita@agro.test", password: "Senha@123" });
     assert.ok(login.ok, "login");
     const token = login.data.token;

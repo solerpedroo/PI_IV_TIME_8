@@ -1,3 +1,4 @@
+/* Autor principal: Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
  * Agro — chrome do app shell
@@ -21,14 +22,118 @@
   };
 
   // Mantém a mesma origem do servidor Java e permite desenvolvimento local.
-  const API_BASE = window.location.port === "8080"
-    ? window.location.origin
-    : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
 
   /** Remove qualquer dado de sessão que não possa mais ser usado. */
   function clearSession() {
     sessionStorage.removeItem(STORAGE.sessionToken);
     sessionStorage.removeItem(STORAGE.sessionUser);
+  }
+
+  /** Marca o item da navegação conforme o arquivo atual (mesma sidebar em todas as telas). */
+  function applySidebarActiveNav() {
+    const nav = $("[data-app-sidebar-nav]");
+    if (!nav) return;
+    // Usa só o nome do arquivo (.html), não query nem hash (ex.: atividades.html?talhao=… → atividades).
+    const file = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    const page = file.replace(/\.html$/i, "") || "dashboard";
+    $$("[data-sidebar-page]", nav).forEach((link) => {
+      const active = link.dataset.sidebarPage === page;
+      link.classList.toggle("is-active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
+  const SIDEBAR_PARTIAL = "partials/app-sidebar.html";
+  const SIDEBAR_FETCH_RETRIES = 2;
+
+  /** HTML mínimo se o partial não estiver disponível (evita shell sem navegação). */
+  function sidebarFallbackMarkup() {
+    return (
+      '<aside class="app-sidebar" role="navigation" aria-label="Navegação principal (modo limitado)">' +
+        '<nav class="sidebar-nav" data-app-sidebar-nav>' +
+          '<a class="sidebar-link" href="dashboard.html" data-sidebar-page="dashboard">Painel</a>' +
+          '<a class="sidebar-link" href="configuracoes.html" data-sidebar-page="configuracoes">Configurações</a>' +
+        '</nav>' +
+        '<div class="sidebar-spacer" aria-hidden="true"></div>' +
+        '<p class="sidebar-fallback-msg" style="font-size:12px;opacity:.85;padding:0 8px">' +
+          "Menu completo indisponível. Recarregue ou verifique se partials/app-sidebar.html está publicado." +
+        "</p>" +
+        '<button type="button" class="btn btn-outline sidebar-fallback-exit" data-sidebar-fallback-exit ' +
+          'style="margin:8px;color:inherit;border-color:rgba(255,255,255,.4)">' +
+          "Sair da sessão" +
+        "</button>" +
+      "</aside>"
+    );
+  }
+
+  async function fetchSidebarHtml() {
+    let lastError;
+    for (let attempt = 0; attempt <= SIDEBAR_FETCH_RETRIES; attempt++) {
+      try {
+        const response = await fetch(SIDEBAR_PARTIAL, {
+          cache: attempt === 0 ? "no-store" : "default",
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const text = await response.text();
+        if (!text || !text.includes("data-app-sidebar-nav")) {
+          throw new Error("Conteúdo do partial inválido");
+        }
+        return text;
+      } catch (error) {
+        lastError = error;
+        if (attempt < SIDEBAR_FETCH_RETRIES) {
+          await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  /**
+   * Sidebar única em partials/app-sidebar.html (ícones iguais a configuracoes.html).
+   * Páginas expõem um placeholder [data-app-sidebar-mount]; fallback após retries.
+   */
+  async function loadAppSidebar() {
+    const mount = $("[data-app-sidebar-mount]");
+    if (!mount) return;
+    mount.setAttribute("aria-busy", "true");
+    mount.setAttribute("aria-label", "Carregando navegação lateral");
+
+    const clearBusy = () => {
+      mount.removeAttribute("aria-busy");
+      mount.removeAttribute("aria-label");
+    };
+
+    try {
+      const html = await fetchSidebarHtml();
+      const template = document.createElement("template");
+      template.innerHTML = html.trim();
+      const aside = template.content.querySelector(".app-sidebar");
+      if (!aside) throw new Error("Markup do partial sem .app-sidebar");
+      clearBusy();
+      mount.replaceWith(aside);
+      applySidebarActiveNav();
+    } catch (error) {
+      console.warn("Não foi possível carregar a sidebar global:", error);
+      clearBusy();
+      const template = document.createElement("template");
+      template.innerHTML = sidebarFallbackMarkup().trim();
+      const aside = template.content.querySelector(".app-sidebar");
+      mount.replaceWith(aside);
+      applySidebarActiveNav();
+      aside.querySelector("[data-sidebar-fallback-exit]")?.addEventListener("click", () => {
+        clearSession();
+        sessionStorage.setItem(STORAGE.flashSuccess, "Sessão encerrada (modo de recuperação da navegação).");
+        window.location.href = "login.html";
+      });
+      window.AgroToast?.show({
+        type: "warning",
+        title: "Navegação reduzida",
+        description: "O menu lateral completo não pôde ser carregado. Recarregue a página.",
+      });
+    }
   }
 
   /**
@@ -42,16 +147,24 @@
       return false;
     }
 
+    await loadAppSidebar();
+
     try {
       const response = await fetch(`${API_BASE}/api/me`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(15000),
       });
-      if (!response.ok) throw new Error("Sessão inválida");
+      if (!response.ok) throw Object.assign(new Error("Sessão não verificada"), {status: response.status});
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
       fillProfile(data.usuario, data.propriedade?.farm);
       return true;
-    } catch {
+    } catch (error) {
+      if (error.status !== 401 && error.status !== 403) {
+        window.AgroToast?.show({type: "error", title: "Servidor indisponível",
+          description: "Não foi possível verificar sua sessão. Recarregue a página para tentar novamente."});
+        return false;
+      }
       clearSession();
       sessionStorage.setItem(STORAGE.flashSuccess, "Sua sessão expirou. Entre novamente.");
       window.location.replace("login.html");

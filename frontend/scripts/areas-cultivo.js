@@ -1,6 +1,6 @@
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 /**
- * Agro — interações da tela Áreas de Cultivo (dados mock híbridos)
+ * Agro — interações da tela Áreas de Cultivo (dados confirmados pela API)
  * --------------------------------------------------------------------------
  * - Busca por nome + filtro por cultura (chips), com contagem de resultados
  *   e empty state (G8 "Espécime de filtros" / E "Empty states").
@@ -18,7 +18,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const API_BASE = window.location.port === "8080" ? window.location.origin : "http://127.0.0.1:8080";
+  const API_BASE = window.location.origin;
 
   /** Estado local — calculado dinamicamente a partir da tabela no load. */
   const state = {
@@ -200,6 +200,10 @@
               <span class="action-menu-icon tone-secondary" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16v-9"/><path d="M17 16V8"/></svg></span>
               <span class="action-menu-label">Ver custos</span>
             </a>
+            ${values.id ? `<button type="button" class="action-menu-item" role="menuitem" data-geo-edit="${values.id}">
+              <span class="action-menu-icon tone-info" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
+              <span class="action-menu-label">Localização</span>
+            </button>` : ""}
           </div>
         </div>
       </td>
@@ -236,7 +240,7 @@
       form.cultura.value = row.dataset.crop.charAt(0).toUpperCase() + row.dataset.crop.slice(1);
       form.cultura.dispatchEvent(new Event("change"));
       form.hectares.value = row.dataset.hectares;
-      form.safra.value = row.dataset.safra || "2025/26";
+      form.safra.value = row.dataset.safra || "";
       form.status.value = row.dataset.status;
       form.status.dispatchEvent(new Event("change"));
       openModal(modal);
@@ -337,7 +341,7 @@
     tbody.replaceChildren(...records.map((record, index) => {
       const row = document.createElement("tr");
       Object.assign(row.dataset, record);
-      row.innerHTML = buildRowMarkup("plot-menu-" + index, {nome: record.plot,
+      row.innerHTML = buildRowMarkup("plot-menu-" + index, {id: record.id || "", nome: record.plot,
         cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
       return row;
     }));
@@ -354,14 +358,14 @@
     initFilters();
     initPlotForm();
     // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
-    restorePlots(window.AgroLocal.read("plots", []));
+    restorePlots([]);
     api("/api/talhoes").then((records) => {
       restorePlots(records.map((record) => ({
       id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
       hectares: record.hectares, status: record.status, safra: record.safra,
       })));
       persist();
-    }).catch((error) => toast("error", "Visualização do cache local", error.message + " Alterações exigem conexão com o servidor."));
+    }).catch((error) => toast("error", "Talhões indisponíveis", error.message + " Recarregue para tentar novamente."));
   }
 
   if (document.readyState === "loading") {

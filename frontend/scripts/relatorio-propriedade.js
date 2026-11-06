@@ -8,7 +8,7 @@
   const content=modal.querySelector('[data-property-report-content]');
   const message=modal.querySelector('[data-property-report-message]');
   const exportButton=modal.querySelector('[data-export-property-report]');
-  const base=location.port === "8080" ? location.origin : "http://127.0.0.1:8080";
+  const base=window.location.origin;
   let snapshot=null, generation=0, loadedContext="", opener=null;
   const moeda=value => new Intl.NumberFormat("pt-BR", {style:"currency",currency:"BRL"}).format(value/100);
   function clear(text) { snapshot=null; exportButton.disabled=true; content.replaceChildren(); message.textContent=text; }

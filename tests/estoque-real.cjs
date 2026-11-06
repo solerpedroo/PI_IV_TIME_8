@@ -11,7 +11,7 @@ let server, browser, log = '';
 
 async function start() {
   server = spawn('java', ['-cp', 'bin:lib/*', 'CenarioEstoqueTeste'], {
-    cwd: path.join(__dirname, '../backend/servidor'), env: {...process.env, SMTP_HOST: ''},
+    cwd: path.join(__dirname, '../backend/api'), env: {...process.env, SMTP_HOST: ''},
   });
   server.stdout.on('data', chunk => { log += chunk.toString(); });
   server.stderr.on('data', chunk => { log += chunk.toString(); });
@@ -190,7 +190,7 @@ async function submit(page, selector, endpoint, status = 201) {
   if (browser) await browser.close(); await stop();
   if (process.env.MONGODB_URI) {
     const cleanup = spawnSync('java', ['-cp', 'bin:lib/*', 'CenarioEstoqueTeste', '--limpar'], {
-      cwd: path.join(__dirname, '../backend/servidor'), env: process.env, encoding: 'utf8',
+      cwd: path.join(__dirname, '../backend/api'), env: process.env, encoding: 'utf8',
     });
     if (cleanup.status !== 0) { console.error('Falha na limpeza dos fixtures:', cleanup.stderr); process.exitCode = 1; }
   }
