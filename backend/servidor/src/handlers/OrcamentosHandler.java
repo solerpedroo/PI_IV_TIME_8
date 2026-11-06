@@ -296,9 +296,9 @@ public class OrcamentosHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-            ret = Resposta.erro (409, "Property context changed; reload before saving");
+            ret = Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
 
         return ret;
     }
@@ -349,7 +349,7 @@ public class OrcamentosHandler implements Manipulador
         Document item = this.consultarItem (requisicao.getSessao ().getPropriedadeId (), requisicao.getParametro ("safraId"));
 
         if (item == null)
-            ret = Resposta.erro (404, "Not found");
+            ret = Resposta.erro (404, "Não encontrado.");
         else
             ret = Resposta.json (200, item);
 
@@ -370,7 +370,7 @@ public class OrcamentosHandler implements Manipulador
             Document safra         = this.safras.buscarPorId (propriedadeId, safraId);
 
             if (safra == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             if (OrcamentosHandler.FINALIZACAO.equals (safra.getString ("etapa")))
                 return OrcamentosHandler.finalizada ();
@@ -409,11 +409,11 @@ public class OrcamentosHandler implements Manipulador
             Document safra         = this.safras.buscarPorId (propriedadeId, safraId);
 
             if (safra == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (OrcamentosHandler.FINALIZACAO.equals (safra.getString ("etapa")))
                 ret = OrcamentosHandler.finalizada ();
             else if (!this.orcamentos.excluir (propriedadeId, safraId))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
                 ret = Resposta.semConteudo ();
 
