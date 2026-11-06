@@ -38,7 +38,9 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         this.propriedades = banco.getCollection ("propriedades");
         this.cliente      = conexao.getCliente ();
 
-        this.usuarios.createIndex (Indexes.ascending ("email"), new IndexOptions ().unique (true));
+        // O Atlas já tem este índice como email_unico. Criar de novo com o nome
+        // padrão (email_1) falha com IndexOptionsConflict e impede o servidor de subir.
+        this.usuarios.createIndex (Indexes.ascending ("email"), new IndexOptions ().unique (true).name ("email_unico"));
         this.usuarios.createIndex (Indexes.ascending ("tokenConfirmacao"));
         this.usuarios.createIndex (Indexes.ascending ("tokenRedefinicao"));
         this.propriedades.createIndex (Indexes.ascending ("usuarioId"));
