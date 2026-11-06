@@ -68,12 +68,12 @@ public class SupervisoraDeConexao extends Thread
             }
             catch (SocketTimeoutException erro)
             {
-                resposta = Resposta.erro (408, "Request timeout");
+                resposta = Resposta.erro (408, "Tempo da requisição esgotado.");
             }
             catch (Exception erro)
             {
                 System.err.println ("Erro na conexao: " + erro);
-                resposta = Resposta.erro (500, "Internal server error");
+                resposta = Resposta.erro (500, "Erro interno do servidor.");
             }
 
             parceiro.enviarResposta (resposta);
