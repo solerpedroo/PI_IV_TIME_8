@@ -56,7 +56,7 @@
       </div>
 
       <div class="occ-filters" aria-label="Filtros de ocorrências">
-        <label>Talhão <select data-occ-plot-filter aria-label="Filtrar por talhão"><option value="">Toda a propriedade</option></select></label>
+        <label>Talhão <select data-occ-plot-filter data-enhance-select data-placeholder="Toda a propriedade" aria-label="Filtrar por talhão"><option value="">Toda a propriedade</option></select></label>
         <label>Mês das resoluções <input type="month" data-occ-month aria-label="Mês das resoluções"></label>
         <label><input type="checkbox" data-occ-archives> Incluir excluídas (consulta)</label>
       </div>
@@ -147,7 +147,7 @@
         </div>
         <div class="input-group">
           <label for="occ-tipo">Tipo *</label>
-          <select id="occ-tipo" name="tipo" required>
+          <select id="occ-tipo" name="tipo" required data-enhance-select data-placeholder="Selecione o tipo">
             <option value="">Selecione o tipo</option>
             <option value="Praga">Praga</option>
             <option value="Doença">Doença</option>
@@ -159,7 +159,7 @@
         </div>
         <div class="input-group">
           <label for="occ-talhao">Talhão (opcional)</label>
-          <select id="occ-talhao" name="talhaoId"><option value="">Ocorrência geral da propriedade</option></select>
+          <select id="occ-talhao" name="talhaoId" data-enhance-select data-placeholder="Ocorrência geral da propriedade"><option value="">Ocorrência geral da propriedade</option></select>
           <p class="field-error" data-error-for="talhaoId"></p>
         </div>
         <!-- Georreferenciamento (#232), Pedro André do Carmo Chavier - RA: 25018639: posição opcional dentro do polígono do talhão -->
@@ -303,6 +303,7 @@
   <script src="scripts/fetch-timeout.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
+  <script src="scripts/date-picker.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/ocorrencias.js" defer></script>
 </body>
