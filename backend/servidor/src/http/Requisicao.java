@@ -91,7 +91,7 @@ public class Requisicao
         String texto = new String (this.corpo, StandardCharsets.UTF_8).trim ();
 
         if (!texto.startsWith ("{"))
-            throw new ErroHttp (400, "Invalid JSON body");
+            throw new ErroHttp (400, "Corpo JSON inválido.");
 
         try
         {
@@ -99,7 +99,7 @@ public class Requisicao
         }
         catch (Exception erro)
         {
-            throw new ErroHttp (400, "Invalid JSON body");
+            throw new ErroHttp (400, "Corpo JSON inválido.");
         }
     }
 
