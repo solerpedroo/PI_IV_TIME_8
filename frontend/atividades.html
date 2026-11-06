@@ -280,14 +280,14 @@
         </div>
         <div class="input-group">
           <label for="activity-safra">Safra</label>
-          <select id="activity-safra" name="safraId">
+          <select id="activity-safra" name="safraId" data-enhance-select data-placeholder="Sem safra vinculada">
             <option value="">Sem safra vinculada</option>
           </select>
           <p class="field-error" data-error-for="safraId"></p>
         </div>
         <div class="input-group">
           <label for="activity-data">Data *</label>
-          <input id="activity-data" name="data" placeholder="Ex.: 12 ago ou 2026-08-12" required>
+          <input id="activity-data" name="data" type="date" required>
           <p class="field-error" data-error-for="data"></p>
         </div>
         <div class="input-group">
@@ -302,7 +302,7 @@
         </div>
         <div class="input-group">
           <label for="activity-prioridade">Prioridade</label>
-          <select id="activity-prioridade" name="prioridade">
+          <select id="activity-prioridade" name="prioridade" data-enhance-select data-placeholder="Não definida">
             <option value="">Não definida</option>
             <option value="Baixa">Baixa</option>
             <option value="Média">Média</option>
@@ -407,6 +407,8 @@
   <script src="scripts/relatorio-util.js" defer></script><script src="scripts/relatorio-operacional.js" defer></script><script src="scripts/relatorio-atividades.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
+  <script src="scripts/date-picker.js" defer></script>
+  <script src="scripts/time-picker.js" defer></script>
   <script src="scripts/data/operational-defaults.js" defer></script>
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/shell.js" defer></script>
