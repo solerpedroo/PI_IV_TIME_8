@@ -200,7 +200,7 @@ async function menu(page, trigger) {
   assert.equal(await page.locator('[data-modal="date-form"]').getAttribute('aria-hidden'), 'true');
   assert.equal(await page.locator('[data-modal="cost-form"]').getAttribute('aria-hidden'), 'false');
   await page.locator('[data-open-date-modal]').click();
-  await page.locator('[data-calendar-today]').click();
+  await page.locator('#date-form [data-calendar-today]').click();
   await form.locator('[name="description"]').fill('Lançamento de revisão visual com descrição longa para conferir quebra de texto na tabela');
   await form.locator('[name="value"]').fill('123.45');
   const save = form.locator('[type="submit"]');
