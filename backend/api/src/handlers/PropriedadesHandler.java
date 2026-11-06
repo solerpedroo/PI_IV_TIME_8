@@ -219,20 +219,20 @@ public class PropriedadesHandler
         if (!this.talhoes.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua ou mova os talhões antes de excluir a propriedade."));
         if (this.estoque != null && (!this.estoque.listar (id).isEmpty () || !this.estoque.listarMovimentacoes (id, null).isEmpty ()))
-            return Resposta.erro (409, "A propriedade possui catálogo ou histórico de estoque e não pode ser excluída.");
+            return Resposta.json (409, new Document ("error", "A propriedade possui catálogo ou histórico de estoque e não pode ser excluída."));
         // Uma ocorrência geral também depende da propriedade, mesmo depois de excluída da lista.
         if (this.ocorrencias != null && this.ocorrencias.temRegistros (id))
-            return Resposta.erro (409, "A propriedade possui ocorrências ou histórico preservado e não pode ser excluída.");
+            return Resposta.json (409, new Document ("error", "A propriedade possui ocorrências ou histórico preservado e não pode ser excluída."));
         // custos sem talhao tambem pertencem a propriedade e ficariam orfaos
         if (this.custos != null && !this.custos.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua os custos antes de excluir a propriedade."));
         if (this.atividades != null && !this.atividades.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "Exclua as atividades antes de excluir a propriedade."));
         if (this.safras != null && !this.safras.listar (id).isEmpty ())
-            return Resposta.erro (409, "Exclua as safras antes de excluir a propriedade.");
+            return Resposta.json (409, new Document ("error", "Exclua as safras antes de excluir a propriedade."));
         // Equipamentos não são excluídos: mesmo inativos preservam a manutenção.
         if (this.equipamentos != null && !this.equipamentos.listar (id).isEmpty ())
-            return Resposta.erro (409, "A propriedade possui equipamentos e histórico de manutenção preservado.");
+            return Resposta.json (409, new Document ("error", "A propriedade possui equipamentos e histórico de manutenção preservado."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
             return Resposta.erro (404, "Not found");
         return Resposta.semConteudo ();
