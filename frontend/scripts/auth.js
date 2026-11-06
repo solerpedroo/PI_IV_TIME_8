@@ -403,24 +403,23 @@
 
         const password = $("[data-password]", form);
         const confirmation = $("[data-password-confirm]", form);
-        const requiresStrong = form.hasAttribute("data-require-strong-password");
+        let route;
+        try {
+          route = authRoute(form);
+        } catch (error) {
+          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
+          console.error(error);
+          return;
+        }
+        // Cadastro e redefinição: o ServerSocket (ValidadorDeConta) decide a senha.
+        const senhaNoSocket = route === "/api/auth/register" || route === "/api/auth/reset-password";
 
-        if (password) {
-          const checks = getPasswordChecks(password.value);
-          if (requiresStrong && passwordLevel(checks) < 4) {
-            setError(password, "Atenda a todas as regras de senha.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha que cumpra todas as regras.");
-            password.focus();
-            return;
-          }
-          if (!requiresStrong && password.value.length < 8) {
-            setError(password, "A senha deve ter pelo menos 8 caracteres.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha mais segura.");
-            password.focus();
-            return;
-          }
+        if (password && !senhaNoSocket && password.value.length < 8) {
+          setError(password, "A senha deve ter pelo menos 8 caracteres.");
+          form.classList.add("is-invalid");
+          showMessage(form, "Escolha uma senha mais segura.");
+          password.focus();
+          return;
         }
 
         if (password && confirmation && password.value !== confirmation.value) {
@@ -431,14 +430,6 @@
           return;
         }
 
-        let route;
-        try {
-          route = authRoute(form);
-        } catch (error) {
-          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
-          console.error(error);
-          return;
-        }
         let result;
 
         setLoading(form, true);
