@@ -59,7 +59,58 @@
               </form>
             </div>
           </div>
-          <div class="settings-section" data-settings-panel="property" hidden><div class="settings-card"><div class="settings-card-header"><div><h2>Dados da Propriedade</h2><p>Esses dados aparecem no cabeçalho e nos relatórios.</p></div><div><button class="btn btn-outline" type="button" data-new-property>Nova propriedade</button> <button class="btn btn-primary" type="submit" form="property-form">Salvar propriedade</button></div></div><form class="settings-form settings-form-single" id="property-form" data-settings-form="property" novalidate><div class="form-grid-2"><div class="input-group"><label for="property-name">Nome da propriedade *</label><input id="property-name" name="farm" value="" required></div><div class="input-group"><label for="property-area">Área total (ha) *</label><input id="property-area" name="area" type="number" min="1" value="" required></div></div><div class="form-grid-2"><div class="input-group"><label for="property-location">Localização *</label><input id="property-location" name="location" value="" required></div><div class="input-group"><label for="property-city">Município *</label><input id="property-city" name="city" value="" required></div></div><div class="input-group"><label for="property-harvest">Safra atual *</label><select id="property-harvest" name="harvest" data-enhance-select data-placeholder="Selecione a safra" required><option value="2025/26">2025/26</option><option value="2026/27">2026/27</option><option value="2024/25">2024/25</option></select></div></form></div><div class="settings-card"><h3>Propriedade padrão</h3><p>Define a propriedade inicial do próximo login. A seleção atual desta sessão continua independente.</p><form class="settings-form settings-form-single" data-default-property-form novalidate><div class="input-group"><label for="default-property">Propriedade padrão *</label><select id="default-property" name="propriedadeId" disabled><option value="">Carregando…</option></select><p class="field-error" data-error-for="propriedadeId"></p></div><button type="submit" class="btn btn-primary" disabled>Salvar propriedade padrão</button></form></div></div>
+          <div class="settings-section" data-settings-panel="property" hidden>
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h2>Dados da Propriedade</h2>
+                  <p>Esses dados aparecem no cabeçalho e nos relatórios.</p>
+                </div>
+                <div class="settings-card-actions">
+                  <button class="btn btn-outline" type="button" data-new-property>Nova propriedade</button>
+                  <button class="btn btn-primary" type="submit" form="property-form">Salvar propriedade</button>
+                </div>
+              </div>
+              <form class="settings-form settings-form-single" id="property-form" data-settings-form="property" novalidate>
+                <div class="input-group">
+                  <label for="property-context">Propriedade ativa</label>
+                  <select id="property-context" class="property-context-select" data-property-context data-enhance-select data-placeholder="Selecione a propriedade" aria-label="Propriedade ativa"></select>
+                </div>
+                <div class="form-grid-2">
+                  <div class="input-group"><label for="property-name">Nome da propriedade *</label><input id="property-name" name="farm" value="" required></div>
+                  <div class="input-group"><label for="property-area">Área total (ha) *</label><input id="property-area" name="area" type="number" min="1" value="" required></div>
+                </div>
+                <div class="form-grid-2">
+                  <div class="input-group"><label for="property-location">Localização *</label><input id="property-location" name="location" value="" required></div>
+                  <div class="input-group"><label for="property-city">Município *</label><input id="property-city" name="city" value="" required></div>
+                </div>
+                <div class="input-group">
+                  <label for="property-harvest">Safra atual *</label>
+                  <select id="property-harvest" name="harvest" data-enhance-select data-placeholder="Selecione a safra" required>
+                    <option value="2025/26">2025/26</option>
+                    <option value="2026/27">2026/27</option>
+                    <option value="2024/25">2024/25</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h2>Propriedade padrão</h2>
+                  <p>Define a propriedade inicial do próximo login. A seleção atual desta sessão continua independente.</p>
+                </div>
+              </div>
+              <form class="settings-form settings-form-single" data-default-property-form novalidate>
+                <div class="input-group">
+                  <label for="default-property">Propriedade padrão *</label>
+                  <select id="default-property" name="propriedadeId" data-enhance-select data-placeholder="Carregando…" disabled><option value="">Carregando…</option></select>
+                  <p class="field-error" data-error-for="propriedadeId"></p>
+                </div>
+                <button type="submit" class="btn btn-primary" disabled>Salvar propriedade padrão</button>
+              </form>
+            </div>
+          </div>
           <div class="settings-section" data-settings-panel="notifications" hidden><div class="settings-card"><div class="settings-card-header"><div><h2>Preferências de Notificação</h2><p>Escolha quais alertas operacionais deseja receber.</p></div><button class="btn btn-primary" type="button" data-save-notifications>Salvar preferências</button></div><div class="preference-list"><label class="preference-row"><span><strong>Alertas de estoque baixo</strong><small>Receber quando insumos atingirem nível crítico</small></span><input type="checkbox" data-preference="stock" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Previsão do tempo</strong><small>Notificações sobre chuva e condições climáticas</small></span><input type="checkbox" data-preference="weather" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Atividades pendentes</strong><small>Lembretes de atividades atrasadas ou próximas</small></span><input type="checkbox" data-preference="activities" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Novas ocorrências</strong><small>Alertas de pragas, doenças e eventos na propriedade</small></span><input type="checkbox" data-preference="occurrences" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Relatórios semanais</strong><small>Resumo semanal enviado por e-mail</small></span><input type="checkbox" data-preference="reports"><span class="toggle-control" aria-hidden="true"></span></label></div></div></div>
           <div class="settings-section" data-settings-panel="security" hidden><div class="settings-card"><div class="settings-card-header"><div><h2>Segurança</h2><p>Use 8 ou mais caracteres, uma maiúscula, um número e um símbolo. Após salvar, entre novamente em todos os dispositivos.</p></div></div><form class="settings-form settings-form-single" data-security-form novalidate><div class="input-group"><label for="current-password">Senha atual *</label><input id="current-password" name="current" type="password" autocomplete="current-password" required><p class="field-error"></p></div><div class="form-grid-2"><div class="input-group"><label for="new-password">Nova senha *</label><input id="new-password" name="new" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><p class="field-error"></p></div><div class="input-group"><label for="confirm-password">Confirmar nova senha *</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" required><p class="field-error"></p></div></div><div class="settings-form-actions"><button class="btn btn-primary" type="submit">Atualizar senha</button></div></form></div></div>
           <div class="settings-section" data-settings-panel="team" hidden><div class="settings-card empty-settings-card"><span class="settings-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><h2>Equipe da propriedade</h2><p>Equipe: área informativa, sem convites ou alteração de permissões.</p><p>Gerenciamento de equipe e permissões ainda indisponível.</p></div></div>
