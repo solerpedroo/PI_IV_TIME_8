@@ -146,7 +146,7 @@
       <h2 id="produto-novo-title">Novo produto</h2><p>Cadastre o insumo para esta propriedade.</p>
       <form class="stack-form" data-produto-novo-form novalidate>
         <div class="input-group"><label for="stock-field-1">Nome *</label><input id="stock-field-1" name="nome" maxlength="100"><p class="field-error" data-error-for="nome"></p></div>
-        <div class="input-group"><label for="stock-field-2">Categoria *</label><select id="stock-field-2" name="categoria"><option value="">Selecione</option><option>Herbicida</option><option>Fertilizante</option><option>Semente</option><option>Fungicida</option><option>Inseticida</option></select><p class="field-error" data-error-for="categoria"></p></div>
+        <div class="input-group"><label for="stock-field-2">Categoria *</label><select id="stock-field-2" name="categoria" data-enhance-select data-placeholder="Selecione"><option value="">Selecione</option><option>Herbicida</option><option>Fertilizante</option><option>Semente</option><option>Fungicida</option><option>Inseticida</option></select><p class="field-error" data-error-for="categoria"></p></div>
         <div class="input-group"><label for="stock-field-3">Unidade *</label><input id="stock-field-3" name="unidade" placeholder="kg, L, sc"><p class="field-error" data-error-for="unidade"></p></div>
         <div class="input-group"><label for="stock-field-4">Saldo inicial *</label><input id="stock-field-4" name="saldo" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="saldo"></p></div>
         <div class="input-group"><label for="stock-field-5">Estoque mínimo *</label><input id="stock-field-5" name="minimo" type="number" min="0" step="0.000001"><p class="field-error" data-error-for="minimo"></p></div>
@@ -167,7 +167,7 @@
         <div class="input-group" data-entrada-produto-wrap>
           <label for="entrada-produto">Produto *</label>
           <!-- Opções do catálogo persistido, atualizadas ao abrir o formulário. -->
-          <select id="entrada-produto" name="produto" required data-placeholder="Selecione o produto">
+          <select id="entrada-produto" name="produto" required data-enhance-select data-placeholder="Selecione o produto">
             <option value="">Selecione o produto</option>
           </select>
           <p class="field-error" data-error-for="produto"></p>
@@ -206,7 +206,7 @@
         </div>
         <div class="input-group">
           <label for="saida-destino">Atividade consumidora (opcional)</label>
-          <select id="saida-destino" name="atividadeId"><option value="">Saída manual (sem atividade)</option></select><p class="field-error" data-error-for="atividadeId"></p>
+          <select id="saida-destino" name="atividadeId" data-enhance-select data-placeholder="Saída manual (sem atividade)"><option value="">Saída manual (sem atividade)</option></select><p class="field-error" data-error-for="atividadeId"></p>
         </div>
         <div class="modal-actions">
           <button class="btn btn-outline" type="button" data-close-modal>Cancelar</button>
@@ -303,6 +303,7 @@
   <script src="scripts/relatorio-util.js" defer></script><script src="scripts/relatorio-operacional.js" defer></script><script src="scripts/relatorio-estoque.js" defer></script>
   <script src="scripts/toast.js" defer></script>
   <script src="scripts/select.js" defer></script>
+  <script src="scripts/date-picker.js" defer></script>
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/insumos.js" defer></script>
 </body>
