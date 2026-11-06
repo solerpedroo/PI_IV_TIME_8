@@ -6,6 +6,7 @@ Base: `origin/dev` em `48e6c3f`, atualizada em 04/11/2026.
 - Painel consulta atividades, talhões e estoque na API; criação e conclusão aguardam confirmação remota.
 - Falhas de leitura não restauram registros antigos de demonstração. Falha de cache não desfaz uma gravação já confirmada no servidor.
 - Requisições usam a origem da página, permitindo HTTPS e portas alternativas. Erros temporários na verificação de sessão preservam o token; 401/403 redirecionam para login.
+- `scripts/fetch-timeout.js` define `AbortSignal.timeout` quando o navegador não oferece (compatibilidade com navegadores mais antigos).
 - Geist variável local (com licença OFL) no aplicativo e nos slides, inclusive valores numéricos e elementos de código.
 - Exclusão de propriedades bloqueada quando há safras ou equipamentos; criação concorrente de sessões respeita o limite de cinco.
 - Inicialização do servidor de algoritmos corrigida quando os scripts são chamados da raiz.
@@ -22,3 +23,8 @@ Executados com JDK 21 e Chromium/Playwright:
 - Sintaxe de todos os scripts do frontend e `git diff --check`.
 
 Os testes usaram servidores isolados em memória. As suítes específicas de MongoDB/Atlas, reinício com persistência em disco e envio SMTP real não foram executadas nesta revisão.
+
+## Escopo dos cards de acompanhamento
+
+- **#258 [Frontend] Remover dados de demonstração** e **#260 [Backend] Corrigir vínculos, sessões e inicialização** são cobertos por esta revisão (diff em relação a `origin/dev` na época da documentação).
+- **#256 [MongoDB] Conectar a API ao Atlas compartilhado** foi entregue em trabalho anterior (ex.: PR #250); **não** faz parte do mesmo conjunto de commits que remove mocks e endurece exclusão de propriedade. Mantenha o card #256 vinculado ao PR correspondente para evitar ambiguidade no escopo.
