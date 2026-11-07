@@ -226,9 +226,9 @@
     const [safra, historicoTalhoes, ocorrencias, custos, resumoCustos] = await Promise.all([
       api(`/api/safras/${id}`),
       api(`/api/safras/${id}/historico`),
-      api("/api/ocorrencias").catch(() => []),
-      api(`/api/custos?safraId=${id}`).catch(() => []),
-      api(`/api/custos/resumo?safraId=${id}`).catch(() => ({ total: 0 })),
+      api("/api/ocorrencias"),
+      api(`/api/custos?safraId=${id}`),
+      api(`/api/custos/resumo?safraId=${id}`),
     ]);
     state.historySafra = safra;
     state.historyFilter = ["atividade", "ocorrencia", "custo"].includes(filtro) ? filtro : "";

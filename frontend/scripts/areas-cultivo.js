@@ -109,7 +109,8 @@
       let visible = 0;
 
       $$("[data-plots-table] tbody tr").forEach((row) => {
-        const matchesCrop = activeCrop === "todos" || row.dataset.crop === activeCrop;
+        const matchesCrop = activeCrop === "todos" || (activeCrop.startsWith("status:")
+          ? row.dataset.status === activeCrop.slice(7) : row.dataset.crop === activeCrop);
         const matchesQuery = !q || row.dataset.plot.toLowerCase().includes(q);
         const show = matchesCrop && matchesQuery;
         row.hidden = !show;
@@ -178,7 +179,7 @@
       <td><span class="badge badge-neutral">${values.cultura}</span></td>
       <td>${values.hectares} ha</td>
       <td><span class="badge ${statusBadgeClass(values.status)}" data-status-badge>${values.status}</span></td>
-      <td class="col-muted">Cadastro manual</td>
+      <td class="col-muted">${values.safra || "—"}</td>
       <td class="col-actions">
         <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar ${values.nome}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -342,7 +343,7 @@
       const row = document.createElement("tr");
       Object.assign(row.dataset, record);
       row.innerHTML = buildRowMarkup("plot-menu-" + index, {id: record.id || "", nome: record.plot,
-        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
+        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status, safra: record.safra || ""});
       return row;
     }));
     state.editingRow = $$("[data-plots-table] tbody tr").find((row) => row.dataset.id === editingId) || null;
