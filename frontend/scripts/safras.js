@@ -6,11 +6,9 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ETAPAS = ["Planejamento", "Preparação", "Plantio", "Manejo", "Colheita", "Finalização"];
-  // Mesmo catálogo de TalhoesHandler.CULTURAS no servidor — base oficial do select.
-  const CULTURAS_OFICIAIS = ["Soja", "Milho", "Trigo", "Café", "Algodão"];
   const ROTULOS_TIPO = { atividade: "Atividade", ocorrencia: "Ocorrência", custo: "Custo" };
   const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const state = { safras: [], talhoes: [], culturas: [...CULTURAS_OFICIAIS], historySafra: null, historyRecords: [], historyFilter: "" };
+  const state = { safras: [], talhoes: [], culturas: [], historySafra: null, historyRecords: [], historyFilter: "" };
   const base = window.location.origin;
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -85,12 +83,12 @@
     return true;
   }
 
-  // Une o catálogo oficial às culturas já usadas em talhões/safras (sem duplicar).
-  function montarCulturas(talhoes, safras) {
-    const extras = [...talhoes.map((t) => t.cultura), ...safras.map((s) => s.cultura)]
+  function montarCulturas(catalogo, talhoes, safras) {
+    const nomes = new Set(catalogo.map((item) => item.nome));
+    [...talhoes.map((t) => t.cultura), ...safras.map((s) => s.cultura)]
       .filter(Boolean)
-      .filter((nome) => !CULTURAS_OFICIAIS.includes(nome));
-    return [...CULTURAS_OFICIAIS, ...new Set(extras)];
+      .forEach((nome) => nomes.add(nome));
+    return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
   function preencherCulturas(culturas) {
@@ -253,10 +251,11 @@
   }
 
   async function carregar() {
+    const catalogo = window.AgroCulturas ? await window.AgroCulturas.listar() : [];
     const [safras, talhoes] = await Promise.all([api("/api/safras"), api("/api/talhoes")]);
     state.safras = Array.isArray(safras) ? safras : [];
     state.talhoes = Array.isArray(talhoes) ? talhoes : [];
-    state.culturas = montarCulturas(state.talhoes, state.safras);
+    state.culturas = montarCulturas(catalogo, state.talhoes, state.safras);
     preencherCulturas(state.culturas);
     $("[name='talhoes']").innerHTML = state.talhoes.map((talhao) =>
       `<option value="${esc(talhao.id)}">${esc(talhao.nome)}</option>`).join("");
