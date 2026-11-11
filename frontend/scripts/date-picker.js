@@ -46,7 +46,7 @@
     if (!value) return "Selecione a data";
     const parsed = new Date(`${value}T12:00:00`);
     if (Number.isNaN(parsed.getTime())) return "Data inválida";
-    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+    return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(parsed);
   }
 
   function enhance(input) {
