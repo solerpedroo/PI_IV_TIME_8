@@ -86,7 +86,7 @@ cd PI_IV_TIME_8
 ### 2) Compilar e testar (HTTP + ServerSocket)
 
 ```bash
-sh backend/serversocket/testar.sh    # algoritmos e protocolo (porta 3000)
+sh backend/serversocket/testar.sh    # JUnit: algoritmos + protocolo (portas efêmeras; não usa a 3000)
 bash backend/api/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
 cd backend/api
 bash compilar.sh
