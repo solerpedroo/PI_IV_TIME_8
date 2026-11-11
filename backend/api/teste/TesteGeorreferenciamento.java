@@ -12,6 +12,7 @@ import dados.RepositorioTalhoesMemoria;
 import dados.RepositorioTalhoesMongo;
 import handlers.GeorreferenciamentoHandler;
 import handlers.OcorrenciasHandler;
+import handlers.CulturasHandler;
 import handlers.TalhoesHandler;
 import http.Requisicao;
 import http.Resposta;
@@ -167,7 +168,9 @@ public class TesteGeorreferenciamento
     {
         Roteador ret = new Roteador (sessoes);
 
-        new TalhoesHandler (talhoes, atividades, sessoes).registrar (ret);
+        dados.RepositorioCulturas culturas = new dados.RepositorioCulturasMemoria ();
+        new CulturasHandler (culturas, talhoes, null).registrar (ret);
+        new TalhoesHandler (talhoes, atividades, culturas, sessoes).registrar (ret);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (ret);
         new GeorreferenciamentoHandler (talhoes, ocorrencias, sessoes).registrar (ret);
 
@@ -194,6 +197,9 @@ public class TesteGeorreferenciamento
             String   outra       = new ObjectId ().toHexString ();
             String   a           = sessoes.criar (new ObjectId ().toHexString (), propriedade);
             String   b           = sessoes.criar (new ObjectId ().toHexString (), outra);
+
+            TesteGeorreferenciamento.chamar (roteador, a, "POST", "/api/culturas", "{\"nome\":\"Soja\"}");
+            TesteGeorreferenciamento.chamar (roteador, b, "POST", "/api/culturas", "{\"nome\":\"Soja\"}");
 
             String norte = TesteGeorreferenciamento.talhao (roteador, a, "Norte", 10);
             String sul   = TesteGeorreferenciamento.talhao (roteador, a, "Sul",   5);
