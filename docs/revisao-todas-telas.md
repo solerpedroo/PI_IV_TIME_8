@@ -11,7 +11,7 @@ Correções:
 - Um valor de data inválido não lança RangeError no calendário; o rótulo informa o problema e o calendário abre no mês atual.
 - A suíte antiga de interações foi atualizada para preencher datas ISO e selecionar a safra pelo select atual.
 
-`tests/todas-telas-audit.cjs` verifica as 28 combinações de página e viewport, erros HTTP/JavaScript, overflow e placeholders permanentes. Verifica também o valor inválido de data. Exige API compilada, Java 21, Playwright e serviço de algoritmos na porta 3000, com 18080 livre, conforme a revisão de cultivo. `AUDIT_SCREENSHOTS` é opcional; não versionar capturas.
+`tests/todas-telas-audit.cjs` verifica as 28 combinações de página e viewport, erros HTTP/JavaScript, overflow e placeholders permanentes. Nas páginas autenticadas, espera o fim de “Carregando propriedade…” (sem timeout fixo frágil). Verifica também o valor inválido de data. Exige API compilada, Java 21, Playwright e serviço de algoritmos na porta 3000 (pré-checagem em `tests/audit-prereqs.cjs`), com 18080 livre. `AUDIT_SCREENSHOTS` é opcional; não versionar capturas.
 
 Não foram encontrados registros operacionais mockados nas telas de produção: os defaults estão vazios e os módulos consultam a API. Dados fictícios permanecem nas fixtures de testes. A inspeção visual inclui estados vazios, não todos os estados possíveis de cada módulo; não equivale a garantia de ausência de bugs ou a teste completo de todos os fluxos de autenticação e persistência no Atlas.
 
