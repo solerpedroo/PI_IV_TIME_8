@@ -8,6 +8,7 @@ import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
 import dados.RepositorioTalhoes;
 import dados.RepositorioOcorrencias;
+import dados.ConflitoDeCadastro;
 import dados.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
@@ -169,10 +170,18 @@ public class PropriedadesHandler
         if (propriedade == null)
             return validacao.resposta ();
         propriedade.append ("criadaEm", propriedade.getString ("atualizadoEm"));
-        Document criada = this.usuarios.criarPropriedade (requisicao.getSessao ().getUsuarioId (), propriedade);
-        if (criada == null)
-            return Resposta.erro (404, "Não encontrado.");
-        return Resposta.json (201, PropriedadesHandler.publico (criada));
+        try
+        {
+            Document criada = this.usuarios.criarPropriedade (requisicao.getSessao ().getUsuarioId (), propriedade);
+            if (criada == null)
+                return Resposta.erro (404, "Não encontrado.");
+            return Resposta.json (201, PropriedadesHandler.publico (criada));
+        }
+        catch (ConflitoDeCadastro conflito)
+        {
+            return Resposta.json (409, new Document ("error", "Já existe uma propriedade com esse nome.")
+                                       .append ("fields", new Document ("nome", "Este nome de propriedade já está em uso.")));
+        }
     }
 
     private Resposta consultar (Requisicao requisicao) throws Exception
