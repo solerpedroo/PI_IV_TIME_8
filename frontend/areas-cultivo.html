@@ -115,9 +115,7 @@
       <div class="filter-bar" role="group" aria-label="Filtrar talhões por cultura ou status">
         <span class="filter-bar-label">Filtrar:</span>
         <button type="button" class="filter-chip is-active" data-filter="todos">Todos</button>
-        <button type="button" class="filter-chip" data-filter="soja">Soja</button>
-        <button type="button" class="filter-chip" data-filter="milho">Milho</button>
-        <button type="button" class="filter-chip" data-filter="trigo">Trigo</button>
+        <span data-culture-chips></span>
         <button type="button" class="filter-chip" data-filter="status:Em preparo">Em preparo</button>
         <span class="filter-spacer"></span>
         <span class="filter-results" data-plots-count>Carregando talhões…</span>
@@ -221,13 +219,9 @@
         <div class="input-group">
           <label for="talhao-cultura-trigger">Cultura *</label>
           <select id="talhao-cultura" name="cultura" required data-enhance-select data-placeholder="Selecione a cultura">
-            <option value="">Selecione a cultura</option>
-            <option value="Soja">Soja</option>
-            <option value="Milho">Milho</option>
-            <option value="Trigo">Trigo</option>
-            <option value="Café">Café</option>
-            <option value="Algodão">Algodão</option>
+            <option value="">Carregando culturas…</option>
           </select>
+          <p class="field-hint"><a href="culturas.html">Cadastrar ou gerenciar culturas</a></p>
           <p class="field-error" data-error-for="cultura"></p>
         </div>
         <div class="input-group">
@@ -321,6 +315,7 @@
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/areas-cultivo.js" defer></script>
   <script src="scripts/georreferenciamento.js" defer></script>
+  <script src="scripts/culturas-catalog.js" defer></script>
   <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>
