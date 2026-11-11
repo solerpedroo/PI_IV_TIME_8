@@ -187,6 +187,8 @@
     root.appendChild(native);
 
     native.addEventListener("change", syncFromNative);
+    // reset restaura o select nativo após o evento; sincroniza o rótulo visível.
+    native.form?.addEventListener("reset", () => setTimeout(syncFromNative, 0));
     const valueDescriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     Object.defineProperty(native, "value", {
       configurable: true,

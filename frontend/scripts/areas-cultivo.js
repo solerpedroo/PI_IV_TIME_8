@@ -2,7 +2,7 @@
 /**
  * Agro — interações da tela Áreas de Cultivo (dados confirmados pela API)
  * --------------------------------------------------------------------------
- * - Busca por nome + filtro por cultura (chips), com contagem de resultados
+ * - Busca por nome + filtro por cultura/status (chips), com contagem de resultados
  *   e empty state (G8 "Espécime de filtros" / E "Empty states").
  * - Modal único de talhão reaproveitado para criar e editar (G3 "Validação
  *   de formulários"): valida campos obrigatórios, mostra erro inline e só
@@ -31,6 +31,7 @@
     const records = $$("[data-plots-table] tbody tr").map((row) => ({
       id: row.dataset.id, plot: row.dataset.plot, crop: row.dataset.crop,
       hectares: Number(row.dataset.hectares), status: row.dataset.status,
+      safra: row.dataset.safra || "",
     }));
     // A API já confirmou a gravação. O cache permite leitura entre telas/offline;
     // sua falha não desfaz uma operação que já foi persistida no servidor.
@@ -93,25 +94,26 @@
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Busca + filtro por cultura                                             */
+  /* Busca + filtro por cultura ou status                                   */
   /* ---------------------------------------------------------------------- */
   function initFilters() {
     const search = $("[data-plots-search]");
-    const chips = $$("[data-filter-crop]");
+    const chips = $$("[data-filter]");
     const count = $("[data-plots-count]");
     const empty = $("[data-plots-empty]");
     const table = $("[data-plots-table]");
 
-    let activeCrop = "todos";
+    let activeFilter = "todos";
 
     function apply() {
       const q = (search?.value || "").trim().toLowerCase();
       let visible = 0;
 
       $$("[data-plots-table] tbody tr").forEach((row) => {
-        const matchesCrop = activeCrop === "todos" || row.dataset.crop === activeCrop;
+        const matchesFilter = activeFilter === "todos" || (activeFilter.startsWith("status:")
+          ? row.dataset.status === activeFilter.slice(7) : row.dataset.crop === activeFilter);
         const matchesQuery = !q || row.dataset.plot.toLowerCase().includes(q);
-        const show = matchesCrop && matchesQuery;
+        const show = matchesFilter && matchesQuery;
         row.hidden = !show;
         if (show) visible += 1;
       });
@@ -127,7 +129,7 @@
       chip.addEventListener("click", () => {
         chips.forEach((c) => c.classList.remove("is-active"));
         chip.classList.add("is-active");
-        activeCrop = chip.dataset.filterCrop;
+        activeFilter = chip.dataset.filter;
         apply();
       });
     });
@@ -178,7 +180,7 @@
       <td><span class="badge badge-neutral">${values.cultura}</span></td>
       <td>${values.hectares} ha</td>
       <td><span class="badge ${statusBadgeClass(values.status)}" data-status-badge>${values.status}</span></td>
-      <td class="col-muted">Cadastro manual</td>
+      <td class="col-muted">${values.safra || "—"}</td>
       <td class="col-actions">
         <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar ${values.nome}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -342,7 +344,7 @@
       const row = document.createElement("tr");
       Object.assign(row.dataset, record);
       row.innerHTML = buildRowMarkup("plot-menu-" + index, {id: record.id || "", nome: record.plot,
-        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
+        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status, safra: record.safra || ""});
       return row;
     }));
     state.editingRow = $$("[data-plots-table] tbody tr").find((row) => row.dataset.id === editingId) || null;

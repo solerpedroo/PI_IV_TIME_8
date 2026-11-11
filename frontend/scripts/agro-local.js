@@ -29,7 +29,9 @@
     && new Set(value.map((item) => item.id)).size === value.length;
   const timeline = list(shape({time: text, title: text, desc: string}));
   const schemas = {
-    plots: records({plot: text, crop: text, hectares: positive, status: oneOf("Ativo", "Irrigação pendente", "Em preparo")}),
+    // Aceita cache antigo sem safra; o formato atual inclui o vínculo exibido na tabela.
+    plots: (value) => records({plot: text, crop: text, hectares: positive, status: oneOf("Ativo", "Irrigação pendente", "Em preparo")})(value)
+      || records({plot: text, crop: text, hectares: positive, status: oneOf("Ativo", "Irrigação pendente", "Em preparo"), safra: string})(value),
     // Aceita o cache anterior sem os campos de planejamento e o formato atual,
     // para que uma atualização não descarte atividades já gravadas no navegador.
     activities: (value) => records({activity: text, tipo: text, talhao: text, date: text,

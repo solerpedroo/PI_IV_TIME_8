@@ -51,7 +51,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Áreas de Cultivo</h1>
-          <p>Carregando propriedade…</p>
+          <p>Gerencie os talhões da propriedade ativa.</p>
         </div>
         <div class="page-header-actions">
           <label class="search-box">
@@ -111,14 +111,14 @@
         </article>
       </section>
 
-      <!-- Filtro por cultura -->
-      <div class="filter-bar" role="group" aria-label="Filtrar talhões por cultura">
+      <!-- Filtro por cultura ou status -->
+      <div class="filter-bar" role="group" aria-label="Filtrar talhões por cultura ou status">
         <span class="filter-bar-label">Filtrar:</span>
-        <button type="button" class="filter-chip is-active" data-filter-crop="todos">Todos</button>
-        <button type="button" class="filter-chip" data-filter-crop="soja">Soja</button>
-        <button type="button" class="filter-chip" data-filter-crop="milho">Milho</button>
-        <button type="button" class="filter-chip" data-filter-crop="trigo">Trigo</button>
-        <button type="button" class="filter-chip" data-filter-crop="em preparo">Em preparo</button>
+        <button type="button" class="filter-chip is-active" data-filter="todos">Todos</button>
+        <button type="button" class="filter-chip" data-filter="soja">Soja</button>
+        <button type="button" class="filter-chip" data-filter="milho">Milho</button>
+        <button type="button" class="filter-chip" data-filter="trigo">Trigo</button>
+        <button type="button" class="filter-chip" data-filter="status:Em preparo">Em preparo</button>
         <span class="filter-spacer"></span>
         <span class="filter-results" data-plots-count>Carregando talhões…</span>
       </div>
@@ -187,7 +187,7 @@
                   <th>Cultura</th>
                   <th>Hectares</th>
                   <th>Status</th>
-                  <th>Última Atividade</th>
+                  <th>Safra</th>
                   <th><span class="visually-hidden">Ações</span></th>
                 </tr>
               </thead>

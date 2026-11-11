@@ -38,6 +38,8 @@
     const file = (window.location.pathname.split("/").pop() || "").toLowerCase();
     const page = file.replace(/\.html$/i, "") || "dashboard";
     $$("[data-sidebar-page]", nav).forEach((link) => {
+      link.setAttribute("aria-label", link.textContent.trim());
+      link.title = link.textContent.trim();
       const active = link.dataset.sidebarPage === page;
       link.classList.toggle("is-active", active);
       if (active) link.setAttribute("aria-current", "page");
