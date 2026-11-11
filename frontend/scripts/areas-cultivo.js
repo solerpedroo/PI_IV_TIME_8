@@ -113,6 +113,17 @@
     document.addEventListener("agro:authenticated", () => run(), { once: true });
   }
 
+  async function loadSafraUi() {
+    if (!window.AgroPeriodosSafra) return;
+    try {
+      const data = await window.AgroPeriodosSafra.carregar();
+      window.AgroPeriodosSafra.aplicarDatalist($("#talhao-safra"), data.opcoes);
+      state.safraPadrao = data.padrao;
+    } catch {
+      // API indisponível: o campo continua editável manualmente.
+    }
+  }
+
   async function loadCulturasUi() {
     if (!window.AgroCulturas) return;
     try {
@@ -259,6 +270,7 @@
         state.editingRow = null;
         form.reset();
         clearErrors(form);
+        if (state.safraPadrao) form.safra.value = state.safraPadrao;
         title.textContent = "Novo Talhão";
         form.querySelector("[name='status']")?.dispatchEvent(new Event("change"));
         openModal(modal);
@@ -312,13 +324,18 @@
         setError(form, "hectares", "Informe um valor de hectares maior que zero.");
         hasError = true;
       }
+      const safraLimpa = String(safra || "").trim();
+      if (!safraLimpa || !(window.AgroPeriodosSafra?.valida(safraLimpa))) {
+        setError(form, "safra", "Use o formato AAAA/AA (ex.: 2026/27).");
+        hasError = true;
+      }
 
       if (hasError) {
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
         return;
       }
 
-      let values = { nome, cultura, hectares, safra, status };
+      let values = { nome, cultura, hectares, safra: safraLimpa, status };
 
       form.setAttribute("aria-busy", "true");
       try {
@@ -396,6 +413,7 @@
     initPlotForm();
     whenAuthenticated(() => {
       loadCulturasUi();
+      loadSafraUi();
     });
     // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
     restorePlots([]);
