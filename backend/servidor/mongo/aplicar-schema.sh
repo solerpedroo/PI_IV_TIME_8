@@ -7,7 +7,12 @@ cd "$(dirname "$0")/.."
 
 case "$MONGODB_DATABASE" in
   *_teste) : ;;
-  *) echo "Recusado: use um banco terminado em _teste para esta operação" >&2; exit 2 ;;
+  *)
+    if [ "${ALLOW_NON_TEST_SCHEMA:-}" != "1" ]; then
+      echo "Recusado: use um banco terminado em _teste (ou ALLOW_NON_TEST_SCHEMA=1)" >&2
+      exit 2
+    fi
+    ;;
 esac
 
 command -v mongosh >/dev/null 2>&1 || {
