@@ -270,6 +270,7 @@ public class Servidor
             Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
+            ServicoEmail.logModo ();
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +
                                 (memoria ? " (modo memoria, sem banco)" : ""));
             System.out.println ("Digite \"desativar\" para encerrar.");
