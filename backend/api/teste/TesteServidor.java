@@ -459,6 +459,12 @@ public class TesteServidor
         return ret.toJson ();
     }
 
+    private static void cadastrarCulturas (String token, String... nomes) throws Exception
+    {
+        for (String nome : nomes)
+            conferir ("cadastrar cultura " + nome, 201, post ("/api/culturas", new Document ("nome", nome).toJson (), token));
+    }
+
     private static void testarTalhoes () throws Exception
     {
         System.out.println ("\n# talhoes e isolamento entre usuarios");
@@ -466,12 +472,16 @@ public class TesteServidor
         String a = login ("maria@agro.com", "Nova@1234");
         String b = login ("joao@agro.com",  "Senha@123");
 
+        conferir ("listar culturas vazio -> 200", get ("/api/culturas", a).corpo.equals ("[]"));
+        cadastrarCulturas (a, "Soja", "Milho", "Trigo", "Caf\u00e9", "Algod\u00e3o");
+        cadastrarCulturas (b, "Soja", "Milho", "Trigo", "Caf\u00e9", "Algod\u00e3o");
+
         conferir ("listar sem token -> 401", 401, get ("/api/talhoes", null));
         conferir ("criar sem token -> 401",  401, post ("/api/talhoes", talhao ("T-01", "Soja", 10, null), null));
 
         Document vazio = camposComErro (post ("/api/talhoes", "{}", a));
         conferir ("corpo vazio -> 400 com nome, cultura e hectares", vazio.keySet ().containsAll (List.of ("nome", "cultura", "hectares")));
-        conferir ("cultura fora da lista -> 400", camposComErro (post ("/api/talhoes", talhao ("T-01", "Arroz", 10, null), a)).containsKey ("cultura"));
+        conferir ("cultura nao cadastrada -> 400", camposComErro (post ("/api/talhoes", talhao ("T-01", "Arroz", 10, null), a)).containsKey ("cultura"));
         conferir ("hectares zero -> 400",         camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", 0, null), a)).containsKey ("hectares"));
         conferir ("hectares negativo -> 400",     camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", -5, null), a)).containsKey ("hectares"));
         conferir ("hectares como texto -> 400",   camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", "10", null), a)).containsKey ("hectares"));
@@ -1065,7 +1075,7 @@ public class TesteServidor
         Document vazio = camposComErro (post ("/api/safras", "{}", a));
         conferir ("safra vazia -> 400 com nome, cultura, datas e talhoes",
                   vazio.keySet ().containsAll (List.of ("nome", "cultura", "dataInicio", "dataFim", "talhoes")));
-        conferir ("cultura fora da lista -> 400",
+        conferir ("cultura nao cadastrada -> 400",
                   camposComErro (post ("/api/safras", safra ("S", "Arroz", inicio, fim, t1), a)).containsKey ("cultura"));
         conferir ("data inexistente (30/02) -> 400",
                   camposComErro (post ("/api/safras", safra ("S", "Soja", "2026-02-30", fim, t1), a)).containsKey ("dataInicio"));
