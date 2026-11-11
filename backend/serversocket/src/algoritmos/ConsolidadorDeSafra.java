@@ -43,15 +43,10 @@ public class ConsolidadorDeSafra
     // soma em centavos (long): a soma exata evita a perda silenciosa do double
     public static long centavos (BigDecimal valor) throws Exception
     {
-        if (valor == null)
+        if (valor == null || valor.signum () < 0)
             throw new Exception (ConsolidadorDeSafra.CUSTO_INVALIDO);
 
-        long ret = valor.movePointRight (2).setScale (0, RoundingMode.HALF_UP).longValueExact ();
-
-        if (ret < 0)
-            throw new Exception (ConsolidadorDeSafra.CUSTO_INVALIDO);
-
-        return ret;
+        return valor.movePointRight (2).setScale (0, RoundingMode.HALF_UP).longValueExact ();
     }
 
     private static boolean noPeriodo (ItemDoRelatorio item, LocalDate inicio, LocalDate fim, List<ItemDoRelatorio> pendencias)
@@ -96,7 +91,12 @@ public class ConsolidadorDeSafra
 
         Map<String, TalhaoDaSafra> mapa = new LinkedHashMap<String, TalhaoDaSafra> ();
         for (TalhaoDaSafra talhao : pedido.getTalhoes ())
+        {
+            if (talhao == null)
+                return new RespostaDeErro (id, RespostaDeErro.PEDIDO_INVALIDO, "Talhão ausente na lista do relatório.");
+
             mapa.put (talhao.getId (), talhao);
+        }
 
         List<String>          ids        = pedido.getIdsDosTalhoes ();
         List<TalhaoDaSafra>   areas      = new ArrayList<TalhaoDaSafra> ();
@@ -119,6 +119,9 @@ public class ConsolidadorDeSafra
 
         for (RegistroDaSafra registro : pedido.getRegistros ())
         {
+            if (registro == null)
+                return new RespostaDeErro (id, RespostaDeErro.PEDIDO_INVALIDO, "Registro ausente na lista do relatório.");
+
             String tipo = registro.getTipo ();
 
             if (RegistroDaSafra.ATIVIDADE.equals (tipo))
