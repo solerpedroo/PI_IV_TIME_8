@@ -194,7 +194,8 @@ public class TesteColheitas
             String   b        = sessoes.criar (new ObjectId ().toHexString (), outra);
 
             SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, new RepositorioCustosMemoria (),
-                                                             new RepositorioAtividadesMemoria (), sessoes);
+                                                             new RepositorioAtividadesMemoria (),
+                                                             new dados.RepositorioCulturasMemoria (), sessoes);
             handlerSafras.setColheitas (colheitas);
             handlerSafras.registrar (roteador);
             new ColheitasHandler (colheitas, safras, talhoes, sessoes).registrar (roteador);
