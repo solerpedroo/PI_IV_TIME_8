@@ -68,6 +68,23 @@ public class Validacao
         return ret;
     }
 
+    // codigo numerico de 6 digitos enviado por e-mail
+    public String codigo6 (String campo, String mensagemAusente)
+    {
+        String ret = this.texto (campo, mensagemAusente, 6);
+
+        if (ret == null)
+            return null;
+
+        if (!ret.matches ("\\d{6}"))
+        {
+            this.erro (campo, "Use o código de 6 dígitos enviado por e-mail.");
+            return null;
+        }
+
+        return ret;
+    }
+
     // data obrigatoria no formato AAAA-MM-DD (o mesmo do input type="date"); null se invalida
     public String data (String campo, String mensagemAusente)
     {
