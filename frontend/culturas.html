@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Culturas — catálogo por propriedade para talhões e safras.">
+  <title>Culturas — Agro</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/shell.css">
+  <link rel="stylesheet" href="styles/modules.css">
+  <link rel="stylesheet" href="styles/culturas.css">
+  <link rel="stylesheet" href="styles/feedback.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div data-app-sidebar-mount></div>
+    <main class="app-main">
+      <header class="page-header">
+        <div class="page-header-copy">
+          <h1>Culturas</h1>
+          <p>Catálogo da propriedade ativa. Use os nomes em talhões, safras e filtros do sistema.</p>
+        </div>
+        <div class="page-header-actions">
+          <a class="btn btn-outline" href="areas-cultivo.html">Voltar aos talhões</a>
+        </div>
+      </header>
+
+      <section class="card cultures-form-card">
+        <div class="card-header">
+          <h2 class="card-title">Nova cultura</h2>
+        </div>
+        <form class="stack-form cultures-form" data-culture-form novalidate>
+          <div class="input-group">
+            <label for="culture-name">Nome da cultura *</label>
+            <input id="culture-name" name="nome" maxlength="40" placeholder="Ex.: Cana-de-açúcar" required>
+            <p class="field-error" data-error-for="nome"></p>
+          </div>
+          <button class="btn btn-primary" type="submit">Cadastrar cultura</button>
+        </form>
+      </section>
+
+      <section class="card cultures-list-card">
+        <div class="card-header">
+          <h2 class="card-title">Culturas cadastradas</h2>
+          <p class="card-subtitle">O catálogo começa vazio. Cadastre aqui as culturas que serão usadas em talhões e safras.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" data-cultures-table>
+            <thead>
+              <tr><th scope="col">Nome</th><th scope="col">Ações</th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="2">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
+
+  <script src="scripts/fetch-timeout.js" defer></script>
+  <script src="scripts/toast.js" defer></script>
+  <script src="scripts/shell.js" defer></script>
+  <script src="scripts/culturas-catalog.js" defer></script>
+  <script src="scripts/culturas.js" defer></script>
+</body>
+</html>
