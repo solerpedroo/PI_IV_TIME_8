@@ -2,8 +2,10 @@ const assert = require('node:assert/strict');
 const {spawn} = require('node:child_process');
 const path = require('node:path');
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const {assertAlgoritmosDisponivel} = require('./audit-prereqs.cjs');
 const base = 'http://127.0.0.1:18080';
 (async () => {
+ await assertAlgoritmosDisponivel();
  const server = spawn('java',['-cp','bin:lib/*','Servidor','18080','--memoria'],{cwd:path.join(__dirname,'../backend/api'),env:{...process.env,SMTP_HOST:'',SMTP_PORT:'',SMTP_USERNAME:'',SMTP_PASSWORD:'',SMTP_FROM:''}});
  let log=''; server.stdout.on('data',x=>log+=x); server.stderr.on('data',x=>log+=x);
  let browser;
@@ -19,18 +21,25 @@ const base = 'http://127.0.0.1:18080';
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   const shot=async name=>{await page.waitForTimeout(500);if(process.env.AUDIT_SCREENSHOTS)await page.screenshot({path:path.join(process.env.AUDIT_SCREENSHOTS,name+'.png'),fullPage:true,animations:'disabled'});};
   const screens=['dashboard','areas-cultivo','safras','atividades','insumos','manutencao','ocorrencias','custos','configuracoes','login','criar-conta','confirmar-email','recuperar-senha','redefinir-senha'];
+  const authScreens=new Set(['login','criar-conta','confirmar-email','recuperar-senha','redefinir-senha']);
   const findings=[];
   for(const width of [1440,390]) {
    await page.setViewportSize({width,height:width===390?844:1000});
    for(const screen of screens) {
     const responses=[]; const listen=r=>{if(r.status()>=400)responses.push(r.status()+' '+new URL(r.url()).pathname);};page.on('response',listen);
-    await page.goto(base+'/'+screen+'.html');await page.waitForTimeout(700);
+    await page.goto(base+'/'+screen+'.html');
+    if (!authScreens.has(screen)) {
+      await page.waitForFunction(() => !document.body.innerText.includes('Carregando propriedade'), null, {timeout: 10000});
+    } else {
+      await page.waitForTimeout(700);
+    }
     await shot(screen+'-'+width);
     const info=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,title:document.querySelector('h1')?.textContent,loading:document.body.innerText.includes('Carregando propriedade')}));
     findings.push({screen,width,...info,responses});page.off('response',listen);
    }
   }
   await page.goto(base+'/atividades.html');
+  await page.waitForFunction(() => !document.body.innerText.includes('Carregando propriedade'), null, {timeout: 10000});
   await page.locator('[name=data]').evaluate(input=>{input.value='data-invalida';});
   assert.ok((await page.locator('[data-date-label]').allTextContents()).includes('Data inválida'));
   console.log(JSON.stringify({findings,errors},null,2));assert.deepEqual(errors,[]);assert.ok(findings.every(r=>!r.overflow && !r.loading && !r.responses.length),'Todas as telas devem carregar sem overflow, erros HTTP ou placeholders permanentes');
