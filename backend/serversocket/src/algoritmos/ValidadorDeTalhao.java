@@ -10,7 +10,6 @@ import protocolo.mensagens.RespostaDeValidacao;
 // Regras de um talhao (as mesmas para criar e editar). As listas abaixo sao as do cadastro atual.
 public class ValidadorDeTalhao
 {
-    public static final List<String> CULTURAS = List.of ("Soja", "Milho", "Trigo", "Café", "Algodão");
     public static final List<String> STATUS   = List.of ("Ativo", "Irrigação pendente", "Em preparo");
     public static final List<String> SAFRAS   = List.of ("2024/25", "2025/26", "2026/27");
 
@@ -28,8 +27,8 @@ public class ValidadorDeTalhao
         if (safra.isEmpty ())
             v.erro ("safra", "Selecione uma safra.");
 
-        if (cultura != null && !ValidadorDeTalhao.CULTURAS.contains (cultura))
-            v.erro ("cultura", "Selecione uma cultura válida.");
+        if (cultura != null && cultura.length () < 2)
+            v.erro ("cultura", "Informe o nome da cultura.");
 
         if (!ValidadorDeTalhao.SAFRAS.contains (safra))
             v.erro ("safra", "Selecione uma safra válida.");
