@@ -474,4 +474,52 @@
   .auth-header h2 {
     font-size: 26px;
   }
+
+  .otp-inputs input {
+    width: 2.5rem;
+    height: 2.75rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Código OTP (6 dígitos) */
+.input-group--otp .label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.otp-inputs {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.otp-inputs input {
+  width: 2.75rem;
+  height: 3.25rem;
+  padding: 0;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.otp-inputs input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.otp-inputs input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
