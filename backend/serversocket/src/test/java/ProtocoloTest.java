@@ -34,7 +34,9 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.TestInstance.Lifecycle;
 
 // Classe fora do pacote protocolo: o filtro de classes do servidor tem que recusar.
@@ -46,14 +48,18 @@ class ComunicadoMalicioso extends Comunicado
 /* Sobe o servidor de verdade (porta livre, 127.0.0.1) e conversa com ele pelo protocolo, como a API vai fazer. */
 @TestMethodOrder (MethodOrderer.OrderAnnotation.class)
 @TestInstance (Lifecycle.PER_CLASS)
+@Tag("integracao")
+@Timeout(30)
 class ProtocoloTest
 {
     private static final String HOST = "127.0.0.1";
     private Servidor servidor;
+    private boolean registrarPedidosAnterior;
 
     @BeforeAll
     void iniciarServidor () throws Exception
     {
+        registrarPedidosAnterior = Servidor.registrarPedidos;
         Servidor.registrarPedidos = false;
         servidor = new Servidor (HOST, 0, Servidor.MAXIMO_DE_CONEXOES, Servidor.OCIOSO_EM_MILISSEGUNDOS);
     }
@@ -61,7 +67,15 @@ class ProtocoloTest
     @AfterAll
     void encerrarServidor () throws Exception
     {
-        servidor.desativar ();
+        try
+        {
+            if (servidor != null)
+                servidor.desativar ();
+        }
+        finally
+        {
+            Servidor.registrarPedidos = registrarPedidosAnterior;
+        }
     }
 
 
@@ -72,11 +86,7 @@ class ProtocoloTest
 
     private static <T extends Resposta> T como (Resposta resposta, Class<T> tipo)
     {
-        if (!tipo.isInstance (resposta))
-            throw new AssertionError ("esperava " + tipo.getSimpleName () + " mas veio " + resposta +
-                (resposta instanceof RespostaDeErro ? " " + ((RespostaDeErro) resposta).getMensagem () : ""));
-
-        return tipo.cast (resposta);
+        return assertInstanceOf (tipo, resposta);
     }
 
     private static boolean falha (Cliente cliente, protocolo.Pedido pedido)
