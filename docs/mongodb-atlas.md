@@ -194,3 +194,38 @@ O último comando deve indicar uma regra do `.gitignore`. Se `.env` aparecer em 
 ## Modelo operacional (#101–#105)
 
 As coleções, referências, índices, históricos e cenários dos dois ciclos estão em [modelo-dados.md](modelo-dados.md). Execute `./backend/core/testar.sh` na raiz para validar o core sem credenciais; após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os ciclos persistentes.
+
+## Schema validation do servidor
+
+Scripts em `backend/servidor/mongo/` (ops ao lado do artefato de deploy; a
+fonte Java continua em `backend/api`). Aplicam `$jsonSchema` com
+`validationAction: "error"` e `validationLevel: "moderate"`: inserts e updates
+em documentos válidos respeitam os tipos essenciais; documentos legados
+inválidos podem permanecer. Campos extras continuam permitidos.
+
+Coleções cobertas: `usuarios`, `propriedades` (aceita `farm` do cadastro ou
+`nome` da API), `talhoes`, `historicos_talhoes`, `atividades`,
+`atividades_historico`, `safras` (exige `cultura`), `insumos`,
+`movimentacoes_insumos`, `ocorrencias`, `ocorrencias_timeline`, `custos`,
+`colheitas`, `orcamentos`, `equipamentos`, `preventivas`, `intervencoes`.
+
+O gate `*_teste` vale nos wrappers **e** em `schema-validation.js` /
+`schema-smoke.js`. Para outro banco após revisão do grupo:
+
+```bash
+export ALLOW_NON_TEST_SCHEMA=1
+```
+
+Fluxo em banco de teste:
+
+```bash
+export MONGODB_DATABASE=agrogestao_ci_teste
+export MONGODB_URI='mongodb+srv://...'
+./backend/servidor/mongo/aplicar-schema.sh
+./backend/servidor/mongo/testar-schema.sh
+```
+
+`aplicar-schema.sh` só aplica validators. `testar-schema.sh` **não** reaplica:
+exercita inserts válidos/inválidos em `propriedades` (farm e nome), `custos`,
+`safras` e `equipamentos`. A aplicação em `agrogestao_dev` só com
+`ALLOW_NON_TEST_SCHEMA=1` e após revisão do grupo.
