@@ -5,8 +5,9 @@
 */
 package handlers;
 
-import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
+import dados.RepositorioCulturas;
+import dados.RepositorioCustos;
 import dados.RepositorioColheitas;
 import dados.RepositorioOrcamentos;
 import dados.RepositorioSafras;
@@ -57,10 +58,11 @@ public class SafrasHandler implements Manipulador
     // datas dos eventos sao comparadas no fuso da operacao, nao em UTC
     private static final ZoneId FUSO = ZoneId.of ("America/Sao_Paulo");
 
-    private final RepositorioSafras  safras;
-    private final RepositorioTalhoes talhoes;
-    private final RepositorioCustos  custos;
-    private final Sessoes            sessoes;
+    private final RepositorioSafras     safras;
+    private final RepositorioTalhoes    talhoes;
+    private final RepositorioCustos     custos;
+    private final RepositorioCulturas   culturas;
+    private final Sessoes               sessoes;
     private final RepositorioAtividades atividades;
     private       RepositorioColheitas  colheitas; // opcional: sem ele, nao confere colheitas na edicao
     private       RepositorioOrcamentos orcamentos; // opcional: remove o planejado ao excluir a safra
@@ -74,7 +76,7 @@ public class SafrasHandler implements Manipulador
     }
 
     public SafrasHandler (RepositorioSafras safras, RepositorioTalhoes talhoes, RepositorioCustos custos,
-                          RepositorioAtividades atividades, Sessoes sessoes) throws Exception
+                          RepositorioAtividades atividades, RepositorioCulturas culturas, Sessoes sessoes) throws Exception
     {
         if (safras == null)
             throw new Exception ("Repositorio de safras ausente");
@@ -87,14 +89,18 @@ public class SafrasHandler implements Manipulador
         if (atividades == null)
             throw new Exception ("Repositorio de atividades ausente");
 
+        if (culturas == null)
+            throw new Exception ("Repositorio de culturas ausente");
+
         if (sessoes == null)
             throw new Exception ("Sessoes ausentes");
 
-        this.safras  = safras;
-        this.talhoes = talhoes;
-        this.custos  = custos;
-        this.atividades = atividades;
-        this.sessoes = sessoes;
+        this.safras      = safras;
+        this.talhoes     = talhoes;
+        this.custos      = custos;
+        this.atividades  = atividades;
+        this.culturas    = culturas;
+        this.sessoes     = sessoes;
     }
 
     // colheitas registradas (#222): a edicao nao tira da safra um talhao que ja foi colhido nela
@@ -214,9 +220,6 @@ public class SafrasHandler implements Manipulador
         String cultura = validacao.texto ("cultura",    "Selecione uma cultura.",            40);
         String inicio  = validacao.data  ("dataInicio", "Informe a data de in\u00edcio.");
         String fim     = validacao.data  ("dataFim",    "Informe a data de t\u00e9rmino.");
-
-        if (cultura != null && !TalhoesHandler.CULTURAS.contains (cultura))
-            validacao.erro ("cultura", "Selecione uma cultura v\u00e1lida.");
 
         if (inicio != null && fim != null && fim.compareTo (inicio) < 0)
             validacao.erro ("dataFim", "A data de t\u00e9rmino deve ser igual ou posterior \u00e0 de in\u00edcio.");
@@ -449,6 +452,9 @@ public class SafrasHandler implements Manipulador
             if (safra == null)
                 return validacao.resposta ();
 
+            if (!this.culturas.existeNome (propriedadeId, safra.getString ("cultura")))
+                return CulturasHandler.erroCulturaNaoCadastrada ();
+
             ret = this.conflitoDeTalhao (propriedadeId, null, safra, talhoes);
             if (ret != null)
                 return ret;
@@ -494,6 +500,9 @@ public class SafrasHandler implements Manipulador
 
             if (campos == null)
                 return validacao.resposta ();
+
+            if (!this.culturas.existeNome (propriedadeId, campos.getString ("cultura")))
+                return CulturasHandler.erroCulturaNaoCadastrada ();
 
             if (this.temAtividades (propriedadeId, id) &&
                 (!atual.getString ("nome").equals (campos.getString ("nome")) ||
