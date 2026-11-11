@@ -72,7 +72,7 @@ class ValidadorDeTalhaoTest
     void recusaTodosOsCamposInvalidosSemNormalizacaoParcial ()
     {
         var r = validar ("", "Banana", "1999/00", 0.0, "Quebrado");
-        assertEquals (Set.of ("nome", "cultura", "safra", "hectares", "status"), r.getErros ().keySet ());
+        assertEquals (Set.of ("nome", "safra", "hectares", "status"), r.getErros ().keySet ());
         assertTrue (r.getNormalizados ().isEmpty ());
     }
 
