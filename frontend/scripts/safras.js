@@ -204,7 +204,7 @@
       <div class="meta-cell"><span class="meta-cell-label">Etapa do ciclo</span><span class="meta-cell-value" data-history-stage>${esc(safra.etapa)}${finalizada ? " (Finalizada)" : ""}</span><small>${esc(etapasConcluidas)}</small></div>
       <div class="meta-cell"><span class="meta-cell-label">Atividades</span><span class="meta-cell-value" data-history-count="atividade">${qtdAtividades}</span></div>
       <div class="meta-cell"><span class="meta-cell-label">Ocorrências</span><span class="meta-cell-value" data-history-count="ocorrencia">${qtdOcorrencias}</span></div>
-      <div class="meta-cell"><span class="meta-cell-label">Custos na safra</span><span class="meta-cell-value" data-history-count="custo">${qtdCustos} · ${esc(moeda.format(state.historyTotalCost || 0))}</span></div>
+      <div class="meta-cell"><span class="meta-cell-label">Custos na safra</span><span class="meta-cell-value" data-history-count="custo">${qtdCustos} · ${state.historyTotalCost == null ? "indisponível" : esc(moeda.format(state.historyTotalCost))}</span></div>
     `;
     $("[data-safra-context-links]").innerHTML = `<span>Ir para módulos filtrados por talhão:</span> ${renderLinksContextuais(safra, nomesTalhoes)}`;
 
@@ -223,20 +223,33 @@
 
   async function abrirHistorico(safraId, filtro = "") {
     const id = encodeURIComponent(safraId);
-    const [safra, historicoTalhoes, ocorrencias, custos, resumoCustos] = await Promise.all([
+    // Safra + histórico do ciclo são obrigatórios; ocorrências/custos podem falhar sem inventar totais.
+    const settled = await Promise.allSettled([
       api(`/api/safras/${id}`),
       api(`/api/safras/${id}/historico`),
       api("/api/ocorrencias"),
       api(`/api/custos?safraId=${id}`),
       api(`/api/custos/resumo?safraId=${id}`),
     ]);
+    if (settled[0].status !== "fulfilled") throw settled[0].reason;
+    if (settled[1].status !== "fulfilled") throw settled[1].reason;
+    const safra = settled[0].value;
+    const historicoTalhoes = settled[1].value;
+    const falhas = [];
+    const ocorrencias = settled[2].status === "fulfilled" ? settled[2].value : (falhas.push("ocorrências"), []);
+    const custos = settled[3].status === "fulfilled" ? settled[3].value : (falhas.push("custos"), []);
+    const resumoOk = settled[4].status === "fulfilled";
+    if (!resumoOk) falhas.push("resumo de custos");
     state.historySafra = safra;
     state.historyFilter = ["atividade", "ocorrencia", "custo"].includes(filtro) ? filtro : "";
-    state.historyTotalCost = Number(resumoCustos?.total || 0);
+    state.historyTotalCost = resumoOk ? Number(settled[4].value?.total || 0) : null;
     state.historyRecords = consolidarRegistros(safra, historicoTalhoes, ocorrencias, custos);
     syncHistoryUrl(safra.id, state.historyFilter);
     renderHistoryModal();
     modal("safra-history", true);
+    if (falhas.length) {
+      toast("warning", "Histórico parcial", `Não foi possível carregar: ${falhas.join(", ")}.`);
+    }
   }
 
   async function carregar() {
@@ -256,7 +269,7 @@
         await abrirHistorico(historicoId, params.get("tipo") || "");
       } catch (error) {
         syncHistoryUrl("");
-        toast("error", "Não foi possível consultar a safra", error?.error || "Safra não encontrada para consulta de histórico.");
+        toast("error", "Não foi possível abrir o histórico", error?.error || "Safra não encontrada para consulta de histórico.");
       }
     }
   }
@@ -312,7 +325,11 @@
       }
     } catch (error) {
       if (advance) advance.disabled = false;
-      toast("error", "Não foi possível atualizar a safra", error?.error || "Recarregue e tente novamente.");
+      toast(
+        "error",
+        history ? "Não foi possível abrir o histórico" : "Não foi possível atualizar a safra",
+        error?.error || "Recarregue e tente novamente."
+      );
       await carregar().catch(() => {});
     }
   });
