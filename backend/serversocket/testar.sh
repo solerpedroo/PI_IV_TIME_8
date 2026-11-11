@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 
 if command -v mvn >/dev/null 2>&1; then
-  exec mvn -q test
+  exec mvn -q test "$@"
 fi
 
 JUNIT_VER=1.11.4
@@ -34,6 +34,10 @@ if [ ! -f "$JAR" ] || ! junit_sha_ok; then
 fi
 
 rm -rf bin && mkdir bin
-javac --release 21 -encoding UTF-8 -cp "$JAR" -d bin $(find src -name '*.java' ! -path 'src/test/*')
-javac --release 21 -encoding UTF-8 -cp "bin:$JAR" -d bin src/test/java/*.java
-exec java -jar "$JAR" execute --class-path bin --scan-classpath
+find src -name '*.java' ! -path 'src/test/*' > bin/fontes.txt
+mkdir -p target/test-classes
+find target/test-classes -name '*.class' -delete
+find src/test/java -name '*.java' > target/fontes-teste.txt
+javac --release 21 -encoding UTF-8 -d bin @bin/fontes.txt
+javac --release 21 -encoding UTF-8 -cp "bin:$JAR" -d target/test-classes @target/fontes-teste.txt
+exec java -jar "$JAR" execute --class-path "bin:target/test-classes" --scan-classpath --fail-if-no-tests --reports-dir target/test-reports "$@"
