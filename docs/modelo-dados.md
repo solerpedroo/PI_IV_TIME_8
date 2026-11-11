@@ -96,7 +96,7 @@ Extensão de `talhoes` e `ocorrencias` da propriedade autenticada (#12/#13, ocor
 - `ocorrencias.localizacao` (opcional): `{lat, lng}` só quando a ocorrência tem `talhaoId` e o talhão tem **polígono**, com o ponto dentro da área. Sem polígono ou sem posição, a ocorrência aparece no centro do talhão no mapa. A posição é copiada nos eventos da timeline (`dados.localizacao`).
 - `GET /api/mapa`: agrega talhões localizados (com `centro`, `areaCalculadaHectares` calculados no socket), ocorrências por talhão, contagem `semLocalizacao` / `ocorrenciasSemTalhao` e `limites` do viewport. Escopo = **uma propriedade por sessão** (sem paginação nesta entrega; volume típico de talhões/ocorrências da fazenda).
 
-Regras de integridade: não remover nem encolher polígono deixando ocorrência marcada fora (409 com `ocorrenciaId` / `ocorrenciaTitulo`). Contrato e evidências: [georreferenciamento.md](georreferenciamento.md), `TesteGeorreferenciamento`, `TesteGeometria`, `tests/georreferenciamento-real.cjs`.
+Regras de integridade: não remover nem encolher polígono deixando ocorrência marcada fora (409 com `ocorrenciaId` / `ocorrenciaTitulo`). Contrato e evidências: [georreferenciamento.md](georreferenciamento.md), `TesteGeorreferenciamento`, `GeometriaTest` (JUnit no ServerSocket), `tests/georreferenciamento-real.cjs`.
 
 
 ## #234 — Manutenção de equipamentos (API `backend/api`)
