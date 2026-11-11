@@ -197,12 +197,26 @@ As coleções, referências, índices, históricos e cenários dos dois ciclos e
 
 ## Schema validation do servidor
 
-As coleções usadas pelo servidor Java têm validação estrutural no MongoDB. O
-script aplica `$jsonSchema` com `validationAction: "error"` e
-`validationLevel: "moderate"`: escritas novas precisam respeitar os tipos
-essenciais, sem exigir a remoção ou a regravação de documentos legados.
+Scripts em `backend/servidor/mongo/` (ops ao lado do artefato de deploy; a
+fonte Java continua em `backend/api`). Aplicam `$jsonSchema` com
+`validationAction: "error"` e `validationLevel: "moderate"`: inserts e updates
+em documentos válidos respeitam os tipos essenciais; documentos legados
+inválidos podem permanecer. Campos extras continuam permitidos.
 
-Por segurança, os scripts recusam bancos que não terminem em `_teste`:
+Coleções cobertas: `usuarios`, `propriedades` (aceita `farm` do cadastro ou
+`nome` da API), `talhoes`, `historicos_talhoes`, `atividades`,
+`atividades_historico`, `safras` (exige `cultura`), `insumos`,
+`movimentacoes_insumos`, `ocorrencias`, `ocorrencias_timeline`, `custos`,
+`colheitas`, `orcamentos`, `equipamentos`, `preventivas`, `intervencoes`.
+
+O gate `*_teste` vale nos wrappers **e** em `schema-validation.js` /
+`schema-smoke.js`. Para outro banco após revisão do grupo:
+
+```bash
+export ALLOW_NON_TEST_SCHEMA=1
+```
+
+Fluxo em banco de teste:
 
 ```bash
 export MONGODB_DATABASE=agrogestao_ci_teste
@@ -211,6 +225,7 @@ export MONGODB_URI='mongodb+srv://...'
 ./backend/servidor/mongo/testar-schema.sh
 ```
 
-O segundo comando faz um smoke test com `Decimal128`: confirma uma gravação
-válida e a rejeição de uma string no mesmo campo. A aplicação em
-`agrogestao_dev` deve ser feita somente após revisão do grupo.
+`aplicar-schema.sh` só aplica validators. `testar-schema.sh` **não** reaplica:
+exercita inserts válidos/inválidos em `propriedades` (farm e nome), `custos`,
+`safras` e `equipamentos`. A aplicação em `agrogestao_dev` só com
+`ALLOW_NON_TEST_SCHEMA=1` e após revisão do grupo.
