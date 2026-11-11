@@ -33,7 +33,8 @@
 
   function initHarvestPicker() {
     const native = $("#property-harvest");
-    if (!native || $("[data-open-harvest-modal]")) return;
+    if (!native || native.dataset.harvestPickerReady === "true") return;
+    native.dataset.harvestPickerReady = "true";
     const enhancedRoot = native.closest(".select");
     enhancedRoot?.setAttribute("hidden", "true");
     const trigger = document.createElement("button");
@@ -63,7 +64,12 @@
 
     function renderOptions() {
       const options = $("[data-harvest-options]", modal);
-      options.innerHTML = [...native.options].map((option) => `<button class="harvest-option ${option.value === pending ? "is-selected" : ""}" type="button" data-harvest-option="${option.value}" role="option" aria-selected="${option.value === pending}"><span><strong>${option.textContent}</strong><small>${option.value === native.value ? "Safra atual da propriedade" : "Período disponível"}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>`).join("");
+      const items = [...native.options].filter((option) => option.value);
+      if (!items.length) {
+        options.innerHTML = '<p class="empty-hint" style="padding: 8px 0">Nenhum período carregado. Recarregue a página ou reinicie a API.</p>';
+        return;
+      }
+      options.innerHTML = items.map((option) => `<button class="harvest-option ${option.value === pending ? "is-selected" : ""}" type="button" data-harvest-option="${option.value}" role="option" aria-selected="${option.value === pending}"><span><strong>${option.textContent}</strong><small>${option.value === native.value ? "Safra atual da propriedade" : "Período disponível"}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>`).join("");
       $$('[data-harvest-option]', modal).forEach((option) => option.addEventListener("click", () => {
         pending = option.dataset.harvestOption;
         renderOptions();
@@ -76,8 +82,11 @@
       trigger.focus();
     }
 
-    trigger.addEventListener("click", () => {
-      pending = native.value;
+    trigger.addEventListener("click", async () => {
+      if (window.AgroPeriodosSafra) {
+        await window.AgroPeriodosSafra.garantirSelect(native, native.value || pending);
+      }
+      pending = native.value || pending;
       renderOptions();
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
@@ -92,6 +101,7 @@
       toast("info", "Safra selecionada", "Clique em Salvar propriedade para confirmar no servidor.");
     });
     native.addEventListener("change", syncLabel);
+    document.addEventListener("agro:periodos-safra", syncLabel);
     syncLabel();
   }
 
