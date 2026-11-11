@@ -26,7 +26,7 @@
       showTab(button.dataset.settingsTab);
     }));
     const initial = location.hash.replace("#settings-", "");
-    showTab(["profile", "property", "notifications", "security", "team"].includes(initial) ? initial : "profile", false);
+    showTab(["profile", "property", "notifications", "security"].includes(initial) ? initial : "profile", false);
   }
 
   // Dados pessoais, preferências e senha são tratados em perfil-api.js.
