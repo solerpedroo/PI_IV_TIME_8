@@ -53,17 +53,18 @@
           novalidate
         >
           <!-- O token vem do e-mail de recuperação ou pode ser colado manualmente. -->
-          <div class="input-group">
-            <label for="token">Código de redefinição</label>
-            <input
-              id="token"
-              name="token"
-              autocomplete="one-time-code"
-              placeholder="Cole o código recebido"
-              required
-              data-required-message="Informe o código recebido."
-            >
-            <span class="field-error" aria-live="polite"></span>
+          <div class="input-group input-group--otp">
+            <span class="label" id="otp-reset-label">Código de redefinição</span>
+            <div class="otp-inputs" data-otp-inputs role="group" aria-labelledby="otp-reset-label">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="one-time-code" data-otp-digit aria-label="Dígito 1">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 2">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 3">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 4">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 5">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 6">
+            </div>
+            <input type="hidden" name="token" id="token" value="" required data-required-message="Informe o código de 6 dígitos.">
+            <span class="field-error" data-otp-error aria-live="polite"></span>
           </div>
 
           <div class="input-group">
