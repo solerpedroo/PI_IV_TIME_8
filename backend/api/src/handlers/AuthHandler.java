@@ -8,13 +8,14 @@ import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
 import java.time.Instant;
-import java.util.UUID;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Senhas;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import seguranca.LimitadorDeTaxa;
+import dados.ConflitoDeCadastro;
+import servicos.CodigosVerificacao;
 import servicos.ServicoEmail;
 import servicos.ClienteDeAlgoritmos;
 import util.Validacao;
@@ -111,7 +112,7 @@ public class AuthHandler
         String area     = remoto.normalizados.getString ("area");
 
         String agora = Instant.now ().toString ();
-        String token = UUID.randomUUID ().toString ();
+        String token = CodigosVerificacao.seisDigitos ();
 
         Document usuario = new Document ("name",                   name)
                                .append  ("email",                  email)
@@ -124,14 +125,33 @@ public class AuthHandler
 
         Document propriedade = new Document ("farm", farm).append ("area", area).append ("criadaEm", agora);
 
-        Document criado = this.usuarios.criar (usuario, propriedade);
-        if (criado == null)
+        Document criado;
+        try
+        {
+            criado = this.usuarios.criar (usuario, propriedade);
+        }
+        catch (ConflitoDeCadastro conflito)
+        {
+            if ("farm".equals (conflito.getCampo ()))
+                return Resposta.json (409, new Document ("error", "Já existe uma propriedade com esse nome.")
+                                               .append ("fields", new Document ("farm", "Este nome de propriedade já está em uso.")));
             return Resposta.json (409, new Document ("error", "E-mail já cadastrado.")
-                                           .append ("fields", new Document ("email", "Este e-mail já está cadastrado.")));
+                                               .append ("fields", new Document ("email", "Este e-mail já está cadastrado.")));
+        }
 
-        this.email.enviarCodigo (email, "Confirmação de e-mail", token);
+        Document corpoResposta = new Document ("usuario", AuthHandler.usuarioPublico (criado));
+        try
+        {
+            this.email.enviarCodigo (email, "Confirmação de e-mail", token);
+        }
+        catch (Exception erro)
+        {
+            corpoResposta.append ("aviso",
+                "Conta criada, mas o e-mail de confirmação não foi enviado. Corrija o SMTP ou use Reenviar confirmação.");
+            corpoResposta.append ("detalheEnvio", erro.getMessage ());
+        }
 
-        return Resposta.json (201, new Document ("usuario", AuthHandler.usuarioPublico (criado)));
+        return Resposta.json (201, corpoResposta);
     }
 
     // POST /api/auth/login
@@ -218,7 +238,7 @@ public class AuthHandler
             return limitada;
 
         Validacao validacao = new Validacao (requisicao.getCorpoJson ());
-        String    token     = validacao.texto ("token", "Informe o código de confirmação.", 64);
+        String    token     = validacao.codigo6 ("token", "Informe o código de confirmação.");
         if (validacao.temErros ())
             return validacao.resposta ();
 
@@ -247,6 +267,9 @@ public class AuthHandler
         if (validacao.temErros ())
             return validacao.resposta ();
 
+        Document corpoResposta = new Document ("message",
+            "Se o e-mail estiver pendente de confirmação, um novo código foi enviado.");
+
         synchronized (this.trava)
         {
             Document usuario = this.usuarios.buscarPor ("email", email);
@@ -267,15 +290,24 @@ public class AuthHandler
                     return ret;
                 }
 
-                String token = UUID.randomUUID ().toString ();
+                String token = CodigosVerificacao.seisDigitos ();
                 this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
                                          new Document ("tokenConfirmacao", token).append ("ultimoEnvioConfirmacao", agora));
 
-                this.email.enviarCodigo (email, "Confirmação de e-mail (reenvio)", token);
+                try
+                {
+                    this.email.enviarCodigo (email, "Confirmação de e-mail (reenvio)", token);
+                }
+                catch (Exception erro)
+                {
+                    corpoResposta.append ("aviso",
+                        "Não foi possível enviar o e-mail agora. Confira o SMTP do servidor ou tente novamente em instantes.");
+                    corpoResposta.append ("detalheEnvio", erro.getMessage ());
+                }
             }
         }
 
-        return AuthHandler.mensagem ("Se o e-mail estiver pendente de confirmação, um novo código foi enviado.");
+        return Resposta.json (200, corpoResposta);
     }
 
     // POST /api/auth/forgot-password  {email} -> sempre 200
@@ -296,12 +328,19 @@ public class AuthHandler
 
             if (usuario != null)
             {
-                String token = UUID.randomUUID ().toString ();
+                String token = CodigosVerificacao.seisDigitos ();
                 this.usuarios.atualizar (((ObjectId) usuario.get ("_id")).toHexString (),
                                          new Document ("tokenRedefinicao", token)
                                              .append ("redefinicaoExpiraEm", System.currentTimeMillis () + AuthHandler.VALIDADE_REDEFINICAO));
 
-                this.email.enviarCodigo (email, "Redefinição de senha", token);
+                try
+                {
+                    this.email.enviarCodigo (email, "Redefinição de senha", token);
+                }
+                catch (Exception ignorado)
+                {
+                    // Resposta generica 200 — nao revelar falha de SMTP ao cliente.
+                }
             }
         }
 
@@ -317,7 +356,7 @@ public class AuthHandler
 
         Document  corpo     = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
-        String    token     = validacao.texto ("token", "Informe o código de redefinição.", 64);
+        String    token     = validacao.codigo6 ("token", "Informe o código de redefinição.");
 
         if (validacao.temErros ())
             return validacao.resposta ();
