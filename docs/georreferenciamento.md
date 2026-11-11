@@ -80,10 +80,10 @@ O contrato da API está no [README do servidor](../backend/api/README.md#georref
 
 ## Evidência
 
-- `sh backend/serversocket/testar.sh`: `TesteGeometria` com 39 verificações (ponto arredondado, faixas,
+- `sh backend/serversocket/testar.sh`: JUnit `GeometriaTest` (ponto arredondado, faixas,
   tipo inválido, 2 e 51 vértices, fechamento descartado, laço, área zero, lado que volta, quadrado de 0,01°
   no equador com ~123 ha, quadrado de ~100 m em Campinas com ~1 ha, centro, dentro, fora, borda, polígono
-  côncavo, mapa com 2 talhões, mapa vazio e lista nula). `TesteAlgoritmos` 73 e `TesteProtocolo` 29 continuam.
+  côncavo, mapa com 2 talhões, mapa vazio e lista nula). `AlgoritmosTest` e `ProtocoloTest` na mesma suíte.
 - `sh backend/api/testar.sh`: `TesteGeorreferenciamento` com 40 verificações em memória (401, recusas campo a
   campo, 404, contexto trocado, ponto e polígono gravados, edição do talhão preservando a localização, ocorrência
   sem talhão, com talhão de ponto, sem localização, fora, dentro, edição e timeline com posição, mapa com
