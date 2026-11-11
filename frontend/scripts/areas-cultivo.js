@@ -96,9 +96,44 @@
   /* ---------------------------------------------------------------------- */
   /* Busca + filtro por cultura ou status                                   */
   /* ---------------------------------------------------------------------- */
+  function renderCultureChips(culturas) {
+    const host = $("[data-culture-chips]");
+    if (!host) return;
+    host.innerHTML = culturas.map((item) => {
+      const key = item.nome.toLowerCase();
+      return `<button type="button" class="filter-chip" data-filter="${key}">${item.nome}</button>`;
+    }).join("");
+  }
+
+  function whenAuthenticated(run) {
+    if (window.__agroAuthenticated) {
+      run();
+      return;
+    }
+    document.addEventListener("agro:authenticated", () => run(), { once: true });
+  }
+
+  async function loadCulturasUi() {
+    if (!window.AgroCulturas) return;
+    try {
+      const culturas = await window.AgroCulturas.listar();
+      window.AgroCulturas.preencherSelect(
+        $("#talhao-cultura"),
+        culturas,
+        culturas.length ? "Selecione a cultura" : "Cadastre culturas em Culturas",
+      );
+      renderCultureChips(culturas);
+    } catch (error) {
+      const hint = error.message === "Não encontrado."
+        ? "Reinicie a API (compile + rodar.sh) para carregar a rota /api/culturas."
+        : error.message;
+      toast("error", "Culturas indisponíveis", hint);
+    }
+  }
+
   function initFilters() {
     const search = $("[data-plots-search]");
-    const chips = $$("[data-filter]");
+    const bar = $(".filter-bar");
     const count = $("[data-plots-count]");
     const empty = $("[data-plots-empty]");
     const table = $("[data-plots-table]");
@@ -125,13 +160,13 @@
 
     search?.addEventListener("input", apply);
 
-    chips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        chips.forEach((c) => c.classList.remove("is-active"));
-        chip.classList.add("is-active");
-        activeFilter = chip.dataset.filter;
-        apply();
-      });
+    bar?.addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-filter]");
+      if (!chip || !bar.contains(chip)) return;
+      $$("[data-filter]", bar).forEach((item) => item.classList.remove("is-active"));
+      chip.classList.add("is-active");
+      activeFilter = chip.dataset.filter;
+      apply();
     });
 
     apply();
@@ -359,8 +394,12 @@
     initPrepToasts();
     initFilters();
     initPlotForm();
+    whenAuthenticated(() => {
+      loadCulturasUi();
+    });
     // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
     restorePlots([]);
+    whenAuthenticated(() => {
     api("/api/talhoes").then((records) => {
       restorePlots(records.map((record) => ({
       id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
@@ -368,6 +407,7 @@
       })));
       persist();
     }).catch((error) => toast("error", "Talhões indisponíveis", error.message + " Recarregue para tentar novamente."));
+    });
   }
 
   if (document.readyState === "loading") {
