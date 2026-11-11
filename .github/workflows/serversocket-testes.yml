@@ -17,5 +17,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Compilar e testar ServerSocket
-        run: sh backend/serversocket/testar.sh
+      - name: Verificar compilação sem dependências de teste
+        run: sh backend/serversocket/compilar.sh
+      - name: Executar JUnit e verificar cobertura dos algoritmos
+        run: mvn -B -ntp -f backend/serversocket/pom.xml clean verify
