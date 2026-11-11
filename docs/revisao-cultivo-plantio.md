@@ -9,9 +9,11 @@ Correções:
 - A coluna Safra mostra o valor da API, substituindo “Última atividade” com o texto fixo “Cadastro manual”.
 - Removido o texto permanente “Carregando propriedade…”.
 - Selects visuais acompanham o reset do formulário, evitando cultura exibida diferente do valor enviado.
-- Erros de consulta no histórico de safras não são convertidos em listas vazias e custos zero.
+- Falha em ocorrências/custos abre o histórico em modo parcial, com “indisponível” no total (sem inventar R$ 0,00); falha na safra/histórico do ciclo bloqueia a abertura.
+- O cache local de talhões inclui `safra`, alinhado à coluna da tabela.
+- O chip de status usa `data-filter` (cultura ou status), sem reutilizar o atributo só de cultura.
 
-Validação com Chromium/Playwright, API Java real em memória na porta 18080 e serviço de algoritmos na porta 3000. Nenhum registro de teste foi gravado no Atlas e nenhum e-mail foi enviado. Foram verificados estado vazio, filtro de status, safra na tabela, reset do formulário, avanço até Plantio, histórico e indisponibilidade de custos. Desktop 1440×1000 e celular 390×844, sem erros de JavaScript ou overflow da página. Tabelas extensas têm rolagem horizontal própria. As capturas foram inspecionadas e apagadas.
+Validação com Chromium/Playwright, API Java real em memória na porta 18080 e serviço de algoritmos na porta 3000. A auditoria falha cedo se a porta 3000 estiver fechada (`tests/audit-prereqs.cjs`). Nenhum registro de teste foi gravado no Atlas e nenhum e-mail foi enviado. Foram verificados estado vazio, filtro de status, safra na tabela, reset do formulário, avanço até Plantio, histórico parcial e indisponibilidade de custos. Desktop 1440×1000 e celular 390×844, sem erros de JavaScript ou overflow da página. Tabelas extensas têm rolagem horizontal própria. As capturas foram inspecionadas e apagadas.
 
 Para repetir, compile a API e o ServerSocket, mantenha o serviço de algoritmos na porta 3000 e deixe 18080 livre. Com Java 21 no PATH e Playwright instalado:
 
