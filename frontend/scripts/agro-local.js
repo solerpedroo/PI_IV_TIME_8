@@ -57,8 +57,18 @@
     settings: shape({profile: shape({name: text, email: text, phone: string, role: string}),
       // Aceita o registro anterior sem localização apenas para leitura; no próximo
       // salvamento a tela exige o novo campo e grava o formato completo.
-      property: (value) => shape({farm: text, area: positive, location: text, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value)
-        || shape({farm: text, area: positive, city: text, harvest: oneOf("2025/26", "2026/27", "2024/25")})(value),
+      property: (value) => {
+        const harvestPeriod = (raw) => {
+          if (!text(raw)) return false;
+          const match = String(raw).trim().match(/^(\d{4})\/(\d{2})$/);
+          if (!match) return false;
+          const year = Number(match[1]);
+          const suffix = Number(match[2]);
+          return suffix === (year + 1) % 100;
+        };
+        return shape({farm: text, area: positive, location: text, city: text, harvest: harvestPeriod})(value)
+          || shape({farm: text, area: positive, city: text, harvest: harvestPeriod})(value);
+      },
       preferences: shape(Object.fromEntries(["stock", "weather", "activities", "occurrences", "reports"].map((key) => [key, (value) => typeof value === "boolean"])))})
   };
   const blocked = new Set();
