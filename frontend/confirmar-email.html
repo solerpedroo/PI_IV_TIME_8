@@ -48,31 +48,33 @@
 
           <h2 id="verify-title">Confirme seu e-mail</h2>
           <p>
-            Enviamos um link de confirmação para
+            Enviamos um <strong>código de 6 dígitos</strong> para
             <strong id="email-placeholder">seu e-mail</strong>.
-            Acesse sua caixa de entrada e clique no link para ativar sua conta.
+            Digite o código abaixo para ativar sua conta.
           </p>
 
           <div class="verify-actions">
             <!-- Em produção, este botão pode abrir o cliente de e-mail (mailto:) -->
             <a class="btn btn-primary btn-block" href="mailto:">Abrir e-mail</a>
             <button class="btn btn-outline btn-block" type="button" data-resend>
-              Reenviar link
+              Reenviar código
             </button>
           </div>
 
           <!-- O código também permite confirmar links copiados de outro dispositivo. -->
           <form class="auth-form" data-confirm-email-form novalidate>
-            <div class="input-group">
-              <label for="token">Código de confirmação</label>
-              <input
-                id="token"
-                name="token"
-                autocomplete="one-time-code"
-                placeholder="Cole o código recebido"
-                required
-              >
-              <span class="field-error" aria-live="polite"></span>
+            <div class="input-group input-group--otp">
+              <span class="label" id="otp-confirm-label">Código de confirmação</span>
+              <div class="otp-inputs" data-otp-inputs role="group" aria-labelledby="otp-confirm-label">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="one-time-code" data-otp-digit aria-label="Dígito 1">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 2">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 3">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 4">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 5">
+                <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 6">
+              </div>
+              <input type="hidden" name="token" id="token" value="" required data-required-message="Informe o código de 6 dígitos.">
+              <span class="field-error" data-otp-error aria-live="polite"></span>
             </div>
             <div data-form-message class="form-message"></div>
             <button class="btn btn-primary btn-block" type="submit">Confirmar e-mail</button>
