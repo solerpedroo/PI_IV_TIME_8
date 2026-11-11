@@ -25,8 +25,7 @@ import util.Validacao;
 */
 public class TalhoesHandler
 {
-    public static final List<String> STATUS   = List.of ("Ativo", "Irrigação pendente", "Em preparo");
-    public static final List<String> SAFRAS    = List.of ("2024/25", "2025/26", "2026/27");
+    public static final List<String> STATUS = List.of ("Ativo", "Irrigação pendente", "Em preparo");
 
     private final RepositorioTalhoes    talhoes;
     private final RepositorioAtividades atividades;
