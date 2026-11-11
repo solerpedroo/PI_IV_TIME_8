@@ -65,6 +65,13 @@ const schemas = {
       hectares: number, areaHectares: number, status: string, safra: string
     }
   },
+  culturas: {
+    required: ["propriedadeId", "nome"],
+    properties: {
+      propriedadeId: string, proprietarioId: string, nome: string,
+      nomeNormalizado: string, criadoEm: date
+    }
+  },
   historicos_talhoes: {
     required: ["propriedadeId", "talhaoId"],
     properties: { propriedadeId: string, talhaoId: string, criadoEm: date, descricao: string, tipo: string }
