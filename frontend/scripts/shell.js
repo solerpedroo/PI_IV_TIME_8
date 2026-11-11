@@ -160,6 +160,8 @@
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
       fillProfile(data.usuario, data.propriedade?.farm);
+      window.__agroAuthenticated = true;
+      document.dispatchEvent(new CustomEvent("agro:authenticated"));
       return true;
     } catch (error) {
       if (error.status !== 401 && error.status !== 403) {
