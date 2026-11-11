@@ -76,7 +76,7 @@ public class Validacao
             return null;
         }
 
-        return ret.toLowerCase ();
+        return ret.toLowerCase (java.util.Locale.ROOT);
     }
 
     // 8, maiuscula, numero e simbolo: as mesmas de scripts/senha-regras.js.
