@@ -38,7 +38,8 @@ src/
     FiltroDeClasses             lista de permissão do ObjectInputStream
     mensagens/                  os pedidos e respostas de cada algoritmo
   algoritmos/                   funções puras, uma classe por assunto
-teste/                          TesteAlgoritmos (sem socket) e TesteProtocolo (socket real)
+  test/java/                    suíte JUnit 5 (algoritmos, geometria, manutenção, protocolo TCP)
+pom.xml                         Maven opcional (`mvn test`); o `testar.sh` também roda só com JDK
 ```
 
 ## Protocolo
@@ -116,7 +117,7 @@ else if (r instanceof RespostaDeErro) { /* veja a tabela de códigos */ }
 ```bash
 sh backend/serversocket/compilar.sh      # ou compilar.bat
 sh backend/serversocket/rodar.sh [porta] # ou rodar.bat; digite "desativar" para encerrar
-sh backend/serversocket/testar.sh        # ou testar.bat
+sh backend/serversocket/testar.sh        # JUnit 5 (Maven ou JDK + console standalone); ou testar.bat
 ```
 
 Variáveis de ambiente: `SERVIDOR_HOST` (padrão `127.0.0.1`) e `SERVIDOR_PORT` (padrão `3000`; o argumento tem prioridade).
@@ -127,7 +128,7 @@ O servidor escuta só em loopback por padrão. Há uma linha de log por pedido (
 1. `algoritmos/NovoAlgoritmo.java`: método estático `Pedido -> Resposta`, puro (sem E/S, sem estado).
 2. `protocolo/mensagens/`: o par `PedidoDeX` / `RespostaDeX`.
 3. Um `if (pedido instanceof PedidoDeX)` em `Atendente.atender`.
-4. Casos em `teste/TesteAlgoritmos.java` (e uma chamada pelo socket em `TesteProtocolo` se o formato for novo).
+4. Casos em `src/test/java/AlgoritmosTest.java` (e um teste de socket em `ProtocoloTest` se o formato for novo).
 
 ## Regras que evitam problemas com serialização
 
