@@ -27,7 +27,7 @@ class ValidadorDeTalhaoTest
             () -> assertEquals ("Norte 1", r.getNormalizados ().get ("nome")),
             () -> assertEquals ("norte 1", r.getNormalizados ().get ("nomeNormalizado")),
             () -> assertEquals ("Soja", r.getNormalizados ().get ("cultura")),
-            () -> assertEquals ("2025/26", r.getNormalizados ().get ("safra")),
+            () -> assertEquals (PeriodoSafra.padraoAtual (), r.getNormalizados ().get ("safra")),
             () -> assertEquals ("Ativo", r.getNormalizados ().get ("status")),
             () -> assertEquals (12.5, r.getNormalizados ().get ("hectares")));
     }
@@ -62,10 +62,26 @@ class ValidadorDeTalhaoTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"2024/25", "2025/26", "2026/27"})
-    void aceitaSafrasDoCadastro (String safra)
+    @MethodSource ("safrasValidas")
+    void aceitaPeriodosValidos (String safra)
     {
         assertTrue (validar ("T", "Soja", safra, 1.0, null).isValido ());
+    }
+
+    static java.util.stream.Stream<String> safrasValidas ()
+    {
+        int base = java.time.Year.now ().getValue ();
+        return java.util.stream.Stream.of (
+            PeriodoSafra.formatar (base - 1),
+            PeriodoSafra.formatar (base),
+            PeriodoSafra.formatar (base + 1));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"invalida", "1999/00", "2025/99"})
+    void recusaPeriodoInvalido (String safra)
+    {
+        campoInvalido (validar ("T", "Soja", safra, 1.0, null), "safra");
     }
 
     @Test
