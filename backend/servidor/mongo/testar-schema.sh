@@ -1,4 +1,5 @@
 #!/bin/sh
+# Smoke das coleções reais. Não reaplica o schema — rode aplicar-schema.sh antes.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -7,7 +8,12 @@ cd "$(dirname "$0")/.."
 
 case "$MONGODB_DATABASE" in
   *_teste) : ;;
-  *) echo "Recusado: use um banco terminado em _teste para esta operação" >&2; exit 2 ;;
+  *)
+    if [ "${ALLOW_NON_TEST_SCHEMA:-}" != "1" ]; then
+      echo "Recusado: use um banco terminado em _teste (ou ALLOW_NON_TEST_SCHEMA=1)" >&2
+      exit 2
+    fi
+    ;;
 esac
 
 command -v mongosh >/dev/null 2>&1 || {
@@ -15,13 +21,4 @@ command -v mongosh >/dev/null 2>&1 || {
   exit 127
 }
 
-mongosh "$MONGODB_URI" --quiet --eval 'db = db.getSiblingDB(process.env.MONGODB_DATABASE)' --file mongo/schema-validation.js --eval '
-  const nome = "schema_smoke_" + new Date().getTime();
-  db.createCollection(nome, { validator: { $jsonSchema: { bsonType: "object", required: ["valor"], properties: { valor: { bsonType: "decimal" } } } }, validationAction: "error" });
-  db.getCollection(nome).insertOne({ valor: Decimal128("1.00") });
-  let rejeitado = false;
-  try { db.getCollection(nome).insertOne({ valor: "1.00" }); } catch (e) { rejeitado = e.codeName === "Document failed validation" || e.code === 121; }
-  db.getCollection(nome).drop();
-  if (!rejeitado) throw new Error("o smoke test não rejeitou valor com tipo inválido");
-  print("schema smoke: OK");
-'
+mongosh "$MONGODB_URI" --quiet --file mongo/schema-smoke.js
