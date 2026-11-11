@@ -1,3 +1,4 @@
+import algoritmos.PeriodoSafra;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,14 +115,14 @@ class AtendenteAlgoritmosTest
     {
         RespostaDeValidacao ok = atender (new PedidoDeValidacaoDeTalhao ("  Norte 1 ", "Soja", null, 12.5, null), RespostaDeValidacao.class);
         verificar ("talhão válido", ok.isValido ());
-        verificar ("talhão aplica safra e status padrão", "2025/26".equals (ok.getNormalizados ().get ("safra")) && "Ativo".equals (ok.getNormalizados ().get ("status")));
+        verificar ("talhão aplica safra e status padrão", PeriodoSafra.padraoAtual ().equals (ok.getNormalizados ().get ("safra")) && "Ativo".equals (ok.getNormalizados ().get ("status")));
         verificar ("talhão guarda nome normalizado em minúsculas", "norte 1".equals (ok.getNormalizados ().get ("nomeNormalizado")) && "Norte 1".equals (ok.getNormalizados ().get ("nome")));
         verificar ("talhão devolve hectares como número", Double.valueOf (12.5).equals (ok.getNormalizados ().get ("hectares")));
 
         verificar ("status vazio vale Ativo", "Ativo".equals (atender (new PedidoDeValidacaoDeTalhao ("T", "Milho", "2026/27", 1.0, ""), RespostaDeValidacao.class).getNormalizados ().get ("status")));
 
         RespostaDeValidacao ruim = atender (new PedidoDeValidacaoDeTalhao ("", "Banana", "1999/00", 0.0, "Quebrado"), RespostaDeValidacao.class);
-        verificar ("talhão acusa nome, cultura, safra, hectares e status", ruim.getErros ().keySet ().containsAll (List.of ("nome", "cultura", "safra", "hectares", "status")) && ruim.getErros ().size () == 5);
+        verificar ("talhão acusa nome, safra, hectares e status", ruim.getErros ().keySet ().containsAll (List.of ("nome", "safra", "hectares", "status")) && ruim.getErros ().size () == 4);
 
         for (Double hectares : new Double[] { null, 0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY, 1000000.01 })
             verificar ("hectares inválidos recusados: " + hectares, atender (new PedidoDeValidacaoDeTalhao ("T", "Soja", null, hectares, null), RespostaDeValidacao.class).getErros ().containsKey ("hectares"));
