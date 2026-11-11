@@ -19,7 +19,10 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessoes;
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import util.Json;
+import util.PeriodoSafra;
 import util.Validacao;
 
 /*
@@ -88,6 +91,7 @@ public class PropriedadesHandler
     public void registrar (Roteador roteador) throws Exception
     {
         roteador.adicionar ("GET",    "/api/propriedades",                 this::listar);
+        roteador.adicionar ("GET",    "/api/propriedades/periodos-safra",  this::periodosSafra);
         roteador.adicionar ("POST",   "/api/propriedades",                 this::criar);
         roteador.adicionar ("GET",    "/api/propriedades/{id}",            this::consultar);
         roteador.adicionar ("PUT",    "/api/propriedades/{id}",            this::atualizar);
@@ -119,8 +123,8 @@ public class PropriedadesHandler
         String localizacao = validacao.texto ("localizacao", "Informe a localização.", 160);
         String municipio = validacao.texto ("municipio", "Informe o município.", 120);
         String safra     = validacao.texto ("safraAtual", "Informe a safra atual.", 20);
-        if (safra != null && !TalhoesHandler.SAFRAS.contains (safra))
-            validacao.erro ("safraAtual", "Selecione uma safra válida.");
+        if (safra != null && !PeriodoSafra.valida (safra))
+            validacao.erro ("safraAtual", "Use o formato AAAA/AA (ex.: 2026/27).");
         Object area      = corpo.get ("areaHectares");
 
         if (!(area instanceof Number) || !Double.isFinite (((Number) area).doubleValue ()) ||
@@ -147,6 +151,54 @@ public class PropriedadesHandler
             if (PropriedadesHandler.id (propriedade).equals (propriedadeId))
                 return propriedade;
         return null;
+    }
+
+    // GET /api/propriedades/periodos-safra — sugestões dinâmicas + períodos já usados na propriedade
+    private Resposta periodosSafra (Requisicao requisicao) throws Exception
+    {
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        LinkedHashSet<String> emUso = new LinkedHashSet<String> ();
+
+        for (Document talhao : this.talhoes.listar (propriedadeId))
+        {
+            String safra = talhao.getString ("safra");
+            if (safra != null && PeriodoSafra.valida (safra))
+                emUso.add (safra.trim ());
+        }
+
+        if (this.safras != null)
+            for (Document ciclo : this.safras.listar (propriedadeId))
+            {
+                String inicio = ciclo.getString ("dataInicio");
+                if (inicio == null)
+                    continue;
+
+                try
+                {
+                    emUso.add (PeriodoSafra.deData (LocalDate.parse (inicio)));
+                }
+                catch (Exception ignorado)
+                {
+                }
+            }
+
+        for (Document propriedade : this.propriedadesDoUsuario (requisicao))
+            if (PropriedadesHandler.id (propriedade).equals (propriedadeId))
+            {
+                String atual = propriedade.getString ("safraAtual");
+                if (atual != null && PeriodoSafra.valida (atual))
+                    emUso.add (atual.trim ());
+
+                break;
+            }
+
+        List<String> sugeridos = PeriodoSafra.sugerir (3, 2);
+        List<String> opcoes    = PeriodoSafra.unirOrdenar (emUso, sugeridos);
+
+        return Resposta.json (200, new Document ("padrao", PeriodoSafra.padraoAtual ())
+                                 .append ("sugeridos", sugeridos)
+                                 .append ("emUso", new ArrayList<String> (emUso))
+                                 .append ("opcoes", opcoes));
     }
 
     private Resposta listar (Requisicao requisicao) throws Exception
