@@ -75,10 +75,10 @@ A intervenção com valor vira um custo em Custos, na categoria Maquinário, lig
 
 ## Evidência
 
-- `sh backend/serversocket/testar.sh`: `TesteAgendaDeManutencao` com 43 verificações (cada recusa de cada validador,
+- `sh backend/serversocket/testar.sh`: JUnit `AgendaDeManutencaoTest` (cada recusa de cada validador,
   ano limite, horímetro negativo e NaN, valor com 3 casas arredondado, valor 0,004, data futura com `hoje` fixo, data
   impossível, agenda com atrasada, próxima, futura, realizada e cancelada ignoradas, `diasDeAviso` 2 e 30, próxima
-  preventiva com e sem intervalo, virada de ano e 29/02). `TesteAlgoritmos` 73 e `TesteProtocolo` 29 continuam.
+  preventiva com e sem intervalo, virada de ano e 29/02). `AlgoritmosTest` e `ProtocoloTest` (JUnit) continuam na mesma suíte.
 - `sh backend/api/testar.sh`: `TesteManutencao` com 61 verificações em memória (401, recusas de equipamento, preventiva
   e intervenção, nome repetido com maiúsculas, isolamento 404 em todas as rotas, contexto trocado, agenda relativa a hoje,
   intervenção sem valor sem custo, `marcarRealizadaSeProgramada` atômico, `custoPendente` e recuperação no `PUT`, custo
