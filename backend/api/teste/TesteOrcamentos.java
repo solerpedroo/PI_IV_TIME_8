@@ -191,7 +191,7 @@ public class TesteOrcamentos
             String   a        = sessoes.criar (new ObjectId ().toHexString (), propriedade);
             String   b        = sessoes.criar (new ObjectId ().toHexString (), outra);
 
-            SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
+            SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, new dados.RepositorioCulturasMemoria (), sessoes);
             handlerSafras.setOrcamentos (orcamentos);
             handlerSafras.registrar (roteador);
             new CustosHandler     (custos, safras, talhoes, sessoes).registrar (roteador);
