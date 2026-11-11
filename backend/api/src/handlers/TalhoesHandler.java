@@ -3,8 +3,9 @@
 
 package handlers;
 
-import dados.RepositorioTalhoes;
 import dados.RepositorioAtividades;
+import dados.RepositorioCulturas;
+import dados.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -24,15 +25,16 @@ import util.Validacao;
 */
 public class TalhoesHandler
 {
-    public static final List<String> CULTURAS = List.of ("Soja", "Milho", "Trigo", "Café", "Algodão");
     public static final List<String> STATUS   = List.of ("Ativo", "Irrigação pendente", "Em preparo");
     public static final List<String> SAFRAS    = List.of ("2024/25", "2025/26", "2026/27");
 
-    private final RepositorioTalhoes talhoes;
-    private final seguranca.Sessoes sessoes;
+    private final RepositorioTalhoes    talhoes;
     private final RepositorioAtividades atividades;
+    private final RepositorioCulturas   culturas;
+    private final seguranca.Sessoes     sessoes;
 
-    public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades, seguranca.Sessoes sessoes) throws Exception
+    public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades,
+                         RepositorioCulturas culturas, seguranca.Sessoes sessoes) throws Exception
     {
         if (talhoes == null)
             throw new Exception ("Repositorio de talhoes ausente");
@@ -40,6 +42,8 @@ public class TalhoesHandler
         this.talhoes = talhoes;
         if (atividades == null) throw new Exception ("Repositorio de atividades ausente");
         this.atividades = atividades;
+        if (culturas == null) throw new Exception ("Repositorio de culturas ausente");
+        this.culturas = culturas;
         if (sessoes == null) throw new Exception ("Sessoes ausentes");
         this.sessoes = sessoes;
     }
@@ -139,7 +143,12 @@ public class TalhoesHandler
         if (talhao == null)
             return TalhoesHandler.respostaTalhaoInvalido (corpo);
 
-        talhao.append ("propriedadeId", requisicao.getSessao ().getPropriedadeId ())
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        String titular       = requisicao.getSessao ().getUsuarioId ();
+        if (!this.culturas.existeNome (propriedadeId, talhao.getString ("cultura")))
+            return CulturasHandler.erroCulturaNaoCadastrada ();
+
+        talhao.append ("propriedadeId", propriedadeId)
               .append ("criadoEm",      talhao.getString ("atualizadoEm"));
 
         if (!this.talhoes.criar (talhao))
@@ -165,6 +174,9 @@ public class TalhoesHandler
 
         if (campos == null)
             return TalhoesHandler.respostaTalhaoInvalido (corpo);
+
+        if (!this.culturas.existeNome (propriedadeId, campos.getString ("cultura")))
+            return CulturasHandler.erroCulturaNaoCadastrada ();
 
         // Atividades antigas guardam o nome do talhão; impedir a troca mantém
         // a referência legível e válida também no histórico existente.
