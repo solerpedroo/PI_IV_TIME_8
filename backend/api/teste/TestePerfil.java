@@ -108,13 +108,22 @@ public class TestePerfil
                 new Document ("farm", "Propriedade de teste").append ("area", "10 ha"));
             String uid = u.getObjectId ("_id").toHexString (); ids.add (uid);
             Document outro = usuarios.criar (new Document ("name", "Outro produtor").append ("email", "outro-" + email)
-                .append ("emailConfirmado", true).append ("senhaHash", Senhas.gerar ("Senha@123")), new Document ("farm", "Outra fazenda"));
+                .append ("emailConfirmado", true).append ("onboardingConcluido", false)
+                .append ("senhaHash", Senhas.gerar ("Senha@123")), new Document ("farm", "Outra fazenda"));
             ids.add (outro.getObjectId ("_id").toHexString ());
             String token = login (email, "Senha@123", 200);
             String outraSessao = login (email, "Senha@123", 200);
             chamar ("GET", "/api/perfil", null, null, 401);
             Document perfil = get (token);
             conferir (perfil.get ("usuario", Document.class).getString ("email").equals (email), "dados do usuário real");
+            conferir (Boolean.TRUE.equals (perfil.get ("usuario", Document.class).getBoolean ("onboardingConcluido")),
+                      "conta sem campo onboarding é tratada como concluída");
+            String tokenNovato = login (outro.getString ("email"), "Senha@123", 200);
+            conferir (Boolean.FALSE.equals (Document.parse (chamar ("GET", "/api/me", null, tokenNovato, 200).body ())
+                .get ("usuario", Document.class).getBoolean ("onboardingConcluido")), "/api/me expõe onboarding pendente");
+            chamar ("POST", "/api/perfil/onboarding", new Document (), tokenNovato, 200);
+            conferir (Boolean.TRUE.equals (Document.parse (chamar ("GET", "/api/me", null, tokenNovato, 200).body ())
+                .get ("usuario", Document.class).getBoolean ("onboardingConcluido")), "onboarding persiste como concluído");
             conferir (!perfil.toJson ().contains ("senhaHash") && !perfil.toJson ().contains ("tokenTrocaEmail"), "API não expõe segredos");
             Document campos = new Document ("name", "Nome editado").append ("email", email).append ("phone", "(11) 98888-1234");
             chamar ("PUT", "/api/perfil", campos, token, 200);
