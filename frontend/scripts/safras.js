@@ -8,7 +8,7 @@
   const ETAPAS = ["Planejamento", "Preparação", "Plantio", "Manejo", "Colheita", "Finalização"];
   const ROTULOS_TIPO = { atividade: "Atividade", ocorrencia: "Ocorrência", custo: "Custo" };
   const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-  const state = { safras: [], talhoes: [], culturas: [], historySafra: null, historyRecords: [], historyFilter: "" };
+  const state = { safras: [], talhoes: [], culturasCatalogo: [], historySafra: null, historyRecords: [], historyFilter: "" };
   const base = window.location.origin;
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
@@ -69,7 +69,11 @@
     const errors = {};
     if (!data.nome?.trim()) errors.nome = "Informe o nome da safra.";
     if (!data.cultura) errors.cultura = "Selecione uma cultura.";
-    else if (!state.culturas.includes(data.cultura)) errors.cultura = "Selecione uma cultura válida.";
+    else if (!state.culturasCatalogo.includes(data.cultura)) {
+      errors.cultura = state.culturasCatalogo.length
+        ? "Selecione uma cultura cadastrada em Culturas."
+        : "Cadastre ao menos uma cultura em Culturas antes de criar a safra.";
+    }
     if (!data.talhoes.length) errors.talhoes = "Selecione ao menos um talhão.";
     if (!data.dataInicio) errors.dataInicio = "Informe a data de início.";
     if (!data.dataFim) errors.dataFim = "Informe a data de término.";
@@ -83,18 +87,16 @@
     return true;
   }
 
-  function montarCulturas(catalogo, talhoes, safras) {
-    const nomes = new Set(catalogo.map((item) => item.nome));
-    [...talhoes.map((t) => t.cultura), ...safras.map((s) => s.cultura)]
-      .filter(Boolean)
-      .forEach((nome) => nomes.add(nome));
-    return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  function nomesDoCatalogo(catalogo) {
+    return [...new Set(catalogo.map((item) => item.nome).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
   function preencherCulturas(culturas) {
     const select = $("[name='cultura']");
     const atual = select.value;
-    select.innerHTML = `<option value="">Selecione</option>${culturas.map((nome) =>
+    const vazio = culturas.length ? "Selecione" : "Cadastre culturas em Culturas";
+    select.innerHTML = `<option value="">${vazio}</option>${culturas.map((nome) =>
       `<option value="${esc(nome)}">${esc(nome)}</option>`).join("")}`;
     if (atual && culturas.includes(atual)) select.value = atual;
   }
@@ -255,8 +257,8 @@
     const [safras, talhoes] = await Promise.all([api("/api/safras"), api("/api/talhoes")]);
     state.safras = Array.isArray(safras) ? safras : [];
     state.talhoes = Array.isArray(talhoes) ? talhoes : [];
-    state.culturas = montarCulturas(catalogo, state.talhoes, state.safras);
-    preencherCulturas(state.culturas);
+    state.culturasCatalogo = nomesDoCatalogo(catalogo);
+    preencherCulturas(state.culturasCatalogo);
     $("[name='talhoes']").innerHTML = state.talhoes.map((talhao) =>
       `<option value="${esc(talhao.id)}">${esc(talhao.nome)}</option>`).join("");
     render();
@@ -333,5 +335,15 @@
     }
   });
 
-  carregar().catch(() => toast("error", "Safras indisponíveis", "Inicie o servidor e faça login para acompanhar os ciclos."));
+  function whenAuthenticated(run) {
+    if (window.__agroAuthenticated) {
+      run();
+      return;
+    }
+    document.addEventListener("agro:authenticated", () => run(), { once: true });
+  }
+
+  whenAuthenticated(() => {
+    carregar().catch(() => toast("error", "Safras indisponíveis", "Inicie o servidor e faça login para acompanhar os ciclos."));
+  });
 })();
