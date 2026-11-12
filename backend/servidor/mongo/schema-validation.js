@@ -41,7 +41,10 @@ const array = { bsonType: "array" };
 const schemas = {
   usuarios: {
     required: ["email", "senhaHash", "emailConfirmado"],
-    properties: { email: string, senhaHash: string, emailConfirmado: bool }
+    properties: {
+      email: string, senhaHash: string, emailConfirmado: bool,
+      onboardingConcluido: bool, onboardingConcluidoEm: date
+    }
   },
   // Cadastro grava farm/area; API de propriedades grava nome/areaHectares.
   propriedades: {
