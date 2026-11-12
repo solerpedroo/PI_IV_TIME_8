@@ -69,6 +69,8 @@
   fill: var(--text-primary);
 }
 
+.plot-shape.geo-plot[class*="crop-"]:not(.crop-vazio) { fill: #c5d4e8; stroke: #9bb0c9; }
+
 .plot-shape.crop-soja { fill: #bcdfcb; }
 .plot-shape.crop-milho { fill: #f3dfa4; }
 .plot-shape.crop-trigo { fill: #e7c9a1; }
@@ -97,6 +99,8 @@
   border-radius: 3px;
   flex-shrink: 0;
 }
+
+.legend-dot[class*="crop-"]:not(.crop-vazio) { background: #c5d4e8; border: 1px solid #9bb0c9; }
 
 .legend-dot.crop-soja { background: #bcdfcb; }
 .legend-dot.crop-milho { background: #f3dfa4; }
