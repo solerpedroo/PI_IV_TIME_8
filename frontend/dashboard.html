@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="styles/dashboard.css">
   <link rel="stylesheet" href="styles/feedback.css">
   <link rel="stylesheet" href="styles/motion.css">
+  <link rel="stylesheet" href="styles/onboarding.css">
 </head>
 <body>
   <!--
@@ -216,6 +217,27 @@
     </div>
   </div>
 
+  <div class="onboarding" data-onboarding hidden aria-hidden="true">
+    <div class="onboarding-backdrop" aria-hidden="true"></div>
+    <div class="onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-describedby="onboarding-track">
+      <header class="onboarding-header">
+        <p class="onboarding-kicker">Primeiros passos</p>
+        <h2 class="onboarding-title" id="onboarding-title" data-onboarding-title>Bem-vindo ao Agro Gestão</h2>
+        <div class="onboarding-progress" data-onboarding-progress aria-hidden="true"></div>
+      </header>
+      <div class="onboarding-body" id="onboarding-track" data-onboarding-track></div>
+      <footer class="onboarding-footer">
+        <span class="onboarding-step-label" data-onboarding-step-label>Passo 1 de 6</span>
+        <div class="onboarding-actions">
+          <button class="btn btn-ghost" type="button" data-onboarding-skip>Pular tour</button>
+          <button class="btn btn-outline" type="button" data-onboarding-back hidden>Anterior</button>
+          <button class="btn btn-primary" type="button" data-onboarding-next>Próximo</button>
+          <button class="btn btn-primary" type="button" data-onboarding-finish hidden>Começar a usar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
   <!-- Relatório independente dos indicadores locais do painel. -->
@@ -238,6 +260,7 @@
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/notificacoes.js" defer></script>
   <script src="scripts/shell.js" defer></script>
+  <script src="scripts/onboarding.js" defer></script>
   <script src="scripts/dashboard.js" defer></script>
   <script src="scripts/talhoes-api.js" defer></script>
 </body>
