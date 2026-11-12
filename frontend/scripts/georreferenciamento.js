@@ -59,6 +59,42 @@
   const classeCultura = (cultura) => "crop-" + (semAcento(cultura) || "vazio");
   const classePrioridade = (prioridade) => "geo-marker-" + (semAcento(prioridade) || "baixa");
 
+  const LEGENDA_OCORRENCIAS = [
+    { classe: "geo-marker-alta", rotulo: "Ocorrência alta" },
+    { classe: "geo-marker-media", rotulo: "Média" },
+    { classe: "geo-marker-baixa", rotulo: "Baixa" },
+  ];
+
+  function atualizarLegenda(mapa) {
+    const lista = $("[data-geo-legend]");
+    if (!lista) return;
+    const culturas = [...new Set((mapa?.talhoes || []).map((t) => t.cultura).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    lista.replaceChildren();
+    culturas.forEach((nome) => {
+      const item = document.createElement("li");
+      const dot = document.createElement("span");
+      dot.className = `legend-dot ${classeCultura(nome)}`;
+      dot.setAttribute("aria-hidden", "true");
+      item.append(dot, document.createTextNode(nome));
+      lista.append(item);
+    });
+    LEGENDA_OCORRENCIAS.forEach(({ classe, rotulo }) => {
+      const item = document.createElement("li");
+      const marca = document.createElement("span");
+      marca.className = `geo-legend-marker ${classe}`;
+      marca.setAttribute("aria-hidden", "true");
+      item.append(marca, document.createTextNode(rotulo));
+      lista.append(item);
+    });
+    if (!culturas.length) {
+      const item = document.createElement("li");
+      item.className = "geo-legend-empty";
+      item.textContent = "Sem talhões localizados para legenda de culturas.";
+      lista.prepend(item);
+    }
+  }
+
   function svg(tag, atributos = {}) {
     const el = document.createElementNS(SVG_NS, tag);
     Object.entries(atributos).forEach(([nome, valor]) => el.setAttribute(nome, String(valor)));
@@ -240,6 +276,7 @@
       if (numeroDaConsulta !== consulta) return null;
       state.mapa = mapa;
       desenhar(mapa);
+      atualizarLegenda(mapa);
       listarSemLocalizacao(mapa);
       const gerais = mapa.ocorrenciasSemTalhao ? ` ${mapa.ocorrenciasSemTalhao} ocorrência(s) geral(is) da propriedade não aparecem no mapa.` : "";
       if (!mapa.talhoes.length) mensagem("Nenhum talhão com localização. Defina a localização na lista ao lado." + gerais);
@@ -250,6 +287,7 @@
       if (numeroDaConsulta !== consulta) return null;
       state.mapa = null;
       $("[data-geo-map]").replaceChildren();
+      atualizarLegenda({ talhoes: [] });
       $("[data-geo-missing]").replaceChildren();
       $("[data-geo-panel]").hidden = true;
       mensagem("Não foi possível carregar o mapa. " + error.message, true);
