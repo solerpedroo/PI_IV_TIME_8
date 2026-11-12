@@ -107,6 +107,24 @@ assertAccepts(
   }
 );
 
+assertAccepts(
+  "cultura válida",
+  "culturas",
+  {
+    propriedadeId: marker,
+    proprietarioId: marker,
+    nome: "Soja",
+    nomeNormalizado: "soja",
+    criadoEm: new Date()
+  }
+);
+
+assertRejects(
+  "cultura sem nome",
+  "culturas",
+  { propriedadeId: marker }
+);
+
 assertRejects(
   "safra sem cultura",
   "safras",
