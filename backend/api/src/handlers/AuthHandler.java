@@ -121,6 +121,7 @@ public class AuthHandler
                                .append  ("emailConfirmado",        false)
                                .append  ("tokenConfirmacao",       token)
                                .append  ("ultimoEnvioConfirmacao", System.currentTimeMillis ())
+                               .append  ("onboardingConcluido",    false)
                                .append  ("criadoEm",               agora);
 
         Document propriedade = new Document ("farm", farm).append ("area", area).append ("criadaEm", agora);
