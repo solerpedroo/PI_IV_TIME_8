@@ -1,0 +1,187 @@
+/* Pedro Henrique Contardi Soler — RA: 25005592 */
+/**
+ * Tour de onboarding no painel (overlay sobre o dashboard).
+ */
+
+body.has-onboarding {
+  overflow: hidden;
+}
+
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--dur-med) var(--ease-out), visibility 0s linear var(--dur-med);
+}
+
+.onboarding.is-open {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  transition: opacity var(--dur-med) var(--ease-out), visibility 0s;
+}
+
+.onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--text-primary) 42%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.onboarding-dialog {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(90vh, 640px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--text-primary) 18%, transparent);
+  overflow: hidden;
+}
+
+.onboarding-header {
+  padding: 24px 24px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.onboarding-kicker {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.onboarding-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.onboarding-progress span {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.onboarding-progress span::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--primary);
+  border-radius: inherit;
+  transition: width var(--dur-med) var(--ease-out);
+}
+
+.onboarding-progress span.is-done::after,
+.onboarding-progress span.is-current::after {
+  width: 100%;
+}
+
+.onboarding-progress span.is-done::after {
+  opacity: 0.45;
+}
+
+.onboarding-body {
+  position: relative;
+  padding: 20px 24px;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.onboarding-slide {
+  position: absolute;
+  inset: 20px 24px;
+  opacity: 0;
+  transform: translateX(28px);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+
+.onboarding-slide.is-active {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.onboarding-slide.is-leaving {
+  opacity: 0;
+  transform: translateX(-24px);
+}
+
+.onboarding-slide p {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.onboarding-slide p:last-child {
+  margin-bottom: 0;
+}
+
+.onboarding-slide ul {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.onboarding-slide li + li {
+  margin-top: 6px;
+}
+
+.onboarding-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.onboarding-step-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding,
+  .onboarding-slide,
+  .onboarding-progress span::after {
+    transition: none;
+  }
+}
