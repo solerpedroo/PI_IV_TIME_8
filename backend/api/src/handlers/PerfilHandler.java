@@ -43,6 +43,7 @@ public class PerfilHandler
         r.adicionar ("PUT", "/api/perfil/senha", q -> this.gravar (q, "senha"));
         r.adicionar ("POST", "/api/perfil/email/confirmar", q -> this.gravar (q, "confirmar"));
         r.adicionar ("POST", "/api/perfil/email/reenviar", q -> this.gravar (q, "reenviar"));
+        r.adicionar ("POST", "/api/perfil/onboarding", q -> this.gravar (q, "onboarding"));
     }
 
     private Resposta consultar (Requisicao q) throws Exception
@@ -75,9 +76,23 @@ public class PerfilHandler
                 case "padrao" -> this.padrao (q, usuario);
                 case "senha" -> this.senha (q, usuario);
                 case "confirmar" -> this.confirmar (q, usuario);
+                case "onboarding" -> this.concluirOnboarding (q, usuario);
                 default -> this.reenviar (q, usuario);
             };
         }
+    }
+
+    private Resposta concluirOnboarding (Requisicao q, Document usuario) throws Exception
+    {
+        if (PerfilUsuario.onboardingConcluido (usuario))
+            return Resposta.json (200, new Document ("onboardingConcluido", true));
+
+        Document campos = new Document ("onboardingConcluido", true)
+            .append ("onboardingConcluidoEm", Instant.now ().toString ());
+        if (!this.usuarios.atualizarCondicional (q.getSessao ().getUsuarioId (), versaoSenha (usuario), campos))
+            return Resposta.erro (409, "A conta mudou. Recarregue e tente novamente.");
+
+        return Resposta.json (200, new Document ("onboardingConcluido", true));
     }
 
     private static Document versaoSenha (Document usuario)
