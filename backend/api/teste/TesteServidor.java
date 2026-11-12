@@ -352,6 +352,7 @@ public class TesteServidor
         conferir ("resposta nao expoe hash nem token",
                   !criado.corpo.contains ("senhaHash") && !criado.corpo.contains ("token") && usuario.getString ("id") != null);
         conferir ("usuario nasce com emailConfirmado=false", Boolean.FALSE.equals (usuario.getBoolean ("emailConfirmado")));
+        conferir ("usuario novo nasce com onboarding pendente", Boolean.FALSE.equals (usuario.getBoolean ("onboardingConcluido")));
         conferir ("senha guardada como PBKDF2",
                   usuarios.buscarPor ("email", "maria@agro.com").getString ("senhaHash").startsWith ("pbkdf2$"));
 
@@ -395,6 +396,14 @@ public class TesteServidor
 
         Resp eu = get ("/api/me", token);
         conferir ("GET /api/me com token -> 200", 200, eu);
+        conferir ("/api/me indica onboarding pendente para conta nova",
+                  Boolean.FALSE.equals (eu.json ().get ("usuario", Document.class).getBoolean ("onboardingConcluido")));
+        Resp concluiu = post ("/api/perfil/onboarding", "{}", token);
+        conferir ("POST /api/perfil/onboarding -> 200", 200, concluiu);
+        conferir ("onboarding marcado como concluído",
+                  Boolean.TRUE.equals (concluiu.json ().getBoolean ("onboardingConcluido")));
+        conferir ("/api/me reflete onboarding concluído",
+                  Boolean.TRUE.equals (get ("/api/me", token).json ().get ("usuario", Document.class).getBoolean ("onboardingConcluido")));
         conferir ("/api/me traz a propriedade",
                   eu.status == 200 && "Fazenda Boa Vista".equals (eu.json ().get ("propriedade", Document.class).getString ("farm")));
         conferir ("GET /api/me sem token -> 401",      401, get ("/api/me", null));
