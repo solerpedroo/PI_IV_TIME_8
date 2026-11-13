@@ -76,10 +76,11 @@ public class Validacao
             return null;
         }
 
-        return ret.toLowerCase ();
+        return ret.toLowerCase (java.util.Locale.ROOT);
     }
 
-    // mesmas regras do medidor de forca do front (scripts/auth.js, getPasswordChecks)
+    // 8, maiuscula, numero e simbolo: as mesmas de scripts/senha-regras.js.
+    // O teto de 128 caracteres e conferido em senha(), antes desta checagem.
     public static boolean senhaForte (String senha)
     {
         return senha.length () >= 8 &&

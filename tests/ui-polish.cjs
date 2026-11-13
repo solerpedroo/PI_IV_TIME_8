@@ -190,6 +190,7 @@ async function menu(page, trigger) {
   await screenshot(page, 'custos-formulario-erros');
   await page.locator('#cost-category-trigger').click();
   await page.locator('#cost-category-listbox [data-value="Insumos"]').click();
+  assert.equal(await page.locator('#cost-category-trigger .select-value').textContent(), 'Insumos');
   await page.locator('#cost-plot-trigger').click();
   await reachable(page.locator('#cost-plot-listbox [data-value]').filter({ hasText: 'T-01 Norte' }));
   await screenshot(page, 'custos-select-no-formulario');
@@ -200,6 +201,22 @@ async function menu(page, trigger) {
   assert.equal(await page.locator('[data-modal="date-form"]').getAttribute('aria-hidden'), 'true');
   assert.equal(await page.locator('[data-modal="cost-form"]').getAttribute('aria-hidden'), 'false');
   await page.locator('[data-open-date-modal]').click();
+  await page.locator('#cost-date').evaluate((input) => { input.value = '2024-01-15'; });
+  assert.equal(await page.locator('#cost-date-trigger [data-date-label]').textContent(), '15/01/2024');
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-picker-layer]').forEach((camada) => camada.classList.add('is-open'));
+  });
+  const camadas = await page.locator('[data-picker-layer]').evaluateAll((lista) => lista.map((camada) => camada.id));
+  await page.keyboard.press('Escape');
+  const abertas = await page.locator('[data-picker-layer].is-open').evaluateAll((lista) => lista.map((camada) => camada.id));
+  assert.deepEqual(abertas, camadas.slice(0, -1));
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-picker-layer]').forEach((camada) => {
+      const manter = camada.id === 'date-form';
+      camada.classList.toggle('is-open', manter);
+      camada.setAttribute('aria-hidden', String(!manter));
+    });
+  });
   await page.locator('#date-form [data-calendar-today]').click();
   await form.locator('[name="description"]').fill('Lançamento de revisão visual com descrição longa para conferir quebra de texto na tabela');
   await form.locator('[name="value"]').fill('123.45');

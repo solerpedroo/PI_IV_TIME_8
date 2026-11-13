@@ -38,7 +38,11 @@ src/
     FiltroDeClasses             lista de permissão do ObjectInputStream
     mensagens/                  os pedidos e respostas de cada algoritmo
   algoritmos/                   funções puras, uma classe por assunto
-teste/                          TesteAlgoritmos (sem socket) e TesteProtocolo (socket real)
+  test/java/
+    algoritmos/                 testes unitários por classe de regra, sem rede ou banco
+    Atendente*Test.java          contratos de pedido -> Atendente -> resposta, sem rede
+    ProtocoloTest.java           integração TCP em loopback e porta livre
+pom.xml                         Maven opcional (`mvn test`); o `testar.sh` também roda só com JDK
 ```
 
 ## Protocolo
@@ -116,7 +120,7 @@ else if (r instanceof RespostaDeErro) { /* veja a tabela de códigos */ }
 ```bash
 sh backend/serversocket/compilar.sh      # ou compilar.bat
 sh backend/serversocket/rodar.sh [porta] # ou rodar.bat; digite "desativar" para encerrar
-sh backend/serversocket/testar.sh        # ou testar.bat
+sh backend/serversocket/testar.sh        # JUnit 5 (Maven ou JDK + console standalone); ou testar.bat
 ```
 
 Variáveis de ambiente: `SERVIDOR_HOST` (padrão `127.0.0.1`) e `SERVIDOR_PORT` (padrão `3000`; o argumento tem prioridade).
@@ -127,7 +131,58 @@ O servidor escuta só em loopback por padrão. Há uma linha de log por pedido (
 1. `algoritmos/NovoAlgoritmo.java`: método estático `Pedido -> Resposta`, puro (sem E/S, sem estado).
 2. `protocolo/mensagens/`: o par `PedidoDeX` / `RespostaDeX`.
 3. Um `if (pedido instanceof PedidoDeX)` em `Atendente.atender`.
-4. Casos em `teste/TesteAlgoritmos.java` (e uma chamada pelo socket em `TesteProtocolo` se o formato for novo).
+4. Testes unitários em `src/test/java/algoritmos/NovoAlgoritmoTest.java`, um comportamento por teste,
+   e cobertura do roteamento em `Atendente*Test` (mais um teste TCP em `ProtocoloTest` se o formato for novo).
+
+## Estrutura e execução dos testes
+
+Os testes do ServerSocket são **JUnit Jupiter 5.11.4**. Não precisam de API, MongoDB ou servidor
+iniciado manualmente. Importe `backend/serversocket/pom.xml` como projeto Maven na IDE para que
+ela reconheça `@Test`, `@ParameterizedTest` e as asserções. Os fontes de produção continuam em
+`src/`; o `pom.xml` exclui `src/test/` da compilação de produção e usa `src/test/java` para testes.
+
+A suíte tem três camadas identificadas por tags:
+
+- `unitario`: classes no pacote `algoritmos`, chamando diretamente as regras. Cobrem cadastro e senha,
+  talhões e resumo, saldo e custo médio de estoque, centavos e consolidação de safra, manutenção,
+  calendário e geometria. Casos parametrizados aparecem individualmente no resultado do JUnit.
+- `contrato`: os `Atendente*Test` preservam os cenários anteriores e verificam o despacho, o tipo de
+  resposta e a correlação do ID do pedido. Esses cenários complementam os testes isolados.
+- `integracao`: `ProtocoloTest` inicia o servidor real em `127.0.0.1`, porta `0` (escolhida pelo sistema),
+  e cobre serialização, filtro de classes, concorrência, respostas atrasadas, limite de conexões,
+  ociosidade e desligamento. Cada método tem limite de 30 segundos.
+
+Com Maven e JDK 21 ou superior (confira também o `JAVA_HOME`):
+
+```bash
+mvn -f backend/serversocket/pom.xml clean verify       # suíte completa e limites de cobertura
+mvn -f backend/serversocket/pom.xml test -Dgroups=unitario
+mvn -f backend/serversocket/pom.xml test -Dgroups=integracao
+mvn -f backend/serversocket/pom.xml test -Dtest=CalculadoraDeEstoqueTest
+```
+
+`mvn test` também gera cobertura JaCoCo em `backend/serversocket/target/site/jacoco/index.html`
+e resultados JUnit em `target/surefire-reports/`. `mvn verify` exige, no pacote `algoritmos`, pelo
+menos **90% de linhas** e **85% de ramificações** cobertas. O workflow `serversocket-testes.yml`
+executa essa verificação e a compilação independente do servidor.
+
+Sem Maven, `testar.sh` / `testar.bat` usam o JUnit Console Standalone, compilam recursivamente os testes
+em `target/test-classes/` e salvam resultados em `target/test-reports/`. O primeiro uso precisa de
+internet para baixar o JUnit; o JAR é verificado por SHA-256 e reutilizado do cache. A execução
+standalone não gera cobertura nem aplica os limites JaCoCo. Os argumentos são repassados ao runner
+disponível, portanto os filtros do Maven e do Console são diferentes:
+
+```bash
+# Somente quando Maven não estiver disponível:
+sh backend/serversocket/testar.sh --include-tag unitario --details=summary
+sh backend/serversocket/testar.sh --include-tag integracao --details=summary
+```
+
+Os casos de regressão também verificam rejeição de hectares negativos/não finitos no resumo,
+custos negativos antes do arredondamento, elementos nulos no relatório e normalização de e-mail
+independente do idioma da máquina. Datas de referência são fixas nos pedidos, evitando que os testes
+mudem de resultado com o calendário. Os testes manuais de `backend/api/teste` pertencem a outro
+módulo; eles não compõem esta suíte JUnit do ServerSocket.
 
 ## Regras que evitam problemas com serialização
 

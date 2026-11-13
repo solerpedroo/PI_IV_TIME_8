@@ -818,6 +818,8 @@
 }
 
 @media (max-width: 760px) {
+  .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-card { min-width: 0; }
   .kanban-board {
     grid-template-columns: 1fr;
   }

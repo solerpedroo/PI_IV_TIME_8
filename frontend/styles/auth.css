@@ -28,9 +28,14 @@
   width: 100%;
 }
 
-.auth-aside .brand-mark {
+.auth-aside .brand-mark:not(.brand-mark--logo) {
   background: var(--primary);
   color: var(--text-inverse);
+}
+
+.auth-aside .brand-mark--logo .brand-img {
+  width: 56px;
+  height: 56px;
 }
 
 .auth-aside .brand-name {
@@ -69,16 +74,17 @@
   margin-bottom: var(--space-md);
 }
 
-.auth-aside--confirm .brand-sprout svg {
-  width: 48px;
-  height: 48px;
+.auth-aside--confirm .brand-sprout svg,
+.auth-aside--confirm .brand-sprout .brand-img {
+  width: 64px;
+  height: 64px;
 }
 
 .auth-aside--confirm .brand-title {
   margin: 0 0 var(--space-md);
   font-family: var(--font-heading);
   font-size: 36px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-inverse);
   letter-spacing: -0.02em;
 }
@@ -354,11 +360,12 @@
 .password-meter-label[data-level="1"] { color: var(--error); }
 .password-meter-label[data-level="2"] { color: var(--warning); }
 .password-meter-label[data-level="3"] { color: var(--accent); }
-.password-meter-label[data-level="4"] { color: var(--success); }
+.password-meter-label[data-level="4"] { color: var(--accent); }
+.password-meter-label[data-level="5"] { color: var(--success); }
 
 .password-meter-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
 
@@ -372,7 +379,8 @@
 .password-meter[data-level="1"] i:nth-child(1) { background: var(--error); }
 .password-meter[data-level="2"] i:nth-child(-n+2) { background: var(--warning); }
 .password-meter[data-level="3"] i:nth-child(-n+3) { background: var(--accent); }
-.password-meter[data-level="4"] i { background: var(--success); }
+.password-meter[data-level="4"] i:nth-child(-n+4) { background: var(--accent); }
+.password-meter[data-level="5"] i { background: var(--success); }
 
 .password-rules {
   display: grid;
@@ -472,4 +480,52 @@
   .auth-header h2 {
     font-size: 26px;
   }
+
+  .otp-inputs input {
+    width: 2.5rem;
+    height: 2.75rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Código OTP (6 dígitos) */
+.input-group--otp .label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.otp-inputs {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
+.otp-inputs input {
+  width: 2.75rem;
+  height: 3.25rem;
+  padding: 0;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.otp-inputs input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.otp-inputs input[aria-invalid="true"] {
+  border-color: var(--danger);
 }

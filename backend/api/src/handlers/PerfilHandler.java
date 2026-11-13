@@ -6,12 +6,12 @@ import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
 import java.time.Instant;
-import java.util.UUID;
 import org.bson.Document;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Senhas;
 import seguranca.Sessoes;
 import servicos.ClienteDeAlgoritmos;
+import servicos.CodigosVerificacao;
 import servicos.ServicoEmail;
 import util.PerfilUsuario;
 import util.Validacao;
@@ -43,6 +43,7 @@ public class PerfilHandler
         r.adicionar ("PUT", "/api/perfil/senha", q -> this.gravar (q, "senha"));
         r.adicionar ("POST", "/api/perfil/email/confirmar", q -> this.gravar (q, "confirmar"));
         r.adicionar ("POST", "/api/perfil/email/reenviar", q -> this.gravar (q, "reenviar"));
+        r.adicionar ("POST", "/api/perfil/onboarding", q -> this.gravar (q, "onboarding"));
     }
 
     private Resposta consultar (Requisicao q) throws Exception
@@ -75,9 +76,23 @@ public class PerfilHandler
                 case "padrao" -> this.padrao (q, usuario);
                 case "senha" -> this.senha (q, usuario);
                 case "confirmar" -> this.confirmar (q, usuario);
+                case "onboarding" -> this.concluirOnboarding (q, usuario);
                 default -> this.reenviar (q, usuario);
             };
         }
+    }
+
+    private Resposta concluirOnboarding (Requisicao q, Document usuario) throws Exception
+    {
+        if (PerfilUsuario.onboardingConcluido (usuario))
+            return Resposta.json (200, new Document ("onboardingConcluido", true));
+
+        Document campos = new Document ("onboardingConcluido", true)
+            .append ("onboardingConcluidoEm", Instant.now ().toString ());
+        if (!this.usuarios.atualizarCondicional (q.getSessao ().getUsuarioId (), versaoSenha (usuario), campos))
+            return Resposta.erro (409, "A conta mudou. Recarregue e tente novamente.");
+
+        return Resposta.json (200, new Document ("onboardingConcluido", true));
     }
 
     private static Document versaoSenha (Document usuario)
@@ -121,7 +136,7 @@ public class PerfilHandler
         {
             if (usuario.getString ("emailPendente") != null && System.currentTimeMillis () - usuario.get ("ultimoEnvioTrocaEmail", 0L) < 30000)
                 return Resposta.erro (429, "Aguarde 30 segundos antes de solicitar outra confirmação.");
-            campos.append ("emailPendente", endereco).append ("tokenTrocaEmail", UUID.randomUUID ().toString ())
+            campos.append ("emailPendente", endereco).append ("tokenTrocaEmail", CodigosVerificacao.seisDigitos ())
                 .append ("trocaEmailExpiraEm", System.currentTimeMillis () + VALIDADE_EMAIL)
                 .append ("ultimoEnvioTrocaEmail", System.currentTimeMillis ());
             esperado.append ("tokenTrocaEmail", usuario.get ("tokenTrocaEmail"));
@@ -196,7 +211,7 @@ public class PerfilHandler
     {
         try
         {
-            this.email.enviarCodigo (destino, "Confirmacao de novo e-mail", codigo);
+            this.email.enviarCodigo (destino, "Confirmação de novo e-mail", codigo);
             return Resposta.json (200, new Document ("confirmacaoPendente", true).append ("message", "Confirme o código enviado ao novo e-mail. O endereço atual continua válido até confirmar."));
         }
         catch (Exception erro)
@@ -210,7 +225,7 @@ public class PerfilHandler
         if (usuario.getString ("emailPendente") == null) return Resposta.erro (400, "Não há troca de e-mail pendente.");
         if (System.currentTimeMillis () - usuario.get ("ultimoEnvioTrocaEmail", 0L) < 30000)
             return Resposta.erro (429, "Aguarde 30 segundos para reenviar.");
-        Document campos = new Document ("tokenTrocaEmail", UUID.randomUUID ().toString ())
+        Document campos = new Document ("tokenTrocaEmail", CodigosVerificacao.seisDigitos ())
             .append ("ultimoEnvioTrocaEmail", System.currentTimeMillis ()).append ("trocaEmailExpiraEm", System.currentTimeMillis () + VALIDADE_EMAIL);
         if (!this.usuarios.atualizarCondicional (q.getSessao ().getUsuarioId (), versaoSenha (usuario)
             .append ("tokenTrocaEmail", usuario.get ("tokenTrocaEmail")), campos)) return Resposta.erro (409, "O pedido mudou. Recarregue.");
@@ -220,7 +235,7 @@ public class PerfilHandler
     private Resposta confirmar (Requisicao q, Document usuario) throws Exception
     {
         Validacao v = new Validacao (q.getCorpoJson ());
-        String codigo = v.texto ("codigo", "Informe o código recebido.", 64);
+        String codigo = v.codigo6 ("codigo", "Informe o código recebido.");
         if (v.temErros ()) return v.resposta ();
         if (!codigo.equals (usuario.getString ("tokenTrocaEmail")) || usuario.get ("trocaEmailExpiraEm", 0L) < System.currentTimeMillis () || usuario.getString ("emailPendente") == null)
             return Resposta.erro (400, "Código inválido ou expirado.");

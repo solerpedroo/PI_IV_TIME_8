@@ -38,6 +38,8 @@
     const file = (window.location.pathname.split("/").pop() || "").toLowerCase();
     const page = file.replace(/\.html$/i, "") || "dashboard";
     $$("[data-sidebar-page]", nav).forEach((link) => {
+      link.setAttribute("aria-label", link.textContent.trim());
+      link.title = link.textContent.trim();
       const active = link.dataset.sidebarPage === page;
       link.classList.toggle("is-active", active);
       if (active) link.setAttribute("aria-current", "page");
@@ -52,6 +54,15 @@
   function sidebarFallbackMarkup() {
     return (
       '<aside class="app-sidebar" role="navigation" aria-label="Navegação principal (modo limitado)">' +
+        '<div class="sidebar-brand">' +
+          '<span class="sidebar-brand-icon" aria-hidden="true">' +
+            '<img src="Assets/brand/simbolo-claro.svg" alt="" width="32" height="32">' +
+          '</span>' +
+          '<span>' +
+            '<span class="sidebar-brand-name">Agro<span class="brand-name-light">Gestão</span></span>' +
+            '<span class="sidebar-brand-caption">Gestão Agrícola</span>' +
+          '</span>' +
+        '</div>' +
         '<nav class="sidebar-nav" data-app-sidebar-nav>' +
           '<a class="sidebar-link" href="dashboard.html" data-sidebar-page="dashboard">Painel</a>' +
           '<a class="sidebar-link" href="configuracoes.html" data-sidebar-page="configuracoes">Configurações</a>' +
@@ -158,6 +169,8 @@
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
       fillProfile(data.usuario, data.propriedade?.farm);
+      window.__agroAuthenticated = true;
+      document.dispatchEvent(new CustomEvent("agro:authenticated", { detail: { usuario: data.usuario } }));
       return true;
     } catch (error) {
       if (error.status !== 401 && error.status !== 403) {

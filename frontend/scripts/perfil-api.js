@@ -7,8 +7,8 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const base = window.location.origin;
   let user = null;
-
   const toast = (type, title, description) => window.AgroToast?.show({type, title, description});
+
   async function api(path, options = {}) {
     const response = await fetch(base + path, {...options, signal: AbortSignal.timeout(15000),
       headers: {Authorization: "Bearer " + sessionStorage.getItem("agro.sessionToken"), "Content-Type": "application/json"}});
@@ -122,6 +122,7 @@
   }
 
   function init() {
+    window.AgroSenha?.iniciar();
     unavailable("Carregando perfil…");
     $("[data-profile-retry]").addEventListener("click", () => load().catch(() => {}));
     $("#profile-email").addEventListener("input", updateEmailPassword);

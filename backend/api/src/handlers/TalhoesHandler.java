@@ -3,8 +3,9 @@
 
 package handlers;
 
-import dados.RepositorioTalhoes;
 import dados.RepositorioAtividades;
+import dados.RepositorioCulturas;
+import dados.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -24,15 +25,15 @@ import util.Validacao;
 */
 public class TalhoesHandler
 {
-    public static final List<String> CULTURAS = List.of ("Soja", "Milho", "Trigo", "Café", "Algodão");
-    public static final List<String> STATUS   = List.of ("Ativo", "Irrigação pendente", "Em preparo");
-    public static final List<String> SAFRAS    = List.of ("2024/25", "2025/26", "2026/27");
+    public static final List<String> STATUS = List.of ("Ativo", "Irrigação pendente", "Em preparo");
 
-    private final RepositorioTalhoes talhoes;
-    private final seguranca.Sessoes sessoes;
+    private final RepositorioTalhoes    talhoes;
     private final RepositorioAtividades atividades;
+    private final RepositorioCulturas   culturas;
+    private final seguranca.Sessoes     sessoes;
 
-    public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades, seguranca.Sessoes sessoes) throws Exception
+    public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades,
+                         RepositorioCulturas culturas, seguranca.Sessoes sessoes) throws Exception
     {
         if (talhoes == null)
             throw new Exception ("Repositorio de talhoes ausente");
@@ -40,6 +41,8 @@ public class TalhoesHandler
         this.talhoes = talhoes;
         if (atividades == null) throw new Exception ("Repositorio de atividades ausente");
         this.atividades = atividades;
+        if (culturas == null) throw new Exception ("Repositorio de culturas ausente");
+        this.culturas = culturas;
         if (sessoes == null) throw new Exception ("Sessoes ausentes");
         this.sessoes = sessoes;
     }
@@ -107,12 +110,12 @@ public class TalhoesHandler
     private static Resposta respostaTalhaoInvalido (Document corpo) throws Exception
     {
         ClienteDeAlgoritmos.ResultadoTalhao remoto = ClienteDeAlgoritmos.validarTalhao (corpo);
-        return remoto.respostaErro != null ? remoto.respostaErro : Resposta.erro (400, "Validation failed");
+        return remoto.respostaErro != null ? remoto.respostaErro : Resposta.erro (400, "Dados inválidos.");
     }
 
     private static Resposta nomeRepetido ()
     {
-        return Resposta.json (409, new Document ("error", "Plot name already exists")
+        return Resposta.json (409, new Document ("error", "Já existe um talhão com esse nome.")
                                        .append ("fields", new Document ("nome", "Já existe um talhão com esse nome.")));
     }
 
@@ -124,9 +127,9 @@ public class TalhoesHandler
         synchronized (this.sessoes)
         {
             seguranca.Sessao atual = this.sessoes.buscar (requisicao.getToken ());
-            if (atual == null) return Resposta.erro (401, "Unauthorized");
+            if (atual == null) return Resposta.erro (401, "Não autorizado.");
             if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-                return Resposta.erro (409, "Property context changed; reload before saving");
+                return Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
             return this.criarProtegido (requisicao);
         }
     }
@@ -139,7 +142,12 @@ public class TalhoesHandler
         if (talhao == null)
             return TalhoesHandler.respostaTalhaoInvalido (corpo);
 
-        talhao.append ("propriedadeId", requisicao.getSessao ().getPropriedadeId ())
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        String titular       = requisicao.getSessao ().getUsuarioId ();
+        if (!this.culturas.existeNome (propriedadeId, talhao.getString ("cultura")))
+            return CulturasHandler.erroCulturaNaoCadastrada ();
+
+        talhao.append ("propriedadeId", propriedadeId)
               .append ("criadoEm",      talhao.getString ("atualizadoEm"));
 
         if (!this.talhoes.criar (talhao))
@@ -158,13 +166,16 @@ public class TalhoesHandler
 
         Document anterior = this.talhoes.buscarPorId (propriedadeId, id);
         if (anterior == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         Document corpo  = requisicao.getCorpoJson ();
         Document campos = TalhoesHandler.lerTalhao (corpo);
 
         if (campos == null)
             return TalhoesHandler.respostaTalhaoInvalido (corpo);
+
+        if (!this.culturas.existeNome (propriedadeId, campos.getString ("cultura")))
+            return CulturasHandler.erroCulturaNaoCadastrada ();
 
         // Atividades antigas guardam o nome do talhão; impedir a troca mantém
         // a referência legível e válida também no histórico existente.
@@ -185,7 +196,7 @@ public class TalhoesHandler
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
         String id = requisicao.getParametro ("id");
-        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Not found");
+        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Não encontrado.");
         ArrayList<Document> ret = new ArrayList<Document> ();
         for (Document evento : this.talhoes.listarHistorico (propriedadeId, id))
             ret.add (Json.publico (evento, "propriedadeId", "talhaoId"));
@@ -197,7 +208,7 @@ public class TalhoesHandler
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
         String id = requisicao.getParametro ("id");
-        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Not found");
+        if (this.talhoes.buscarPorId (propriedadeId, id) == null) return Resposta.erro (404, "Não encontrado.");
         Document corpo = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
         String tipo = validacao.texto ("tipo", "Informe o tipo.", 20);

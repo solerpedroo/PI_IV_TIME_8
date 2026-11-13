@@ -8,6 +8,7 @@ import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
 import dados.RepositorioTalhoes;
 import dados.RepositorioOcorrencias;
+import dados.ConflitoDeCadastro;
 import dados.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
@@ -18,7 +19,10 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessoes;
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import util.Json;
+import util.PeriodoSafra;
 import util.Validacao;
 
 /*
@@ -87,6 +91,7 @@ public class PropriedadesHandler
     public void registrar (Roteador roteador) throws Exception
     {
         roteador.adicionar ("GET",    "/api/propriedades",                 this::listar);
+        roteador.adicionar ("GET",    "/api/propriedades/periodos-safra",  this::periodosSafra);
         roteador.adicionar ("POST",   "/api/propriedades",                 this::criar);
         roteador.adicionar ("GET",    "/api/propriedades/{id}",            this::consultar);
         roteador.adicionar ("PUT",    "/api/propriedades/{id}",            this::atualizar);
@@ -118,8 +123,8 @@ public class PropriedadesHandler
         String localizacao = validacao.texto ("localizacao", "Informe a localização.", 160);
         String municipio = validacao.texto ("municipio", "Informe o município.", 120);
         String safra     = validacao.texto ("safraAtual", "Informe a safra atual.", 20);
-        if (safra != null && !TalhoesHandler.SAFRAS.contains (safra))
-            validacao.erro ("safraAtual", "Selecione uma safra válida.");
+        if (safra != null && !PeriodoSafra.valida (safra))
+            validacao.erro ("safraAtual", "Use o formato AAAA/AA (ex.: 2026/27).");
         Object area      = corpo.get ("areaHectares");
 
         if (!(area instanceof Number) || !Double.isFinite (((Number) area).doubleValue ()) ||
@@ -148,6 +153,54 @@ public class PropriedadesHandler
         return null;
     }
 
+    // GET /api/propriedades/periodos-safra — sugestões dinâmicas + períodos já usados na propriedade
+    private Resposta periodosSafra (Requisicao requisicao) throws Exception
+    {
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        LinkedHashSet<String> emUso = new LinkedHashSet<String> ();
+
+        for (Document talhao : this.talhoes.listar (propriedadeId))
+        {
+            String safra = talhao.getString ("safra");
+            if (safra != null && PeriodoSafra.valida (safra))
+                emUso.add (safra.trim ());
+        }
+
+        if (this.safras != null)
+            for (Document ciclo : this.safras.listar (propriedadeId))
+            {
+                String inicio = ciclo.getString ("dataInicio");
+                if (inicio == null)
+                    continue;
+
+                try
+                {
+                    emUso.add (PeriodoSafra.deData (LocalDate.parse (inicio)));
+                }
+                catch (Exception ignorado)
+                {
+                }
+            }
+
+        for (Document propriedade : this.propriedadesDoUsuario (requisicao))
+            if (PropriedadesHandler.id (propriedade).equals (propriedadeId))
+            {
+                String atual = propriedade.getString ("safraAtual");
+                if (atual != null && PeriodoSafra.valida (atual))
+                    emUso.add (atual.trim ());
+
+                break;
+            }
+
+        List<String> sugeridos = PeriodoSafra.sugerir (3, 2);
+        List<String> opcoes    = PeriodoSafra.unirOrdenar (emUso, sugeridos);
+
+        return Resposta.json (200, new Document ("padrao", PeriodoSafra.padraoAtual ())
+                                 .append ("sugeridos", sugeridos)
+                                 .append ("emUso", new ArrayList<String> (emUso))
+                                 .append ("opcoes", opcoes));
+    }
+
     private Resposta listar (Requisicao requisicao) throws Exception
     {
         ArrayList<Document> ret = new ArrayList<Document> ();
@@ -169,16 +222,24 @@ public class PropriedadesHandler
         if (propriedade == null)
             return validacao.resposta ();
         propriedade.append ("criadaEm", propriedade.getString ("atualizadoEm"));
-        Document criada = this.usuarios.criarPropriedade (requisicao.getSessao ().getUsuarioId (), propriedade);
-        if (criada == null)
-            return Resposta.erro (404, "Not found");
-        return Resposta.json (201, PropriedadesHandler.publico (criada));
+        try
+        {
+            Document criada = this.usuarios.criarPropriedade (requisicao.getSessao ().getUsuarioId (), propriedade);
+            if (criada == null)
+                return Resposta.erro (404, "Não encontrado.");
+            return Resposta.json (201, PropriedadesHandler.publico (criada));
+        }
+        catch (ConflitoDeCadastro conflito)
+        {
+            return Resposta.json (409, new Document ("error", "Já existe uma propriedade com esse nome.")
+                                       .append ("fields", new Document ("nome", "Este nome de propriedade já está em uso.")));
+        }
     }
 
     private Resposta consultar (Requisicao requisicao) throws Exception
     {
         Document propriedade = this.propriedadeDoUsuario (requisicao, requisicao.getParametro ("id"));
-        return propriedade == null ? Resposta.erro (404, "Not found") : Resposta.json (200, PropriedadesHandler.publico (propriedade));
+        return propriedade == null ? Resposta.erro (404, "Não encontrado.") : Resposta.json (200, PropriedadesHandler.publico (propriedade));
     }
 
     private Resposta atualizar (Requisicao requisicao) throws Exception
@@ -190,7 +251,7 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         Document corpo = requisicao.getCorpoJson ();
         Validacao validacao = new Validacao (corpo);
         Document campos = PropriedadesHandler.lerPropriedade (corpo, validacao);
@@ -209,7 +270,7 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         if (this.propriedadesDoUsuario (requisicao).size () <= 1)
             return Resposta.json (409, new Document ("error", "A última propriedade não pode ser excluída."));
         if (id.equals (requisicao.getSessao ().getPropriedadeId ()))
@@ -234,7 +295,7 @@ public class PropriedadesHandler
         if (this.equipamentos != null && !this.equipamentos.listar (id).isEmpty ())
             return Resposta.json (409, new Document ("error", "A propriedade possui equipamentos e histórico de manutenção preservado."));
         if (!this.usuarios.excluirPropriedade (requisicao.getSessao ().getUsuarioId (), id))
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         return Resposta.semConteudo ();
     }
 
@@ -247,9 +308,9 @@ public class PropriedadesHandler
     {
         String id = requisicao.getParametro ("id");
         if (this.propriedadeDoUsuario (requisicao, id) == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         if (!this.sessoes.selecionarPropriedade (requisicao.getToken (), id))
-            return Resposta.erro (401, "Unauthorized");
+            return Resposta.erro (401, "Não autorizado.");
         return Resposta.json (200, new Document ("propriedadeId", id));
     }
 }

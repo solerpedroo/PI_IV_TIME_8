@@ -11,8 +11,8 @@ import org.bson.Document;
 */
 public interface RepositorioUsuarios
 {
-    // grava o usuario e a propriedade dele; devolve o usuario com _id e propriedadeId,
-    // ou null se o e-mail ja estiver cadastrado
+    // grava o usuario e a propriedade dele; devolve o usuario com _id e propriedadeId.
+    // ConflitoDeCadastro se email ou nome da propriedade ja existir (indice unico).
     public Document criar (Document usuario, Document propriedade) throws Exception;
 
     public Document buscarPorId (String id) throws Exception;

@@ -48,11 +48,42 @@
     if (selector.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(selector);
   }
 
+  async function loadHarvestPeriods(valorAtual = "") {
+    if (!window.AgroPeriodosSafra || !token()) return window.AgroPeriodosSafra?.fallbackLocal?.() || null;
+    window.AgroPeriodosSafra.limparCache();
+    const data = await window.AgroPeriodosSafra.garantirSelect(
+      form.elements.harvest,
+      valorAtual || form.elements.harvest.value,
+    );
+    if (form.elements.harvest.dataset.selectEnhanced === "true" && window.AgroSelect) {
+      window.AgroSelect.enhance(form.elements.harvest);
+    }
+    document.dispatchEvent(new CustomEvent("agro:periodos-safra", { detail: data }));
+    return data;
+  }
+
+  function whenAuthenticated(run) {
+    if (window.__agroAuthenticated) {
+      run();
+      return;
+    }
+    document.addEventListener("agro:authenticated", () => run(), { once: true });
+  }
+
   async function load() {
     if (!token()) return;
     properties = await request("/api/propriedades");
     const selected = properties.find((property) => property.selecionada) || properties[0];
-    if (selected) { fill(selected); renderSelector(); }
+    const periodos = await loadHarvestPeriods(selected?.safraAtual || "").catch(
+      () => window.AgroPeriodosSafra?.fallbackLocal() || null,
+    );
+    if (selected) {
+      fill(selected);
+    } else if (periodos?.padrao && !form.elements.harvest.value) {
+      form.elements.harvest.value = periodos.padrao;
+      form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (selected || properties.length) renderSelector();
     document.dispatchEvent(new Event("agro:properties-loaded"));
   }
 
@@ -77,7 +108,12 @@
     currentId = null;
     form.reset();
     for (const field of ["farm", "area", "location", "city", "harvest"]) form.elements[field].value = "";
-    form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
+    window.AgroPeriodosSafra?.carregar().then((data) => {
+      if (data?.padrao) {
+        form.elements.harvest.value = data.padrao;
+        form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }).catch(() => {});
     renderSelector();
     form.elements.farm.focus();
   });
@@ -115,5 +151,13 @@
     }
   }, true);
 
-  document.addEventListener("DOMContentLoaded", () => load().catch((error) => toast("error", "Propriedades indisponíveis", error.message)));
+  function boot() {
+    load().catch((error) => toast("error", "Propriedades indisponíveis", error.message));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => whenAuthenticated(boot));
+  } else {
+    whenAuthenticated(boot);
+  }
 })();

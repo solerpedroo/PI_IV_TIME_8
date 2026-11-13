@@ -4,8 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Defina uma nova senha para sua conta Agro.">
-  <title>Redefinir senha — Agro</title>
+  <meta name="description" content="Defina uma nova senha para sua conta no AgroGestão.">
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Redefinir senha - AgroGestão</title>
   <!-- Tipografia Geist carregada em styles/base.css (@font-face Fontsource) -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/auth.css">
@@ -22,16 +23,11 @@
       <!-- Branding -->
       <div class="center-brand">
         <div class="brand-lockup brand-lockup--compact">
-          <span class="brand-mark brand-mark--bare" aria-hidden="true">
-            <!-- Lucide: sprout -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M7 20h10"/>
-              <path d="M10 20c5.5-2.5.8-6.4 3-10"/>
-              <path d="M9.5 9.4c1.7.8 2.9 2.6 3.5 4.6.9-1.8 2.4-3.2 4.2-3.8-1.6-.5-3.2.2-4.3 1.3-1.3-2.1-3.2-3.4-5.4-3.7 1.5.6 2.4 1.8 2 1.6z"/>
-            </svg>
+          <span class="brand-mark brand-mark--logo" aria-hidden="true">
+            <img class="brand-img" src="Assets/brand/simbolo.svg" alt="" width="48" height="48">
           </span>
           <span>
-            <span class="brand-name">Agro</span>
+            <span class="brand-name">Agro<span class="brand-name-light">Gestão</span></span>
             <span class="brand-caption">Gestão agrícola inteligente</span>
           </span>
         </div>
@@ -48,23 +44,23 @@
           class="auth-form"
           data-auth-form
           data-auth-route="/api/auth/reset-password"
-          data-require-strong-password
           data-success-route="login.html"
           data-flash-message="Senha redefinida com sucesso. Faça login com a nova senha."
           novalidate
         >
           <!-- O token vem do e-mail de recuperação ou pode ser colado manualmente. -->
-          <div class="input-group">
-            <label for="token">Código de redefinição</label>
-            <input
-              id="token"
-              name="token"
-              autocomplete="one-time-code"
-              placeholder="Cole o código recebido"
-              required
-              data-required-message="Informe o código recebido."
-            >
-            <span class="field-error" aria-live="polite"></span>
+          <div class="input-group input-group--otp">
+            <span class="label" id="otp-reset-label">Código de redefinição</span>
+            <div class="otp-inputs" data-otp-inputs role="group" aria-labelledby="otp-reset-label">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" autocomplete="one-time-code" data-otp-digit aria-label="Dígito 1">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 2">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 3">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 4">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 5">
+              <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" data-otp-digit aria-label="Dígito 6">
+            </div>
+            <input type="hidden" name="token" id="token" value="" required data-required-message="Informe o código de 6 dígitos.">
+            <span class="field-error" data-otp-error aria-live="polite"></span>
           </div>
 
           <div class="input-group">
@@ -78,6 +74,7 @@
                 data-password-meter
                 autocomplete="new-password"
                 placeholder="Digite sua nova senha"
+                maxlength="128"
                 required
                 data-required-message="Crie uma nova senha."
               >
@@ -94,20 +91,21 @@
             <span class="field-error" aria-live="polite"></span>
           </div>
 
-          <!-- Força da senha (4 segmentos + regras) -->
+          <!-- Força da senha (5 segmentos + regras do servidor) -->
           <div class="password-meter" data-meter data-level="0" aria-live="polite">
             <div class="password-meter-header">
               <span>Força da senha</span>
               <span class="password-meter-label" data-meter-label data-level="0">—</span>
             </div>
             <div class="password-meter-bar" aria-hidden="true">
-              <i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i>
             </div>
             <div class="password-rules">
               <span data-rule="length">Mínimo de 8 caracteres</span>
               <span data-rule="upper">Pelo menos uma letra maiúscula</span>
               <span data-rule="number">Pelo menos um número</span>
               <span data-rule="symbol">Pelo menos um caractere especial</span>
+              <span data-rule="max">No máximo 128 caracteres</span>
             </div>
           </div>
 
@@ -121,6 +119,7 @@
                 data-password-confirm
                 autocomplete="new-password"
                 placeholder="Digite novamente sua nova senha"
+                maxlength="128"
                 required
                 data-required-message="Confirme sua senha."
               >
@@ -154,6 +153,7 @@
   </main>
 
   <script src="scripts/fetch-timeout.js" defer></script>
+  <script src="scripts/senha-regras.js" defer></script>
   <script src="scripts/auth.js" defer></script>
 </body>
 </html>

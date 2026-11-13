@@ -17,6 +17,24 @@ public class PerfilUsuario
         return ret;
     }
 
+    public static boolean onboardingConcluido (Document usuario)
+    {
+        if (usuario == null)
+            return true;
+
+        if (!usuario.containsKey ("onboardingConcluido"))
+            return true;
+
+        Object valor = usuario.get ("onboardingConcluido");
+        if (valor instanceof Boolean)
+            return Boolean.TRUE.equals (valor);
+
+        if (valor instanceof String)
+            return "true".equalsIgnoreCase (((String) valor).trim ());
+
+        return true;
+    }
+
     public static Document publico (Document usuario)
     {
         return new Document ("id", usuario.getObjectId ("_id").toHexString ())
@@ -24,6 +42,7 @@ public class PerfilUsuario
             .append ("phone", usuario.getString ("phone")).append ("emailConfirmado", usuario.getBoolean ("emailConfirmado"))
             .append ("emailPendente", usuario.getString ("emailPendente"))
             .append ("propriedadeId", usuario.getString ("propriedadeId"))
-            .append ("propriedadePadraoId", usuario.getString ("propriedadeId"));
+            .append ("propriedadePadraoId", usuario.getString ("propriedadeId"))
+            .append ("onboardingConcluido", PerfilUsuario.onboardingConcluido (usuario));
     }
 }

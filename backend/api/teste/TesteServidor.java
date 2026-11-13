@@ -337,6 +337,8 @@ public class TesteServidor
         conferir ("senha sem simbolo",   camposComErro (post ("/api/auth/register", new Document (base).append ("password", "Senha1234").append ("password-confirm", "Senha1234").toJson (), null)).containsKey ("password"));
         conferir ("senha sem maiuscula", camposComErro (post ("/api/auth/register", new Document (base).append ("password", "senha@123").append ("password-confirm", "senha@123").toJson (), null)).containsKey ("password"));
         conferir ("senha curta",         camposComErro (post ("/api/auth/register", new Document (base).append ("password", "Se@1").append ("password-confirm", "Se@1").toJson (), null)).containsKey ("password"));
+        String senhaLonga = "A1!" + "b".repeat (130);
+        conferir ("senha acima de 128", "Valor inválido.".equals (camposComErro (post ("/api/auth/register", new Document (base).append ("password", senhaLonga).append ("password-confirm", senhaLonga).toJson (), null)).get ("password")));
         conferir ("confirmacao diferente", camposComErro (post ("/api/auth/register", new Document (base).append ("password-confirm", "Outra@123").toJson (), null)).containsKey ("password-confirm"));
         conferir ("telefone fixo recusado", camposComErro (post ("/api/auth/register", new Document (base).append ("phone", "(11) 3456-7890").toJson (), null)).containsKey ("phone"));
         conferir ("telefone sem mascara recusado", camposComErro (post ("/api/auth/register", new Document (base).append ("phone", "11987654321").toJson (), null)).containsKey ("phone"));
@@ -350,6 +352,7 @@ public class TesteServidor
         conferir ("resposta nao expoe hash nem token",
                   !criado.corpo.contains ("senhaHash") && !criado.corpo.contains ("token") && usuario.getString ("id") != null);
         conferir ("usuario nasce com emailConfirmado=false", Boolean.FALSE.equals (usuario.getBoolean ("emailConfirmado")));
+        conferir ("usuario novo nasce com onboarding pendente", Boolean.FALSE.equals (usuario.getBoolean ("onboardingConcluido")));
         conferir ("senha guardada como PBKDF2",
                   usuarios.buscarPor ("email", "maria@agro.com").getString ("senhaHash").startsWith ("pbkdf2$"));
 
@@ -393,6 +396,14 @@ public class TesteServidor
 
         Resp eu = get ("/api/me", token);
         conferir ("GET /api/me com token -> 200", 200, eu);
+        conferir ("/api/me indica onboarding pendente para conta nova",
+                  Boolean.FALSE.equals (eu.json ().get ("usuario", Document.class).getBoolean ("onboardingConcluido")));
+        Resp concluiu = post ("/api/perfil/onboarding", "{}", token);
+        conferir ("POST /api/perfil/onboarding -> 200", 200, concluiu);
+        conferir ("onboarding marcado como concluído",
+                  Boolean.TRUE.equals (concluiu.json ().getBoolean ("onboardingConcluido")));
+        conferir ("/api/me reflete onboarding concluído",
+                  Boolean.TRUE.equals (get ("/api/me", token).json ().get ("usuario", Document.class).getBoolean ("onboardingConcluido")));
         conferir ("/api/me traz a propriedade",
                   eu.status == 200 && "Fazenda Boa Vista".equals (eu.json ().get ("propriedade", Document.class).getString ("farm")));
         conferir ("GET /api/me sem token -> 401",      401, get ("/api/me", null));
@@ -457,6 +468,12 @@ public class TesteServidor
         return ret.toJson ();
     }
 
+    private static void cadastrarCulturas (String token, String... nomes) throws Exception
+    {
+        for (String nome : nomes)
+            conferir ("cadastrar cultura " + nome, 201, post ("/api/culturas", new Document ("nome", nome).toJson (), token));
+    }
+
     private static void testarTalhoes () throws Exception
     {
         System.out.println ("\n# talhoes e isolamento entre usuarios");
@@ -464,12 +481,16 @@ public class TesteServidor
         String a = login ("maria@agro.com", "Nova@1234");
         String b = login ("joao@agro.com",  "Senha@123");
 
+        conferir ("listar culturas vazio -> 200", get ("/api/culturas", a).corpo.equals ("[]"));
+        cadastrarCulturas (a, "Soja", "Milho", "Trigo", "Caf\u00e9", "Algod\u00e3o");
+        cadastrarCulturas (b, "Soja", "Milho", "Trigo", "Caf\u00e9", "Algod\u00e3o");
+
         conferir ("listar sem token -> 401", 401, get ("/api/talhoes", null));
         conferir ("criar sem token -> 401",  401, post ("/api/talhoes", talhao ("T-01", "Soja", 10, null), null));
 
         Document vazio = camposComErro (post ("/api/talhoes", "{}", a));
         conferir ("corpo vazio -> 400 com nome, cultura e hectares", vazio.keySet ().containsAll (List.of ("nome", "cultura", "hectares")));
-        conferir ("cultura fora da lista -> 400", camposComErro (post ("/api/talhoes", talhao ("T-01", "Arroz", 10, null), a)).containsKey ("cultura"));
+        conferir ("cultura nao cadastrada -> 400", camposComErro (post ("/api/talhoes", talhao ("T-01", "Arroz", 10, null), a)).containsKey ("cultura"));
         conferir ("hectares zero -> 400",         camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", 0, null), a)).containsKey ("hectares"));
         conferir ("hectares negativo -> 400",     camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", -5, null), a)).containsKey ("hectares"));
         conferir ("hectares como texto -> 400",   camposComErro (post ("/api/talhoes", talhao ("T-01", "Soja", "10", null), a)).containsKey ("hectares"));
@@ -1063,7 +1084,7 @@ public class TesteServidor
         Document vazio = camposComErro (post ("/api/safras", "{}", a));
         conferir ("safra vazia -> 400 com nome, cultura, datas e talhoes",
                   vazio.keySet ().containsAll (List.of ("nome", "cultura", "dataInicio", "dataFim", "talhoes")));
-        conferir ("cultura fora da lista -> 400",
+        conferir ("cultura nao cadastrada -> 400",
                   camposComErro (post ("/api/safras", safra ("S", "Arroz", inicio, fim, t1), a)).containsKey ("cultura"));
         conferir ("data inexistente (30/02) -> 400",
                   camposComErro (post ("/api/safras", safra ("S", "Soja", "2026-02-30", fim, t1), a)).containsKey ("dataInicio"));
@@ -1315,7 +1336,7 @@ public class TesteServidor
         Resp tirou = put ("/api/safras/" + cafe, safra ("Caf\u00e9 2026", "Caf\u00e9", safraCafe.getString ("dataInicio"),
                                                        safraCafe.getString ("dataFim"), t4), a);
         conferir ("safra nao perde talhao com custo lancado nela",
-                  tirou.status == 409 && "Plot has costs in this crop season".equals (tirou.json ().getString ("error")));
+                  tirou.status == 409 && "O talhão possui custos nesta safra.".equals (tirou.json ().getString ("error")));
 
         for (int i = 0; i < 5; i++)
             post ("/api/safras/" + trig + "/avancar", null, a);
@@ -1411,7 +1432,7 @@ public class TesteServidor
         // erro dentro de um handler vira 500 e o servidor continua de pe
         Resp explodiu = get ("/explodir", null);
         conferir ("excecao no handler -> 500 generico",
-                  explodiu.status == 500 && explodiu.corpo.equals ("{\"error\": \"Internal server error\"}"));
+                  explodiu.status == 500 && explodiu.corpo.equals ("{\"error\": \"Erro interno do servidor.\"}"));
 
         // cliente que manda metade da requisicao e some
         try (Socket conexao = new Socket ("127.0.0.1", TesteServidor.porta))

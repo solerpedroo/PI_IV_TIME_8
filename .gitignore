@@ -50,6 +50,7 @@ slides/.vercel
 
 # Backend local
 backend/gateway/bin/
+backend/servidor/bin/
 backend/core/target/
 
 # Dependências instaladas localmente (qualquer diretório)

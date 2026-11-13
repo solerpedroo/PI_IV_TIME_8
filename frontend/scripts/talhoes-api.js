@@ -31,7 +31,8 @@
     try {
       talhoes = await request("/api/talhoes");
       window.AgroLocal.save("plots", talhoes.map((item) => ({id: item.id, plot: item.nome,
-        crop: item.cultura.toLowerCase(), hectares: item.hectares, status: item.status})));
+        crop: item.cultura.toLowerCase(), hectares: item.hectares, status: item.status,
+        safra: item.safra || ""})));
     } catch (error) {
       talhoes = [];
       window.AgroToast?.show({type: "error", title: "Talhões sem conexão", description: error.message + " Recarregue para consultar os talhões."});

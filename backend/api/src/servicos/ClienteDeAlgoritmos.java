@@ -278,7 +278,7 @@ public class ClienteDeAlgoritmos
                 campos.append (par.getKey (), par.getValue ());
 
             return new ResultadoMovimentacao (
-                http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", campos)),
+                http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", campos)),
                 null);
         }
 
@@ -332,7 +332,7 @@ public class ClienteDeAlgoritmos
                 ClienteDeAlgoritmos.ajustarCamposCadastro (corpo, campos);
 
             return new ResultadoCadastro (
-                http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", campos)),
+                http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", campos)),
                 null,
                 null);
         }
@@ -359,7 +359,7 @@ public class ClienteDeAlgoritmos
             {
                 ClienteDeAlgoritmos.ajustarCamposSenha (corpo, campoSenha, campos);
                 return new ResultadoCadastro (
-                    http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", campos)),
+                    http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", campos)),
                     null,
                     null);
             }
@@ -410,7 +410,7 @@ public class ClienteDeAlgoritmos
         if (campos.isEmpty ())
             return null;
 
-        return http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", campos));
+        return http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", campos));
     }
 
     private static void ajustarCamposCadastro (Document corpo, Document campos)

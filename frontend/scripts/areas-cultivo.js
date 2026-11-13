@@ -2,7 +2,7 @@
 /**
  * Agro — interações da tela Áreas de Cultivo (dados confirmados pela API)
  * --------------------------------------------------------------------------
- * - Busca por nome + filtro por cultura (chips), com contagem de resultados
+ * - Busca por nome + filtro por cultura/status (chips), com contagem de resultados
  *   e empty state (G8 "Espécime de filtros" / E "Empty states").
  * - Modal único de talhão reaproveitado para criar e editar (G3 "Validação
  *   de formulários"): valida campos obrigatórios, mostra erro inline e só
@@ -31,6 +31,7 @@
     const records = $$("[data-plots-table] tbody tr").map((row) => ({
       id: row.dataset.id, plot: row.dataset.plot, crop: row.dataset.crop,
       hectares: Number(row.dataset.hectares), status: row.dataset.status,
+      safra: row.dataset.safra || "",
     }));
     // A API já confirmou a gravação. O cache permite leitura entre telas/offline;
     // sua falha não desfaz uma operação que já foi persistida no servidor.
@@ -93,25 +94,72 @@
   }
 
   /* ---------------------------------------------------------------------- */
-  /* Busca + filtro por cultura                                             */
+  /* Busca + filtro por cultura ou status                                   */
   /* ---------------------------------------------------------------------- */
+  function renderCultureChips(culturas) {
+    const host = $("[data-culture-chips]");
+    if (!host) return;
+    host.innerHTML = culturas.map((item) => {
+      const key = item.nome.toLowerCase();
+      return `<button type="button" class="filter-chip" data-filter="${key}">${item.nome}</button>`;
+    }).join("");
+  }
+
+  function whenAuthenticated(run) {
+    if (window.__agroAuthenticated) {
+      run();
+      return;
+    }
+    document.addEventListener("agro:authenticated", () => run(), { once: true });
+  }
+
+  async function loadSafraUi() {
+    if (!window.AgroPeriodosSafra) return;
+    try {
+      const data = await window.AgroPeriodosSafra.carregar();
+      window.AgroPeriodosSafra.aplicarDatalist($("#talhao-safra"), data.opcoes);
+      state.safraPadrao = data.padrao;
+    } catch {
+      // API indisponível: o campo continua editável manualmente.
+    }
+  }
+
+  async function loadCulturasUi() {
+    if (!window.AgroCulturas) return;
+    try {
+      const culturas = await window.AgroCulturas.listar();
+      window.AgroCulturas.preencherSelect(
+        $("#talhao-cultura"),
+        culturas,
+        culturas.length ? "Selecione a cultura" : "Cadastre culturas em Culturas",
+      );
+      renderCultureChips(culturas);
+    } catch (error) {
+      const hint = error.message === "Não encontrado."
+        ? "Reinicie a API (compile + rodar.sh) para carregar a rota /api/culturas."
+        : error.message;
+      toast("error", "Culturas indisponíveis", hint);
+    }
+  }
+
   function initFilters() {
     const search = $("[data-plots-search]");
-    const chips = $$("[data-filter-crop]");
+    const bar = $(".filter-bar");
     const count = $("[data-plots-count]");
     const empty = $("[data-plots-empty]");
     const table = $("[data-plots-table]");
 
-    let activeCrop = "todos";
+    let activeFilter = "todos";
 
     function apply() {
       const q = (search?.value || "").trim().toLowerCase();
       let visible = 0;
 
       $$("[data-plots-table] tbody tr").forEach((row) => {
-        const matchesCrop = activeCrop === "todos" || row.dataset.crop === activeCrop;
+        const matchesFilter = activeFilter === "todos" || (activeFilter.startsWith("status:")
+          ? row.dataset.status === activeFilter.slice(7) : row.dataset.crop === activeFilter);
         const matchesQuery = !q || row.dataset.plot.toLowerCase().includes(q);
-        const show = matchesCrop && matchesQuery;
+        const show = matchesFilter && matchesQuery;
         row.hidden = !show;
         if (show) visible += 1;
       });
@@ -123,13 +171,13 @@
 
     search?.addEventListener("input", apply);
 
-    chips.forEach((chip) => {
-      chip.addEventListener("click", () => {
-        chips.forEach((c) => c.classList.remove("is-active"));
-        chip.classList.add("is-active");
-        activeCrop = chip.dataset.filterCrop;
-        apply();
-      });
+    bar?.addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-filter]");
+      if (!chip || !bar.contains(chip)) return;
+      $$("[data-filter]", bar).forEach((item) => item.classList.remove("is-active"));
+      chip.classList.add("is-active");
+      activeFilter = chip.dataset.filter;
+      apply();
     });
 
     apply();
@@ -178,7 +226,7 @@
       <td><span class="badge badge-neutral">${values.cultura}</span></td>
       <td>${values.hectares} ha</td>
       <td><span class="badge ${statusBadgeClass(values.status)}" data-status-badge>${values.status}</span></td>
-      <td class="col-muted">Cadastro manual</td>
+      <td class="col-muted">${values.safra || "—"}</td>
       <td class="col-actions">
         <button type="button" class="row-action" data-edit-plot title="Editar talhão" aria-label="Editar ${values.nome}">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
@@ -222,6 +270,7 @@
         state.editingRow = null;
         form.reset();
         clearErrors(form);
+        if (state.safraPadrao) form.safra.value = state.safraPadrao;
         title.textContent = "Novo Talhão";
         form.querySelector("[name='status']")?.dispatchEvent(new Event("change"));
         openModal(modal);
@@ -275,13 +324,18 @@
         setError(form, "hectares", "Informe um valor de hectares maior que zero.");
         hasError = true;
       }
+      const safraLimpa = String(safra || "").trim();
+      if (!safraLimpa || !(window.AgroPeriodosSafra?.valida(safraLimpa))) {
+        setError(form, "safra", "Use o formato AAAA/AA (ex.: 2026/27).");
+        hasError = true;
+      }
 
       if (hasError) {
         toast("error", "Falha ao salvar", "Revise os campos destacados no formulário.");
         return;
       }
 
-      let values = { nome, cultura, hectares, safra, status };
+      let values = { nome, cultura, hectares, safra: safraLimpa, status };
 
       form.setAttribute("aria-busy", "true");
       try {
@@ -342,7 +396,7 @@
       const row = document.createElement("tr");
       Object.assign(row.dataset, record);
       row.innerHTML = buildRowMarkup("plot-menu-" + index, {id: record.id || "", nome: record.plot,
-        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status});
+        cultura: record.crop.charAt(0).toUpperCase() + record.crop.slice(1), hectares: record.hectares, status: record.status, safra: record.safra || ""});
       return row;
     }));
     state.editingRow = $$("[data-plots-table] tbody tr").find((row) => row.dataset.id === editingId) || null;
@@ -357,8 +411,13 @@
     initPrepToasts();
     initFilters();
     initPlotForm();
+    whenAuthenticated(() => {
+      loadCulturasUi();
+      loadSafraUi();
+    });
     // Nunca apresenta os mocks da página como se fossem dados desta propriedade.
     restorePlots([]);
+    whenAuthenticated(() => {
     api("/api/talhoes").then((records) => {
       restorePlots(records.map((record) => ({
       id: record.id, plot: record.nome, crop: record.cultura.toLowerCase(),
@@ -366,6 +425,7 @@
       })));
       persist();
     }).catch((error) => toast("error", "Talhões indisponíveis", error.message + " Recarregue para tentar novamente."));
+    });
   }
 
   if (document.readyState === "loading") {

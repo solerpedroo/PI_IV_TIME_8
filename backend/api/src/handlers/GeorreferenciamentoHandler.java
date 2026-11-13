@@ -99,7 +99,7 @@ public class GeorreferenciamentoHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
             ret = Resposta.erro (409, "Property context changed; reload before saving");
 
@@ -162,7 +162,7 @@ public class GeorreferenciamentoHandler implements Manipulador
             Document talhao        = this.talhoes.buscarPorId (propriedadeId, id);
 
             if (talhao == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             AlgoritmosDeGeo.ResultadoLocalizacao nova = AlgoritmosDeGeo.validarLocalizacao (requisicao.getCorpoJson ());
 
@@ -209,7 +209,7 @@ public class GeorreferenciamentoHandler implements Manipulador
             ArrayList<Document> marcadas      = talhao == null ? null : this.marcadas (requisicao, id);
 
             if (talhao == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (!marcadas.isEmpty ())
                 ret = GeorreferenciamentoHandler.conflito ("H\u00e1 ocorr\u00eancias marcadas neste pol\u00edgono.", marcadas.get (0));
             else
@@ -232,7 +232,7 @@ public class GeorreferenciamentoHandler implements Manipulador
         boolean todas         = "todas".equals (situacao);
 
         if (situacao != null && !situacao.isEmpty () && !todas && !"abertas".equals (situacao))
-            return Resposta.json (400, new Document ("error", "Validation failed")
+            return Resposta.json (400, new Document ("error", "Dados inválidos.")
                                            .append ("fields", new Document ("ocorrencias", "Use abertas ou todas.")));
 
         ArrayList<Document> localizados = new ArrayList<Document> ();

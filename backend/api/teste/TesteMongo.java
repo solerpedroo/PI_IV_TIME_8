@@ -35,8 +35,10 @@ public class TesteMongo
             Document criado = usuarios.criar (usuario, propriedade);
 
             conferir (criado != null, "cadastro Mongo deveria criar o usuario");
-            conferir (usuarios.buscarPropriedade (criado.getString ("propriedadeId")) != null,
-                      "a propriedade deve existir junto com o usuario");
+            Document prop = usuarios.buscarPropriedade (criado.getString ("propriedadeId"));
+            conferir (prop != null, "a propriedade deve existir junto com o usuario");
+            conferir (criado.getObjectId ("_id").equals (prop.get ("proprietarioId")) && "Fazenda teste".equals (prop.getString ("nome")),
+                      "cadastro deve preencher proprietarioId e nome (core)");
             Document segunda = usuarios.criarPropriedade (((org.bson.types.ObjectId) criado.get ("_id")).toHexString (),
                                                           new Document ("nome", "Fazenda dois"));
             conferir (segunda != null && usuarios.listarPropriedades (((org.bson.types.ObjectId) criado.get ("_id")).toHexString ()).size () == 2,
@@ -47,8 +49,16 @@ public class TesteMongo
             conferir (usuarios.excluirPropriedade (((org.bson.types.ObjectId) criado.get ("_id")).toHexString (),
                                                    ((org.bson.types.ObjectId) segunda.get ("_id")).toHexString ()),
                       "CRUD Mongo deve excluir propriedade sem vinculos");
-            conferir (usuarios.criar (usuario, propriedade) == null,
-                      "indice unico deve rejeitar e-mail duplicado");
+            boolean duplicou = false;
+            try
+            {
+                usuarios.criar (usuario, propriedade);
+            }
+            catch (dados.ConflitoDeCadastro conflito)
+            {
+                duplicou = "email".equals (conflito.getCampo ());
+            }
+            conferir (duplicou, "indice unico deve rejeitar e-mail duplicado");
             conferir (conexao.getBanco ().getCollection ("usuarios").countDocuments () == 1,
                       "a transacao nao deve duplicar usuario");
             conferir (conexao.getBanco ().getCollection ("propriedades").countDocuments () == 1,

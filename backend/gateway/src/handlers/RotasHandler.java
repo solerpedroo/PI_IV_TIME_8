@@ -17,9 +17,9 @@ public class RotasHandler implements HttpHandler
 {
     private static final String UP        = "{\"status\":\"UP\"}";
     private static final String DOWN      = "{\"status\":\"DOWN\"}";
-    private static final String NOT_FOUND = "{\"error\":\"Not found\"}";
+    private static final String NOT_FOUND = "{\"error\":\"Não encontrado.\"}";
     private static final String CORE_DOWN = "{\"error\":\"Core unavailable\"}";
-    private static final String ERRO      = "{\"error\":\"Internal server error\"}";
+    private static final String ERRO      = "{\"error\":\"Erro interno do servidor.\"}";
 
     private final ClienteCore core;
 
@@ -71,7 +71,7 @@ public class RotasHandler implements HttpHandler
         }
         catch (ClienteCore.CorpoGrande erro)
         {
-            Resposta.enviar (troca, 413, "{\"error\":\"Request body too large\"}");
+            Resposta.enviar (troca, 413, "{\"error\":\"Corpo da requisição grande demais.\"}");
         }
         catch (HttpTimeoutException erro)
         {

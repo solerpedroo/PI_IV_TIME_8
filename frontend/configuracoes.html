@@ -6,7 +6,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Configurações da conta, propriedade e preferências do AgroGestão.">
-  <title>Configurações — Agro</title>
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Configurações - AgroGestão</title>
   <!-- Tokens visuais compartilhados. -->
   <link rel="stylesheet" href="styles/base.css">
   <!-- Navegação, perfil, notificações e logout. -->
@@ -30,8 +31,6 @@
           <button class="settings-nav-item" type="button" data-settings-tab="property"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V5l7-3 7 3v16"/><path d="M9 9h1"/><path d="M14 9h1"/><path d="M9 13h1"/><path d="M14 13h1"/></svg><span>Propriedade</span></button>
           <button class="settings-nav-item" type="button" data-settings-tab="notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span>Notificações</span></button>
           <button class="settings-nav-item" type="button" data-settings-tab="security"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg><span>Segurança</span></button>
-          <button class="settings-nav-item" type="button" data-settings-tab="team"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Equipe</span></button>
-          <button class="settings-nav-item" type="button" data-settings-tab="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg><span>Plano</span></button>
         </nav>
         <section class="settings-panel" aria-live="polite">
           <p data-profile-message role="status">Carregando perfil…</p>
@@ -87,9 +86,7 @@
                 <div class="input-group">
                   <label for="property-harvest">Safra atual *</label>
                   <select id="property-harvest" name="harvest" data-enhance-select data-placeholder="Selecione a safra" required>
-                    <option value="2025/26">2025/26</option>
-                    <option value="2026/27">2026/27</option>
-                    <option value="2024/25">2024/25</option>
+                    <option value="">Carregando períodos…</option>
                   </select>
                 </div>
               </form>
@@ -112,9 +109,50 @@
             </div>
           </div>
           <div class="settings-section" data-settings-panel="notifications" hidden><div class="settings-card"><div class="settings-card-header"><div><h2>Preferências de Notificação</h2><p>Escolha quais alertas operacionais deseja receber.</p></div><button class="btn btn-primary" type="button" data-save-notifications>Salvar preferências</button></div><div class="preference-list"><label class="preference-row"><span><strong>Alertas de estoque baixo</strong><small>Receber quando insumos atingirem nível crítico</small></span><input type="checkbox" data-preference="stock" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Previsão do tempo</strong><small>Notificações sobre chuva e condições climáticas</small></span><input type="checkbox" data-preference="weather" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Atividades pendentes</strong><small>Lembretes de atividades atrasadas ou próximas</small></span><input type="checkbox" data-preference="activities" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Novas ocorrências</strong><small>Alertas de pragas, doenças e eventos na propriedade</small></span><input type="checkbox" data-preference="occurrences" checked><span class="toggle-control" aria-hidden="true"></span></label><label class="preference-row"><span><strong>Relatórios semanais</strong><small>Resumo semanal enviado por e-mail</small></span><input type="checkbox" data-preference="reports"><span class="toggle-control" aria-hidden="true"></span></label></div></div></div>
-          <div class="settings-section" data-settings-panel="security" hidden><div class="settings-card"><div class="settings-card-header"><div><h2>Segurança</h2><p>Use 8 ou mais caracteres, uma maiúscula, um número e um símbolo. Após salvar, entre novamente em todos os dispositivos.</p></div></div><form class="settings-form settings-form-single" data-security-form novalidate><div class="input-group"><label for="current-password">Senha atual *</label><input id="current-password" name="current" type="password" autocomplete="current-password" required><p class="field-error"></p></div><div class="form-grid-2"><div class="input-group"><label for="new-password">Nova senha *</label><input id="new-password" name="new" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><p class="field-error"></p></div><div class="input-group"><label for="confirm-password">Confirmar nova senha *</label><input id="confirm-password" name="confirm" type="password" autocomplete="new-password" required><p class="field-error"></p></div></div><div class="settings-form-actions"><button class="btn btn-primary" type="submit">Atualizar senha</button></div></form></div></div>
-          <div class="settings-section" data-settings-panel="team" hidden><div class="settings-card empty-settings-card"><span class="settings-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><h2>Equipe da propriedade</h2><p>Equipe: área informativa, sem convites ou alteração de permissões.</p><p>Gerenciamento de equipe e permissões ainda indisponível.</p></div></div>
-          <div class="settings-section" data-settings-panel="plan" hidden><div class="settings-card empty-settings-card"><span class="settings-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg></span><h2>Plano AgroGestão</h2><p>Plano: área informativa. Contratação, cobrança e renovação não estão implementadas nesta entrega.</p></div></div>
+          <div class="settings-section" data-settings-panel="security" hidden>
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <h2>Segurança</h2>
+                  <p>A nova senha é conferida no servidor de validações. Depois de salvar, entre novamente em todos os dispositivos.</p>
+                </div>
+              </div>
+              <form class="settings-form settings-form-single" data-security-form novalidate>
+                <div class="input-group">
+                  <label for="current-password">Senha atual *</label>
+                  <input id="current-password" name="current" type="password" autocomplete="current-password" required>
+                  <p class="field-error"></p>
+                </div>
+                <div class="input-group">
+                  <label for="new-password">Nova senha *</label>
+                  <input id="new-password" name="new" type="password" data-password-meter autocomplete="new-password" maxlength="128" required>
+                  <p class="field-error"></p>
+                  <div class="password-meter" data-meter data-level="0" aria-live="polite">
+                    <div class="password-meter-header">
+                      <span>Força da senha</span>
+                      <span class="password-meter-label" data-meter-label data-level="0">—</span>
+                    </div>
+                    <div class="password-meter-bar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                    <div class="password-rules">
+                      <span data-rule="length">Mínimo de 8 caracteres</span>
+                      <span data-rule="upper">Pelo menos uma letra maiúscula</span>
+                      <span data-rule="number">Pelo menos um número</span>
+                      <span data-rule="symbol">Pelo menos um caractere especial</span>
+                      <span data-rule="max">No máximo 128 caracteres</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="confirm-password">Confirmar nova senha *</label>
+                  <input id="confirm-password" name="confirm" type="password" autocomplete="new-password" maxlength="128" required>
+                  <p class="field-error"></p>
+                </div>
+                <div class="settings-form-actions">
+                  <button class="btn btn-primary" type="submit">Atualizar senha</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </section>
       </div>
     </main>
@@ -122,6 +160,7 @@
   <div class="modal-backdrop" data-modal="logout" aria-hidden="true" role="presentation"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title"><h2 id="logout-title">Sair da conta?</h2><p>Sua sessão será encerrada e você voltará para a tela de login.</p><div class="modal-actions"><button class="btn btn-outline" type="button" data-close-modal>Cancelar</button><button class="btn btn-destructive" type="button" data-confirm-logout>Sair</button></div></div></div>
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
   <script src="scripts/fetch-timeout.js" defer></script>
-  <script src="scripts/toast.js" defer></script><script src="scripts/select.js" defer></script><script src="scripts/data/operational-defaults.js" defer></script><script src="scripts/agro-local.js" defer></script><script src="scripts/shell.js" defer></script><script src="scripts/configuracoes.js" defer></script><script src="scripts/propriedades-api.js" defer></script><script src="scripts/perfil-api.js" defer></script>
+  <script src="scripts/senha-regras.js" defer></script>
+  <script src="scripts/toast.js" defer></script><script src="scripts/select.js" defer></script><script src="scripts/periodos-safra.js" defer></script><script src="scripts/data/operational-defaults.js" defer></script><script src="scripts/agro-local.js" defer></script><script src="scripts/shell.js" defer></script><script src="scripts/configuracoes.js" defer></script><script src="scripts/propriedades-api.js" defer></script><script src="scripts/perfil-api.js" defer></script>
 </body>
 </html>

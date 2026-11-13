@@ -83,7 +83,7 @@
     const data = await response.json();
     if (response.status === 401) { sessionStorage.removeItem("agro.sessionToken"); location.replace("login.html"); }
     if (!response.ok) {
-      const error = new Error(data.error === "Validation failed" ? Object.values(data.fields || {}).join(" ") || "Revise os campos informados." : data.error || "Falha na API.");
+      const error = new Error(data.error === "Dados inválidos." ? Object.values(data.fields || {}).join(" ") || "Revise os campos informados." : data.error || "Falha na API.");
       error.fields = data.fields; throw error;
     }
     return data;

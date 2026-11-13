@@ -114,7 +114,7 @@ public class Roteador
         catch (Exception erro)
         {
             System.err.println ("Erro em " + requisicao.getMetodo () + " " + requisicao.getCaminho () + ": " + erro);
-            ret = Resposta.erro (500, "Internal server error");
+            ret = Resposta.erro (500, "Erro interno do servidor.");
         }
 
         Roteador.adicionarCors (requisicao, ret);
@@ -155,7 +155,7 @@ public class Roteador
             {
                 Sessao sessao = this.sessoes.buscar (requisicao.getToken ());
                 if (sessao == null)
-                    return Resposta.erro (401, "Unauthorized");
+                    return Resposta.erro (401, "Não autorizado.");
                 requisicao.setSessao (sessao);
             }
 
@@ -166,7 +166,7 @@ public class Roteador
         // o caminho existe, mas nao com esse metodo
         if (!permitidos.isEmpty ())
         {
-            Resposta ret = Resposta.erro (405, "Method not allowed");
+            Resposta ret = Resposta.erro (405, "Método não permitido.");
             ret.setCabecalho ("Allow", String.join (", ", permitidos) + ", OPTIONS");
             return ret;
         }
@@ -177,16 +177,16 @@ public class Roteador
         {
             // fora de /api/auth/* nao revela quais rotas existem para quem nao tem token
             if (!caminho.startsWith ("/api/auth/") && this.sessoes.buscar (requisicao.getToken ()) == null)
-                return Resposta.erro (401, "Unauthorized");
-            return Resposta.erro (404, "Not found");
+                return Resposta.erro (401, "Não autorizado.");
+            return Resposta.erro (404, "Não encontrado.");
         }
 
         if (this.estaticos == null)
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         if (!procurado.equals ("GET"))
         {
-            Resposta ret = Resposta.erro (405, "Method not allowed");
+            Resposta ret = Resposta.erro (405, "Método não permitido.");
             ret.setCabecalho ("Allow", "GET, HEAD, OPTIONS");
             return ret;
         }

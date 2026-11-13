@@ -24,7 +24,7 @@ import protocolo.mensagens.RespostaDeValidacao;
     Ponte da manutencao com o servidor de algoritmos (ValidadorDeManutencao e AgendaDeManutencao).
     Monta os pedidos a partir dos Document e traduz as respostas:
       tipo errado no corpo (texto onde vai numero...) -> 400 sem chamar o socket
-      RespostaDeValidacao invalida                     -> 400 {"error":"Validation failed","fields":{...}}
+      RespostaDeValidacao invalida                     -> 400 {"error":"Dados inválidos.","fields":{...}}
       RespostaDeErro                                   -> 503 (DADOS_INCONSISTENTES -> 409)
       falha de comunicacao                             -> 503
     Dinheiro vai em BigDecimal no protocolo e volta para a API arredondado a 2 casas.
@@ -105,7 +105,7 @@ public class AlgoritmosDeManutencao
         for (Map.Entry<String, ?> par : erros.entrySet ())
             fields.append (par.getKey (), par.getValue ());
 
-        return http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", fields));
+        return http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", fields));
     }
 
     // texto do corpo; ausente ou null -> null; outro tipo -> erro de tipo

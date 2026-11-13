@@ -9,7 +9,7 @@
  * 4. Criação de atividade e registro inicial do evento 0 no histórico.
  * 5. Conclusão de atividade -> bloqueio de estados terminais e registro no histórico.
  * 6. Cancelamento justificado de atividade com motivo registrado na timeline.
- * 7. Casos inválidos pertinentes (409 Conflict em transições após estado terminal).
+ * 7. Casos inválidos pertinentes (409 Conflito em transições após estado terminal).
  * 8. Persistência real comprovada após recarga completa da página (reload).
  */
 const assert = require("node:assert/strict");
@@ -400,15 +400,15 @@ async function clickCardAction(page, name, action) {
     console.log("Atividade 1 no backend:", ativ1NoBackend.data);
     // Tentar concluir atividade cancelada
     const resConcluirCancelada = await api(`/api/atividades/${atividade2Api.id}/concluir`, {}, sessionToken);
-    assert.equal(resConcluirCancelada.status, 409, "Servidor deve retornar 409 Conflict ao tentar concluir atividade cancelada");
+    assert.equal(resConcluirCancelada.status, 409, "Servidor deve retornar 409 Conflito ao tentar concluir atividade cancelada");
 
     // Tentar cancelar atividade concluída
     const resCancelarConcluida = await api(`/api/atividades/${idAtividade1}/cancelar`, { motivo: "Invalido" }, sessionToken);
-    assert.equal(resCancelarConcluida.status, 409, "Servidor deve retornar 409 Conflict ao tentar cancelar atividade concluída");
+    assert.equal(resCancelarConcluida.status, 409, "Servidor deve retornar 409 Conflito ao tentar cancelar atividade concluída");
 
     // Tentar mudar status de atividade concluída para Agendada
     const resMudarStatus = await api(`/api/atividades/${idAtividade1}/status`, { status: "Agendada" }, sessionToken);
-    assert.equal(resMudarStatus.status, 409, "Servidor deve retornar 409 Conflict ao tentar mudar status de atividade terminal");
+    assert.equal(resMudarStatus.status, 409, "Servidor deve retornar 409 Conflito ao tentar mudar status de atividade terminal");
     console.log("OK - Todos os casos inválidos foram devidamente rejeitados com HTTP 409.");
 
     // 9. Validar persistência após reload completo da página

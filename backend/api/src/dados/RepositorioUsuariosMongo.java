@@ -69,6 +69,35 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         return new ObjectId (id);
     }
 
+    private static Document propriedadeNoCadastro (Document propriedade, ObjectId idPropriedade, ObjectId idUsuario)
+    {
+        Document doc = new Document (propriedade).append ("_id", idPropriedade)
+                                                 .append ("usuarioId", idUsuario.toHexString ())
+                                                 .append ("proprietarioId", idUsuario);
+        String nome = doc.getString ("nome");
+        if (nome == null || nome.isBlank ())
+        {
+            String farm = doc.getString ("farm");
+            if (farm != null && !farm.isBlank ())
+                doc.append ("nome", farm);
+        }
+        return doc;
+    }
+
+    private static ConflitoDeCadastro conflitoDe (MongoWriteException erro) throws MongoWriteException
+    {
+        if (erro.getError ().getCategory () != ErrorCategory.DUPLICATE_KEY)
+            throw erro;
+
+        String detalhe = erro.getMessage () == null ? "" : erro.getMessage ().toLowerCase ();
+        if (detalhe.contains ("email"))
+            return new ConflitoDeCadastro ("email");
+        if (detalhe.contains ("proprietario_nome") || detalhe.contains ("\"nome\""))
+            return new ConflitoDeCadastro ("farm");
+
+        return new ConflitoDeCadastro ("email");
+    }
+
     public Document criar (Document usuario, Document propriedade) throws Exception
     {
         if (usuario == null)
@@ -78,9 +107,11 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
             throw new Exception ("Propriedade ausente");
 
         // o usuario entra primeiro: se o e-mail repetir, nenhuma propriedade orfa fica no banco
+        ObjectId idUsuario     = new ObjectId ();
         ObjectId idPropriedade = new ObjectId ();
-        Document novoUsuario   = new Document (usuario).append ("_id", new ObjectId ())
+        Document novoUsuario   = new Document (usuario).append ("_id", idUsuario)
                                                        .append ("propriedadeId", idPropriedade.toHexString ());
+        Document novaPropriedade = RepositorioUsuariosMongo.propriedadeNoCadastro (propriedade, idPropriedade, idUsuario);
 
         // Usuario e propriedade formam uma unidade: com replica set, a transacao
         // impede referencias para propriedade ausente em falhas parciais.
@@ -89,16 +120,13 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
             sessao.withTransaction (() ->
             {
                 this.usuarios.insertOne (sessao, novoUsuario);
-                this.propriedades.insertOne (sessao, new Document (propriedade).append ("_id", idPropriedade)
-                                                                         .append ("usuarioId", novoUsuario.getObjectId ("_id").toHexString ()));
+                this.propriedades.insertOne (sessao, novaPropriedade);
                 return null;
             });
         }
         catch (MongoWriteException erro)
         {
-            if (erro.getError ().getCategory () == ErrorCategory.DUPLICATE_KEY)
-                return null;
-            throw erro;
+            throw RepositorioUsuariosMongo.conflitoDe (erro);
         }
 
         return novoUsuario;
@@ -192,10 +220,18 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
 
     public Document criarPropriedade (String usuarioId, Document propriedade) throws Exception
     {
-        if (this.buscarPorId (usuarioId) == null || propriedade == null)
+        ObjectId idUsuario = RepositorioUsuariosMongo.paraId (usuarioId);
+        if (idUsuario == null || propriedade == null)
             return null;
-        Document criada = new Document (propriedade).append ("_id", new ObjectId ()).append ("usuarioId", usuarioId);
-        this.propriedades.insertOne (criada);
+        Document criada = RepositorioUsuariosMongo.propriedadeNoCadastro (propriedade, new ObjectId (), idUsuario);
+        try
+        {
+            this.propriedades.insertOne (criada);
+        }
+        catch (MongoWriteException erro)
+        {
+            throw RepositorioUsuariosMongo.conflitoDe (erro);
+        }
         return criada;
     }
 

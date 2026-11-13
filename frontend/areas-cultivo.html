@@ -6,7 +6,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Áreas de Cultivo — talhões, culturas e safras da propriedade.">
-  <title>Áreas de Cultivo — Agro</title>
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Áreas de Cultivo - AgroGestão</title>
   <!-- Tipografia Geist carregada em styles/base.css -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/shell.css">
@@ -51,7 +52,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Áreas de Cultivo</h1>
-          <p>Carregando propriedade…</p>
+          <p>Gerencie os talhões da propriedade ativa.</p>
         </div>
         <div class="page-header-actions">
           <label class="search-box">
@@ -111,14 +112,12 @@
         </article>
       </section>
 
-      <!-- Filtro por cultura -->
-      <div class="filter-bar" role="group" aria-label="Filtrar talhões por cultura">
+      <!-- Filtro por cultura ou status -->
+      <div class="filter-bar" role="group" aria-label="Filtrar talhões por cultura ou status">
         <span class="filter-bar-label">Filtrar:</span>
-        <button type="button" class="filter-chip is-active" data-filter-crop="todos">Todos</button>
-        <button type="button" class="filter-chip" data-filter-crop="soja">Soja</button>
-        <button type="button" class="filter-chip" data-filter-crop="milho">Milho</button>
-        <button type="button" class="filter-chip" data-filter-crop="trigo">Trigo</button>
-        <button type="button" class="filter-chip" data-filter-crop="em preparo">Em preparo</button>
+        <button type="button" class="filter-chip is-active" data-filter="todos">Todos</button>
+        <span data-culture-chips></span>
+        <button type="button" class="filter-chip" data-filter="status:Em preparo">Em preparo</button>
         <span class="filter-spacer"></span>
         <span class="filter-results" data-plots-count>Carregando talhões…</span>
       </div>
@@ -155,16 +154,7 @@
                 <button class="btn btn-ghost" type="button" data-geo-panel-edit>Editar localização</button>
               </div>
             </div>
-            <ul class="plots-map-legend" aria-label="Legenda do mapa">
-              <li><span class="legend-dot crop-soja" aria-hidden="true"></span>Soja</li>
-              <li><span class="legend-dot crop-milho" aria-hidden="true"></span>Milho</li>
-              <li><span class="legend-dot crop-trigo" aria-hidden="true"></span>Trigo</li>
-              <li><span class="legend-dot crop-cafe" aria-hidden="true"></span>Café</li>
-              <li><span class="legend-dot crop-algodao" aria-hidden="true"></span>Algodão</li>
-              <li><span class="geo-legend-marker geo-marker-alta" aria-hidden="true"></span>Ocorrência alta</li>
-              <li><span class="geo-legend-marker geo-marker-media" aria-hidden="true"></span>Média</li>
-              <li><span class="geo-legend-marker geo-marker-baixa" aria-hidden="true"></span>Baixa</li>
-            </ul>
+            <ul class="plots-map-legend" aria-label="Legenda do mapa" data-geo-legend></ul>
             <div class="geo-missing">
               <h3 class="geo-missing-title">Sem localização</h3>
               <ul class="geo-missing-list" data-geo-missing></ul>
@@ -187,7 +177,7 @@
                   <th>Cultura</th>
                   <th>Hectares</th>
                   <th>Status</th>
-                  <th>Última Atividade</th>
+                  <th>Safra</th>
                   <th><span class="visually-hidden">Ações</span></th>
                 </tr>
               </thead>
@@ -221,13 +211,9 @@
         <div class="input-group">
           <label for="talhao-cultura-trigger">Cultura *</label>
           <select id="talhao-cultura" name="cultura" required data-enhance-select data-placeholder="Selecione a cultura">
-            <option value="">Selecione a cultura</option>
-            <option value="Soja">Soja</option>
-            <option value="Milho">Milho</option>
-            <option value="Trigo">Trigo</option>
-            <option value="Café">Café</option>
-            <option value="Algodão">Algodão</option>
+            <option value="">Carregando culturas…</option>
           </select>
+          <p class="field-hint"><a href="culturas.html">Cadastrar ou gerenciar culturas</a></p>
           <p class="field-error" data-error-for="cultura"></p>
         </div>
         <div class="input-group">
@@ -321,6 +307,8 @@
   <script src="scripts/shell.js" defer></script>
   <script src="scripts/areas-cultivo.js" defer></script>
   <script src="scripts/georreferenciamento.js" defer></script>
+  <script src="scripts/culturas-catalog.js" defer></script>
+  <script src="scripts/periodos-safra.js" defer></script>
   <script src="scripts/talhoes-api.js" defer></script>
 </body>
 </html>

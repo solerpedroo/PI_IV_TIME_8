@@ -18,7 +18,7 @@ import protocolo.mensagens.RespostaDeValidacao;
 /*
     Ponte do georreferenciamento com o servidor de algoritmos (GeometriaDeTalhao no serversocket).
     Monta os pedidos a partir dos Document e traduz as respostas:
-      RespostaDeValidacao invalida -> 400 {"error":"Validation failed","fields":{...}}
+      RespostaDeValidacao invalida -> 400 {"error":"Dados inválidos.","fields":{...}}
       RespostaDeErro               -> 503 {"error":"Servidor de algoritmos indisponivel","codigo":...}
                                       (DADOS_INCONSISTENTES -> 409)
       falha de comunicacao         -> 503
@@ -114,12 +114,12 @@ public class AlgoritmosDeGeo
         for (Map.Entry<String, String> par : erros.entrySet ())
             fields.append (par.getKey (), par.getValue ());
 
-        return http.Resposta.json (400, new Document ("error", "Validation failed").append ("fields", fields));
+        return http.Resposta.json (400, new Document ("error", "Dados inválidos.").append ("fields", fields));
     }
 
     private static http.Resposta campo (String nome, String mensagem)
     {
-        return http.Resposta.json (400, new Document ("error", "Validation failed")
+        return http.Resposta.json (400, new Document ("error", "Dados inválidos.")
                                             .append ("fields", new Document (nome, mensagem)));
     }
 

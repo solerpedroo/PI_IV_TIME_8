@@ -6,7 +6,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Insumos — controle de estoque, entradas e saídas da propriedade.">
-  <title>Insumos — Agro</title>
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Insumos - AgroGestão</title>
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/shell.css">
   <link rel="stylesheet" href="styles/modules.css">
@@ -295,7 +296,7 @@
 
   <!-- O saldo exibido é atual; as movimentações respeitam o período escolhido. -->
   <div class="modal-backdrop" data-modal="report-operational" aria-hidden="true"><div class="modal report-operational-modal" role="dialog" aria-modal="true" aria-labelledby="report-operational-title">
-    <h2 id="report-operational-title">Relatório de estoque</h2><form><label>Início <input name="de" type="date" required></label> <label>Fim <input name="ate" type="date" required></label> <button type="submit" class="btn btn-primary">Consultar</button></form>
+    <h2 id="report-operational-title">Relatório de estoque</h2><form novalidate><label>Início <input name="de" type="date" required></label> <label>Fim <input name="ate" type="date" required></label> <button type="submit" class="btn btn-primary">Consultar</button></form>
     <p data-report-message role="status" aria-live="polite"></p><div data-report-output class="report-operational-output"></div><div class="modal-actions"><button type="button" class="btn btn-outline" data-report-close>Fechar</button><button type="button" class="btn btn-primary" data-report-export disabled>Exportar CSV</button></div>
   </div></div>
   <style>.report-operational-modal{width:min(800px,100%)} .report-operational-output{max-height:55vh;overflow:auto;overflow-wrap:anywhere} [data-modal="report-operational"] form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px} [data-modal="report-operational"] label{display:grid;gap:4px}</style>

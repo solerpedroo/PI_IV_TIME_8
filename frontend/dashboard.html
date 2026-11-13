@@ -5,14 +5,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Painel geral da propriedade — Agro Gestão Agrícola.">
-  <title>Painel Geral — Agro</title>
+  <meta name="description" content="Painel geral da propriedade no AgroGestão.">
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Painel Geral - AgroGestão</title>
   <!-- Tipografia Geist carregada em styles/base.css -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/shell.css">
   <link rel="stylesheet" href="styles/dashboard.css">
   <link rel="stylesheet" href="styles/feedback.css">
   <link rel="stylesheet" href="styles/motion.css">
+  <link rel="stylesheet" href="styles/onboarding.css">
 </head>
 <body>
   <!--
@@ -35,7 +37,7 @@
       <header class="page-header">
         <div class="page-header-copy">
           <h1>Painel Geral</h1>
-          <p>Carregando propriedade…</p>
+          <p>Resumo da operação da propriedade ativa.</p>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-outline" type="button" data-open-property-report>Relatório da propriedade</button>
@@ -216,12 +218,33 @@
     </div>
   </div>
 
+  <div class="onboarding" data-onboarding hidden aria-hidden="true">
+    <div class="onboarding-backdrop" aria-hidden="true"></div>
+    <div class="onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" aria-describedby="onboarding-track">
+      <header class="onboarding-header">
+        <p class="onboarding-kicker">Primeiros passos</p>
+        <h2 class="onboarding-title" id="onboarding-title" data-onboarding-title>Bem-vindo ao AgroGestão</h2>
+        <div class="onboarding-progress" data-onboarding-progress aria-hidden="true"></div>
+      </header>
+      <div class="onboarding-body" id="onboarding-track" data-onboarding-track></div>
+      <footer class="onboarding-footer">
+        <span class="onboarding-step-label" data-onboarding-step-label>Passo 1 de 6</span>
+        <div class="onboarding-actions">
+          <button class="btn btn-ghost" type="button" data-onboarding-skip>Pular tour</button>
+          <button class="btn btn-outline" type="button" data-onboarding-back hidden>Anterior</button>
+          <button class="btn btn-primary" type="button" data-onboarding-next>Próximo</button>
+          <button class="btn btn-primary" type="button" data-onboarding-finish hidden>Começar a usar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
   <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
 
   <!-- Relatório independente dos indicadores locais do painel. -->
   <div class="modal-backdrop" data-modal="property-report" aria-hidden="true"><div class="modal property-report-modal" role="dialog" aria-modal="true" aria-labelledby="property-report-title">
     <h2 id="property-report-title">Relatório da propriedade</h2>
-    <form data-property-report-form><label>Início <input type="date" name="de" required></label> <label>Fim <input type="date" name="ate" required></label> <button class="btn btn-primary" type="submit">Consultar</button></form>
+    <form data-property-report-form novalidate><label>Início <input type="date" name="de" required></label> <label>Fim <input type="date" name="ate" required></label> <button class="btn btn-primary" type="submit">Consultar</button></form>
     <p data-property-report-message role="status" aria-live="polite"></p><div data-property-report-content class="property-report-content"></div>
     <div class="modal-actions"><button class="btn btn-outline" type="button" data-close-property-report>Fechar</button><button class="btn btn-primary" type="button" data-export-property-report disabled>Exportar CSV</button></div>
   </div></div>
@@ -238,6 +261,7 @@
   <script src="scripts/agro-local.js" defer></script>
   <script src="scripts/notificacoes.js" defer></script>
   <script src="scripts/shell.js" defer></script>
+  <script src="scripts/onboarding.js" defer></script>
   <script src="scripts/dashboard.js" defer></script>
   <script src="scripts/talhoes-api.js" defer></script>
 </body>

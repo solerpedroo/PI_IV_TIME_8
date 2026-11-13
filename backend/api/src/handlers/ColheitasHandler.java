@@ -315,9 +315,9 @@ public class ColheitasHandler implements Manipulador
         Sessao   atual = this.sessoes.buscar (requisicao.getToken ());
 
         if (atual == null)
-            ret = Resposta.erro (401, "Unauthorized");
+            ret = Resposta.erro (401, "Não autorizado.");
         else if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
-            ret = Resposta.erro (409, "Property context changed; reload before saving");
+            ret = Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
 
         return ret;
     }
@@ -608,7 +608,7 @@ public class ColheitasHandler implements Manipulador
         Document colheita      = this.colheitas.buscarPorId (propriedadeId, requisicao.getParametro ("id"));
 
         if (colheita == null)
-            ret = Resposta.erro (404, "Not found");
+            ret = Resposta.erro (404, "Não encontrado.");
         else
             ret = Resposta.json (200, ColheitasHandler.publico (colheita,
                                                                 ColheitasHandler.porId (this.talhoes.listar (propriedadeId)),
@@ -663,7 +663,7 @@ public class ColheitasHandler implements Manipulador
             Document atual         = this.colheitas.buscarPorId (propriedadeId, id);
 
             if (atual == null)
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             Document                        corpo     = requisicao.getCorpoJson ();
             Validacao                       validacao = new Validacao (corpo);
@@ -684,7 +684,7 @@ public class ColheitasHandler implements Manipulador
                 return ret;
 
             if (!this.colheitas.atualizar (propriedadeId, id, campos))
-                return Resposta.erro (404, "Not found");
+                return Resposta.erro (404, "Não encontrado.");
 
             return Resposta.json (200, ColheitasHandler.publico (this.colheitas.buscarPorId (propriedadeId, id), talhoes, safras));
         }
@@ -704,11 +704,11 @@ public class ColheitasHandler implements Manipulador
             Document colheita      = this.colheitas.buscarPorId (propriedadeId, id);
 
             if (colheita == null)
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else if (ColheitasHandler.finalizada (this.safras.buscarPorId (propriedadeId, colheita.getString ("safraId"))))
                 ret = ColheitasHandler.safraFechada ();
             else if (!this.colheitas.excluir (propriedadeId, id))
-                ret = Resposta.erro (404, "Not found");
+                ret = Resposta.erro (404, "Não encontrado.");
             else
                 ret = Resposta.semConteudo ();
 

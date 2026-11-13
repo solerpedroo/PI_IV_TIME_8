@@ -27,6 +27,18 @@ import protocolo.mensagens.RespostaDeValidacao;
 import protocolo.mensagens.TalhaoDaSafra;
 import protocolo.mensagens.TalhaoParaResumo;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Timeout;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.TestInstance.Lifecycle;
+
 // Classe fora do pacote protocolo: o filtro de classes do servidor tem que recusar.
 class ComunicadoMalicioso extends Comunicado
 {
@@ -34,28 +46,47 @@ class ComunicadoMalicioso extends Comunicado
 }
 
 /* Sobe o servidor de verdade (porta livre, 127.0.0.1) e conversa com ele pelo protocolo, como a API vai fazer. */
-public class TesteProtocolo
+@TestMethodOrder (MethodOrderer.OrderAnnotation.class)
+@TestInstance (Lifecycle.PER_CLASS)
+@Tag("integracao")
+@Timeout(30)
+class ProtocoloTest
 {
     private static final String HOST = "127.0.0.1";
+    private Servidor servidor;
+    private boolean registrarPedidosAnterior;
 
-    private static int total;
+    @BeforeAll
+    void iniciarServidor () throws Exception
+    {
+        registrarPedidosAnterior = Servidor.registrarPedidos;
+        Servidor.registrarPedidos = false;
+        servidor = new Servidor (HOST, 0, Servidor.MAXIMO_DE_CONEXOES, Servidor.OCIOSO_EM_MILISSEGUNDOS);
+    }
+
+    @AfterAll
+    void encerrarServidor () throws Exception
+    {
+        try
+        {
+            if (servidor != null)
+                servidor.desativar ();
+        }
+        finally
+        {
+            Servidor.registrarPedidos = registrarPedidosAnterior;
+        }
+    }
+
 
     private static void verificar (String nome, boolean ok)
     {
-        if (!ok)
-            throw new AssertionError (nome);
-
-        total++;
-        System.out.println ("ok " + nome);
+        assertTrue (ok, nome);
     }
 
     private static <T extends Resposta> T como (Resposta resposta, Class<T> tipo)
     {
-        if (!tipo.isInstance (resposta))
-            throw new AssertionError ("esperava " + tipo.getSimpleName () + " mas veio " + resposta +
-                (resposta instanceof RespostaDeErro ? " " + ((RespostaDeErro) resposta).getMensagem () : ""));
-
-        return tipo.cast (resposta);
+        return assertInstanceOf (tipo, resposta);
     }
 
     private static boolean falha (Cliente cliente, protocolo.Pedido pedido)
@@ -96,7 +127,9 @@ public class TesteProtocolo
         return new PedidoDeMovimentacaoDeEstoque (saldo, 2.0, "entrada", 10.0, 4.0, null);
     }
 
-    private static void conversa (Servidor servidor) throws Exception
+    @Test
+    @Order (1)
+    void conversa () throws Exception
     {
         Cliente cliente = new Cliente (HOST, servidor.getPorta (), 3000);
 
@@ -136,9 +169,11 @@ public class TesteProtocolo
     }
 
     // varios pedidos enviados sem esperar: o servidor responde um a um, na ordem, com os ids certos
-    private static void pipeline (Servidor servidor) throws Exception
+    @Test
+    @Order (2)
+    void pipeline () throws Exception
     {
-        Parceiro parceiro = TesteProtocolo.conectar (servidor.getPorta ());
+        Parceiro parceiro = ProtocoloTest.conectar (servidor.getPorta ());
         verificar ("o servidor fala primeiro: boas-vindas", parceiro.envie () instanceof ComunicadoDeBoasVindas);
 
         PedidoDePing a = new PedidoDePing (), b = new PedidoDePing (), c = new PedidoDePing ();
@@ -155,9 +190,11 @@ public class TesteProtocolo
         parceiro.adeus ();
     }
 
-    private static void seguranca (Servidor servidor) throws Exception
+    @Test
+    @Order (3)
+    void seguranca () throws Exception
     {
-        Parceiro parceiro = TesteProtocolo.conectar (servidor.getPorta ());
+        Parceiro parceiro = ProtocoloTest.conectar (servidor.getPorta ());
         parceiro.envie (); // boas-vindas
 
         parceiro.receba (new ComunicadoMalicioso ());
@@ -183,7 +220,9 @@ public class TesteProtocolo
     }
 
     // quem chama pelo Cliente: um pedido por vez; a API abre varias conexoes para atender em paralelo
-    private static void concorrencia (Servidor servidor) throws Exception
+    @Test
+    @Order (4)
+    void concorrencia () throws Exception
     {
         final int threads = 50, chamadas = 40;
         AtomicInteger certas = new AtomicInteger (), erradas = new AtomicInteger ();
@@ -272,7 +311,9 @@ public class TesteProtocolo
     }
 
     // resposta atrasada de um pedido anterior (que estourou o tempo limite) nao pode ser confundida com a atual
-    private static void respostaAtrasada () throws Exception
+    @Test
+    @Order (5)
+    void respostaAtrasada () throws Exception
     {
         ServerSocket falso = new ServerSocket (0, 1, java.net.InetAddress.getByName (HOST));
         falso.setSoTimeout (5000);
@@ -309,7 +350,9 @@ public class TesteProtocolo
         falso.close ();
     }
 
-    private static void limites () throws Exception
+    @Test
+    @Order (6)
+    void limites () throws Exception
     {
         Servidor pequeno = new Servidor (HOST, 0, 2, 5000);
 
@@ -352,10 +395,12 @@ public class TesteProtocolo
         impaciente.desativar ();
     }
 
-    private static void desligamento () throws Exception
+    @Test
+    @Order (7)
+    void desligamento () throws Exception
     {
         Servidor servidor = new Servidor (HOST, 0, 10, 60000);
-        Parceiro conectado = TesteProtocolo.conectar (servidor.getPorta ());
+        Parceiro conectado = ProtocoloTest.conectar (servidor.getPorta ());
         conectado.envie (); // boas-vindas
         verificar ("antes de desativar há uma conexão ativa", aguardar ( () -> servidor.getConexoesAtivas () == 1));
 
@@ -380,25 +425,5 @@ public class TesteProtocolo
         {
             return true;
         }
-    }
-
-    public static void main (String[] args) throws Exception
-    {
-        Servidor.registrarPedidos = false;
-
-        Servidor servidor = new Servidor (HOST, 0, Servidor.MAXIMO_DE_CONEXOES, Servidor.OCIOSO_EM_MILISSEGUNDOS);
-
-        TesteProtocolo.conversa (servidor);
-        TesteProtocolo.pipeline (servidor);
-        TesteProtocolo.seguranca (servidor);
-        TesteProtocolo.concorrencia (servidor);
-        TesteProtocolo.respostaAtrasada ();
-        TesteProtocolo.limites ();
-        TesteProtocolo.desligamento ();
-
-        servidor.desativar ();
-
-        System.out.println ("Protocolo: " + TesteProtocolo.total + " verificações aprovadas.");
-        System.exit (0);
     }
 }

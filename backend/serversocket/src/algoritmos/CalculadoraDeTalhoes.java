@@ -23,6 +23,9 @@ public class CalculadoraDeTalhoes
             if (talhao == null)
                 return new RespostaDeErro (pedido.getId (), RespostaDeErro.PEDIDO_INVALIDO, "Talhão ausente na lista.");
 
+            if (!Double.isFinite (talhao.getHectares ()) || talhao.getHectares () < 0)
+                return new RespostaDeErro (pedido.getId (), RespostaDeErro.DADOS_INCONSISTENTES, "Área inválida no talhão.");
+
             hectares += talhao.getHectares ();
             total++;
 

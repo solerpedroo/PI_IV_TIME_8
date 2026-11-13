@@ -26,13 +26,20 @@ public class RepositorioUsuariosMemoria implements RepositorioUsuarios
             throw new Exception ("Propriedade ausente");
 
         if (this.buscarPor ("email", usuario.getString ("email")) != null)
-            return null;
+            throw new ConflitoDeCadastro ("email");
 
         ObjectId idPropriedade = new ObjectId ();
         ObjectId idUsuario     = new ObjectId ();
 
         Document novaPropriedade = new Document (propriedade).append ("_id", idPropriedade)
-                                                        .append ("usuarioId", idUsuario.toHexString ());
+                                                        .append ("usuarioId", idUsuario.toHexString ())
+                                                        .append ("proprietarioId", idUsuario);
+        if (novaPropriedade.getString ("nome") == null || novaPropriedade.getString ("nome").isBlank ())
+        {
+            String farm = novaPropriedade.getString ("farm");
+            if (farm != null && !farm.isBlank ())
+                novaPropriedade.append ("nome", farm);
+        }
         Document novoUsuario     = new Document (usuario).append ("_id", idUsuario)
                                                          .append ("propriedadeId", idPropriedade.toHexString ());
 

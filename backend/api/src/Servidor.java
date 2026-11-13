@@ -6,6 +6,9 @@ import dados.RepositorioAtividades;
 import dados.RepositorioAtividadesMemoria;
 import dados.RepositorioAtividadesMongo;
 import dados.RepositorioColheitas;
+import dados.RepositorioCulturas;
+import dados.RepositorioCulturasMemoria;
+import dados.RepositorioCulturasMongo;
 import dados.RepositorioColheitasMemoria;
 import dados.RepositorioColheitasMongo;
 import dados.RepositorioOcorrencias;
@@ -42,6 +45,7 @@ import handlers.AuthHandler;
 import handlers.ColheitasHandler;
 import handlers.AtividadesHandler;
 import handlers.CalendarioHandler;
+import handlers.CulturasHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
@@ -144,12 +148,17 @@ public class Servidor
         new SaudeHandler   (conexao).registrar           (roteador);
         new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
+        RepositorioCulturas culturas = conexao == null
+            ? new RepositorioCulturasMemoria ()
+            : new RepositorioCulturasMongo (conexao.getBanco ());
+
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
         propriedades.setEstoque (estoque);
         propriedades.setAtividades (atividades);
         propriedades.setSafras (safras);
         propriedades.registrar (roteador);
-        TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, sessoes);
+        new CulturasHandler (culturas, talhoes, safras).registrar (roteador);
+        TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, culturas, sessoes);
         handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
         CustosDeConsumo consumo = new CustosDeConsumo (custos, estoque, talhoes, safras);
@@ -158,7 +167,7 @@ public class Servidor
         handlerEstoque.registrar (roteador);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
         new GeorreferenciamentoHandler (talhoes, ocorrencias, sessoes).registrar (roteador);
-        SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, sessoes);
+        SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, culturas, sessoes);
         handlerSafras.registrar (roteador);
         RepositorioColheitas colheitas = conexao == null ? new RepositorioColheitasMemoria () : new RepositorioColheitasMongo (conexao.getBanco ());
         handlerSafras.setColheitas (colheitas);
@@ -270,6 +279,7 @@ public class Servidor
             Roteador roteador = Servidor.montarRoteador (usuarios, talhoes, atividades, estoque, safras, custos, conexao, raiz);
             servidor = new Servidor (host, Servidor.lerPorta (porta), roteador, conexao, Servidor.MAXIMO_DE_CONEXOES);
 
+            ServicoEmail.logModo ();
             System.out.println ("Servidor ouvindo em http://" + host + ":" + servidor.getPorta () +
                                 (memoria ? " (modo memoria, sem banco)" : ""));
             System.out.println ("Digite \"desativar\" para encerrar.");

@@ -88,7 +88,19 @@
 }
 
 .sidebar-brand-icon {
+  display: block;
+  flex-shrink: 0;
+  line-height: 0;
   color: var(--accent);
+}
+
+.sidebar-brand-name .brand-name-light {
+  font-weight: 400;
+}
+
+.sidebar-brand-icon img {
+  width: 32px;
+  height: 32px;
 }
 
 .sidebar-brand-icon svg {
@@ -105,7 +117,7 @@
   display: block;
   font-family: var(--font-heading);
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   color: var(--text-inverse);
 }
@@ -658,13 +670,20 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    overflow-x: auto;
+    flex-wrap: wrap;
   }
 
   .sidebar-nav {
     flex-direction: row;
-    flex: 1;
+    flex: 1 0 100%;
+    order: 3;
+    overflow-x: auto;
+    min-width: 0;
   }
+
+  .sidebar-user { margin-left: auto; }
+  .sidebar-user-meta { display: none !important; }
+  .sidebar-link { flex: 0 0 auto; }
 
   .sidebar-spacer,
   .sidebar-brand-caption,

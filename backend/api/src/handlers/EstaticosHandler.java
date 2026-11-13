@@ -48,7 +48,7 @@ public class EstaticosHandler
             return Resposta.redirecionar ("/login.html");
 
         if (!EstaticosHandler.permitido (caminho))
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         String extensao = caminho.substring (caminho.lastIndexOf ('.') + 1).toLowerCase ();
 
@@ -59,18 +59,18 @@ public class EstaticosHandler
         }
         catch (Exception erro) // caminho invalido para o sistema de arquivos
         {
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
         }
 
         if (!arquivo.startsWith (this.raiz) || !Files.isRegularFile (arquivo))
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         // confere de novo depois de seguir links simbolicos
         if (!arquivo.toRealPath ().startsWith (this.raiz))
-            return Resposta.erro (404, "Not found");
+            return Resposta.erro (404, "Não encontrado.");
 
         if (Files.size (arquivo) > EstaticosHandler.MAXIMO_ARQUIVO)
-            return Resposta.erro (413, "Static file too large");
+            return Resposta.erro (413, "Arquivo estático grande demais.");
 
         return new Resposta (200, EstaticosHandler.TIPOS.get (extensao), Files.readAllBytes (arquivo));
     }

@@ -4,7 +4,7 @@ import protocolo.Pedido;
 
 /*
     Valida os campos de um talhao (criar e editar usam as mesmas regras).
-    safra nula vale "2025/26" e status nulo ou vazio vale "Ativo" (como no cadastro atual).
+    safra nula vale o período atual calculado e status nulo ou vazio vale "Ativo".
     Nome unico por propriedade depende do banco e continua na API.
 */
 public class PedidoDeValidacaoDeTalhao extends Pedido

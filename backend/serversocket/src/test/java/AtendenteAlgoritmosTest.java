@@ -1,3 +1,4 @@
+import algoritmos.PeriodoSafra;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,18 +22,18 @@ import protocolo.mensagens.RespostaDeValidacao;
 import protocolo.mensagens.TalhaoDaSafra;
 import protocolo.mensagens.TalhaoParaResumo;
 
-/* Casos deterministicos dos algoritmos, chamados pelo Atendente, sem socket. */
-public class TesteAlgoritmos
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
+import static org.junit.jupiter.api.Assertions.*;
+
+/* Contratos entre pedidos, roteamento pelo Atendente e respostas, sem rede. */
+@Tag("contrato")
+class AtendenteAlgoritmosTest
 {
-    private static int total;
 
     private static void verificar (String nome, boolean ok)
     {
-        if (!ok)
-            throw new AssertionError (nome);
-
-        total++;
-        System.out.println ("ok " + nome);
+        assertTrue (ok, nome);
     }
 
     // atende o pedido e confere o tipo da resposta (mostrando o erro, se o servidor devolveu um)
@@ -40,16 +41,8 @@ public class TesteAlgoritmos
     {
         Resposta resposta = Atendente.atender (pedido);
 
-        if (!tipo.isInstance (resposta))
-        {
-            String detalhe = resposta instanceof RespostaDeErro ?
-                ((RespostaDeErro) resposta).getCodigo () + ": " + ((RespostaDeErro) resposta).getMensagem () : resposta.toString ();
-            throw new AssertionError ("esperava " + tipo.getSimpleName () + " mas veio " + detalhe);
-        }
-
-        // toda resposta devolve o id do pedido (silencioso: seria uma linha por chamada)
-        if (resposta.getIdDoPedido () != pedido.getId ())
-            throw new AssertionError ("a resposta de " + pedido + " veio com o id " + resposta.getIdDoPedido ());
+        assertInstanceOf (tipo, resposta);
+        assertEquals (pedido.getId (), resposta.getIdDoPedido ());
 
         return tipo.cast (resposta);
     }
@@ -86,7 +79,8 @@ public class TesteAlgoritmos
         return new RegistroDaSafra ("ocorrencia", id, "Ocorrência", data, null, talhaoId, "Norte", null, null, excluida);
     }
 
-    private static void cadastros ()
+    @Test
+    void cadastros ()
     {
         RespostaDeValidacao ok = atender (cadastro ("  Ana Souza ", "ANA@Teste.com", "(11) 91234-5678", "Senha@123", "Senha@123",
                                                     "Fazenda Sol", "120 ha", true), RespostaDeValidacao.class);
@@ -116,18 +110,19 @@ public class TesteAlgoritmos
         verificar ("redefinir senha acusa senha e confirmação", senha.getErros ().containsKey ("password") && senha.getErros ().containsKey ("password-confirm"));
     }
 
-    private static void talhoes ()
+    @Test
+    void talhoes ()
     {
         RespostaDeValidacao ok = atender (new PedidoDeValidacaoDeTalhao ("  Norte 1 ", "Soja", null, 12.5, null), RespostaDeValidacao.class);
         verificar ("talhão válido", ok.isValido ());
-        verificar ("talhão aplica safra e status padrão", "2025/26".equals (ok.getNormalizados ().get ("safra")) && "Ativo".equals (ok.getNormalizados ().get ("status")));
+        verificar ("talhão aplica safra e status padrão", PeriodoSafra.padraoAtual ().equals (ok.getNormalizados ().get ("safra")) && "Ativo".equals (ok.getNormalizados ().get ("status")));
         verificar ("talhão guarda nome normalizado em minúsculas", "norte 1".equals (ok.getNormalizados ().get ("nomeNormalizado")) && "Norte 1".equals (ok.getNormalizados ().get ("nome")));
         verificar ("talhão devolve hectares como número", Double.valueOf (12.5).equals (ok.getNormalizados ().get ("hectares")));
 
         verificar ("status vazio vale Ativo", "Ativo".equals (atender (new PedidoDeValidacaoDeTalhao ("T", "Milho", "2026/27", 1.0, ""), RespostaDeValidacao.class).getNormalizados ().get ("status")));
 
         RespostaDeValidacao ruim = atender (new PedidoDeValidacaoDeTalhao ("", "Banana", "1999/00", 0.0, "Quebrado"), RespostaDeValidacao.class);
-        verificar ("talhão acusa nome, cultura, safra, hectares e status", ruim.getErros ().keySet ().containsAll (List.of ("nome", "cultura", "safra", "hectares", "status")) && ruim.getErros ().size () == 5);
+        verificar ("talhão acusa nome, safra, hectares e status", ruim.getErros ().keySet ().containsAll (List.of ("nome", "safra", "hectares", "status")) && ruim.getErros ().size () == 4);
 
         for (Double hectares : new Double[] { null, 0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY, 1000000.01 })
             verificar ("hectares inválidos recusados: " + hectares, atender (new PedidoDeValidacaoDeTalhao ("T", "Soja", null, hectares, null), RespostaDeValidacao.class).getErros ().containsKey ("hectares"));
@@ -137,7 +132,8 @@ public class TesteAlgoritmos
         verificar ("cultura com acento (Café) aceita", atender (new PedidoDeValidacaoDeTalhao ("T", "Café", null, 1.0, "Irrigação pendente"), RespostaDeValidacao.class).isValido ());
     }
 
-    private static void resumo ()
+    @Test
+    void resumo ()
     {
         RespostaDeResumoDeTalhoes r = atender (new PedidoDeResumoDeTalhoes (List.of (
             new TalhaoParaResumo (12.5, "Ativo"), new TalhaoParaResumo (7.5, "Em preparo"), new TalhaoParaResumo (10, "Ativo"))), RespostaDeResumoDeTalhoes.class);
@@ -150,7 +146,8 @@ public class TesteAlgoritmos
         verificar ("resumo com talhão nulo é pedido inválido", RespostaDeErro.PEDIDO_INVALIDO.equals (erro (new PedidoDeResumoDeTalhoes (java.util.Arrays.asList (new TalhaoParaResumo (1, "Ativo"), null))).getCodigo ()));
     }
 
-    private static void estoque ()
+    @Test
+    void estoque ()
     {
         RespostaDeMovimentacaoDeEstoque entrada = atender (movimento (10, 5, "entrada", 10.0, 7.0, null), RespostaDeMovimentacaoDeEstoque.class);
         verificar ("entrada com custo pondera o custo médio: (10x5 + 10x7) / 20 = 6", entrada.isOk () && entrada.getSaldoAnterior () == 10 && entrada.getSaldoPosterior () == 20 && entrada.getCustoUnitario () == 6);
@@ -198,7 +195,8 @@ public class TesteAlgoritmos
         return new PedidoDeRelatorioDeSafra (inicio, fim, ids, talhoes, registros);
     }
 
-    private static void relatorioDeSafra ()
+    @Test
+    void relatorioDeSafra ()
     {
         TalhaoDaSafra norte = new TalhaoDaSafra ("t1", "Norte", 12.5);
         List<String>  ids   = List.of ("t1");
@@ -258,21 +256,18 @@ public class TesteAlgoritmos
         verificar ("mil custos de 1 centavo somam exatos 1000 centavos", atender (relatorio ("2026-01-01", "2026-12-31", ids, List.of (norte), muitos), RespostaDeRelatorioDeSafra.class).getTotalCentavos () == 1000);
     }
 
-    public static void main (String[] args) throws Exception
+    @Test
+    void ping () throws Exception
     {
         RespostaDePing ping = atender (new PedidoDePing (), RespostaDePing.class);
         verificar ("ping devolve a versão do protocolo", protocolo.Protocolo.VERSAO.equals (ping.getVersao ()));
+    }
 
-        TesteAlgoritmos.cadastros ();
-        TesteAlgoritmos.talhoes ();
-        TesteAlgoritmos.resumo ();
-        TesteAlgoritmos.estoque ();
-        TesteAlgoritmos.relatorioDeSafra ();
-
-        // um pedido de tipo que o servidor nao conhece vira erro, nunca excecao
+    @Test
+    void pedidoDesconhecido ()
+    {
         Pedido desconhecido = new Pedido () {};
         verificar ("pedido desconhecido vira PEDIDO_DESCONHECIDO", RespostaDeErro.PEDIDO_DESCONHECIDO.equals (erro (desconhecido).getCodigo ()));
-
-        System.out.println ("Algoritmos: " + TesteAlgoritmos.total + " verificações aprovadas.");
     }
+
 }

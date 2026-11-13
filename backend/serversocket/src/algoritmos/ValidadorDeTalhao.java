@@ -10,11 +10,7 @@ import protocolo.mensagens.RespostaDeValidacao;
 // Regras de um talhao (as mesmas para criar e editar). As listas abaixo sao as do cadastro atual.
 public class ValidadorDeTalhao
 {
-    public static final List<String> CULTURAS = List.of ("Soja", "Milho", "Trigo", "Café", "Algodão");
-    public static final List<String> STATUS   = List.of ("Ativo", "Irrigação pendente", "Em preparo");
-    public static final List<String> SAFRAS   = List.of ("2024/25", "2025/26", "2026/27");
-
-    public static final String SAFRA_PADRAO  = "2025/26";
+    public static final List<String> STATUS = List.of ("Ativo", "Irrigação pendente", "Em preparo");
     public static final String STATUS_PADRAO = "Ativo";
 
     public static Resposta validar (PedidoDeValidacaoDeTalhao pedido)
@@ -24,15 +20,15 @@ public class ValidadorDeTalhao
         String nome    = v.texto ("nome", pedido.getNome (), "Informe o nome do talhão.", 80);
         String cultura = v.texto ("cultura", pedido.getCultura (), "Selecione uma cultura.", 40);
 
-        String safra = pedido.getSafra () == null ? ValidadorDeTalhao.SAFRA_PADRAO : pedido.getSafra ().trim ();
+        String safra = pedido.getSafra () == null ? PeriodoSafra.padraoAtual () : pedido.getSafra ().trim ();
         if (safra.isEmpty ())
-            v.erro ("safra", "Selecione uma safra.");
+            v.erro ("safra", "Informe o período da safra.");
 
-        if (cultura != null && !ValidadorDeTalhao.CULTURAS.contains (cultura))
-            v.erro ("cultura", "Selecione uma cultura válida.");
+        if (cultura != null && cultura.length () < 2)
+            v.erro ("cultura", "Informe o nome da cultura.");
 
-        if (!ValidadorDeTalhao.SAFRAS.contains (safra))
-            v.erro ("safra", "Selecione uma safra válida.");
+        if (!PeriodoSafra.valida (safra))
+            v.erro ("safra", "Use o formato AAAA/AA (ex.: 2026/27).");
 
         Double hectares = pedido.getHectares ();
         if (hectares == null || !(hectares > 0) || hectares > 1000000) // o !(> 0) tambem barra NaN

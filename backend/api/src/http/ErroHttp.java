@@ -4,7 +4,7 @@ package http;
 
 /*
     Erro que ja sabe qual status HTTP deve virar.
-    Ex.: throw new ErroHttp (400, "Malformed request");
+    Ex.: throw new ErroHttp (400, "Requisição malformada.");
 */
 public class ErroHttp extends Exception
 {

@@ -28,8 +28,6 @@
   // A API acompanha a origem da página, inclusive com HTTPS e portas alternativas.
   const API_BASE = window.location.origin;
 
-  const STRENGTH_LABELS = ["—", "Fraca", "Média", "Boa", "Forte"];
-
   /**
    * Exibe mensagem acessível no formulário (erro ou sucesso).
    */
@@ -80,20 +78,68 @@
     return firstInvalid;
   }
 
-  /**
-   * Avalia regras de força da senha (espelha o meter do pen).
-   */
-  function getPasswordChecks(value) {
-    return {
-      length: value.length >= 8,
-      upper: /[A-ZÀ-Ý]/.test(value),
-      number: /\d/.test(value),
-      symbol: /[^A-Za-zÀ-ÿ\d]/.test(value),
-    };
+  function readOtpDigits(group) {
+    return $$("[data-otp-digit]", group).map((el) => el.value).join("");
   }
 
-  function passwordLevel(checks) {
-    return Object.values(checks).filter(Boolean).length;
+  function syncOtpHidden(group) {
+    const form = group.closest("form");
+    const hidden = form?.querySelector('[name="token"]');
+    if (!hidden) return;
+    hidden.value = readOtpDigits(group);
+  }
+
+  function fillOtpDigits(group, code) {
+    const digits = String(code || "").replace(/\D/g, "").slice(0, 6);
+    const inputs = $$("[data-otp-digit]", group);
+    inputs.forEach((input, index) => {
+      input.value = digits[index] || "";
+      input.removeAttribute("aria-invalid");
+    });
+    syncOtpHidden(group);
+  }
+
+  function clearOtpError(group) {
+    $$("[data-otp-digit]", group).forEach((input) => input.removeAttribute("aria-invalid"));
+    const error = group.closest(".input-group")?.querySelector("[data-otp-error], .field-error");
+    if (error) error.textContent = "";
+  }
+
+  function setOtpError(group, message) {
+    $$("[data-otp-digit]", group).forEach((input) => input.setAttribute("aria-invalid", "true"));
+    const error = group.closest(".input-group")?.querySelector("[data-otp-error], .field-error");
+    if (error) error.textContent = message;
+  }
+
+  function initOtpInputs() {
+    $$("[data-otp-inputs]").forEach((group) => {
+      const inputs = $$("[data-otp-digit]", group);
+
+      inputs.forEach((input, index) => {
+        input.addEventListener("input", () => {
+          input.value = input.value.replace(/\D/g, "").slice(0, 1);
+          clearOtpError(group);
+          syncOtpHidden(group);
+          if (input.value && index < inputs.length - 1) inputs[index + 1].focus();
+        });
+
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Backspace" && !input.value && index > 0) {
+            inputs[index - 1].focus();
+          }
+          if (event.key === "ArrowLeft" && index > 0) inputs[index - 1].focus();
+          if (event.key === "ArrowRight" && index < inputs.length - 1) inputs[index + 1].focus();
+        });
+
+        input.addEventListener("paste", (event) => {
+          event.preventDefault();
+          const text = (event.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+          fillOtpDigits(group, text);
+          const focusAt = Math.min(text.length, inputs.length - 1);
+          inputs[focusAt]?.focus();
+        });
+      });
+    });
   }
 
   function setLoading(form, loading) {
@@ -142,7 +188,7 @@
       const input = form.elements.namedItem(field);
       if (input instanceof HTMLElement) setError(input, message);
     });
-    const message = error.message === "Email confirmation required"
+    const message = error.message === "Confirme o e-mail antes de entrar."
       ? "Confirme seu e-mail antes de entrar. Use o código enviado para sua caixa de entrada."
       : (error.message || "Não foi possível concluir a solicitação.");
     showMessage(form, message);
@@ -191,33 +237,10 @@
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Medidor de força                                                         */
+  /* Medidor de força: regras únicas em senha-regras.js                      */
   /* ------------------------------------------------------------------------ */
   function initPasswordMeter() {
-    const passwordInput = $("[data-password-meter]");
-    if (!passwordInput) return;
-
-    const meter = $("[data-meter]");
-    if (!meter) return;
-
-    const rules = $$("[data-rule]", meter);
-    const label = $("[data-meter-label]", meter);
-
-    const update = () => {
-      const checks = getPasswordChecks(passwordInput.value);
-      const level = passwordLevel(checks);
-      meter.dataset.level = String(level);
-      if (label) {
-        label.dataset.level = String(level);
-        label.textContent = STRENGTH_LABELS[level];
-      }
-      rules.forEach((rule) => {
-        rule.classList.toggle("is-valid", Boolean(checks[rule.dataset.rule]));
-      });
-    };
-
-    passwordInput.addEventListener("input", update);
-    update();
+    window.AgroSenha?.iniciar();
   }
 
   /* ------------------------------------------------------------------------ */
@@ -258,10 +281,9 @@
       sessionStorage.setItem(STORAGE.pendingEmail, email);
     }
 
-    // Um link de e-mail pode informar o código pela query string.
     const token = params.get("token");
-    const tokenInput = $("[name=token]");
-    if (token && tokenInput) tokenInput.value = token;
+    const otp = $("[data-otp-inputs]");
+    if (token && otp) fillOtpDigits(otp, token);
   }
 
   /* ------------------------------------------------------------------------ */
@@ -283,8 +305,9 @@
         return;
       }
 
+      let data;
       try {
-        await requestApi("/api/auth/resend-confirmation", { email });
+        data = await requestApi("/api/auth/resend-confirmation", { email });
       } catch (error) {
         resend.disabled = false;
         const seconds = Number(error.retryAfter || 0);
@@ -292,6 +315,13 @@
           ? `Aguarde ${seconds}s antes de solicitar outro código.`
           : error.message);
         return;
+      }
+
+      const form = $("[data-confirm-email-form]");
+      if (data.aviso) {
+        showMessage(form, data.aviso);
+      } else {
+        showMessage(form, data.message || "Se o e-mail estiver cadastrado, enviamos um novo código.");
       }
 
       let seconds = 30;
@@ -317,10 +347,12 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (form.getAttribute("aria-busy") === "true") return;
-      const token = String(form.elements.token.value || "").trim();
-      if (!token) {
-        setError(form.elements.token, "Informe o código recebido.");
-        showMessage(form, "Informe o código de confirmação.");
+      const otp = $("[data-otp-inputs]", form);
+      if (otp) syncOtpHidden(otp);
+      const token = String(form.elements.token?.value || "").replace(/\D/g, "").slice(0, 6);
+      if (!/^\d{6}$/.test(token)) {
+        if (otp) setOtpError(otp, "Informe o código de 6 dígitos enviado por e-mail.");
+        showMessage(form, "O código deve ter 6 números.");
         return;
       }
 
@@ -384,12 +416,27 @@
         clearMessage(form);
         form.classList.remove("is-invalid");
 
+        const otpGroup = $("[data-otp-inputs]", form);
+        if (otpGroup) syncOtpHidden(otpGroup);
+
         const firstInvalid = validateRequired(form);
         if (firstInvalid) {
           form.classList.add("is-invalid");
           showMessage(form, "Revise os campos obrigatórios para continuar.");
           firstInvalid.focus();
           return;
+        }
+
+        if (otpGroup) {
+          const code = readOtpDigits(otpGroup);
+          if (!/^\d{6}$/.test(code)) {
+            setOtpError(otpGroup, "Informe os 6 dígitos do e-mail.");
+            form.classList.add("is-invalid");
+            showMessage(form, "O código deve ter 6 números.");
+            $$("[data-otp-digit]", otpGroup).find((el) => !el.value)?.focus()
+              || $$("[data-otp-digit]", otpGroup)[0]?.focus();
+            return;
+          }
         }
 
         const email = $("[type=email]", form);
@@ -403,24 +450,23 @@
 
         const password = $("[data-password]", form);
         const confirmation = $("[data-password-confirm]", form);
-        const requiresStrong = form.hasAttribute("data-require-strong-password");
+        let route;
+        try {
+          route = authRoute(form);
+        } catch (error) {
+          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
+          console.error(error);
+          return;
+        }
+        // Cadastro e redefinição: o ServerSocket (ValidadorDeConta) decide a senha.
+        const senhaNoSocket = route === "/api/auth/register" || route === "/api/auth/reset-password";
 
-        if (password) {
-          const checks = getPasswordChecks(password.value);
-          if (requiresStrong && passwordLevel(checks) < 4) {
-            setError(password, "Atenda a todas as regras de senha.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha que cumpra todas as regras.");
-            password.focus();
-            return;
-          }
-          if (!requiresStrong && password.value.length < 8) {
-            setError(password, "A senha deve ter pelo menos 8 caracteres.");
-            form.classList.add("is-invalid");
-            showMessage(form, "Escolha uma senha mais segura.");
-            password.focus();
-            return;
-          }
+        if (password && !senhaNoSocket && password.value.length < 8) {
+          setError(password, "A senha deve ter pelo menos 8 caracteres.");
+          form.classList.add("is-invalid");
+          showMessage(form, "Escolha uma senha mais segura.");
+          password.focus();
+          return;
         }
 
         if (password && confirmation && password.value !== confirmation.value) {
@@ -431,14 +477,6 @@
           return;
         }
 
-        let route;
-        try {
-          route = authRoute(form);
-        } catch (error) {
-          showMessage(form, "Configuração do formulário inválida. Recarregue a página.");
-          console.error(error);
-          return;
-        }
         let result;
 
         setLoading(form, true);
@@ -447,7 +485,7 @@
         } catch (error) {
           // Permite que o link "Confirmar e-mail" já saiba para qual conta
           // pedir novo código depois de um login bloqueado por confirmação.
-          if (route === "/api/auth/login" && error.message === "Email confirmation required" && email) {
+          if (route === "/api/auth/login" && error.message === "Confirme o e-mail antes de entrar." && email) {
             sessionStorage.setItem(STORAGE.pendingEmail, email.value.trim());
           }
           showApiErrors(form, error);
@@ -507,6 +545,7 @@
     initPasswordToggles();
     initPasswordMeter();
     initPhoneMask();
+    initOtpInputs();
     initConfirmEmail();
     initResend();
     initConfirmEmailForm();
