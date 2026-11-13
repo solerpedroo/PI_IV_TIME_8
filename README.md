@@ -32,6 +32,7 @@ Com base no documento de produto e nas issues do Project, o MVP contempla:
 - **Estoque (Insumos)**: catálogo, entradas/saídas/ajustes, histórico e indicadores (Normal/Baixo/Crítico), sem negativar saldo.
 - **Ocorrências**: registro, timeline, resolução, exclusão lógica e resumo mensal.
 - **Custos**: lançamentos, indicadores e vínculo com a operação da propriedade.
+- **Manutenção**: equipamentos, preventivas, intervenções e custos em Maquinário vinculados à operação.
 - **Dashboard**: visão geral operacional a partir dos módulos integrados.
 - **Notificações**: sino com alertas reais (atraso, estoque, ocorrência, atividades do dia), navegação ao registro e leitura/preferências persistentes.
 - **Configurações / Perfil**: dados pessoais, preferências, propriedade padrão, troca de e-mail/senha e logout.
