@@ -1,8 +1,14 @@
-# Identidade visual AgroGestao
+# Identidade visual AgroGestão
 
 Aplicacao da identidade visual no frontend: simbolo, favicon, nome da marca e
 tratamento tipografico. A paleta e o design system Forest Sage ja usavam os
 mesmos tokens, entao nenhuma variavel de cor foi alterada.
+
+## Convencao do nome
+
+- **Interface** (HTML, onboarding, meta description, titulos de aba): **AgroGestão** (com acento).
+- **Codigo e docs tecnicos** (pastas, commits, slugs): **AgroGestao** sem acento, quando o ASCII evita problemas de encoding.
+- **Titulos de aba**: `Pagina - AgroGestão` (hifen ASCII, sem travessao em dash U+2014).
 
 ## O que mudou
 
@@ -11,8 +17,8 @@ mesmos tokens, entao nenhuma variavel de cor foi alterada.
   - `simbolo.svg`: versao colorida, para fundos claros (recuperar e redefinir senha).
   - `simbolo-claro.svg`: versao para fundos escuros (sidebar, painel de login, cadastro e confirmacao de e-mail).
   - `favicon.svg`: simbolo sobre fundo `#f4f7f2` com cantos arredondados, ligado em todas as paginas.
-- **Nome**: "Agro" em peso 700 e "Gestao" em peso 400 (Geist), na sidebar e nas telas de autenticacao.
-- **Titulos das abas**: terminam em `AgroGestao`, sem travessao.
+- **Nome**: "Agro" em peso 700 e "Gestão" em peso 400 (Geist), na sidebar e nas telas de autenticacao.
+- **Titulos das abas**: terminam em `AgroGestão`, no formato `Pagina - AgroGestão` (sem travessao).
 - **Substituido**: o icone generico de folha (Lucide) que ficava em quadrado verde.
 
 ## Onde esta aplicado
@@ -24,6 +30,8 @@ mesmos tokens, entao nenhuma variavel de cor foi alterada.
 | Confirmar e-mail | `confirmar-email.html` | claro |
 | Recuperar e redefinir senha | `recuperar-senha.html`, `redefinir-senha.html` | colorido |
 | Estilos | `base.css`, `auth.css`, `shell.css` | `.brand-mark--logo`, `.brand-img`, `.brand-name-light` |
+| Sidebar degradada | `scripts/shell.js` (`sidebarFallbackMarkup`) | claro (mesmo lockup do partial) |
+| Onboarding | `dashboard.html`, `scripts/onboarding.js` | nome AgroGestão |
 
 ## Validacao
 
