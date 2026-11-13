@@ -56,7 +56,7 @@ function servir() {
       assert.equal(await page.locator('link[rel="icon"][href="Assets/brand/favicon.svg"]').count(), 1, 'favicon ausente: ' + tela);
       assert.match(await page.title(), /AgroGestão$/, 'titulo sem o nome da marca: ' + tela);
       assert.doesNotMatch(await page.title(), /\u2014/, 'titulo com travessao: ' + tela);
-      if (telasApp.includes(tela) && tela !== 'safras' && tela !== 'culturas' && tela !== 'manutencao') {
+      if (telasApp.includes(tela)) {
         await page.waitForSelector('.sidebar-brand-icon img', { timeout: 10000 });
         assert.equal(await page.locator('.sidebar-brand-name').innerText(), 'AgroGestão', 'nome na sidebar: ' + tela);
       }
