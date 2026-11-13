@@ -214,6 +214,25 @@ svg {
   height: 36px;
 }
 
+/* Identidade visual AgroGestao: simbolo em SVG (Assets/brand) */
+.brand-mark--logo {
+  width: auto;
+  height: auto;
+  background: transparent;
+  border-radius: 0;
+}
+
+.brand-img {
+  display: block;
+  width: 48px;
+  height: 48px;
+}
+
+.brand-mark--sm .brand-img {
+  width: 36px;
+  height: 36px;
+}
+
 .brand-sprout svg,
 .verify-icon svg {
   fill: none;
@@ -226,9 +245,14 @@ svg {
 .brand-name {
   font-family: var(--font-heading);
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+.brand-name .brand-name-light,
+.brand-title .brand-name-light {
+  font-weight: 400;
 }
 
 .brand-caption {
