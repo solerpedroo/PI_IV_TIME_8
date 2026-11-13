@@ -5,6 +5,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Repositório**: [`PI_IV_TIME_8`](https://github.com/solerpedroo/PI_IV_TIME_8)
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
+- **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
 ## 👥 Equipe
@@ -31,6 +32,7 @@ Com base no documento de produto e nas issues do Project, o MVP contempla:
 - **Estoque (Insumos)**: catálogo, entradas/saídas/ajustes, histórico e indicadores (Normal/Baixo/Crítico), sem negativar saldo.
 - **Ocorrências**: registro, timeline, resolução, exclusão lógica e resumo mensal.
 - **Custos**: lançamentos, indicadores e vínculo com a operação da propriedade.
+- **Manutenção**: equipamentos, preventivas, intervenções e custos em Maquinário vinculados à operação.
 - **Dashboard**: visão geral operacional a partir dos módulos integrados.
 - **Notificações**: sino com alertas reais (atraso, estoque, ocorrência, atividades do dia), navegação ao registro e leitura/preferências persistentes.
 - **Configurações / Perfil**: dados pessoais, preferências, propriedade padrão, troca de e-mail/senha e logout.
