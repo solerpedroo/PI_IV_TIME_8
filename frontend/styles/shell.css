@@ -88,13 +88,10 @@
 }
 
 .sidebar-brand-icon {
-  color: var(--accent);
-}
-
-.sidebar-brand-icon {
   display: block;
   flex-shrink: 0;
   line-height: 0;
+  color: var(--accent);
 }
 
 .sidebar-brand-name .brand-name-light {
