@@ -3,6 +3,7 @@
 Aplicação web para **centralizar a operação de propriedades rurais**: propriedades, talhões, safras, atividades, estoque, ocorrências, custos e indicadores do painel. O servidor Java entrega a API e o frontend na mesma origem; o MongoDB persiste os dados por propriedade autenticada.
 
 - **Repositório**: [`PI_IV_TIME_8`](https://github.com/solerpedroo/PI_IV_TIME_8)
+- **Manual do usuário**: [`docs/15-manual-do-usuario.md`](docs/15-manual-do-usuario.md)
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
