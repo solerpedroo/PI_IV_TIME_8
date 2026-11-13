@@ -1,0 +1,55 @@
+Evidência bruta da execução de testes de 12/11/2026 (branch dev, commit 60d7dda).
+Ambiente: Linux 6.18.58.1-microsoft-standard-WSL2, OpenJDK 21.0.13, Node v22.22.0, Playwright 1.62.1, sem Docker e sem MongoDB.
+Primeira execução: 20:58:09 a 21:02:39 (-03:00). Formato: suíte | código de saída | duração.
+
+== Resumo da primeira execução (testes/*.cjs na ordem alfabética, depois Java) ==
+serversocket|1|8s
+api|1|12s
+atividades-real|1|16s
+atividades-reinicio|1|0s
+calendario-real|1|19s
+colheita-real|1|16s
+cultivo-plantio-audit|1|1s
+custos-real|1|19s
+empty-state-origin|0|5s
+estoque-real|1|0s
+georreferenciamento-real|1|0s
+local-persistence|0|3s
+local-screens|1|45s
+login-real|1|9s
+manutencao-real|1|0s
+notificacoes-real|1|16s
+ocorrencias-real|1|19s
+orcamento-real|1|16s
+perfil-real|1|18s
+relatorio-safra-real|1|0s
+storage-scope|0|0s
+talhoes-real|1|1s
+todas-telas-audit|1|1s
+token-confirmacao|0|0s
+ui-polish|1|42s
+FIM
+
+== Suítes Java complementares (rodadas uma a uma, socket de teste na 30100) ==
+TesteOcorrencias|0|1s
+TesteColheitas|1|0s
+TesteManutencao|0|0s
+TesteRelatorioSafra|0|0s
+
+== Segunda execução, com cópia temporária dos testes (regex do log: "token:" trocado por "token|codigo:"; cópia não versionada) ==
+login-real|1|2s
+talhoes-real|1|35s
+atividades-real|1|1s
+calendario-real|1|1s
+colheita-real|1|1s
+custos-real|1|1s
+notificacoes-real|1|0s
+ocorrencias-real|1|1s
+orcamento-real|1|1s
+perfil-real|0|3s
+cultivo-plantio-audit|1|2s
+georreferenciamento-real|1|1s
+manutencao-real|1|1s
+todas-telas-audit|1|27s
+local-screens|1|45s
+FIM

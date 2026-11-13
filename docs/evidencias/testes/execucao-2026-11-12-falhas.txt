@@ -1,0 +1,51 @@
+Trechos de saída das falhas encontradas (12/11/2026, dev 60d7dda). Códigos de verificação e senhas de teste não aparecem.
+
+== backend/serversocket: sh backend/serversocket/testar.sh ==
+│  │  ├─ conversa() ✘ erros por campo atravessam o socket ==> expected: <true> but was: <false>
+│  │  ├─ talhoes() ✘ talhão acusa nome, safra, hectares e status ==> expected: <true> but was: <false>
+│  │  ├─ recusaTodosOsCamposInvalidosSemNormalizacaoParcial() ✘ expected: <[hectares, safra, nome, status]> but was: <[nome, hectares, status]>
+│  │  │  ├─ [2] 1999/00 ✘ Multiple Failures (3 failures)
+[       280 tests found           ]
+[       276 tests successful      ]
+[         4 tests failed          ]
+
+== backend/api: sh backend/api/testar.sh (resumos e falhas; a cadeia parou na Georreferenciamento) ==
+420/420 testes ok
+TesteOrcamentos: 41/41 verificações OK (memória)
+TestePerfil: 56 verificações OK em memória
+FALHA PUT /api/talhoes/{id} (edicao normal) preserva a localizacao
+FALHA mapa filtrado por cultura (Norte virou Milho)
+TesteGeorreferenciamento: 38/40 verificações OK (memória)
+
+== backend/api: TesteColheitas (falhas e resumo) ==
+FALHA safra nao perde talhao que ja tem colheita (409 no campo talhoes)
+FALHA safra nao comeca depois de uma colheita existente (409 em dataInicio)
+FALHA sem a colheita do Sul, a safra pode sair do talhao
+TesteColheitas: 41/44 verificações OK (memória)
+
+== Testes de navegador: primeira falha de cada suíte (primeira execução) ==
+-- atividades-real:   throw new Error ("Token de confirmação não chegou ao log do servidor.");
+-- calendario-real: Error: Token de confirmação não chegou ao log do servidor.
+-- colheita-real: Error: Token de confirmação não chegou ao log do servidor.
+-- custos-real: Error: Token de confirmação não chegou ao log do servidor.
+-- login-real: AssertionError [ERR_ASSERTION]: token de confirmação no console
+-- notificacoes-real: Error: Token de confirmação não chegou ao log do servidor.
+-- ocorrencias-real: Error: Token de confirmação não chegou ao log do servidor.
+-- orcamento-real: Error: Token de confirmação não chegou ao log do servidor.
+-- perfil-real: Error: Token de confirmação não chegou ao log do servidor.
+-- talhoes-real: AssertionError [ERR_ASSERTION]: modo local deve entregar código no console
+-- cultivo-plantio-audit: TypeError: Cannot read properties of null (reading '1')
+-- georreferenciamento-real: TypeError: Cannot read properties of null (reading '1')
+-- manutencao-real: TypeError: Cannot read properties of null (reading '1')
+-- todas-telas-audit: TypeError: Cannot read properties of null (reading '1')
+-- atividades-reinicio: <ref *1> Error: spawnSync docker ENOENT
+-- estoque-real: AssertionError [ERR_ASSERTION]: MONGODB_URI de teste é obrigatória
+-- relatorio-safra-real: Error: Cannot find module 'mongodb'
+-- ui-polish: AssertionError [ERR_ASSERTION]: console ou recurso com erro
+-- local-screens: FALHOU áreas: criação, edição, filtro e indisponibilidade offline page.waitForFunction: Timeout 30000ms exceeded.
+
+== ui-polish: erros de console reportados (primeira execução) ==
++   '404 http://agro.local/api/culturas',
++   '404 http://agro.local/api/propriedades/periodos-safra',
++   '404 http://agro.local/api/propriedades/periodos-safra',
++   '404 http://agro.local/api/propriedades/periodos-safra',
