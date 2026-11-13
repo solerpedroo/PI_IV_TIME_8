@@ -61,6 +61,7 @@ Este projeto **não** implementa no MVP:
 - Driver oficial **MongoDB** (`lib/`)
 - Gateway Java opcional (`backend/gateway`)
 - Núcleo de modelo/Atlas (`backend/core`, Maven) para validação do domínio Mongo
+- Catálogo dos endpoints: [`docs/06-contrato-api.md`](docs/06-contrato-api.md)
 
 ### Banco e infra local
 - **MongoDB 8** (Docker Compose com replica set, ou Atlas Free)
