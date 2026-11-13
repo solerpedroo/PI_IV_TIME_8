@@ -5,6 +5,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Repositório**: [`PI_IV_TIME_8`](https://github.com/solerpedroo/PI_IV_TIME_8)
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
+- **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
 ## 👥 Equipe
