@@ -215,6 +215,8 @@ PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 
 Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
 
+Relatório da última execução: [`docs/10-relatorio-de-testes.md`](docs/10-relatorio-de-testes.md).
+
 Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/estoque.md`](docs/estoque.md), [`docs/ocorrencias.md`](docs/ocorrencias.md), [`docs/notificacoes.md`](docs/notificacoes.md), [`docs/perfil.md`](docs/perfil.md), [`docs/safras.md`](docs/safras.md).
 
 ## 🛟 Troubleshooting
