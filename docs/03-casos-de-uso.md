@@ -11,19 +11,21 @@ Mostrar, de forma rastreável, o que cada ator consegue fazer no AgroGestão, em
 que condições e com quais resultados e erros. O documento serve de base para o
 [manual do usuário](15-manual-do-usuario.md), para o
 [contrato da API](06-contrato-api.md) e para o
-[relatório de testes](10-relatorio-de-testes.md).
+[relatório de testes](10-relatorio-de-testes.md). Esses três arquivos entram na
+`dev` com os PRs #306 (manual), #304 (contrato) e #305 (relatório de testes).
 
-Escopo: 12 casos de uso representativos. Autenticação, propriedade, estoque e
-ocorrência estão detalhados com mais profundidade, como pede a issue.
+Escopo: **14 casos de uso** — os 12 representativos da issue #274, mais manutenção
+de equipamentos (UC13) e painel com alertas (UC14). Autenticação, propriedade,
+estoque e ocorrência continuam com mais profundidade, como pede a issue.
 
 ## 2. Atores
 
 | Ator | Tipo | Papel no sistema |
 |---|---|---|
 | Visitante | Humano | Pessoa sem sessão. Só acessa cadastro, confirmação de e-mail, login e recuperação de senha. |
-| Produtor | Humano | Usuário autenticado. Opera a propriedade ativa: talhões, safras, atividades, estoque, ocorrências, custos, relatórios e perfil. |
+| Produtor | Humano | Usuário autenticado. Opera a propriedade ativa: culturas, talhões, safras, atividades, estoque, manutenção, ocorrências, custos, painel, relatórios e perfil. |
 | Serviço de e-mail | Sistema externo | Entrega os códigos de confirmação e de redefinição de senha por SMTP. Sem SMTP configurado, o servidor imprime o código no console (modo simulado). |
-| Servidor de algoritmos | Sistema interno | Processo TCP (porta 3000) que valida cadastro, senha, talhão, movimentação de estoque e calcula o relatório de safra. A API o consulta por `ClienteDeAlgoritmos`. |
+| Servidor de algoritmos | Sistema interno | Processo TCP (porta 3000) que valida cadastro, senha, talhão, movimentação de estoque, campos de manutenção, agenda de preventivas e consolida o relatório de safra. A API o consulta por `ClienteDeAlgoritmos`. |
 
 Observação: a implementação atual tem um único perfil de usuário autenticado
 (o Produtor). Equipe, convites e permissões aparecem apenas como informação na
@@ -54,11 +56,13 @@ flowchart LR
         UC08(UC08 Movimentar estoque)
         UC09(UC09 Registrar e acompanhar ocorrência)
         UC10(UC10 Lançar custo e orçamento)
+        UC13(UC13 Manter equipamentos e manutenção)
     end
 
     subgraph analise ["Análise e conta"]
         UC11(UC11 Consultar relatório e exportar CSV)
         UC12(UC12 Gerenciar perfil e segurança)
+        UC14(UC14 Consultar painel e alertas)
     end
 
     V --> UC01
@@ -74,6 +78,8 @@ flowchart LR
     P --> UC10
     P --> UC11
     P --> UC12
+    P --> UC13
+    P --> UC14
 
     UC01 -. envia código .-> E
     UC03 -. envia código .-> E
@@ -82,11 +88,14 @@ flowchart LR
     UC05 -. valida .-> A
     UC08 -. valida .-> A
     UC11 -. calcula .-> A
+    UC13 -. valida .-> A
 ```
 
-Dependências entre os casos: UC05 exige UC04 (propriedade ativa); UC06 e UC07
-exigem UC05 (talhão); UC10 pode se vincular a UC05 e UC06; a saída de estoque
-com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
+Dependências entre os casos: UC05 exige UC04 (propriedade ativa) e catálogo de
+culturas (UC05 A3); UC06 e UC07 exigem UC05 (talhão); UC10 pode se vincular a
+UC05, UC06, UC08 (saída com atividade) e UC13 (intervenção com valor); UC11
+consolida dados de UC05 a UC10; UC14 usa os mesmos dados para métricas e alertas
+e segue UC02 (sessão); UC12 A1 filtra quais famílias de alerta aparecem em UC14.
 
 ## 4. Especificação dos casos de uso
 
@@ -141,6 +150,7 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 
 - A1: sem token, ou com token expirado ou encerrado, as telas internas redirecionam para `login.html`.
 - A2: se o logout falhar por rede, o navegador remove o token local e informa que o encerramento no servidor não foi confirmado.
+- A3: após o login, se `GET /api/me` indicar `onboardingConcluido=false`, o Painel abre o tour de boas-vindas (UC14).
 
 **Pós-condições**: sessão criada (ou encerrada). Cada conta mantém no máximo 5 sessões simultâneas.
 
@@ -218,10 +228,11 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 
 - A1: editar o talhão (`PUT /api/talhoes/{id}`).
 - A2: cadastrar a localização no mapa (ponto ou polígono de 3 a 50 vértices) em `PUT /api/talhoes/{id}/localizacao`.
+- A3 (catálogo de culturas): em Culturas, o Produtor lista o catálogo da propriedade (`GET /api/culturas`), cadastra nomes únicos (`POST /api/culturas`) ou remove entradas não usadas (`DELETE /api/culturas/{id}`). Talhões e safras só aceitam cultura já cadastrada.
 
 **Pós-condições**: talhão disponível para safras, atividades, custos e ocorrências.
 
-**Exceções**: E1 campo inválido, inclusive cultura que não está no catálogo (400, "Selecione uma cultura cadastrada ou inclua uma nova em Culturas."); E2 nome repetido na propriedade, sem diferenciar maiúsculas (409); E3 Servidor de algoritmos fora do ar, rotas delegadas respondem 503.
+**Exceções**: E1 campo inválido, inclusive cultura que não está no catálogo (400, "Selecione uma cultura cadastrada ou inclua uma nova em Culturas."); E2 nome repetido na propriedade, sem diferenciar maiúsculas (409); E3 Servidor de algoritmos fora do ar, rotas delegadas respondem 503; E4 no catálogo (A3), cultura duplicada (409) ou exclusão com uso em talhão/safra (409).
 
 ### UC06 - Planejar safra e avançar etapas
 
@@ -229,7 +240,7 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 |---|---|
 | Ator principal | Produtor |
 | Objetivo | Criar um ciclo produtivo e conduzi-lo até a finalização. |
-| Pré-condições | Ao menos um talhão cadastrado. |
+| Pré-condições | Ao menos um talhão cadastrado; cultura no catálogo (UC05 A3). |
 
 **Fluxo principal**
 
@@ -339,6 +350,11 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 3. Os indicadores mostram total, custo por hectare, divisão por categoria, talhão, safra e evolução mensal (`GET /api/custos/resumo`).
 4. O Produtor define o orçamento da safra (`PUT /api/orcamentos/{safraId}`) e acompanha o desvio e a situação (`dentro`, `proximo` ou `acima`).
 
+**Fluxos alternativos**
+
+- A1: consultar planejado x realizado de todas as safras (`GET /api/orcamentos`) ou de uma safra (`GET /api/orcamentos/{safraId}`).
+- A2: remover o valor planejado (`DELETE /api/orcamentos/{safraId}`).
+
 **Pós-condições**: custos e orçamento persistidos. Sem orçamento, planejado e desvio ficam nulos, sem meta inventada.
 
 **Exceções**: E1 valor ou campo inválido (400); E2 safra finalizada, que não aceita criar, alterar ou excluir custo (409); E3 editar custo gerado por consumo de estoque ou por manutenção, que muda pela origem (409).
@@ -356,7 +372,7 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 
 1. O Produtor abre o relatório pelo botão da tela: "Relatório da propriedade" no Painel, "Relatório de atividades" em Atividades, "Relatório de estoque" em Insumos ou o relatório da safra em Safras.
 2. Nos relatórios por período, informa início e fim.
-3. O sistema consulta a API (`/api/relatorios/propriedade`, `/atividades`, `/estoque` ou `/safras/{id}`) e mostra o resultado.
+3. O sistema consulta a API (`GET /api/relatorios/propriedade`, `GET /api/relatorios/atividades`, `GET /api/relatorios/estoque` ou `GET /api/relatorios/safras/{id}`) e mostra o resultado.
 4. O Produtor usa "Exportar CSV". O arquivo traz o mesmo resultado consultado, com BOM UTF-8 e separador `;`.
 
 **Pós-condições**: nenhum dado é alterado.
@@ -381,12 +397,69 @@ com atividade (UC08) gera custo em UC10; UC11 consolida dados de UC05 a UC10.
 
 **Fluxos alternativos**
 
-- A1: salvar preferências de notificação (`PUT /api/perfil/preferencias`).
+- A1: salvar preferências de notificação (`PUT /api/perfil/preferencias`). As chaves `stock`, `activities`, `occurrences`, `weather` e `reports` filtram o que UC14 exibe no sino (sem inventar alerta climático no MVP).
 - A2: reenviar o código de e-mail, com intervalo de 30 s (`POST /api/perfil/email/reenviar`).
+- A3: contas legadas sem o campo `onboardingConcluido` são tratadas como tour já concluído (`GET /api/me`); contas novas concluem com `POST /api/perfil/onboarding` (detalhes em UC14).
 
 **Pós-condições**: dados persistidos; o usuário vem sempre da sessão, nunca de um ID enviado pelo cliente.
 
 **Exceções**: E1 senha atual incorreta ou nova fora da regra (400); E2 e-mail já ocupado ou código reutilizado (409); E3 falha de SMTP mantém o e-mail antigo e avisa que o envio não foi confirmado.
+
+### UC13 - Manter equipamentos e manutenção
+
+| Campo | Descrição |
+|---|---|
+| Ator principal | Produtor |
+| Ator de apoio | Servidor de algoritmos |
+| Objetivo | Cadastrar equipamentos, programar preventivas e registrar intervenções com custo opcional. |
+| Pré-condições | Sessão ativa e propriedade ativa. |
+
+**Fluxo principal**
+
+1. Em Manutenção, o Produtor cadastra um equipamento (`POST /api/equipamentos`) com nome único na propriedade (sem diferenciar maiúsculas).
+2. O Servidor de algoritmos valida tipo, horímetro, ano e status; a API persiste o registro.
+3. O Produtor programa uma preventiva (`POST /api/preventivas`) com data prevista e intervalo opcional.
+4. O Produtor registra uma intervenção (`POST /api/intervencoes`), preventiva ou corretiva. Com valor informado, o sistema gera custo em **Maquinário** (UC10); sem valor, não há custo.
+5. A agenda (`GET /api/preventivas`) mostra `situacao` e `diasAte` calculados no socket; o resumo da tela usa `GET /api/manutencao/resumo`.
+
+**Fluxos alternativos**
+
+- A1: alterar equipamento (`PUT /api/equipamentos/{id}`) ou inativar com status Inativo (não há exclusão do equipamento).
+- A2: cancelar preventiva (`PUT /api/preventivas/{id}` com `status: cancelada`) ou excluir preventiva ainda não realizada (`DELETE /api/preventivas/{id}`).
+- A3: intervenção ligada a preventiva programada marca a preventiva como realizada e pode gerar a próxima data pelo intervalo.
+- A4: consultar histórico (`GET /api/equipamentos/{id}/historico`) ou abrir atalho `manutencao.html?equipamentoId=` a partir de Custos.
+
+**Pós-condições**: equipamento com histórico; custo de manutenção só muda pela intervenção (não por `PUT`/`DELETE` direto em `/api/custos/{id}`).
+
+**Exceções**: E1 campo inválido (400); E2 nome de equipamento repetido (409); E3 preventiva já realizada não pode ser alterada ou excluída (409); E4 intervenção com safra finalizada ou talhão fora da safra (409); E5 registro de outra propriedade (404); E6 custo pendente após intervenção gravada (`custoPendente: true` em 201/200, recuperável com novo `PUT` na intervenção); E7 socket indisponível (503).
+
+Detalhes: [manutencao.md](manutencao.md).
+
+### UC14 - Consultar painel e alertas
+
+| Campo | Descrição |
+|---|---|
+| Ator principal | Produtor |
+| Objetivo | Ver indicadores do Painel, concluir o tour inicial e tratar alertas operacionais do sino. |
+| Pré-condições | Sessão ativa (UC02). |
+
+**Fluxo principal**
+
+1. O Produtor abre `dashboard.html`. Métricas e atalhos carregam da API da propriedade ativa; totais mostram `-` até a resposta.
+2. Se `GET /api/me` devolver `onboardingConcluido=false`, o tour de boas-vindas abre sobre o painel (seis passos). Ao concluir ou pular, o cliente chama `POST /api/perfil/onboarding` (200) e atualiza a sessão local.
+3. O sino monta alertas reais a partir de `GET /api/insumos` (estoque baixo/crítico), `GET /api/atividades` (atrasadas e do dia) e `GET /api/ocorrencias` (abertas/em acompanhamento), respeitando as preferências de UC12 A1.
+4. O Produtor clica em um alerta; o sistema navega para a tela do registro (insumo, atividade ou ocorrência) e marca a leitura no cliente, com IDs estáveis por usuário e propriedade.
+
+**Fluxos alternativos**
+
+- A1: até 40 alertas visíveis no painel do sino (limite do cliente; sem endpoint de resumo dedicado).
+- A2: após recarregar a página, a lista é regenerada da API; leituras persistem e itens órfãos são podados.
+
+**Pós-condições**: nenhum dado operacional é alterado pelo painel ou pelo sino, exceto a flag de onboarding no UC14 passo 2.
+
+**Exceções**: E1 falha de uma fonte de alerta: a família correspondente some ou mostra erro com "Tentar novamente"; E2 tour não bloqueia o uso se a API de onboarding falhar (mensagem de erro, tour pode ser tentado de novo).
+
+Detalhes: [notificacoes.md](notificacoes.md).
 
 ## 5. Fluxos alternativos e exceções
 
@@ -415,4 +488,4 @@ Regras de interface que complementam os fluxos:
 - [Manual do usuário](15-manual-do-usuario.md)
 - [Relatório de testes](10-relatorio-de-testes.md)
 - [Documento de produto](AgroGestao_Projeto.md)
-- Módulos: [atividades](atividades.md), [estoque](estoque.md), [ocorrências](ocorrencias.md), [safras](safras.md), [custos](custos.md), [orçamento](orcamento.md), [perfil](perfil.md), [georreferenciamento](georreferenciamento.md)
+- Módulos: [atividades](atividades.md), [estoque](estoque.md), [ocorrências](ocorrencias.md), [safras](safras.md), [custos](custos.md), [orçamento](orcamento.md), [perfil](perfil.md), [manutenção](manutencao.md), [notificações](notificacoes.md), [georreferenciamento](georreferenciamento.md)
