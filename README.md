@@ -6,6 +6,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Manual do usuário**: [`docs/15-manual-do-usuario.md`](docs/15-manual-do-usuario.md)
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
+- **Requisitos do MVP (RF, RNF, RN)**: [`docs/02-requisitos.md`](docs/02-requisitos.md)
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
@@ -244,6 +245,7 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 ## 🔗 Materiais de apoio
 
 - **Documento de produto**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
+- **Requisitos do MVP**: [`docs/02-requisitos.md`](docs/02-requisitos.md) — requisitos funcionais e não funcionais, regras de negócio, critérios de aceite e rastreabilidade
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
