@@ -3,9 +3,11 @@
 Aplicação web para **centralizar a operação de propriedades rurais**: propriedades, talhões, safras, atividades, estoque, ocorrências, custos e indicadores do painel. O servidor Java entrega a API e o frontend na mesma origem; o MongoDB persiste os dados por propriedade autenticada.
 
 - **Repositório**: [`PI_IV_TIME_8`](https://github.com/solerpedroo/PI_IV_TIME_8)
+- **Manual do usuário**: [`docs/15-manual-do-usuario.md`](docs/15-manual-do-usuario.md)
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
+- **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
 ## 👥 Equipe
@@ -63,6 +65,7 @@ Este projeto **não** implementa no MVP:
 - Driver oficial **MongoDB** (`lib/`)
 - Gateway Java opcional (`backend/gateway`)
 - Núcleo de modelo/Atlas (`backend/core`, Maven) para validação do domínio Mongo
+- Catálogo dos endpoints: [`docs/06-contrato-api.md`](docs/06-contrato-api.md)
 
 ### Banco e infra local
 - **MongoDB 8** (Docker Compose com replica set, ou Atlas Free)
@@ -217,6 +220,8 @@ PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 
 Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
 
+Relatório da última execução: [`docs/10-relatorio-de-testes.md`](docs/10-relatorio-de-testes.md).
+
 Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/estoque.md`](docs/estoque.md), [`docs/ocorrencias.md`](docs/ocorrencias.md), [`docs/notificacoes.md`](docs/notificacoes.md), [`docs/perfil.md`](docs/perfil.md), [`docs/safras.md`](docs/safras.md).
 
 ## 🛟 Troubleshooting
@@ -240,6 +245,7 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 
 - **Documento de produto**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
+- **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
 - **Backend (detalhe)**: [`backend/README.md`](backend/README.md)
 - **MongoDB Atlas**: [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md)
