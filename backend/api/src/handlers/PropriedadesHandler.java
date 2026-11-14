@@ -4,6 +4,7 @@
 
 package handlers;
 
+import dados.RepositorioEquipe;
 import dados.RepositorioCustos;
 import dados.RepositorioAtividades;
 import dados.RepositorioTalhoes;
@@ -22,6 +23,7 @@ import seguranca.Sessoes;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import util.Json;
+import util.PapelNaPropriedade;
 import util.PeriodoSafra;
 import util.Validacao;
 
@@ -50,7 +52,13 @@ public class PropriedadesHandler
     {
         this.equipamentos = equipamentos;
     }
+
+    public void setEquipe (RepositorioEquipe equipe)
+    {
+        this.equipe = equipe;
+    }
     private final RepositorioOcorrencias ocorrencias;
+    private RepositorioEquipe equipe;
 
     // O servidor injeta o estoque para impedir exclusão de propriedade com histórico.
     public void setEstoque (dados.RepositorioEstoque estoque)
@@ -205,12 +213,35 @@ public class PropriedadesHandler
     {
         ArrayList<Document> ret = new ArrayList<Document> ();
         String ativa = requisicao.getSessao ().getPropriedadeId ();
+        LinkedHashSet<String> vistos = new LinkedHashSet<String> ();
+
         for (Document propriedade : this.propriedadesDoUsuario (requisicao))
         {
+            String id = PropriedadesHandler.id (propriedade);
+            vistos.add (id);
             Document item = PropriedadesHandler.publico (propriedade);
-            item.append ("selecionada", PropriedadesHandler.id (propriedade).equals (ativa));
+            item.append ("selecionada", id.equals (ativa));
+            item.append ("papel", PapelNaPropriedade.PROPRIETARIO);
             ret.add (item);
         }
+
+        if (this.equipe != null)
+            for (String id : this.equipe.listarPropriedadesColaborador (requisicao.getSessao ().getUsuarioId ()))
+            {
+                if (vistos.contains (id))
+                    continue;
+
+                Document propriedade = this.usuarios.buscarPropriedade (id);
+                if (propriedade == null)
+                    continue;
+
+                Document item = PropriedadesHandler.publico (propriedade);
+                item.append ("selecionada", id.equals (ativa));
+                item.append ("papel", PapelNaPropriedade.COLABORADOR);
+                ret.add (item);
+                vistos.add (id);
+            }
+
         return Resposta.json (200, Json.escrever (ret));
     }
 
@@ -304,10 +335,21 @@ public class PropriedadesHandler
         synchronized (this.sessoes) { return this.selecionarProtegido (requisicao); }
     }
 
+    private boolean podeSelecionar (Requisicao requisicao, String propriedadeId) throws Exception
+    {
+        if (this.propriedadeDoUsuario (requisicao, propriedadeId) != null)
+            return true;
+
+        if (this.equipe == null)
+            return false;
+
+        return this.equipe.membroAtivoDoUsuario (propriedadeId, requisicao.getSessao ().getUsuarioId ()) != null;
+    }
+
     private Resposta selecionarProtegido (Requisicao requisicao) throws Exception
     {
         String id = requisicao.getParametro ("id");
-        if (this.propriedadeDoUsuario (requisicao, id) == null)
+        if (!this.podeSelecionar (requisicao, id))
             return Resposta.erro (404, "Não encontrado.");
         if (!this.sessoes.selecionarPropriedade (requisicao.getToken (), id))
             return Resposta.erro (401, "Não autorizado.");

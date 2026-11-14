@@ -150,22 +150,23 @@ public class Servidor
         Roteador roteador = new Roteador (sessoes);
 
         new SaudeHandler   (conexao).registrar           (roteador);
-        new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
+        RepositorioEquipe equipe = conexao == null
+            ? new RepositorioEquipeMemoria ()
+            : new RepositorioEquipeMongo (conexao.getBanco ());
+        new AuthHandler    (usuarios, sessoes, ServicoEmail.doAmbiente (), equipe).registrar (roteador);
         new PerfilHandler (usuarios, sessoes, ServicoEmail.doAmbiente ()).registrar (roteador);
         RepositorioCulturas culturas = conexao == null
             ? new RepositorioCulturasMemoria ()
             : new RepositorioCulturasMongo (conexao.getBanco ());
 
         PropriedadesHandler propriedades = new PropriedadesHandler (usuarios, talhoes, custos, sessoes, ocorrencias);
+        propriedades.setEquipe (equipe);
         propriedades.setEstoque (estoque);
         propriedades.setAtividades (atividades);
         propriedades.setSafras (safras);
         propriedades.registrar (roteador);
         new CulturasHandler (culturas, talhoes, safras).registrar (roteador);
-        RepositorioEquipe equipe = conexao == null
-            ? new RepositorioEquipeMemoria ()
-            : new RepositorioEquipeMongo (conexao.getBanco ());
-        new EquipeHandler (equipe).registrar (roteador);
+        new EquipeHandler (equipe, usuarios).registrar (roteador);
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, culturas, sessoes);
         handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
