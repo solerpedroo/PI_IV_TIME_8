@@ -9,6 +9,9 @@ import dados.RepositorioColheitas;
 import dados.RepositorioCulturas;
 import dados.RepositorioCulturasMemoria;
 import dados.RepositorioCulturasMongo;
+import dados.RepositorioEquipe;
+import dados.RepositorioEquipeMemoria;
+import dados.RepositorioEquipeMongo;
 import dados.RepositorioColheitasMemoria;
 import dados.RepositorioColheitasMongo;
 import dados.RepositorioOcorrencias;
@@ -46,6 +49,7 @@ import handlers.ColheitasHandler;
 import handlers.AtividadesHandler;
 import handlers.CalendarioHandler;
 import handlers.CulturasHandler;
+import handlers.EquipeHandler;
 import handlers.CustosHandler;
 import handlers.EstaticosHandler;
 import handlers.EstoqueHandler;
@@ -158,6 +162,10 @@ public class Servidor
         propriedades.setSafras (safras);
         propriedades.registrar (roteador);
         new CulturasHandler (culturas, talhoes, safras).registrar (roteador);
+        RepositorioEquipe equipe = conexao == null
+            ? new RepositorioEquipeMemoria ()
+            : new RepositorioEquipeMongo (conexao.getBanco ());
+        new EquipeHandler (equipe).registrar (roteador);
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, culturas, sessoes);
         handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
