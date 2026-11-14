@@ -88,7 +88,19 @@
 }
 
 .sidebar-brand-icon {
+  display: block;
+  flex-shrink: 0;
+  line-height: 0;
   color: var(--accent);
+}
+
+.sidebar-brand-name .brand-name-light {
+  font-weight: 400;
+}
+
+.sidebar-brand-icon img {
+  width: 32px;
+  height: 32px;
 }
 
 .sidebar-brand-icon svg {
@@ -105,7 +117,7 @@
   display: block;
   font-family: var(--font-heading);
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   color: var(--text-inverse);
 }

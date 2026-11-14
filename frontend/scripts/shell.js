@@ -54,6 +54,15 @@
   function sidebarFallbackMarkup() {
     return (
       '<aside class="app-sidebar" role="navigation" aria-label="Navegação principal (modo limitado)">' +
+        '<div class="sidebar-brand">' +
+          '<span class="sidebar-brand-icon" aria-hidden="true">' +
+            '<img src="Assets/brand/simbolo-claro.svg" alt="" width="32" height="32">' +
+          '</span>' +
+          '<span>' +
+            '<span class="sidebar-brand-name">Agro<span class="brand-name-light">Gestão</span></span>' +
+            '<span class="sidebar-brand-caption">Gestão Agrícola</span>' +
+          '</span>' +
+        '</div>' +
         '<nav class="sidebar-nav" data-app-sidebar-nav>' +
           '<a class="sidebar-link" href="dashboard.html" data-sidebar-page="dashboard">Painel</a>' +
           '<a class="sidebar-link" href="configuracoes.html" data-sidebar-page="configuracoes">Configurações</a>' +

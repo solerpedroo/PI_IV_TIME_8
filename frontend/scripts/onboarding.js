@@ -8,7 +8,7 @@
   const STORAGE_USER = "agro.sessionUser";
   const STEPS = [
     {
-      title: "Bem-vindo ao Agro Gestão",
+      title: "Bem-vindo ao AgroGestão",
       html: `<p>Este painel concentra a operação da <strong>propriedade ativa</strong>: indicadores, atividades recentes e atalhos do dia a dia.</p>
         <p>Tudo o que você registrar fica salvo no servidor — pode recarregar a página ou trocar de dispositivo sem perder dados.</p>`,
     },

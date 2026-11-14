@@ -28,9 +28,14 @@
   width: 100%;
 }
 
-.auth-aside .brand-mark {
+.auth-aside .brand-mark:not(.brand-mark--logo) {
   background: var(--primary);
   color: var(--text-inverse);
+}
+
+.auth-aside .brand-mark--logo .brand-img {
+  width: 56px;
+  height: 56px;
 }
 
 .auth-aside .brand-name {
@@ -69,16 +74,17 @@
   margin-bottom: var(--space-md);
 }
 
-.auth-aside--confirm .brand-sprout svg {
-  width: 48px;
-  height: 48px;
+.auth-aside--confirm .brand-sprout svg,
+.auth-aside--confirm .brand-sprout .brand-img {
+  width: 64px;
+  height: 64px;
 }
 
 .auth-aside--confirm .brand-title {
   margin: 0 0 var(--space-md);
   font-family: var(--font-heading);
   font-size: 36px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-inverse);
   letter-spacing: -0.02em;
 }
