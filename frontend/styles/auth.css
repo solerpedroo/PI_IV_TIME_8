@@ -529,3 +529,53 @@
 .otp-inputs input[aria-invalid="true"] {
   border-color: var(--danger);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Convite de equipe (equipe-convite.html) — Miguel — RA: 25003110           */
+/* Mesmo eixo das telas centralizadas de recuperar/redefinir senha.          */
+/* -------------------------------------------------------------------------- */
+.convite-card .auth-header p[data-convite-status] {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.convite-resumo {
+  width: 100%;
+  margin: 0 0 var(--space-lg);
+  display: grid;
+  gap: 0;
+}
+
+.convite-resumo > div {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 38%) minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.convite-resumo > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.convite-resumo dt {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.convite-resumo dd {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.convite-actions .btn {
+  width: 100%;
+  justify-content: center;
+}

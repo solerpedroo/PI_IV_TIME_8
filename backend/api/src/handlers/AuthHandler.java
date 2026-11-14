@@ -3,7 +3,9 @@ package handlers;
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
+import dados.RepositorioEquipe;
 import dados.RepositorioUsuarios;
+import util.PapelNaPropriedade;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -32,6 +34,7 @@ public class AuthHandler
     private static final int  MAXIMO_TENTATIVAS = 60;
 
     private final RepositorioUsuarios usuarios;
+    private final RepositorioEquipe   equipe;
     private final Sessoes             sessoes;
     private final ServicoEmail        email;
     private final LimitadorDeTaxa     limitador = new LimitadorDeTaxa ();
@@ -40,6 +43,12 @@ public class AuthHandler
     private final Object trava = new Object ();
 
     public AuthHandler (RepositorioUsuarios usuarios, Sessoes sessoes, ServicoEmail email) throws Exception
+    {
+        this (usuarios, sessoes, email, null);
+    }
+
+    public AuthHandler (RepositorioUsuarios usuarios, Sessoes sessoes, ServicoEmail email,
+                        RepositorioEquipe equipe) throws Exception
     {
         if (usuarios == null)
             throw new Exception ("Repositorio de usuarios ausente");
@@ -51,6 +60,7 @@ public class AuthHandler
             throw new Exception ("Servico de e-mail ausente");
 
         this.usuarios = usuarios;
+        this.equipe   = equipe;
         this.sessoes  = sessoes;
         this.email    = email;
     }
@@ -220,8 +230,23 @@ public class AuthHandler
             return Resposta.erro (401, "Não autorizado.");
 
         Document propriedade = this.usuarios.buscarPropriedade (sessao.getPropriedadeId ());
-        Document ret         = new Document ("usuario", AuthHandler.usuarioPublico (usuario)
-                                         .append ("propriedadeId", sessao.getPropriedadeId ()));
+        Document usuarioPublico = AuthHandler.usuarioPublico (usuario)
+                                      .append ("propriedadeId", sessao.getPropriedadeId ());
+
+        String propriedadeId = sessao.getPropriedadeId ();
+        String usuarioId     = sessao.getUsuarioId ();
+        boolean dono = PapelNaPropriedade.ehProprietario (this.usuarios, propriedadeId, usuarioId);
+        usuarioPublico.append ("papel", dono ? PapelNaPropriedade.PROPRIETARIO : PapelNaPropriedade.COLABORADOR);
+        usuarioPublico.append ("equipeGerenciavel", dono);
+
+        if (!dono && this.equipe != null)
+        {
+            Document colaboracao = this.equipe.membroAtivoDoUsuario (propriedadeId, usuarioId);
+            if (colaboracao != null)
+                usuarioPublico.append ("telas", colaboracao.get ("telas"));
+        }
+
+        Document ret = new Document ("usuario", usuarioPublico);
 
         if (propriedade != null)
             ret.append ("propriedade", new Document ("id",   sessao.getPropriedadeId ())

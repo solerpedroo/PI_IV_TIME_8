@@ -541,6 +541,14 @@
   /* ------------------------------------------------------------------------ */
   /* Boot                                                                     */
   /* ------------------------------------------------------------------------ */
+  function aplicarRedirectLogin() {
+    const destino = new URLSearchParams(location.search).get("redirect");
+    if (!destino || destino.includes("://") || destino.includes("..")) return;
+    $$('[data-auth-route="/api/auth/login"]').forEach((form) => {
+      form.dataset.successRoute = destino;
+    });
+  }
+
   function init() {
     initPasswordToggles();
     initPasswordMeter();
@@ -549,6 +557,7 @@
     initConfirmEmail();
     initResend();
     initConfirmEmailForm();
+    aplicarRedirectLogin();
     initAuthForms();
     consumeFlashMessage();
   }

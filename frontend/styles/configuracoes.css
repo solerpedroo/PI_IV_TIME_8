@@ -1,3 +1,4 @@
+/* Miguel — RA: 25003110 */
 /* Layout da tela de Configurações. */
 .settings-main { gap: 20px; }
 .settings-content { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; flex: 1 1 auto; min-height: 0; }
@@ -13,6 +14,7 @@
 .settings-card-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .settings-card-header h2 { margin: 0 0 4px; font-family: var(--font-heading); font-size: 18px; font-weight: 600; }
 .settings-card-header p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.settings-callout { margin-top: 8px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border)); background: var(--primary-subtle); font-size: 12px; line-height: 1.45; color: var(--text-primary); }
 .settings-form { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 24px; padding: 24px; }
 .settings-form-single { display: grid; grid-template-columns: 1fr; gap: 16px; align-content: start; }
 .profile-avatar-column { display: grid; align-content: start; justify-items: center; gap: 12px; }
@@ -75,5 +77,46 @@
 .password-rules span.is-valid::before { border-color: var(--success); background: radial-gradient(circle at center, var(--success) 0 35%, transparent 36%); }
 @keyframes settings-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+.team-panel-body { gap: 20px; }
+.team-section-title { margin: 0 0 8px; font-family: var(--font-heading); font-size: 15px; font-weight: 600; }
+.team-member-list { display: grid; gap: 14px; }
+.team-member-card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-card); overflow: hidden; }
+.team-member-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.team-member-avatar { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: var(--primary); color: var(--text-inverse); font-size: 16px; font-weight: 600; flex: 0 0 auto; }
+.team-member-fields { display: grid; gap: 12px; min-width: 0; }
+.team-member-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* Miguel — RA: 25003110 — painel retrátil de telas no card do integrante */
+.team-access-panel { border-top: 1px solid var(--border); padding: 0; }
+.team-access-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background-color 0.15s ease;
+}
+.team-access-trigger:hover { background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.team-access-title { margin: 0; flex: 1 1 auto; color: var(--text-secondary); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.team-access-hint { flex: 0 0 auto; font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: none; letter-spacing: normal; }
+.team-access-chevron { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.18s ease; }
+.team-access-trigger[aria-expanded="false"] .team-access-chevron { transform: rotate(-90deg); }
+.team-access-body { padding-bottom: 8px; }
+.team-access-list { padding: 0 12px 4px; }
+.team-access-row strong { font-size: 13px; }
+.team-status-badge { margin: 12px 20px 0; font-size: 11px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: .04em; }
+.team-mode-row { display: grid; gap: 8px; padding: 16px 20px 0; font-size: 13px; }
+.team-mode-option { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.team-invite-panel { padding: 0 20px 16px; border-top: 1px solid var(--border); }
+.team-invite-label { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.team-invite-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+.team-invite-row input { width: 100%; min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; font: inherit; font-size: 12px; }
+
 @media (max-width: 900px) { .settings-content { grid-template-columns: 1fr; } .settings-nav { display: grid; grid-template-columns: repeat(3, 1fr); } .settings-nav-item { justify-content: center; } }
-@media (max-width: 620px) { .settings-nav { grid-template-columns: repeat(2, 1fr); } .settings-nav-item { justify-content: flex-start; } .settings-card-header, .settings-form { padding: 18px; } .settings-card-header { flex-direction: column; } .settings-form { grid-template-columns: 1fr; } .form-grid-2 { grid-template-columns: 1fr; } .profile-avatar-column { justify-items: start; } }
+@media (max-width: 620px) { .settings-nav { grid-template-columns: repeat(2, 1fr); } .settings-nav-item { justify-content: flex-start; } .settings-card-header, .settings-form { padding: 18px; } .settings-card-header { flex-direction: column; } .settings-form { grid-template-columns: 1fr; } .form-grid-2 { grid-template-columns: 1fr; } .profile-avatar-column { justify-items: start; } .team-member-head { grid-template-columns: 1fr; } .team-member-actions { justify-content: stretch; } .team-member-actions .btn { flex: 1 1 auto; } }

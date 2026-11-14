@@ -23,10 +23,14 @@
   function initTabs() {
     $$('[data-settings-tab]').forEach((button) => button.addEventListener("click", (event) => {
       event.preventDefault();
-      showTab(button.dataset.settingsTab);
+      const nome = button.dataset.settingsTab;
+      showTab(nome);
+      document.dispatchEvent(new CustomEvent("agro:settings-tab", { detail: nome }));
     }));
     const initial = location.hash.replace("#settings-", "");
-    showTab(["profile", "property", "notifications", "security"].includes(initial) ? initial : "profile", false);
+    const abas = ["profile", "property", "notifications", "security", "team"];
+    showTab(abas.includes(initial) ? initial : "profile", false);
+    if (abas.includes(initial)) document.dispatchEvent(new CustomEvent("agro:settings-tab", { detail: initial }));
   }
 
   // Dados pessoais, preferências e senha são tratados em perfil-api.js.

@@ -169,6 +169,9 @@
       const data = await response.json();
       sessionStorage.setItem(STORAGE.sessionUser, JSON.stringify(data.usuario));
       fillProfile(data.usuario, data.propriedade?.farm);
+      aplicarTelasColaborador(data.usuario);
+      ajustarUiPorPapel(data.usuario);
+      await iniciarSeletorPropriedade(data.usuario);
       window.__agroAuthenticated = true;
       document.dispatchEvent(new CustomEvent("agro:authenticated", { detail: { usuario: data.usuario } }));
       return true;
@@ -185,11 +188,71 @@
     }
   }
 
+  // Esconde itens do menu conforme permissões do colaborador na propriedade ativa.
+  function aplicarTelasColaborador(user) {
+    const nav = document.querySelector("[data-app-sidebar-nav]");
+    if (!nav) return;
+    const links = [...nav.querySelectorAll("[data-sidebar-page]")];
+    links.forEach((link) => { link.hidden = false; link.removeAttribute("aria-disabled"); });
+    if (!user || user.papel !== "colaborador" || !user.telas) return;
+    links.forEach((link) => {
+      const chave = link.dataset.sidebarPage;
+      if (user.telas[chave] === false) {
+        link.hidden = true;
+        link.setAttribute("aria-disabled", "true");
+      }
+    });
+    const pagina = (window.location.pathname.split("/").pop() || "").replace(/\.html$/i, "");
+    if (user.telas[pagina] === false) {
+      const destino = links.find((link) => !link.hidden)?.getAttribute("href") || "dashboard.html";
+      window.location.replace(destino);
+    }
+  }
+
   // Usa sempre a conta autenticada, sem nomes fixos do protótipo na navegação.
   function fillProfile(user, property) {
     $$(".sidebar-user-name").forEach(el => { el.textContent = user.name; });
-    if (property) $$(".sidebar-user-property").forEach(el => { el.textContent = property; });
+    const papel = user?.papel === "colaborador" ? "Colaboração" : "Minha propriedade";
+    const rotulo = property ? `${property} · ${papel}` : papel;
+    $$(".sidebar-user-property").forEach(el => { el.textContent = rotulo; });
     $$(".sidebar-avatar").forEach(el => { el.textContent = (user.name || "").split(/\s+/).slice(0, 2).map(part => part[0]).join(""); });
+  }
+
+  // Colaborador não gerencia equipe; proprietário vê a aba normalmente.
+  function ajustarUiPorPapel(user) {
+    const abaEquipe = document.querySelector('[data-settings-tab="team"]');
+    if (abaEquipe) abaEquipe.hidden = user?.equipeGerenciavel === false;
+    const hint = document.querySelector("[data-property-context-hint]");
+    if (hint) {
+      const colab = user?.papel === "colaborador";
+      hint.hidden = !colab;
+      hint.textContent = colab
+        ? "Modo colaboração: permissões limitadas às telas liberadas pelo proprietário."
+        : "";
+    }
+  }
+
+  async function iniciarSeletorPropriedade(user) {
+    const ctx = window.AgroContextoPropriedade;
+    const select = document.querySelector("[data-property-context-switch]");
+    if (!ctx || !select) return;
+    try {
+      const lista = await ctx.listar();
+      const ativa = ctx.preencherSelect(select, lista, user?.propriedadeId);
+      ctx.ligarTroca(select, ativa);
+      const configSelect = document.querySelector("#property-context[data-property-context]");
+      if (configSelect && configSelect !== select) {
+        ctx.preencherSelect(configSelect, lista, ativa);
+        if (configSelect.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(configSelect);
+        ctx.ligarTroca(configSelect, ativa);
+      }
+    } catch (erro) {
+      window.AgroToast?.show({
+        type: "error",
+        title: "Propriedades indisponíveis",
+        description: erro.message,
+      });
+    }
   }
   document.addEventListener("agro:profile-updated", e => fillProfile(e.detail));
 
