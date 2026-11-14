@@ -6,6 +6,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Contexto acadêmico**: Projeto Integrador IV — Engenharia de Software — PUC-Campinas (2026)
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
+- **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
 ## 👥 Equipe
@@ -240,6 +241,7 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 
 - **Documento de produto**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
+- **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
 - **Backend (detalhe)**: [`backend/README.md`](backend/README.md)
 - **MongoDB Atlas**: [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md)
