@@ -474,6 +474,59 @@ public class TesteServidor
             conferir ("cadastrar cultura " + nome, 201, post ("/api/culturas", new Document ("nome", nome).toJson (), token));
     }
 
+    private static void testarEquipe () throws Exception
+    {
+        System.out.println ("\n# equipe da propriedade");
+
+        String token = login ("maria@agro.com", "Nova@1234");
+        conferir ("listar equipe vazia", get ("/api/equipe", token).corpo.equals ("[]"));
+        conferir ("listar sem token -> 401", 401, get ("/api/equipe", null));
+        conferir ("nome curto -> 400", camposComErro (post ("/api/equipe", "{\"nome\":\"A\"}", token)).containsKey ("nome"));
+        conferir ("cargo nao texto -> 400", camposComErro (post ("/api/equipe", "{\"nome\":\"Ana\",\"cargo\":1}", token)).containsKey ("cargo"));
+        conferir ("telas fora de objeto -> 400", camposComErro (post ("/api/equipe", "{\"nome\":\"Ana\",\"telas\":\"todas\"}", token)).containsKey ("telas"));
+
+        Document telas = new Document ("dashboard", true).append ("configuracoes", false);
+        Document corpo = new Document ("nome", "Carlos Pereira").append ("cargo", "Operador de campo").append ("telas", telas);
+        Resp criado = post ("/api/equipe", corpo.toJson (), token);
+        conferir ("criar integrante -> 201", 201, criado);
+        String id = criado.json ().getString ("id");
+        conferir ("cargo gravado", "Operador de campo".equals (criado.json ().getString ("cargo")));
+        conferir ("resposta esconde campos internos",
+                  !criado.corpo.contains ("propriedadeId") && !criado.corpo.contains ("nomeNormalizado") && !criado.corpo.contains ("proprietarioId"));
+        conferir ("configuracoes bloqueadas",
+                  Boolean.FALSE.equals (criado.json ().get ("telas", Document.class).getBoolean ("configuracoes")));
+        conferir ("nome duplicado -> 409", 409, post ("/api/equipe", corpo.toJson (), token));
+        conferir ("nome duplicado sem diferenca de maiusculas -> 409", 409,
+                  post ("/api/equipe", new Document ("nome", "carlos pereira").toJson (), token));
+
+        Resp semCargo = post ("/api/equipe", new Document ("nome", "Sem Funcao").toJson (), token);
+        conferir ("criar sem cargo -> 201", 201, semCargo);
+        conferir ("cargo em branco nao vai no json", semCargo.status == 201 && !semCargo.corpo.contains ("\"cargo\""));
+        if (semCargo.status == 201)
+            conferir ("excluir sem cargo -> 204", 204, requisitar ("DELETE", "/api/equipe/" + semCargo.json ().getString ("id"), null, token));
+
+        String outro = login ("joao@agro.com", "Senha@123");
+        conferir ("sessao da outra propriedade", outro != null);
+        if (outro != null)
+        {
+            conferir ("outra propriedade nao lista o integrante", !get ("/api/equipe", outro).corpo.contains ("Carlos Pereira"));
+            conferir ("outra propriedade nao altera -> 404", 404, put ("/api/equipe/" + id, corpo.toJson (), outro));
+            conferir ("outra propriedade nao exclui -> 404", 404, requisitar ("DELETE", "/api/equipe/" + id, null, outro));
+        }
+
+        conferir ("atualizar inexistente -> 404", 404, put ("/api/equipe/" + new ObjectId ().toHexString (), corpo.toJson (), token));
+
+        Document edicao = new Document ("nome", "Carlos P.").append ("cargo", "Capataz")
+            .append ("telas", new Document ("custos", false).append ("dashboard", true));
+        Resp atualizado = put ("/api/equipe/" + id, edicao.toJson (), token);
+        conferir ("atualizar integrante -> 200", 200, atualizado);
+        conferir ("custos desligado",
+                  Boolean.FALSE.equals (atualizado.json ().get ("telas", Document.class).getBoolean ("custos")));
+
+        conferir ("excluir integrante -> 204", 204, requisitar ("DELETE", "/api/equipe/" + id, null, token));
+        conferir ("excluir novamente -> 404", 404, requisitar ("DELETE", "/api/equipe/" + id, null, token));
+    }
+
     private static void testarTalhoes () throws Exception
     {
         System.out.println ("\n# talhoes e isolamento entre usuarios");
@@ -1557,6 +1610,7 @@ public class TesteServidor
             TesteServidor.testarCadastro ();
             TesteServidor.testarLogin ();
             TesteServidor.testarConfirmacaoERedefinicao ();
+            TesteServidor.testarEquipe ();
             TesteServidor.testarTalhoes ();
             TesteServidor.testarAtividadesEHistorico ();
             TesteServidor.testarCalendario ();
