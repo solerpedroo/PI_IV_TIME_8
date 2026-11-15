@@ -103,18 +103,17 @@ Esses testes não acessam o Atlas nem precisam de credenciais.
 
 ## Etapa 6 — iniciar a API com o Atlas
 
-Na raiz do repositório, no Linux, macOS ou Git Bash, carregue o arquivo local no terminal que iniciará a API. Execute apenas arquivos `.env` de confiança, pois o comando `.` interpreta seu conteúdo como comandos de shell:
+Na raiz do repositório:
 
 ```bash
-set -a
-. ./.env
-set +a
-cd backend/api
-bash compilar.sh
-bash rodar.sh
+bash emular.sh
 ```
 
-Em outro terminal, execute `curl -i http://127.0.0.1:8080/ready`. HTTP 200 confirma que a API conseguiu consultar o banco; HTTP 503 indica indisponibilidade. Se a API não iniciar, confira o IP autorizado, usuário, senha, nome do banco e a URI, sem compartilhar a URI completa. Cada novo terminal precisa carregar o `.env` novamente. Sem essa etapa, o script usa o MongoDB local por padrão.
+No Windows: `emular.bat`. O script carrega o `.env` (somente arquivos de confiança), compila se necessário e sobe a API com o MongoDB Atlas.
+
+Em outro terminal, execute `curl -i http://127.0.0.1:8080/ready`. HTTP 200 confirma que a API conseguiu consultar o banco; HTTP 503 indica indisponibilidade. Se a API não iniciar, confira o IP autorizado, usuário, senha, nome do banco e a URI, sem compartilhar a URI completa.
+
+Alternativa manual: `bash backend/api/rodar.sh` (ele também lê `.env` na raiz quando `MONGODB_URI` não está no ambiente).
 
 Para validar também o módulo core, volte à raiz do repositório, carregue o `.env` no terminal e inicie o core:
 
