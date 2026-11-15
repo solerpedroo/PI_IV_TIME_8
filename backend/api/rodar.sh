@@ -12,8 +12,17 @@ for arg in "$@"; do
     case "$arg" in --memoria) usa_memoria=true ;; esac
 done
 
+ENV_RAIZ="$(cd "$(dirname "$0")/../.." && pwd)/.env"
+if [ -z "${MONGODB_URI:-}" ] && [ -f "$ENV_RAIZ" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$ENV_RAIZ"
+    set +a
+fi
+
 if [ -z "$MONGODB_URI" ] && [ "$usa_memoria" = false ]; then
-    echo "Defina MONGODB_URI (MongoDB Atlas). Copie .env.example para .env na raiz e carregue-o." >&2
+    echo "Defina MONGODB_URI (MongoDB Atlas). Copie .env.example para .env na raiz." >&2
+    echo "Na raiz do repositório: bash emular.sh" >&2
     echo "Guia: docs/mongodb-atlas.md" >&2
     exit 1
 fi
