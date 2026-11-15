@@ -344,7 +344,7 @@ Verificação manual feita em modo memória, na porta 8080:
 
 | Item | Situação |
 |---|---|
-| **Validação com MongoDB real** | `backend/api/testar-mongo.sh` valida cadastro, índice único e criação transacional contra o banco `agrogestao_teste`. Requer `docker compose up -d mongo`. |
+| **Validação com MongoDB real** | `backend/api/testar-mongo.sh` valida cadastro, índice único e criação transacional no Atlas; exige `MONGODB_URI` com banco `_teste`. |
 | Integração do front | Formulários de autenticação integrados por `fetch`, com token em `sessionStorage`. |
 | Demais módulos | Atividades, Insumos, Ocorrências, Custos, Dashboard, Notificações e Configurações ficam para as próximas entregas. |
 | Sessões em memória | Reiniciar o servidor desloga todos (aceitável nesta fase). |
@@ -387,7 +387,7 @@ alterados.
 1. `backend\api\testar.bat`: deve terminar em `137/137 testes ok`.
 2. `backend\api\compilar.bat` e `rodar.bat --memoria`; abrir
    <http://localhost:8080> e seguir o roteiro com `curl` do README.
-3. Com Docker: `docker compose up -d mongo`, depois `rodar.bat`. Repetir o
+3. Com Atlas: carregue o `.env` com `MONGODB_URI`, depois `rodar.bat`. Repetir o
    roteiro, reiniciar o servidor e confirmar que os talhões continuam lá.
 4. Pontos de leitura sugeridos: `http/ParceiroHttp.java` (protocolo),
    `http/Roteador.java` (rotas e autenticação), `handlers/EstaticosHandler.java`
