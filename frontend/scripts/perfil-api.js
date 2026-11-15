@@ -55,8 +55,10 @@
 
   async function defaultOptions() {
     const properties = await api("/api/propriedades");
+    const owned = window.AgroContextoPropriedade?.propriedadesProprias(properties)
+      ?? properties.filter((p) => p.papel !== "colaborador");
     const select = $("[data-default-property-form] select");
-    select.replaceChildren(...properties.map(p => new Option(p.nome || p.farm, p.id)));
+    select.replaceChildren(...owned.map((p) => new Option(p.nome || p.farm, p.id)));
     select.value = user.propriedadePadraoId;
     select.disabled = false;
   }

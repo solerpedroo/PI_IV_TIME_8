@@ -1,0 +1,52 @@
+<!-- Miguel — RA: 25003110 -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Aceitar convite para colaborar em uma propriedade no AgroGestão.">
+  <link rel="icon" type="image/svg+xml" href="Assets/brand/favicon.svg">
+  <title>Convite de equipe — AgroGestão</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/feedback.css">
+  <link rel="stylesheet" href="styles/motion.css">
+</head>
+<body>
+  <main class="auth-main auth-main--flush">
+    <div class="center-stack center-stack--reset">
+      <div class="center-brand">
+        <div class="brand-lockup brand-lockup--compact">
+          <span class="brand-mark brand-mark--logo" aria-hidden="true">
+            <img class="brand-img" src="Assets/brand/simbolo.svg" alt="" width="48" height="48">
+          </span>
+          <span>
+            <span class="brand-name">Agro<span class="brand-name-light">Gestão</span></span>
+            <span class="brand-caption">Gestão agrícola inteligente</span>
+          </span>
+        </div>
+      </div>
+
+      <section class="verify-card convite-card" aria-labelledby="convite-title">
+        <header class="auth-header">
+          <h2 id="convite-title">Convite para a equipe</h2>
+          <p data-convite-status role="status">Validando convite…</p>
+        </header>
+
+        <dl class="convite-resumo" data-convite-resumo hidden></dl>
+        <div class="form-message" data-convite-message></div>
+
+        <div class="verify-actions convite-actions">
+          <a class="btn btn-outline" href="login.html" data-convite-login hidden>Entrar para aceitar</a>
+          <button type="button" class="btn btn-primary" data-convite-aceitar hidden>Aceitar convite</button>
+          <a class="btn btn-outline" href="dashboard.html" data-convite-ir hidden>Ir para o painel</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast-viewport" data-toast-viewport aria-live="polite"></div>
+  <script src="scripts/toast.js" defer></script>
+  <script src="scripts/equipe-convite.js" defer></script>
+</body>
+</html>

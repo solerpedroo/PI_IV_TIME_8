@@ -1,10 +1,8 @@
-/* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
-/* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
-
+// Miguel — RA: 25003110
+// Autor secundário: Pedro Henrique Contardi Soler — RA: 25005592
 /*
   Conecta a aba Propriedade à API Java quando há uma sessão autenticada.
-  A seleção é enviada ao servidor, portanto Áreas de Cultivo receberá o
-  contexto correto mesmo após recarregar a página.
+  A troca de contexto usa AgroContextoPropriedade (sidebar + este select).
 */
 (() => {
   "use strict";
@@ -15,11 +13,13 @@
   const token = () => sessionStorage.getItem("agro.sessionToken");
   const base = window.location.origin;
   const toast = (type, title, description) => window.AgroToast?.show({ type, title, description });
+  const ctx = () => window.AgroContextoPropriedade;
+
   const request = async (path, options = {}) => {
     const response = await fetch(base + path, {
       ...options,
       signal: AbortSignal.timeout(15000),
-      headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json", ...(options.headers || {}) }
+      headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json", ...(options.headers || {}) },
     });
     const body = response.status === 204 ? null : await response.json().catch(() => ({}));
     if (!response.ok) throw Object.assign(new Error(body.error || "Não foi possível concluir a operação."), { body });
@@ -29,7 +29,6 @@
   let currentId = null;
   let properties = [];
   const selector = document.querySelector("#property-context");
-  if (!selector) return;
 
   function fill(property) {
     currentId = property.id;
@@ -41,10 +40,25 @@
     form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  function aplicarModoPropriedade() {
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    const colaborador = user?.papel === "colaborador";
+    const notice = document.querySelector("[data-property-collab-notice]");
+    const nova = document.querySelector("[data-new-property]");
+    const salvar = document.querySelector('button[form="property-form"]');
+    if (notice) notice.hidden = !colaborador;
+    if (nova) nova.hidden = colaborador;
+    if (salvar) salvar.hidden = colaborador;
+    for (const name of ["farm", "area", "location", "city", "harvest"]) {
+      const controle = form.elements[name];
+      if (controle) controle.disabled = colaborador;
+    }
+    if (selector) selector.disabled = false;
+  }
+
   function renderSelector() {
-    selector.replaceChildren(...properties.map((property) => new Option(property.nome, property.id)));
-    if (currentId) selector.value = currentId;
-    else selector.selectedIndex = -1;
+    if (!selector || !ctx()) return;
+    ctx().preencherSelect(selector, properties, currentId);
     if (selector.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(selector);
   }
 
@@ -71,8 +85,8 @@
   }
 
   async function load() {
-    if (!token()) return;
-    properties = await request("/api/propriedades");
+    if (!token() || !ctx()) return;
+    properties = await ctx().listar();
     const selected = properties.find((property) => property.selecionada) || properties[0];
     const periodos = await loadHarvestPeriods(selected?.safraAtual || "").catch(
       () => window.AgroPeriodosSafra?.fallbackLocal() || null,
@@ -84,27 +98,13 @@
       form.elements.harvest.dispatchEvent(new Event("change", { bubbles: true }));
     }
     if (selected || properties.length) renderSelector();
+    aplicarModoPropriedade();
     document.dispatchEvent(new Event("agro:properties-loaded"));
   }
 
-  selector.addEventListener("change", async () => {
-    selector.disabled = true;
-    try {
-      const selected = await request(`/api/propriedades/${encodeURIComponent(selector.value)}/selecionar`, { method: "POST", body: "{}" });
-      const user = JSON.parse(sessionStorage.getItem("agro.sessionUser"));
-      user.propriedadeId = selected.propriedadeId;
-      sessionStorage.setItem("agro.sessionUser", JSON.stringify(user));
-      // Reinicializa também os módulos locais no namespace da nova propriedade.
-      window.location.reload();
-    } catch (error) {
-      selector.value = currentId;
-      selector.disabled = false;
-      toast("error", "Não foi possível trocar", error.message);
-    }
-  });
-
-  // Limpa o formulário para que o próximo salvamento crie uma nova propriedade.
   document.querySelector("[data-new-property]")?.addEventListener("click", () => {
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    if (user?.papel === "colaborador") return;
     currentId = null;
     form.reset();
     for (const field of ["farm", "area", "location", "city", "harvest"]) form.elements[field].value = "";
@@ -118,18 +118,25 @@
     form.elements.farm.focus();
   });
 
-  // Captura o submit antes do manipulador local para não anunciar persistência remota
-  // quando a API devolve uma validação ou erro de autorização.
   form.addEventListener("submit", async (event) => {
     if (!token()) return;
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    if (user?.papel === "colaborador") {
+      event.preventDefault();
+      toast("warning", "Somente leitura", "Colaboradores não alteram os dados cadastrais da propriedade.");
+      return;
+    }
     event.preventDefault();
     event.stopImmediatePropagation();
     if (form.getAttribute("aria-busy") === "true") return;
     form.setAttribute("aria-busy", "true");
-    form.querySelectorAll("[aria-invalid]").forEach(control => control.removeAttribute("aria-invalid"));
+    form.querySelectorAll("[aria-invalid]").forEach((control) => control.removeAttribute("aria-invalid"));
     const payload = {
-      nome: form.elements.farm.value.trim(), areaHectares: Number(form.elements.area.value), localizacao: form.elements.location.value.trim(),
-      municipio: form.elements.city.value.trim(), safraAtual: form.elements.harvest.value
+      nome: form.elements.farm.value.trim(),
+      areaHectares: Number(form.elements.area.value),
+      localizacao: form.elements.location.value.trim(),
+      municipio: form.elements.city.value.trim(),
+      safraAtual: form.elements.harvest.value,
     };
     try {
       const property = currentId

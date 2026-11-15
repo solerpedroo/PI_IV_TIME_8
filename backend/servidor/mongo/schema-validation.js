@@ -1,3 +1,4 @@
+// Miguel — RA: 25003110
 /*
  * Validação estrutural das coleções do servidor AgroGestão.
  *
@@ -73,6 +74,16 @@ const schemas = {
     properties: {
       propriedadeId: string, proprietarioId: string, nome: string,
       nomeNormalizado: string, criadoEm: date
+    }
+  },
+  // cargo fica de fora quando a função está em branco; null não é string.
+  equipe_membros: {
+    required: ["propriedadeId", "nome", "status", "telas"],
+    properties: {
+      propriedadeId: string, proprietarioId: string, usuarioId: string,
+      nome: string, nomeNormalizado: string, emailConvidado: string, status: string,
+      conviteToken: string, conviteExpiraEm: date,
+      cargo: string, telas: object, criadoEm: date, atualizadoEm: date
     }
   },
   historicos_talhoes: {
