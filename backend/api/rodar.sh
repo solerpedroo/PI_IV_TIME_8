@@ -7,8 +7,15 @@ cd "$(dirname "$0")"
 SEP=":"
 case "$(uname)" in MINGW*|MSYS*|CYGWIN*) SEP=";" ;; esac
 
-if [ -z "$MONGODB_URI" ]; then
-    export MONGODB_URI="mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000"
+usa_memoria=false
+for arg in "$@"; do
+    case "$arg" in --memoria) usa_memoria=true ;; esac
+done
+
+if [ -z "$MONGODB_URI" ] && [ "$usa_memoria" = false ]; then
+    echo "Defina MONGODB_URI (MongoDB Atlas). Copie .env.example para .env na raiz e carregue-o." >&2
+    echo "Guia: docs/mongodb-atlas.md" >&2
+    exit 1
 fi
 
 if [ -z "$SERVIDOR_ALGORITMOS_DISABLED" ]; then
