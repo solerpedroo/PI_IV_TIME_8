@@ -48,11 +48,11 @@ Na raiz, JDK 21 instalado:
 sh backend/api/testar.sh
 ```
 
-Mongo local com transações (o Compose inicializa `rs0` e aguarda primário):
+MongoDB Atlas com banco dedicado `_teste`:
 
 ```bash
-docker compose up -d --wait mongo
-export MONGODB_URI='mongodb://127.0.0.1:27017/agro_estoque_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
+set -a && . ./.env && set +a
+# Ajuste temporariamente a URI para um banco terminado em _teste (ex.: agrogestao_ci_teste)
 sh backend/api/testar-estoque-mongo.sh
 node tests/estoque-real.cjs
 ```
