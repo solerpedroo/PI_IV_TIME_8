@@ -83,7 +83,7 @@ impressos no console da API; o gateway só existe quando alguém o inicia.
 | Porta | Processo | Quando se aplica |
 | --- | --- | --- |
 | **8080** | API HTTP (`backend/api`) | Sempre. Configurável por argumento ou `SERVIDOR_PORT`. É a porta aberta no navegador. |
-| **3000** | ServerSocket de algoritmos | Sempre. `backend/api/rodar.sh` sobe o socket antes da API; o `rodar.bat` não, e no Windows ele é iniciado à parte com `backend/serversocket/rodar.bat`. Configurável na API por `SERVIDOR_ALGORITMOS_PORT`. |
+| **3000** | ServerSocket de algoritmos | Sempre. `emular.sh` / `rodar.sh` / `rodar.bat` sobem o socket antes da API. Configurável por `SERVIDOR_ALGORITMOS_PORT`. |
 | **Atlas** | MongoDB na nuvem (`MONGODB_URI`) | Persistência única do projeto; porta e host vêm do cluster. Sem banco (`--memoria`), não se aplica. |
 | 30100 | ServerSocket de teste | Só em `backend/api/testar.sh`, para não colidir com um socket na 3000. |
 | 8081 | `backend/core` | Só ao executar o `CoreApplication` (`JAVA_PORT`). |
@@ -226,7 +226,7 @@ memória; sem a opção, a implementação Mongo.
 
 | Modo | Comando | Banco | Uso |
 | --- | --- | --- | --- |
-| Com MongoDB | `bash backend/api/rodar.sh` | `MONGODB_URI` obrigatória (Atlas, via `.env`) | Uso normal, com persistência |
+| Com MongoDB | `bash emular.sh` (raiz) ou `bash backend/api/rodar.sh` | `MONGODB_URI` no `.env` na raiz (Atlas) | Uso normal, com persistência |
 | Memória | `bash backend/api/rodar.sh --memoria` | nenhum | Desenvolvimento e testes; os dados somem ao encerrar |
 | Sem ServerSocket | `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh …` | conforme o modo | Não recomendado: as rotas delegadas respondem 503 |
 
