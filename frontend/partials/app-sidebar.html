@@ -54,17 +54,21 @@
 
   <div class="sidebar-spacer" aria-hidden="true"></div>
 
-  <!-- Seletor global de contexto (própria ou colaboração) — Miguel — RA: 25003110 -->
-  <div class="sidebar-context" data-sidebar-property-context>
-    <label class="sidebar-context-label" for="sidebar-property-context">Propriedade ativa</label>
-    <select
-      id="sidebar-property-context"
-      class="sidebar-context-select"
-      data-property-context-switch
-      aria-label="Trocar propriedade ativa"
-    >
-      <option value="">Carregando…</option>
-    </select>
+  <!-- Seletor global de contexto (só com 2+ propriedades) — Miguel — RA: 25003110 -->
+  <div class="sidebar-context" data-sidebar-property-context hidden>
+    <div class="sidebar-property-switcher" data-property-switcher hidden>
+      <label class="sidebar-context-label" for="sidebar-property-context">Propriedade ativa</label>
+      <select
+        id="sidebar-property-context"
+        class="sidebar-context-select"
+        data-property-context-switch
+        data-enhance-select
+        data-placeholder="Selecione a propriedade"
+        aria-label="Trocar propriedade ativa"
+      >
+        <option value="">Carregando…</option>
+      </select>
+    </div>
     <p class="sidebar-context-hint" data-property-context-hint hidden></p>
   </div>
 
