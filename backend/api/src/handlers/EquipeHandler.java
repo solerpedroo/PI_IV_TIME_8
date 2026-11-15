@@ -8,6 +8,7 @@ import http.Resposta;
 import http.Roteador;
 import java.util.ArrayList;
 import org.bson.Document;
+import servicos.ServicoEmail;
 import util.ConviteEquipe;
 import util.EquipeMembro;
 import util.Json;
@@ -20,14 +21,16 @@ public class EquipeHandler
 {
     private final RepositorioEquipe   equipe;
     private final RepositorioUsuarios usuarios;
+    private final ServicoEmail        email;
 
-    public EquipeHandler (RepositorioEquipe equipe, RepositorioUsuarios usuarios) throws Exception
+    public EquipeHandler (RepositorioEquipe equipe, RepositorioUsuarios usuarios, ServicoEmail email) throws Exception
     {
-        if (equipe == null || usuarios == null)
+        if (equipe == null || usuarios == null || email == null)
             throw new Exception ("Dependencia de equipe ausente");
 
         this.equipe   = equipe;
         this.usuarios = usuarios;
+        this.email    = email;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -68,6 +71,40 @@ public class EquipeHandler
         Document ret = new Document (membro);
         ret.append ("conviteLink", EquipeHandler.montarLink (requisicao, membro.getString ("conviteToken")));
         return ret;
+    }
+
+    private Document respostaComConvite (Requisicao requisicao, Document membro) throws Exception
+    {
+        Document publico = EquipeHandler.comLink (requisicao, membro);
+        boolean enviado  = false;
+        try
+        {
+            enviado = this.tentarEnviarConvite (requisicao, membro, publico.getString ("conviteLink"));
+        }
+        catch (Exception erro)
+        {
+            System.err.println ("Convite criado, mas o e-mail não foi enviado: " + erro.getMessage ());
+        }
+        publico.append ("conviteEmailEnviado", enviado);
+        return publico;
+    }
+
+    private boolean tentarEnviarConvite (Requisicao requisicao, Document membro, String link) throws Exception
+    {
+        String destinatario = membro.getString ("email");
+        if (destinatario == null || destinatario.isBlank ())
+            destinatario = membro.getString ("emailConvidado");
+        if (destinatario == null || destinatario.isBlank () || link == null || link.isBlank ())
+            return false;
+
+        String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
+        Document propriedade = this.usuarios.buscarPropriedade (propriedadeId);
+        String nomeFazenda   = propriedade == null ? null : propriedade.getString ("nome");
+        if (nomeFazenda == null || nomeFazenda.isBlank ())
+            nomeFazenda = propriedade == null ? null : propriedade.getString ("farm");
+
+        String nomeConvidado = membro.getString ("nome");
+        return this.email.enviarConviteEquipe (destinatario.trim (), nomeConvidado, nomeFazenda, link);
     }
 
     private Resposta listar (Requisicao requisicao) throws Exception
@@ -170,7 +207,7 @@ public class EquipeHandler
                 return Resposta.json (409, new Document ("error", "Convite já existente.")
                                              .append ("fields", new Document ("email", "Já há convite ou colaborador com esse e-mail.")));
 
-            return Resposta.json (201, EquipeHandler.comLink (requisicao, criado));
+            return Resposta.json (201, this.respostaComConvite (requisicao, criado));
         }
 
         Document criado = this.equipe.criar (propriedadeId, titular, dados[0]);
@@ -239,7 +276,7 @@ public class EquipeHandler
         if (renovado == null)
             return Resposta.erro (404, "Convite não encontrado ou já aceito.");
 
-        return Resposta.json (200, EquipeHandler.comLink (requisicao, renovado));
+        return Resposta.json (200, this.respostaComConvite (requisicao, renovado));
     }
 
     private Resposta excluir (Requisicao requisicao) throws Exception
