@@ -10,6 +10,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
 - **Arquitetura (componentes, portas e fluxo)**: [`docs/04-arquitetura.md`](docs/04-arquitetura.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
+- **Plano de testes (estratégia, ambiente e casos)**: [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md)
 - **Rastreabilidade (requisito → implementação → teste)**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
@@ -223,6 +224,8 @@ PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 
 Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
 
+Plano de testes (tipos, ambiente, dados, casos e critérios de aprovação): [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md).
+
 Relatório da última execução: [`docs/10-relatorio-de-testes.md`](docs/10-relatorio-de-testes.md).
 
 Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/estoque.md`](docs/estoque.md), [`docs/ocorrencias.md`](docs/ocorrencias.md), [`docs/notificacoes.md`](docs/notificacoes.md), [`docs/perfil.md`](docs/perfil.md), [`docs/safras.md`](docs/safras.md).
@@ -250,6 +253,7 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 - **Requisitos do MVP**: [`docs/02-requisitos.md`](docs/02-requisitos.md) — requisitos funcionais e não funcionais, regras de negócio, critérios de aceite e rastreabilidade
 - **Arquitetura**: [`docs/04-arquitetura.md`](docs/04-arquitetura.md) — frontend, API HTTP, ServerSocket, MongoDB e gateway opcional, com portas, fluxo de requisição, segurança e limitações
 - **Matriz de rastreabilidade**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md) — cada requisito ligado à tela, à rota, ao código e ao teste, com a situação da última execução
+- **Plano de testes**: [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md) — o que é automatizado, manual ou depende de ambiente externo, com casos, status inicial e critérios de aprovação
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
