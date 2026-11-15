@@ -71,16 +71,15 @@ Este projeto **não** implementa no MVP:
 - Núcleo de modelo/Atlas (`backend/core`, Maven) para validação do domínio Mongo
 - Catálogo dos endpoints: [`docs/06-contrato-api.md`](docs/06-contrato-api.md)
 
-### Banco e infra local
-- **MongoDB 8** (Docker Compose com replica set, ou Atlas Free)
-- **Docker Compose** (`compose.yaml`) para Mongo local em loopback
-- **GitHub Actions** para suítes de API, Mongo e navegador (Playwright)
+### Banco e infra
+- **MongoDB Atlas** (cluster compartilhado; persistência via `MONGODB_URI` no `.env`)
+- **GitHub Actions** apenas para automações de projeto (tracker, proteção de branch)
 
 ## 📋 Pré-requisitos
 
 - **JDK 21** (`java` e `javac` no PATH)
 - **Node.js 22+** (testes de navegador / scripts em `tests/`)
-- **Docker** (opcional, para Mongo local via Compose)
+- **`mongosh`** (opcional, para suítes que limpam banco `_teste` no Atlas)
 - Navegador moderno
 
 ## 🔧 Instalação e execução (ambiente de testes)
@@ -107,11 +106,9 @@ Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISAB
 
 No Windows, use os scripts `.bat` equivalentes em `backend/api/`.
 
-### 3) MongoDB local ou Atlas compartilhado
+### 3) MongoDB Atlas (obrigatório para persistência)
 
-Para usar o MongoDB local, execute `docker compose up -d --wait mongo` na raiz do repositório. O Atlas não exige Docker.
-
-Para usar o Atlas compartilhado, copie `.env.example` para `.env` na raiz e preencha a URI individual fornecida pelo responsável pelo cluster. Siga o [guia do Atlas](docs/mongodb-atlas.md) para autorizar seu IP e configurar seu usuário. O arquivo `.env` não é carregado automaticamente: no Linux, macOS ou Git Bash, execute na raiz do projeto:
+Copie `.env.example` para `.env` na raiz e preencha a URI individual fornecida pelo responsável pelo cluster. Siga o [guia do Atlas](docs/mongodb-atlas.md) para autorizar seu IP e configurar seu usuário. O arquivo `.env` não é carregado automaticamente: no Linux, macOS ou Git Bash, execute na raiz do projeto:
 
 ```bash
 set -a
@@ -122,7 +119,7 @@ bash compilar.sh
 bash rodar.sh
 ```
 
-Em outro terminal, `curl -i http://127.0.0.1:8080/ready` deve responder HTTP 200. O endpoint consulta o banco configurado; erro ou HTTP 503 indica que a conexão não está pronta. Para usar o Docker local, não carregue o `.env` do Atlas: `rodar.sh` usa `127.0.0.1:27017` por padrão. Se `MONGODB_DATABASE` estiver definida, ela deve coincidir com o banco da URI. Credenciais **não** entram no Git.
+Em outro terminal, `curl -i http://127.0.0.1:8080/ready` deve responder HTTP 200. O endpoint consulta o Atlas configurado; erro ou HTTP 503 indica que a conexão não está pronta. Sem `MONGODB_URI`, `rodar.sh` encerra (use `rodar.sh --memoria` só para testes efêmeros). Se `MONGODB_DATABASE` estiver definida, ela deve coincidir com o banco da URI. Credenciais **não** entram no Git.
 
 ### 4) Frontend estático (opcional, sem API)
 
@@ -154,7 +151,6 @@ PI_IV_TIME_8/
 ├── docs/                     # produto, contratos por módulo, Atlas, design
 ├── tests/                    # e2e Playwright e integração Node
 ├── slides/                   # pitch / apresentação
-├── compose.yaml              # Mongo local (replica set)
 └── README.md
 ```
 
@@ -207,10 +203,10 @@ PI_IV_TIME_8/
 bash backend/api/testar.sh
 ```
 
-### Mongo + reinício (exemplos)
+### Mongo Atlas + reinício (exemplo)
 
 ```bash
-docker compose up -d --wait mongo
+set -a && . ./.env && set +a
 node tests/atividades-reinicio.cjs
 ```
 
@@ -236,7 +232,7 @@ Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/e
 Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (abra `http://127.0.0.1:9000/login.html`).
 
 ### `/ready` falha com Mongo
-Confirme o Compose (`docker compose ps`), o `replicaSet=rs0` na URI e que o healthcheck iniciou o RS. Veja também [`docs/servidor-java.md`](docs/servidor-java.md).
+Confirme o `.env` carregado, o IP liberado no **Network Access** do Atlas, `MONGODB_DATABASE` alinhado ao path da URI e [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md).
 
 ### Cadastro sem e-mail real
 Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/api/README.md`](backend/api/README.md).
