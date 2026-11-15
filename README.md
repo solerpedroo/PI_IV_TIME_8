@@ -222,7 +222,7 @@ npx playwright install chromium --with-deps
 PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 ```
 
-Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
+Outras suítes: `tests/ocorrencias-real.cjs`, `tests/identidade-visual-real.cjs`, scripts `*-real.cjs` em `tests/`. As suítes rodam **localmente**; o repositório não mantém workflows de CI de testes (apenas automações de projeto em `.github/workflows/`).
 
 Plano de testes (tipos, ambiente, dados, casos e critérios de aprovação): [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md).
 
