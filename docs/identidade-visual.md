@@ -38,7 +38,7 @@ mesmos tokens, entao nenhuma variavel de cor foi alterada.
 `node tests/identidade-visual-real.cjs` sobe o frontend estatico, abre as 15
 telas no Chromium e confere favicon, titulo, nome na sidebar, imagens da marca
 carregadas (`naturalWidth > 0`), ausencia do icone antigo e a variante certa por
-fundo. Workflow: `.github/workflows/identidade-visual-testes.yml`.
+fundo. Execucao local (nao ha workflow de CI para este teste).
 
 ## Limites
 

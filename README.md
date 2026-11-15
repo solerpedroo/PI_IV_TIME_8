@@ -8,7 +8,9 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Documento de produto (referência)**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Requisitos do MVP (RF, RNF, RN)**: [`docs/02-requisitos.md`](docs/02-requisitos.md)
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
+- **Arquitetura (componentes, portas e fluxo)**: [`docs/04-arquitetura.md`](docs/04-arquitetura.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
+- **Plano de testes (estratégia, ambiente e casos)**: [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md)
 - **Rastreabilidade (requisito → implementação → teste)**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
@@ -18,7 +20,7 @@ Time 8 — Projeto Integrador IV (2026)
 
 ```text
 - Miguel Fernandes Costacurta — 25003110
-- Pedro André do Carmo Chavier
+- Pedro André do Carmo Chavier - 25018639
 - Pedro Henrique Contardi Soler — 25005592
 - Tomás de Paula Michelon Toniato — 25004211
 - Vinicius Panutti Salgado — 25007329
@@ -220,7 +222,9 @@ npx playwright install chromium --with-deps
 PLAYWRIGHT_MODULE=playwright node tests/atividades-real.cjs
 ```
 
-Outras suítes: `tests/ocorrencias-real.cjs`, workflows em `.github/workflows/`.
+Outras suítes: `tests/ocorrencias-real.cjs`, `tests/identidade-visual-real.cjs`, scripts `*-real.cjs` em `tests/`. As suítes rodam **localmente**; o repositório não mantém workflows de CI de testes (apenas automações de projeto em `.github/workflows/`).
+
+Plano de testes (tipos, ambiente, dados, casos e critérios de aprovação): [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md).
 
 Relatório da última execução: [`docs/10-relatorio-de-testes.md`](docs/10-relatorio-de-testes.md).
 
@@ -247,7 +251,9 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 
 - **Documento de produto**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Requisitos do MVP**: [`docs/02-requisitos.md`](docs/02-requisitos.md) — requisitos funcionais e não funcionais, regras de negócio, critérios de aceite e rastreabilidade
+- **Arquitetura**: [`docs/04-arquitetura.md`](docs/04-arquitetura.md) — frontend, API HTTP, ServerSocket, MongoDB e gateway opcional, com portas, fluxo de requisição, segurança e limitações
 - **Matriz de rastreabilidade**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md) — cada requisito ligado à tela, à rota, ao código e ao teste, com a situação da última execução
+- **Plano de testes**: [`docs/09-plano-de-testes.md`](docs/09-plano-de-testes.md) — o que é automatizado, manual ou depende de ambiente externo, com casos, status inicial e critérios de aprovação
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
