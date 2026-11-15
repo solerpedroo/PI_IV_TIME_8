@@ -57,6 +57,9 @@
       root.classList.add("filter-select");
       native.classList.remove("filter-select");
     }
+    if (native.classList.contains("sidebar-context-select")) {
+      root.classList.add("select--sidebar");
+    }
 
     const trigger = document.createElement("button");
     trigger.type = "button";
