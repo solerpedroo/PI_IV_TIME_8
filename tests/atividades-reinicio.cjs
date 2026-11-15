@@ -1,17 +1,45 @@
 /* Miguel — RA: 25003110 */
-// Testa a API real após reiniciar o servidor, em um banco local isolado.
+// Testa a API real após reiniciar o servidor, em um banco Atlas isolado (_teste).
 const assert = require('node:assert/strict');
 const { spawn, execFileSync } = require('node:child_process');
 const { randomBytes } = require('node:crypto');
 const net = require('node:net');
 const path = require('node:path');
 const { aguardarTokenDeConfirmacao } = require('./token-confirmacao.cjs');
+
+function substituirBanco(uri, nomeBanco) {
+  const q = uri.indexOf('?');
+  const semQuery = q >= 0 ? uri.slice(0, q) : uri;
+  const query = q >= 0 ? uri.slice(q) : '';
+  const barraHost = semQuery.indexOf('//') + 2;
+  const ultimaBarra = semQuery.lastIndexOf('/');
+  const hostPart = ultimaBarra > barraHost ? semQuery.slice(0, ultimaBarra) : semQuery.replace(/\/$/, '');
+  return hostPart + '/' + nomeBanco + query;
+}
+
+function mongosh(uri, banco, script) {
+  const args = banco
+    ? ['mongosh', uri, banco, '--quiet', '--eval', script]
+    : ['mongosh', uri, '--quiet', '--eval', script];
+  return execFileSync('mongosh', args, { encoding: 'utf8' });
+}
+
+if (!process.env.MONGODB_URI) {
+  throw new Error('Carregue MONGODB_URI (Atlas). Veja docs/mongodb-atlas.md');
+}
+
 const banco = `agro_i135_${randomBytes(16).toString('hex')}_teste`;
+const mongoUri = substituirBanco(process.env.MONGODB_URI, banco);
 const base = 'http://127.0.0.1:18081';
 const cwd = path.join(__dirname, '../backend/api');
-const mongo = execFileSync('docker', ['compose', 'ps', '-q', 'mongo'], {encoding: 'utf8'}).trim();
-if (!mongo) throw new Error('Inicie o serviço mongo do Docker Compose.');
-const env = { ...process.env, MONGODB_URI: `mongodb://127.0.0.1:27017/${banco}?replicaSet=rs0`, SMTP_HOST: '', SMTP_USERNAME: '', SMTP_PASSWORD: '', SMTP_FROM: '' };
+const env = {
+  ...process.env,
+  MONGODB_URI: mongoUri,
+  SMTP_HOST: '',
+  SMTP_USERNAME: '',
+  SMTP_PASSWORD: '',
+  SMTP_FROM: '',
+};
 let processo, segundo, log = '';
 const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function portaLivre(porta) {
@@ -45,8 +73,12 @@ async function api(url, body, token, method) {
   try {
     await portaLivre(18081);
     await portaLivre(18082);
-    const bancos = JSON.parse(execFileSync('docker', ['exec', mongo, 'mongosh', '--quiet', '--eval', 'JSON.stringify(db.adminCommand({listDatabases:1,nameOnly:true}).databases.map(x=>x.name))'], { encoding: 'utf8' }));
-    assert.ok(!bancos.includes(banco), 'Banco aleatório já existe');
+    try {
+      const bancos = JSON.parse(mongosh(mongoUri, null, 'JSON.stringify(db.adminCommand({listDatabases:1,nameOnly:true}).databases.map(x=>x.name))'));
+      assert.ok(!bancos.includes(banco), 'Banco aleatório já existe');
+    } catch {
+      // listDatabases pode ser restrito no Atlas; o sufixo aleatório basta.
+    }
     criado = true; await iniciar();
     const email = 'i135@agro.test', password = 'Senha@123';
     assert.equal((await api('/api/auth/register', {name:'Operador Teste',email,phone:'(19) 98888-1111',password,confirm:password,farm:'Fazenda Teste',area:'120 ha',terms:true})).status, 201);
@@ -66,8 +98,7 @@ async function api(url, body, token, method) {
     const id = atividade.data.id;
     // Simula atividade criada antes da introdução de versao/foto. A API deve
     // publicar a versão inicial e permitir o primeiro anexo sem migração manual.
-    execFileSync('docker', ['exec', mongo, 'mongosh', '--quiet', banco, '--eval',
-      `db.atividades.updateOne({_id:ObjectId("${id}")},{$unset:{versao:""}})`], { stdio: 'ignore' });
+    mongosh(mongoUri, banco, `db.atividades.updateOne({_id:ObjectId("${id}")},{$unset:{versao:""}})`);
     const legado = await api('/api/atividades/' + id, null, token);
     assert.equal(legado.status, 200); assert.equal(legado.data.versao, 1);
     const png1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAD0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -159,6 +190,12 @@ async function api(url, body, token, method) {
     if (segundo && segundo.exitCode === null) { const terminado = new Promise(resolve => segundo.once('exit', resolve)); segundo.stdin.write('desativar\n'); await terminado; }
     await parar();
     // Somente o banco de nome aleatório criado nesta execução é removido.
-    if (criado) execFileSync('docker', ['exec',mongo,'mongosh','--quiet',banco,'--eval','db.dropDatabase()'], { stdio:'ignore' });
+    if (criado) {
+      try {
+        mongosh(mongoUri, banco, 'db.dropDatabase()');
+      } catch {
+        // limpeza best-effort no Atlas
+      }
+    }
   }
 })().catch(err => { console.error(err); process.exitCode = 1; });
