@@ -7,7 +7,10 @@ import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Map;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -156,6 +159,55 @@ public final class ServicoEmail
                     .replace ("\"", "&quot;");
     }
 
+    private static Path pastaRecursosEmail ()
+    {
+        String custom = System.getenv ("SMTP_RECURSOS_EMAIL");
+        if (custom != null && !custom.isBlank ())
+            return Path.of (custom);
+
+        return Path.of (System.getProperty ("user.dir"), "recursos", "email");
+    }
+
+    private static String carregarModelo (String nomeArquivo) throws Exception
+    {
+        Path arquivo = ServicoEmail.pastaRecursosEmail ().resolve (nomeArquivo);
+        if (!Files.isRegularFile (arquivo))
+            throw new Exception ("Modelo de e-mail ausente: " + arquivo);
+
+        return Files.readString (arquivo, StandardCharsets.UTF_8);
+    }
+
+    private static String aplicarModelo (String modelo, Map<String, String> valores, boolean html)
+    {
+        String saida = modelo;
+        for (Map.Entry<String, String> entrada : valores.entrySet ())
+        {
+            String chave = "{{" + entrada.getKey () + "}}";
+            String valor = entrada.getValue () == null ? "" : entrada.getValue ();
+            if (html)
+                valor = ServicoEmail.escapeHtml (valor);
+            saida = saida.replace (chave, valor);
+        }
+        return saida;
+    }
+
+    public void enviarMultipart (String destinatario, String assunto, String textoPlano, String html) throws Exception
+    {
+        ServicoEmail.conferirEndereco (destinatario);
+
+        if (this.host == null)
+        {
+            System.out.println ("[e-mail simulado] para " + destinatario + " | " + assunto);
+            System.out.println (textoPlano);
+            return;
+        }
+
+        String assuntoCompleto = assunto.endsWith ("— AgroGestão") ? assunto : assunto + " — AgroGestão";
+        String boundary        = "----=_AgroGestao_" + System.currentTimeMillis ();
+        String mime            = ServicoEmail.montarMime (boundary, textoPlano, html);
+        this.enviarSmtp (destinatario, assuntoCompleto, boundary, mime);
+    }
+
     private static String corpoTexto (String titulo, String codigo)
     {
         return titulo + "\n\n"
@@ -283,12 +335,46 @@ public final class ServicoEmail
         else if (assunto.toLowerCase ().contains ("confirm"))
             instrucao = "Use o código abaixo na tela de confirmação de e-mail do AgroGestão.";
 
-        String assuntoCompleto = assunto.endsWith ("— AgroGestão") ? assunto : assunto + " — AgroGestão";
-        String boundary      = "----=_AgroGestao_" + System.currentTimeMillis ();
         String texto = ServicoEmail.corpoTexto (titulo, codigo);
         String html  = ServicoEmail.corpoHtml (titulo, codigo, instrucao);
-        String mime  = ServicoEmail.montarMime (boundary, texto, html);
+        this.enviarMultipart (destinatario, assunto, texto, html);
+    }
 
-        this.enviarSmtp (destinatario, assuntoCompleto, boundary, mime);
+    /** Convite de equipe: modelos UTF-8 em recursos/email/convite-equipe.{html,txt}. */
+    public boolean enviarConviteEquipe (String destinatario, String nomeConvidado, String nomePropriedade, String linkConvite) throws Exception
+    {
+        ServicoEmail.conferirEndereco (destinatario);
+
+        String saudacao = (nomeConvidado == null || nomeConvidado.isBlank ())
+            ? "Olá!"
+            : "Olá, " + nomeConvidado.trim () + "!";
+
+        String propriedade = (nomePropriedade == null || nomePropriedade.isBlank ())
+            ? "uma propriedade rural"
+            : nomePropriedade.trim ();
+
+        java.util.HashMap<String, String> vars = new java.util.HashMap<String, String> ();
+        vars.put ("TITULO",            "Convite para a equipe");
+        vars.put ("SAUDACAO",          saudacao);
+        vars.put ("NOME_PROPRIEDADE",  propriedade);
+        vars.put ("LINK_CONVITE",      linkConvite);
+        vars.put ("VALIDADE",          "7 dias");
+        vars.put ("BOTAO_TEXTO",       "Aceitar convite");
+
+        String modeloTxt  = ServicoEmail.carregarModelo ("convite-equipe.txt");
+        String modeloHtml = ServicoEmail.carregarModelo ("convite-equipe.html");
+        String texto      = ServicoEmail.aplicarModelo (modeloTxt, vars, false);
+        String html       = ServicoEmail.aplicarModelo (modeloHtml, vars, true);
+
+        try
+        {
+            this.enviarMultipart (destinatario, "Convite para a equipe", texto, html);
+            return !this.simulado ();
+        }
+        catch (Exception erro)
+        {
+            System.err.println ("Falha ao enviar convite de equipe para " + destinatario + ": " + erro.getMessage ());
+            throw erro;
+        }
     }
 }
