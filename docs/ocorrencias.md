@@ -113,10 +113,10 @@ node --test tests/storage-scope.cjs
 node tests/ui-polish.cjs
 ```
 
-Com MongoDB em replica set (por exemplo, `docker compose up -d --wait mongo`):
+Com MongoDB Atlas (URI com banco terminado em `_teste`):
 
 ```bash
-export MONGODB_URI='mongodb://127.0.0.1:27017/agro_ocorrencias_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
+set -a && . ./.env && set +a
 (cd backend/api && java -cp 'bin:lib/*' TesteOcorrencias --mongo)
 node tests/ocorrencias-real.cjs --mongo
 ```
