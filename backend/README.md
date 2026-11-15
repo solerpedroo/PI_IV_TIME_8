@@ -33,14 +33,9 @@ bash rodar.sh --memoria
 ```
 
 Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os registros
-do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para
-persistência, configure `MONGODB_URI` (MongoDB local ou Atlas) e execute
-`bash rodar.sh` sem `--memoria`. Não é necessário Docker para usar Atlas.
-No Windows, use os scripts `.bat` equivalentes. Consulte
-[api/README.md](api/README.md) para configuração de SMTP e MongoDB.
-
-O `compose.yaml` na raiz sobe um Mongo local com replica set (loopback), útil
-para o servidor e para `testar-mongo.sh`.
+do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para persistência, configure `MONGODB_URI` no `.env` (MongoDB Atlas) e execute
+`bash rodar.sh` sem `--memoria`. No Windows, use os scripts `.bat` equivalentes.
+Consulte [api/README.md](api/README.md) e [docs/mongodb-atlas.md](../docs/mongodb-atlas.md).
 
 `GET /health` verifica o processo; `GET /ready` verifica também o banco quando
 configurado. Cadastro, confirmação de e-mail, login e talhões usam `/api/**`.
