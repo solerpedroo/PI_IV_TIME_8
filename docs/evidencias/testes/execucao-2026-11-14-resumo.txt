@@ -1,0 +1,55 @@
+Evidência bruta da execução de testes de 14/11/2026 (branch dev, commit 99ac03e), feita para a matriz de rastreabilidade (docs/13-rastreabilidade.md).
+Ambiente: Windows 11 Home 10.0.26200, Git Bash, OpenJDK Temurin 21.0.12.1, Node v24.18.0, sem Docker, sem MongoDB e sem Playwright.
+Somente as suítes Java foram executadas, uma de cada vez e em memória (sem a cadeia && do testar.sh). Socket de algoritmos na porta 30100.
+
+== Servidor de algoritmos (JUnit 5, junit-platform-console-standalone 1.11.4) ==
+280 tests found | 276 tests successful | 4 tests failed | 0 skipped
+Falhas:
+  ProtocoloTest.conversa() -> erros por campo atravessam o socket ==> expected: <true> but was: <false>
+  AtendenteAlgoritmosTest.talhoes() -> talhão acusa nome, safra, hectares e status ==> expected: <true> but was: <false>
+  ValidadorDeTalhaoTest.recusaTodosOsCamposInvalidosSemNormalizacaoParcial() -> expected: <[safra, nome, status, hectares]> but was: <[nome, hectares, status]>
+  ValidadorDeTalhaoTest.recusaPeriodoInvalido [2] 1999/00 -> Multiple Failures (3 failures)
+
+== API Java (memória) ==
+suíte | código de saída | última linha
+TesteServidor | 1 | -1/0 testes ok  (FALHA inesperada: MongoConfigurationException: Failed looking up TXT record for host cluster.mongodb.net, em testarResolucaoMongoBanco)
+TesteServidor (cópia temporária sem testarResolucaoMongoBanco) | 0 | 439/439 testes ok
+TesteOrcamentos | 0 | TesteOrcamentos: 41/41 verificações OK (memória)
+TestePerfil | 0 | TestePerfil: 56 verificações OK em memória
+TesteGeorreferenciamento | 1 | TesteGeorreferenciamento: 38/40 verificações OK (memória)
+TesteOcorrencias | 0 | TesteOcorrencias: 69 verificações OK (memória)
+TesteColheitas | 1 | TesteColheitas: 41/44 verificações OK (memória)
+TesteManutencao | 0 | TesteManutencao: 61/61 verificações OK (memória)
+TesteRelatorioSafra | 0 | Relatório safra: 24 verificações aprovadas.
+
+Falhas observadas:
+  TesteGeorreferenciamento: FALHA PUT /api/talhoes/{id} (edicao normal) preserva a localizacao
+  TesteGeorreferenciamento: FALHA mapa filtrado por cultura (Norte virou Milho)
+  TesteColheitas: FALHA safra nao perde talhao que ja tem colheita (409 no campo talhoes)
+  TesteColheitas: FALHA safra nao comeca depois de uma colheita existente (409 em dataInicio)
+  TesteColheitas: FALHA sem a colheita do Sul, a safra pode sair do talhao
+
+Observação sobre o TesteServidor: o grupo testarResolucaoMongoBanco monta uma URI mongodb+srv,
+e o driver consulta o registro TXT do host no DNS. Nesta máquina a consulta terminou em
+SocketTimeoutException (também fora do sandbox), e a exceção interrompe a suíte antes do primeiro
+grupo HTTP. Para medir o restante, uma cópia do arquivo com apenas essa chamada comentada foi
+compilada fora do repositório; nenhum arquivo versionado foi alterado.
+
+== Não executado nesta conferência ==
+tests/*.cjs (Playwright não instalado nesta máquina); TesteMongo, TesteEstoqueMongo e as variantes --mongo (sem MongoDB).
+O estado das suítes de navegador continua sendo o de execucao-2026-11-12-*.txt. Entre 60d7dda e 99ac03e,
+tests/ recebeu apenas identidade-visual-real.cjs, e tests/token-confirmacao.cjs continua procurando "token:"
+enquanto ServicoEmail imprime "codigo:" no e-mail simulado.
+
+== CI (GitHub Actions), última rodada completa: PR #303, commit 710afc4, 13/11/2026 ==
+Aprovados: Identidade visual no navegador, Testes do gateway.
+Falharam (passo que falhou):
+  Atividades Java e MongoDB, Auth formulários, Calendario Java e navegador, Colheita Java e navegador,
+  Custos Java e navegador, Notificações navegador, Orçamento Java e navegador -> Compilar e testar servidor
+  Estoque Java e MongoDB -> Compilar e testar em memória
+  Ocorrências Java e navegador -> Testes Java em memória
+  Perfil Java e persistência -> Regressão do servidor e contratos de perfil
+  Georreferenciamento Java, socket e navegador; Manutenção Java, socket e navegador -> Testar algoritmos do serversocket
+  ServerSocket de algoritmos -> Executar JUnit e verificar cobertura dos algoritmos
+  Persistência local (Playwright) -> Testes de persistência
+  Polish de interface -> Testes de layout (também falhou no push b0c5292 da dev, 14/11/2026)

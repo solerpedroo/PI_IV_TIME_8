@@ -651,6 +651,9 @@ As mesmas suítes rodam nos workflows de
 | Relatórios | RF-053 a RF-056 | RN-036, RN-037 | [relatorio-safra.md](relatorio-safra.md) e demais relatórios | `Relatorio*Handler`, `ConsolidadorDeSafra` | `TesteRelatorioSafra`, `relatorio-safra-real.cjs` |
 | Extensões | RF-057 a RF-060 | RN-034, RN-038 a RN-040 | [orcamento.md](orcamento.md), [colheita.md](colheita.md), [georreferenciamento.md](georreferenciamento.md), [manutencao.md](manutencao.md) | `OrcamentosHandler`, `ColheitasHandler`, `GeorreferenciamentoHandler`, `ManutencaoHandler` | `TesteOrcamentos`, `TesteColheitas`, `TesteGeorreferenciamento`, `TesteManutencao` |
 
+A matriz por requisito, com rota, método, grupo de teste e situação da última
+execução, está em [13-rastreabilidade.md](13-rastreabilidade.md).
+
 Os handlers ficam em [`backend/api/src/handlers/`](../backend/api/src/handlers/),
 os algoritmos em [`backend/serversocket/src/algoritmos/`](../backend/serversocket/src/algoritmos/),
 os scripts de tela em [`frontend/scripts/`](../frontend/scripts/) e os testes em
