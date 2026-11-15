@@ -23,19 +23,14 @@ safras e a tela `frontend/safras.html` usam a `api` (`SafrasHandler` + Bearer).
 
 ## Executar o servidor
 
-Com JDK 21 no PATH, a partir da raiz do projeto:
+Com JDK 21 no PATH, configure `.env` na raiz ([mongodb-atlas.md](../docs/mongodb-atlas.md)) e suba tudo com:
 
 ```bash
-bash backend/api/testar.sh
-cd backend/api
-bash compilar.sh
-bash rodar.sh --memoria
+bash emular.sh
 ```
 
-Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os registros
-do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para persistência, configure `MONGODB_URI` no `.env` (MongoDB Atlas) e execute
-`bash rodar.sh` sem `--memoria`. No Windows, use os scripts `.bat` equivalentes.
-Consulte [api/README.md](api/README.md) e [docs/mongodb-atlas.md](../docs/mongodb-atlas.md).
+No Windows: `emular.bat`. Abra `http://127.0.0.1:8080/login.html`. Suítes rápidas sem Atlas: `bash backend/api/testar.sh` (`--memoria` só interno aos testes).
+Consulte [api/README.md](api/README.md).
 
 `GET /health` verifica o processo; `GET /ready` verifica também o banco quando
 configurado. Cadastro, confirmação de e-mail, login e talhões usam `/api/**`.
