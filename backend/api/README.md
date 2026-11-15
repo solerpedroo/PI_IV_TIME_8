@@ -66,28 +66,26 @@ O mesmo servidor entrega:
 ## Requisitos
 
 - JDK 21 (`java` e `javac` no PATH). Não precisa de Maven.
-- MongoDB Atlas (`MONGODB_URI` no `.env`). Sem banco, use `--memoria`.
+- MongoDB Atlas (`MONGODB_URI` no `.env` na raiz). Emulação: `bash emular.sh` na raiz do repositório.
 
 Os jars do driver já estão em `lib/`: `mongodb-driver-sync`, `mongodb-driver-core`
 e `bson`, versão 5.13.0, baixados do Maven Central.
 
 ## Comandos
 
-Todos rodam a partir de qualquer pasta. Os scripts entram em `backend/api/` sozinhos.
+**Recomendado (raiz do repositório):** `bash emular.sh` ou `emular.bat` — carrega `.env`, compila se preciso, Atlas + socket + API.
+
+Scripts em `backend/api/` (entram nesta pasta sozinhos):
 
 | Ação | Windows | Linux/macOS/Git Bash |
 |---|---|---|
 | Compilar | `compilar.bat` | `./compilar.sh` |
-| Rodar com MongoDB | `rodar.bat` | `./rodar.sh` |
-| Rodar sem banco | `rodar.bat --memoria` | `./rodar.sh --memoria` |
+| Rodar com MongoDB | `rodar.bat` (lê `.env` da raiz) | `./rodar.sh` (lê `.env` da raiz) |
 | Rodar em outra porta | `rodar.bat 9000` | `./rodar.sh 9000` |
-| Testes automáticos | `testar.bat` | `./testar.sh` |
+| Testes automáticos (memória) | `testar.bat` | `./testar.sh` |
 | Integração MongoDB | — | `./testar-mongo.sh` |
 
-Rode `compilar` antes de `rodar`. O `testar` compila sozinho. Os scripts Unix
-são executáveis e fixam a compilação em Java 21. Para validar a persistência no
-Atlas, carregue o `.env` com `MONGODB_URI` apontando para um banco `_teste` e
-execute `./testar-mongo.sh`.
+O `testar` compila sozinho. Compilação fixada em Java 21. Para `./testar-mongo.sh`, use `MONGODB_URI` com banco `_teste` (via `.env` ou ambiente).
 
 Com o servidor no ar:
 
