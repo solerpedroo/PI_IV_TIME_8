@@ -9,6 +9,7 @@ Aplicação web para **centralizar a operação de propriedades rurais**: propri
 - **Requisitos do MVP (RF, RNF, RN)**: [`docs/02-requisitos.md`](docs/02-requisitos.md)
 - **Casos de uso**: [`docs/03-casos-de-uso.md`](docs/03-casos-de-uso.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
+- **Rastreabilidade (requisito → implementação → teste)**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md)
 - **Project no GitHub**: [PI_IV_TIME_8 · Project nº 3](https://github.com/users/solerpedroo/projects/3)
 
 ## 👥 Equipe
@@ -246,6 +247,7 @@ Com sessão autenticada, a API é a fonte de verdade. O cache do navegador é c�
 
 - **Documento de produto**: [`docs/AgroGestao_Projeto.md`](docs/AgroGestao_Projeto.md)
 - **Requisitos do MVP**: [`docs/02-requisitos.md`](docs/02-requisitos.md) — requisitos funcionais e não funcionais, regras de negócio, critérios de aceite e rastreabilidade
+- **Matriz de rastreabilidade**: [`docs/13-rastreabilidade.md`](docs/13-rastreabilidade.md) — cada requisito ligado à tela, à rota, ao código e ao teste, com a situação da última execução
 - **Modelo de dados**: [`docs/modelo-dados.md`](docs/modelo-dados.md)
 - **Dicionário de dados**: [`docs/05-dicionario-de-dados.md`](docs/05-dicionario-de-dados.md)
 - **Pitch / slides**: [`slides/`](slides/)
