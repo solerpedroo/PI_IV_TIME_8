@@ -166,7 +166,8 @@ public class Servidor
         propriedades.setSafras (safras);
         propriedades.registrar (roteador);
         new CulturasHandler (culturas, talhoes, safras).registrar (roteador);
-        new EquipeHandler (equipe, usuarios).registrar (roteador);
+        ServicoEmail servicoEmailEquipe = ServicoEmail.doAmbiente ();
+        new EquipeHandler (equipe, usuarios, servicoEmailEquipe).registrar (roteador);
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, culturas, sessoes);
         handlerTalhoes.registrar (roteador);
         new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
