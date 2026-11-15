@@ -1,0 +1,13 @@
+Convite para a equipe — AgroGestão
+
+{{SAUDACAO}}
+
+Você foi convidado(a) para colaborar na propriedade {{NOME_PROPRIEDADE}} no AgroGestão.
+
+Abra o link abaixo com a mesma conta de e-mail indicada no convite (válido por {{VALIDADE}}):
+
+{{LINK_CONVITE}}
+
+Se você não esperava este convite, ignore esta mensagem.
+
+— AgroGestão (mensagem automática)
