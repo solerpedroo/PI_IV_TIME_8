@@ -77,69 +77,121 @@ Este projeto **não** implementa no MVP:
 
 ## 📋 Pré-requisitos
 
-- **JDK 21** (`java` e `javac` no PATH)
-- **Node.js 22+** (testes de navegador / scripts em `tests/`)
-- **`mongosh`** (opcional, para suítes que limpam banco `_teste` no Atlas)
-- Navegador moderno
+Instale antes de emular:
 
-## 🔧 Instalação e execução (ambiente de testes)
+| Item | Para quê | Como conferir |
+|------|----------|----------------|
+| **JDK 21** | compilar e rodar o servidor | `java -version` e `javac -version` |
+| **MongoDB Atlas** | persistir dados (obrigatório) | URI no `.env` — ver passo a passo abaixo |
+| **Navegador moderno** | usar o sistema | Chrome, Firefox ou Edge atual |
+| **Node.js 22+** | só se for rodar testes em `tests/` | `node -version` |
+| **`mongosh`** | opcional; suítes que limpam banco `_teste` | — |
 
-### 1) Clone o projeto
+O projeto **não** usa Docker local: o banco é sempre o **Atlas** (nuvem).
+
+---
+
+## 🖥️ Como emular o projeto (passo a passo)
+
+Ao final deste roteiro você terá o AgroGestão no navegador em **http://127.0.0.1:8080**, com login, cadastro e todos os módulos gravando no MongoDB online.
+
+O script **`emular.sh`** (ou **`emular.bat`** no Windows) faz o trabalho pesado: lê o `.env`, compila o Java se ainda não existir `backend/api/bin/`, sobe o **ServerSocket** de algoritmos na porta **3000** e a **API + telas** na porta **8080**.
+
+### Passo 1 — Obter o código
 
 ```bash
 git clone https://github.com/solerpedroo/PI_IV_TIME_8.git
 cd PI_IV_TIME_8
 ```
 
-### 2) Compilar e testar (HTTP + ServerSocket)
+Todos os comandos seguintes assumem que você está **na raiz** do repositório (onde ficam `emular.sh`, `frontend/` e `backend/`).
+
+### Passo 2 — Criar o arquivo `.env` (só na primeira vez)
 
 ```bash
-sh backend/serversocket/testar.sh    # JUnit: algoritmos + protocolo (portas efêmeras; não usa a 3000)
-bash backend/api/testar.sh      # sobe o socket na 30100 e roda a suíte HTTP
-cd backend/api
-bash compilar.sh
-bash rodar.sh --memoria              # sobe o socket na 3000 e a API na 8080
+cp .env.example .env
 ```
 
-Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os dados ao encerrar.
-Para subir só a API sem o socket (não recomendado): `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh --memoria`.
+Edite `.env` e preencha pelo menos:
 
-No Windows, use os scripts `.bat` equivalentes em `backend/api/`.
+1. **`MONGODB_URI`** — connection string do Atlas (usuário, senha, cluster e banco `agrogestao_dev`).
+2. **`MONGODB_DATABASE`** — deve ser o **mesmo nome** do banco no path da URI (ex.: `agrogestao_dev`).
 
-### 3) MongoDB Atlas (obrigatório para persistência)
+Passo a passo completo (criar usuário no cluster, liberar IP, copiar URI): **[docs/mongodb-atlas.md](docs/mongodb-atlas.md)**.
 
-Copie `.env.example` para `.env` na raiz e preencha a URI individual fornecida pelo responsável pelo cluster. Siga o [guia do Atlas](docs/mongodb-atlas.md) para autorizar seu IP e configurar seu usuário. O arquivo `.env` não é carregado automaticamente: no Linux, macOS ou Git Bash, execute na raiz do projeto:
+> **Segurança:** nunca commite o `.env`. Cada integrante usa a própria URI.
+
+SMTP (`SMTP_*` no `.env`) é **opcional**. Sem e-mail configurado, o código de confirmação de cadastro aparece no **terminal** onde o servidor está rodando.
+
+### Passo 3 — Subir o servidor
+
+Na raiz do projeto:
+
+| Sistema | Comando |
+|---------|---------|
+| Linux, macOS ou Git Bash | `bash emular.sh` |
+| Windows (Prompt de Comando) | `emular.bat` |
+
+Na **primeira execução**, a compilação pode levar alguns segundos. Você verá no terminal as URLs do app e do diagnóstico.
+
+| Situação | O que fazer |
+|----------|-------------|
+| Alterou código Java | `bash emular.sh --build` (ou `emular.bat --build`) |
+| Porta 8080 ocupada | `bash emular.sh 9000` e abra `http://127.0.0.1:9000/login.html` |
+| Encerrar o servidor | no terminal do servidor, digite `desativar` e Enter |
+
+### Passo 4 — Abrir no navegador
+
+1. Acesse **http://127.0.0.1:8080/login.html** (ou a porta que escolheu).
+2. Crie uma conta ou entre com usuário existente.
+3. Use o sistema normalmente; os dados ficam no Atlas.
+
+Use o **mesmo endereço** (`127.0.0.1:8080`): o servidor entrega API e HTML na mesma origem. Abrir só os arquivos HTML ou usar `python -m http.server` na pasta `frontend/` **não** permite login nem persistência.
+
+### Passo 5 — Confirmar que o banco respondeu (recomendado na primeira vez)
+
+Em **outro terminal** (com o servidor ainda ligado):
 
 ```bash
-set -a
-. ./.env
-set +a
-cd backend/api
-bash compilar.sh
-bash rodar.sh
+curl -i http://127.0.0.1:8080/ready
 ```
 
-Em outro terminal, `curl -i http://127.0.0.1:8080/ready` deve responder HTTP 200. O endpoint consulta o Atlas configurado; erro ou HTTP 503 indica que a conexão não está pronta. Sem `MONGODB_URI`, `rodar.sh` encerra (use `rodar.sh --memoria` só para testes efêmeros). Se `MONGODB_DATABASE` estiver definida, ela deve coincidir com o banco da URI. Credenciais **não** entram no Git.
+- **HTTP 200** — API conectada ao Atlas; pode usar o app.
+- **HTTP 503** — revise IP liberado no Atlas, URI, senha e nome do banco; veja a seção **Troubleshooting** abaixo e [mongodb-atlas.md](docs/mongodb-atlas.md).
 
-### 4) Frontend estático (opcional, sem API)
+Endpoints úteis:
 
-Só para inspecionar as páginas sem o servidor Java:
+- `GET /health` — só verifica se o processo Java está no ar.
+- `GET /ready` — verifica processo **e** MongoDB.
+
+### Uso no dia a dia
+
+Depois que o `.env` já estiver configurado, o fluxo é sempre o mesmo:
 
 ```bash
-python -m http.server 5500 --directory frontend
+cd PI_IV_TIME_8    # se ainda não estiver na pasta
+bash emular.sh     # ou emular.bat no Windows
 ```
 
-Acesse `http://localhost:5500/login.html`. Fluxos autenticados e persistentes exigem a API na mesma origem da página. O servidor Java entrega ambos; portas alternativas e HTTPS via proxy preservam essa origem.
+Não é preciso `set -a && . ./.env`: o `emular.sh` carrega o `.env` automaticamente.
 
-### 5) Saúde do serviço
+### Referência rápida (desenvolvedores)
 
-- `GET /health` — processo no ar
-- `GET /ready` — processo + banco (quando configurado)
+| Objetivo | Comando |
+|----------|---------|
+| Mesmo que `emular`, só pela pasta da API | `bash backend/api/rodar.sh` (também lê `.env` na raiz) |
+| Testes HTTP automáticos (sem Atlas, uso interno) | `bash backend/api/testar.sh` |
+| Testes do socket (JUnit) | `sh backend/serversocket/testar.sh` |
+| Só olhar layout das páginas, sem backend | `python -m http.server 5500 --directory frontend` |
+
+O modo `--memoria` existe **apenas** para suítes de teste; **não** emule o produto assim — use sempre Atlas + `emular.sh`.
 
 ## 📁 Estrutura do projeto
 
 ```text
 PI_IV_TIME_8/
+├── emular.sh / emular.bat    # subir app com MongoDB Atlas (comando principal)
+├── scripts/                  # apoio Windows (carregar-env.ps1, emular.ps1)
 ├── frontend/                 # HTML, CSS, JS e assets da interface
 │   ├── scripts/              # auth, módulos operacionais, agro-local
 │   ├── styles/               # design system e estilos por tela
@@ -229,10 +281,10 @@ Documentação por módulo: [`docs/atividades.md`](docs/atividades.md), [`docs/e
 ## 🛟 Troubleshooting
 
 ### Porta 8080 ocupada
-Encerre outro processo na porta ou suba o servidor em outra: `bash rodar.sh 9000` (abra `http://127.0.0.1:9000/login.html`).
+Encerre outro processo na porta ou use `bash emular.sh 9000`.
 
 ### `/ready` falha com Mongo
-Confirme o `.env` carregado, o IP liberado no **Network Access** do Atlas, `MONGODB_DATABASE` alinhado ao path da URI e [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md).
+Revise o `.env` na raiz, o IP liberado no **Network Access** do Atlas, `MONGODB_DATABASE` alinhado ao path da URI e [`docs/mongodb-atlas.md`](docs/mongodb-atlas.md). O `emular.sh` carrega o `.env` automaticamente.
 
 ### Cadastro sem e-mail real
 Sem SMTP configurado, o token de confirmação aparece no log do servidor (modo desenvolvimento). Detalhes em [`backend/api/README.md`](backend/api/README.md).
