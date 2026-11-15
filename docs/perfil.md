@@ -73,11 +73,10 @@ sh backend/api/testar.sh
 ```
 
 O script compila as fontes e executa `TesteServidor` e `TestePerfil`. No Windows,
-use `backend/api/testar.bat`. Para persistência real, use um replica set local
-ou Atlas e um banco dedicado terminado em `_teste`, com SMTP em modo local:
+use `backend/api/testar.bat`. Para persistência real, use Atlas com banco dedicado terminado em `_teste`, com SMTP em modo local:
 
 ```bash
-export MONGODB_URI='mongodb://127.0.0.1:27017/agro_perfil_teste?replicaSet=rs0&serverSelectionTimeoutMS=5000'
+set -a && . ./.env && set +a
 java -cp 'backend/api/bin:backend/api/lib/*' TestePerfil --mongo
 PROFILE_MONGO=1 node tests/perfil-real.cjs
 ```
