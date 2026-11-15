@@ -42,7 +42,16 @@ for arg in "$@"; do
   esac
 done
 
+PRECISA_COMPILAR=false
 if [ "$BUILD" = true ] || [ ! -f "$BIN" ]; then
+  PRECISA_COMPILAR=true
+elif [ ! -f "$API_DIR/bin/handlers/EquipeHandler.class" ]; then
+  PRECISA_COMPILAR=true
+elif find "$API_DIR/src" -name '*.java' -newer "$BIN" -print -quit | grep -q .; then
+  PRECISA_COMPILAR=true
+fi
+
+if [ "$PRECISA_COMPILAR" = true ]; then
   echo "Compilando backend/api…"
   sh "$API_DIR/compilar.sh"
 fi
