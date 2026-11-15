@@ -1,6 +1,9 @@
 # MongoDB Atlas com Java puro
 
-O projeto utiliza MongoDB Atlas Free e o driver oficial `mongodb-driver-sync` para Java. Não utiliza Spring, Spring Data, Hibernate ou outro framework para acessar o banco. Maven serve apenas para baixar o driver e compilar o Java.
+O projeto utiliza **somente** MongoDB Atlas (online) para persistência. Não há
+MongoDB local via Docker no repositório. O driver oficial `mongodb-driver-sync`
+para Java acessa o cluster. Não utiliza Spring, Spring Data, Hibernate ou outro
+framework para acessar o banco. Maven serve apenas para baixar o driver e compilar o Java.
 
 ## O que existe nesta branch
 
