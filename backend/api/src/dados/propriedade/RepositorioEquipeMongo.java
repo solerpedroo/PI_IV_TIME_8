@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-package dados;
+package dados.propriedade;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoWriteException;
@@ -15,9 +15,9 @@ import java.util.List;
 import java.util.Locale;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import util.ConviteEquipe;
-import util.EquipeMembro;
-import util.TelasAcesso;
+import util.propriedade.ConviteEquipe;
+import util.propriedade.EquipeMembro;
+import util.propriedade.TelasAcesso;
 
 public class RepositorioEquipeMongo implements RepositorioEquipe
 {
