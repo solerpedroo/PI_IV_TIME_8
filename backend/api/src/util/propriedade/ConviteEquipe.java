@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-package util;
+package util.propriedade;
 
 import java.security.SecureRandom;
 import java.time.Instant;
