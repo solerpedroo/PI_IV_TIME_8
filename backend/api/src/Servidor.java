@@ -74,6 +74,7 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import seguranca.Sessoes;
 import servicos.financeiro.CustosDeConsumo;
+import servicos.integracao.EspelhoHistoricoTalhao;
 import servicos.financeiro.CustosDeManutencao;
 import servicos.conta.ServicoEmail;
 
@@ -170,12 +171,18 @@ public class Servidor
         new EquipeHandler (equipe, usuarios, servicoEmailEquipe).registrar (roteador);
         TalhoesHandler handlerTalhoes = new TalhoesHandler (talhoes, atividades, culturas, sessoes);
         handlerTalhoes.registrar (roteador);
-        new AtividadesHandler (atividades, talhoes, safras, sessoes).registrar (roteador);
+        EspelhoHistoricoTalhao espelhoHistorico = new EspelhoHistoricoTalhao (talhoes);
+        AtividadesHandler handlerAtividades = new AtividadesHandler (atividades, talhoes, safras, sessoes);
+        handlerAtividades.setEspelhoHistorico (espelhoHistorico);
+        handlerAtividades.registrar (roteador);
         CustosDeConsumo consumo = new CustosDeConsumo (custos, estoque, talhoes, safras);
         EstoqueHandler handlerEstoque = new EstoqueHandler (estoque, sessoes);
         handlerEstoque.setConsumo (consumo);
+        handlerEstoque.setEspelhoHistorico (espelhoHistorico);
         handlerEstoque.registrar (roteador);
-        new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (roteador);
+        OcorrenciasHandler handlerOcorrencias = new OcorrenciasHandler (ocorrencias, talhoes, sessoes);
+        handlerOcorrencias.setEspelhoHistorico (espelhoHistorico);
+        handlerOcorrencias.registrar (roteador);
         new GeorreferenciamentoHandler (talhoes, ocorrencias, sessoes).registrar (roteador);
         SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, culturas, sessoes);
         handlerSafras.registrar (roteador);
