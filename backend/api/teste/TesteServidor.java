@@ -8,6 +8,7 @@ import dados.financeiro.RepositorioCustosMemoria;
 import dados.cultivo.RepositorioSafrasMemoria;
 import dados.cultivo.RepositorioTalhoesMemoria;
 import dados.estoque.RepositorioEstoqueMemoria;
+import dados.operacao.RepositorioAtividadesMemoria;
 import dados.conta.RepositorioUsuariosMemoria;
 import http.Roteador;
 import java.io.ByteArrayOutputStream;
@@ -50,6 +51,7 @@ public class TesteServidor
     private static int porta;
 
     private static RepositorioUsuariosMemoria usuarios;
+    private static RepositorioAtividadesMemoria atividades;
     private static RepositorioEstoqueMemoria estoque;
     private static RepositorioCustosMemoria custos;
     private static RepositorioTalhoesMemoria talhoes;
@@ -1414,6 +1416,87 @@ public class TesteServidor
         conferir ("sem custos a propriedade pode ser excluida", 204, requisitar ("DELETE", "/api/propriedades/" + outra, null, a));
     }
 
+    /* Roteiro #180/#181/#35: ciclo produtivo + ocorrencias com historico espelhado no talhao. */
+    private static void testarValidacaoCiclosOficiais () throws Exception
+    {
+        System.out.println ("\n# validacao — ciclos oficiais (#35 / #180-#182)");
+
+        String token = login ("maria@agro.com", "Nova@1234");
+        LocalDate hoje = LocalDate.now (ZoneId.of ("America/Sao_Paulo"));
+        String inicio = hoje.minusDays (5).toString ();
+        String fim    = hoje.plusDays (120).toString ();
+        String dataOp = hoje.toString ();
+
+        Resp talhaoNovo = post ("/api/talhoes", talhao ("Talhao ciclo I31", "Soja", 18, null), token);
+        conferir ("validacao: talhao dedicado -> 201", 201, talhaoNovo);
+        String talhaoId = talhaoNovo.json ().getString ("id");
+        String talhaoNome = talhaoNovo.json ().getString ("nome");
+
+        Resp safraResp = post ("/api/safras", safra ("Ciclo validacao I31", "Soja", inicio, fim, talhaoId), token);
+        conferir ("validacao: criar safra do ciclo -> 201", 201, safraResp);
+        String safraId = safraResp.json ().getString ("id");
+
+        Resp atv = post ("/api/atividades",
+            "{\"nome\":\"Adubacao validacao\",\"tipo\":\"Aplica\\u00e7\\u00e3o\",\"talhao\":\"" + talhaoNome + "\",\"data\":\"" + dataOp +
+            "\",\"safraId\":\"" + safraId + "\"}", token);
+        conferir ("validacao: criar atividade -> 201", 201, atv);
+        String atividadeId = atv.json ().getString ("id");
+        conferir ("validacao: agendar atividade", 200, post ("/api/atividades/" + atividadeId + "/status", "{\"status\":\"Agendada\"}", token));
+        conferir ("validacao: iniciar atividade", 200, post ("/api/atividades/" + atividadeId + "/status", "{\"status\":\"Em andamento\"}", token));
+        conferir ("validacao: concluir atividade", 200, post ("/api/atividades/" + atividadeId + "/concluir", "{}", token));
+
+        Resp insumoResp = post ("/api/insumos", new Document ("nome", "Herbicida ciclo I31").append ("categoria", "Herbicida")
+            .append ("unidade", "L").append ("saldo", 20).append ("minimo", 2).append ("custoUnitario", 15).toJson (), token);
+        conferir ("validacao: criar insumo -> 201", 201, insumoResp);
+        String insumoId = insumoResp.json ().getString ("id");
+        Resp consumo = post ("/api/insumos/" + insumoId + "/movimentacoes",
+            "{\"tipo\":\"saida\",\"quantidade\":2,\"atividadeId\":\"" + atividadeId + "\"}", token);
+        conferir ("validacao: consumo com custo -> 201", 201, consumo);
+        conferir ("validacao: movimentacao retorna custoId", consumo.json ().getString ("custoId") != null);
+
+        Resp histTalhao = get ("/api/talhoes/" + talhaoId + "/historico", token);
+        conferir ("validacao: historico do talhao espelha conclusao", histTalhao.corpo.contains ("Concluida"));
+        conferir ("validacao: historico do talhao espelha consumo", histTalhao.corpo.contains ("Consumo"));
+
+        Resp histSafra = get ("/api/safras/" + safraId + "/historico", token);
+        conferir ("validacao: historico da safra inclui eventos do talhao", histSafra.status == 200 &&
+                  (histSafra.corpo.contains ("Consumo") || histSafra.corpo.contains ("Concluida") || histSafra.corpo.contains ("Praga")));
+
+        String de = hoje.minusDays (30).toString ();
+        String ate = hoje.plusDays (1).toString ();
+        Resp painel = get ("/api/relatorios/propriedade?de=" + de + "&ate=" + ate, token);
+        conferir ("validacao: painel operacional agrega registros", painel.status == 200 &&
+                  painel.json ().get ("contagens", Document.class).getInteger ("atividade") >= 1);
+
+        Document occBody = new Document ("titulo", "Praga ciclo I31").append ("tipo", "Praga").append ("prioridade", "M\u00e9dia")
+            .append ("data", dataOp).append ("descricao", "Monitoramento no ciclo de validacao.").append ("talhaoId", talhaoId);
+        Resp occ = post ("/api/ocorrencias", occBody.toJson (), token);
+        conferir ("validacao: registrar ocorrencia -> 201", 201, occ);
+        String occId = occ.json ().getString ("id");
+        long versao = ((Number) occ.json ().get ("versao")).longValue ();
+        conferir ("validacao: acompanhamento", 200, post ("/api/ocorrencias/" + occId + "/timeline",
+            new Document ("versao", versao).append ("acao", "acompanhamento").append ("descricao", "Vistoria em campo").toJson (), token));
+        versao++;
+        conferir ("validacao: resolucao", 200, post ("/api/ocorrencias/" + occId + "/timeline",
+            new Document ("versao", versao).append ("acao", "resolucao").append ("descricao", "Tratamento concluido").toJson (), token));
+
+        Resp histPosOcc = get ("/api/talhoes/" + talhaoId + "/historico", token);
+        conferir ("validacao: historico espelha ocorrencia", histPosOcc.corpo.contains ("Praga ciclo I31"));
+        conferir ("validacao: timeline preserva resolucao",
+                  lista (get ("/api/ocorrencias/" + occId + "/timeline", token)).size () >= 3);
+
+        conferir ("validacao: consumo invalido rejeitado -> 409", 409,
+                  post ("/api/insumos/" + insumoId + "/movimentacoes", "{\"tipo\":\"saida\",\"quantidade\":999}", token));
+        conferir ("validacao: ocorrencia resolvida nao edita cadastro", 409,
+                  put ("/api/ocorrencias/" + occId, occBody.append ("versao", versao + 1).append ("descricao", "Hack").toJson (), token));
+
+        conferir ("validacao: consulta final preserva historico apos falhas", get ("/api/talhoes/" + talhaoId + "/historico", token).corpo.contains ("Resolvida"));
+
+        String propriedadeId = usuarios.buscarPor ("email", "maria@agro.com").getString ("propriedadeId");
+        conferir ("validacao: repositorio mantem historico do talhao",
+                  TesteServidor.talhoes.listarHistorico (propriedadeId, talhaoId).size () >= 3);
+    }
+
     private static void testarConcorrencia () throws Exception
     {
         System.out.println ("\n# concorrencia e erros");
@@ -1586,14 +1669,15 @@ public class TesteServidor
     public static void main (String[] args) throws Exception
     {
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
-        TesteServidor.estoque = new RepositorioEstoqueMemoria ();
+        TesteServidor.atividades = new RepositorioAtividadesMemoria ();
+        TesteServidor.estoque = new RepositorioEstoqueMemoria (TesteServidor.atividades);
 
         TesteServidor.custos  = new RepositorioCustosMemoria ();
         TesteServidor.talhoes = new RepositorioTalhoesMemoria ();
         TesteServidor.safras  = new RepositorioSafrasMemoria ();
 
-        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, TesteServidor.talhoes, TesteServidor.estoque,
-                                                     TesteServidor.safras,
+        Roteador roteador = Servidor.montarRoteador (TesteServidor.usuarios, TesteServidor.talhoes, TesteServidor.atividades,
+                                                     TesteServidor.estoque, TesteServidor.safras,
                                                      TesteServidor.custos, null, Path.of ("../../frontend"));
 
         // rota de teste que sempre lanca excecao
@@ -1619,6 +1703,7 @@ public class TesteServidor
             TesteServidor.testarSafras ();
             TesteServidor.testarCustos ();
             TesteServidor.testarCustosDeConsumo ();
+            TesteServidor.testarValidacaoCiclosOficiais ();
             TesteServidor.testarConcorrencia ();
             TesteServidor.testarLimiteDeConexoes ();
             TesteServidor.testarProtecoesDeAbuso ();
