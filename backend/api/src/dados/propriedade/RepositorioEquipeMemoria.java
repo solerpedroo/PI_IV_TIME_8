@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-package dados;
+package dados.propriedade;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import util.ConviteEquipe;
-import util.EquipeMembro;
-import util.TelasAcesso;
+import util.propriedade.ConviteEquipe;
+import util.propriedade.EquipeMembro;
+import util.propriedade.TelasAcesso;
 
 public class RepositorioEquipeMemoria implements RepositorioEquipe
 {
