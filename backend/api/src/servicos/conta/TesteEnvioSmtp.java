@@ -1,7 +1,7 @@
-package servicos;
+package servicos.conta;
 
 /*
-    Uso: java -cp bin servicos.TesteEnvioSmtp destino@email.com
+    Uso: java -cp bin servicos.conta.TesteEnvioSmtp destino@email.com
     Requer SMTP_* no ambiente (carregue o .env antes).
 */
 public final class TesteEnvioSmtp
