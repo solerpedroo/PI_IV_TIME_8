@@ -1,9 +1,9 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
 /* Autor secundario: Pedro Andre do Carmo Chavier - RA: 25018639 (posicao da ocorrencia no talhao, #232) */
-package handlers;
+package handlers.operacao;
 
-import dados.RepositorioOcorrencias;
-import dados.RepositorioTalhoes;
+import dados.operacao.RepositorioOcorrencias;
+import dados.cultivo.RepositorioTalhoes;
 import http.ErroHttp;
 import http.Requisicao;
 import http.Resposta;
@@ -20,10 +20,10 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.AlgoritmosDeGeo;
-import util.FotoEvidencia;
-import util.Json;
-import util.Validacao;
+import servicos.integracao.AlgoritmosDeGeo;
+import util.comum.FotoEvidencia;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /* Regras do projeto §8.7. O cliente informa dados; titularidade, status inicial,
    ordem dos eventos e datas de publicação/resolução são definidos pelo servidor. */
