@@ -1,6 +1,6 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package servicos;
+package servicos.conta;
 
 import java.security.SecureRandom;
 
