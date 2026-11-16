@@ -1,4 +1,4 @@
-package dados;
+package dados.infra;
 
 /*
     Cadastro transacional: indice unico em email ou em (proprietarioId, nome) da propriedade.
