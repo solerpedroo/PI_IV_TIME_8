@@ -2,12 +2,12 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package servicos;
+package servicos.financeiro;
 
-import dados.RepositorioCustos;
-import dados.RepositorioEstoque;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.financeiro.RepositorioCustos;
+import dados.estoque.RepositorioEstoque;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
