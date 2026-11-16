@@ -1,5 +1,13 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-import dados.*;
+import dados.conta.RepositorioUsuarios;
+import dados.conta.RepositorioUsuariosMemoria;
+import dados.conta.RepositorioUsuariosMongo;
+import dados.cultivo.RepositorioSafrasMemoria;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.cultivo.RepositorioTalhoesMongo;
+import dados.estoque.RepositorioEstoqueMemoria;
+import dados.financeiro.RepositorioCustosMemoria;
+import dados.infra.ConexaoMongo;
 import http.Roteador;
 import java.net.URI;
 import java.net.http.*;
