@@ -21,6 +21,7 @@ import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import servicos.integracao.AlgoritmosDeGeo;
+import servicos.integracao.EspelhoHistoricoTalhao;
 import util.comum.FotoEvidencia;
 import util.comum.Json;
 import util.comum.Validacao;
@@ -36,6 +37,7 @@ public class OcorrenciasHandler
     private final RepositorioTalhoes talhoes;
     private final Sessoes sessoes;
     private final Clock relogio;
+    private EspelhoHistoricoTalhao espelhoHistorico;
 
     public OcorrenciasHandler (RepositorioOcorrencias ocorrencias, RepositorioTalhoes talhoes, Sessoes sessoes)
     {
@@ -49,6 +51,11 @@ public class OcorrenciasHandler
         this.talhoes = talhoes;
         this.sessoes = sessoes;
         this.relogio = relogio;
+    }
+
+    public void setEspelhoHistorico (EspelhoHistoricoTalhao espelho)
+    {
+        this.espelhoHistorico = espelho;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -260,6 +267,8 @@ public class OcorrenciasHandler
                     .append ("criadaEm", agora).append ("atualizadaEm", agora).append ("resolvidaEm", null)
                     .append ("excluida", false).append ("versao", 1L);
                 this.ocorrencias.criar (registro, evento (registro, "registro", registro.getString ("descricao")));
+                if (this.espelhoHistorico != null)
+                    this.espelhoHistorico.ocorrenciaRegistrada (propriedade, registro);
                 return Resposta.json (201, publico (registro));
             }
             Document anterior = this.buscar (r);
@@ -308,6 +317,8 @@ public class OcorrenciasHandler
             nova.append ("versao", versao (anterior) + 1).append ("atualizadaEm", agora);
             if (!this.ocorrencias.salvar (anterior, nova, evento (nova, acao, descricao)))
                 return Resposta.erro (409, "Outra atualização foi salva. Reabra o detalhe para continuar.");
+            if (this.espelhoHistorico != null && List.of ("acompanhamento", "atualizacao", "resolucao").contains (acao))
+                this.espelhoHistorico.ocorrenciaAtualizada (propriedade, nova, acao, descricao);
             return Resposta.json (200, publico (nova));
         }
     }
