@@ -1,14 +1,21 @@
 /* Miguel — RA: 25003110 */
-package handlers;
+package handlers.relatorios;
 
-import dados.*;
+import dados.conta.RepositorioUsuarios;
+import handlers.cultivo.SafrasHandler;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
+import dados.estoque.RepositorioEstoque;
+import dados.financeiro.RepositorioCustos;
+import dados.operacao.RepositorioAtividades;
+import dados.operacao.RepositorioOcorrencias;
 import http.*;
 import java.time.LocalDate;
 import java.util.*;
 import org.bson.Document;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.RelatorioSafra;
+import servicos.relatorios.RelatorioSafra;
 
 /* Consulta somente a propriedade da sessão; o período nunca altera os saldos atuais. */
 public class RelatorioPropriedadeHandler implements Manipulador
