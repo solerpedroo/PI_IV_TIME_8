@@ -340,7 +340,7 @@ Os repositórios da API usam 19 coleções: `usuarios`, `propriedades`, `equipe_
   safra, safra no custo, talhão na colheita) dentro da mesma propriedade antes de
   gravar.
 - Validadores `$jsonSchema` opcionais, com `validationLevel: moderate`, ficam em
-  `backend/servidor/mongo/` e são aplicados à mão com `mongosh`
+  `backend/mongo-schema/` e são aplicados à mão com `mongosh`
   (`aplicar-schema.sh`); a API não depende deles para funcionar.
 
 ### 6.3 O que não fica no banco
@@ -524,7 +524,7 @@ As verificações correspondentes são RNF-001 a RNF-008 em
 | --- | --- | --- |
 | Algoritmos | JUnit 5 em `backend/serversocket/src/test/java` (tags `unitario`, `contrato`, `integracao`) | `sh backend/serversocket/testar.sh` ou `mvn verify`; workflow `serversocket-testes.yml` |
 | API | `backend/api/teste/Teste*.java`, sem JUnit: sobem a API real numa porta livre, com repositórios em memória, e fazem HTTP por socket | `bash backend/api/testar.sh` (sobe o socket na 30100); variantes `--mongo` exigem banco `_teste` |
-| Banco | `TesteMongo`, `TesteEstoqueMongo`, `testar-mongo.sh`, `backend/core/testar.sh --atlas`, `backend/servidor/mongo/testar-schema.sh` | MongoDB local ou Atlas com banco `_teste` |
+| Banco | `TesteMongo`, `TesteEstoqueMongo`, `testar-mongo.sh`, `backend/core/testar.sh --atlas`, `backend/mongo-schema/testar-schema.sh` | MongoDB local ou Atlas com banco `_teste` |
 | Gateway | `backend/gateway/teste/TesteGateway.java` | `bash backend/gateway/testar.sh` |
 | Navegador | `tests/*-real.cjs` (Playwright, com a API em `--memoria` e o socket na 3000) e `tests/local-*.cjs` (sem backend) | `node tests/<arquivo>.cjs`; workflows por módulo |
 
