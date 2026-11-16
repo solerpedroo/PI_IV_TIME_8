@@ -1,10 +1,10 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
-package handlers;
+package handlers.operacao;
 
-import dados.RepositorioAtividades;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.operacao.RepositorioAtividades;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -16,9 +16,9 @@ import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import java.time.Instant;
-import util.FotoEvidencia;
-import util.Json;
-import util.Validacao;
+import util.comum.FotoEvidencia;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /**
  * Manipulador HTTP das rotas de Atividades operacionais e linha do tempo de histórico.
