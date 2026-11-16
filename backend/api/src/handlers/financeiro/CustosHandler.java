@@ -2,11 +2,12 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package handlers;
+package handlers.financeiro;
 
-import dados.RepositorioCustos;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.financeiro.RepositorioCustos;
+import handlers.cultivo.SafrasHandler;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -22,9 +23,9 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.CustosDeConsumo;
-import util.Json;
-import util.Validacao;
+import servicos.financeiro.CustosDeConsumo;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Lancamentos de custo da propriedade de quem esta logado (controle gerencial, nao contabil).
