@@ -1,6 +1,6 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package util;
+package util.comum;
 
 import java.util.Base64;
 import java.util.List;
