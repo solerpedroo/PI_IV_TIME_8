@@ -1,12 +1,12 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package handlers;
+package handlers.manutencao;
 
-import dados.RepositorioCustos;
-import dados.RepositorioEquipamentos;
-import dados.RepositorioIntervencoes;
-import dados.RepositorioPreventivas;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.financeiro.RepositorioCustos;
+import dados.manutencao.RepositorioEquipamentos;
+import dados.manutencao.RepositorioIntervencoes;
+import dados.manutencao.RepositorioPreventivas;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -24,10 +24,10 @@ import org.bson.types.ObjectId;
 import protocolo.mensagens.RespostaDeAgendaDeManutencao;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.AlgoritmosDeManutencao;
-import servicos.CustosDeManutencao;
-import util.Json;
-import util.Validacao;
+import servicos.integracao.AlgoritmosDeManutencao;
+import servicos.financeiro.CustosDeManutencao;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Manutencao de equipamentos agricolas (#234, #235, #236).
