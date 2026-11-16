@@ -1,4 +1,4 @@
-package dados;
+package dados.cultivo;
 
 import java.util.List;
 import org.bson.Document;
