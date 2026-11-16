@@ -1,11 +1,11 @@
 /* Miguel — RA: 25003110 */
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package handlers;
+package handlers.cultivo;
 
-import dados.RepositorioAtividades;
-import dados.RepositorioCulturas;
-import dados.RepositorioTalhoes;
+import dados.operacao.RepositorioAtividades;
+import dados.cultivo.RepositorioCulturas;
+import dados.cultivo.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -14,9 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.bson.Document;
-import servicos.ClienteDeAlgoritmos;
-import util.Json;
-import util.Validacao;
+import servicos.integracao.ClienteDeAlgoritmos;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Talhoes (areas de cultivo) da propriedade de quem esta logado.
