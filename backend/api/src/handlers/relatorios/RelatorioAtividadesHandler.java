@@ -1,15 +1,16 @@
 /* Miguel — RA: 25003110 */
-package handlers;
+package handlers.relatorios;
 
-import dados.RepositorioAtividades;
-import dados.RepositorioUsuarios;
+import dados.operacao.RepositorioAtividades;
+import handlers.operacao.AtividadesHandler;
+import dados.conta.RepositorioUsuarios;
 import http.*;
 import java.time.*;
 import java.util.*;
 import org.bson.Document;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.RelatorioSafra;
+import servicos.relatorios.RelatorioSafra;
 
 /* Data é a data planejada; o status e o atraso são os observados na consulta. */
 public class RelatorioAtividadesHandler implements Manipulador
