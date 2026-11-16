@@ -1,16 +1,16 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package handlers;
+package handlers.cultivo;
 
-import dados.RepositorioCulturas;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.cultivo.RepositorioCulturas;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
 import org.bson.Document;
-import util.Json;
-import util.Validacao;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /** Catálogo de culturas da propriedade (coleção culturas). */
 public class CulturasHandler
