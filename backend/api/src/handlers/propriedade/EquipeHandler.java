@@ -1,20 +1,20 @@
 // Miguel — RA: 25003110
-package handlers;
+package handlers.propriedade;
 
-import dados.RepositorioEquipe;
-import dados.RepositorioUsuarios;
+import dados.propriedade.RepositorioEquipe;
+import dados.conta.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
 import java.util.ArrayList;
 import org.bson.Document;
-import servicos.ServicoEmail;
-import util.ConviteEquipe;
-import util.EquipeMembro;
-import util.Json;
-import util.PapelNaPropriedade;
-import util.TelasAcesso;
-import util.Validacao;
+import servicos.conta.ServicoEmail;
+import util.propriedade.ConviteEquipe;
+import util.propriedade.EquipeMembro;
+import util.comum.Json;
+import util.propriedade.PapelNaPropriedade;
+import util.propriedade.TelasAcesso;
+import util.comum.Validacao;
 
 /** CRUD da equipe, convites por link e aceite de colaboradores. */
 public class EquipeHandler
