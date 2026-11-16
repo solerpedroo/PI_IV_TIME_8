@@ -1,8 +1,10 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package handlers;
+package handlers.cultivo;
 
-import dados.RepositorioOcorrencias;
-import dados.RepositorioTalhoes;
+import handlers.operacao.OcorrenciasHandler;
+import util.comum.Validacao;
+import dados.operacao.RepositorioOcorrencias;
+import dados.cultivo.RepositorioTalhoes;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -16,8 +18,8 @@ import org.bson.types.ObjectId;
 import protocolo.mensagens.RespostaDeGeometriaDoMapa;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.AlgoritmosDeGeo;
-import util.Json;
+import servicos.integracao.AlgoritmosDeGeo;
+import util.comum.Json;
 
 /*
     Georreferenciamento simplificado dos talhoes (#230, #231, #232). Sem satelite, sem camadas, sem GIS.
