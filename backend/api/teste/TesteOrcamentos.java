@@ -2,24 +2,24 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-import dados.ConexaoMongo;
-import dados.RepositorioAtividades;
-import dados.RepositorioAtividadesMemoria;
-import dados.RepositorioCustos;
-import dados.RepositorioCustosMemoria;
-import dados.RepositorioCustosMongo;
-import dados.RepositorioOrcamentos;
-import dados.RepositorioOrcamentosMemoria;
-import dados.RepositorioOrcamentosMongo;
-import dados.RepositorioSafras;
-import dados.RepositorioSafrasMemoria;
-import dados.RepositorioSafrasMongo;
-import dados.RepositorioTalhoes;
-import dados.RepositorioTalhoesMemoria;
-import dados.RepositorioTalhoesMongo;
-import handlers.CustosHandler;
-import handlers.OrcamentosHandler;
-import handlers.SafrasHandler;
+import dados.infra.ConexaoMongo;
+import dados.operacao.RepositorioAtividades;
+import dados.operacao.RepositorioAtividadesMemoria;
+import dados.financeiro.RepositorioCustos;
+import dados.financeiro.RepositorioCustosMemoria;
+import dados.financeiro.RepositorioCustosMongo;
+import dados.financeiro.RepositorioOrcamentos;
+import dados.financeiro.RepositorioOrcamentosMemoria;
+import dados.financeiro.RepositorioOrcamentosMongo;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioSafrasMemoria;
+import dados.cultivo.RepositorioSafrasMongo;
+import dados.cultivo.RepositorioTalhoes;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.cultivo.RepositorioTalhoesMongo;
+import handlers.financeiro.CustosHandler;
+import handlers.financeiro.OrcamentosHandler;
+import handlers.cultivo.SafrasHandler;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -191,7 +191,7 @@ public class TesteOrcamentos
             String   a        = sessoes.criar (new ObjectId ().toHexString (), propriedade);
             String   b        = sessoes.criar (new ObjectId ().toHexString (), outra);
 
-            SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, new dados.RepositorioCulturasMemoria (), sessoes);
+            SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, custos, atividades, new dados.cultivo.RepositorioCulturasMemoria (), sessoes);
             handlerSafras.setOrcamentos (orcamentos);
             handlerSafras.registrar (roteador);
             new CustosHandler     (custos, safras, talhoes, sessoes).registrar (roteador);
