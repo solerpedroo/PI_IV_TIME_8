@@ -197,9 +197,9 @@ O último comando deve indicar uma regra do `.gitignore`. Se `.env` aparecer em 
 
 As coleções, referências, índices, históricos e cenários dos dois ciclos estão em [modelo-dados.md](modelo-dados.md). Execute `./backend/core/testar.sh` na raiz para validar o core sem credenciais; após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os ciclos persistentes.
 
-## Schema validation do servidor
+## Schema validation no MongoDB
 
-Scripts em `backend/servidor/mongo/` (ops ao lado do artefato de deploy; a
+Scripts em `backend/mongo-schema/` (ops ao lado do artefato de deploy; a
 fonte Java continua em `backend/api`). Aplicam `$jsonSchema` com
 `validationAction: "error"` e `validationLevel: "moderate"`: inserts e updates
 em documentos válidos respeitam os tipos essenciais; documentos legados
@@ -223,8 +223,8 @@ Fluxo em banco de teste:
 ```bash
 export MONGODB_DATABASE=agrogestao_ci_teste
 export MONGODB_URI='mongodb+srv://...'
-./backend/servidor/mongo/aplicar-schema.sh
-./backend/servidor/mongo/testar-schema.sh
+./backend/mongo-schema/aplicar-schema.sh
+./backend/mongo-schema/testar-schema.sh
 ```
 
 `aplicar-schema.sh` só aplica validators. `testar-schema.sh` **não** reaplica:
