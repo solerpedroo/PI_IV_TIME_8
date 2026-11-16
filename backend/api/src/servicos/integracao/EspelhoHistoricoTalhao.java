@@ -113,9 +113,10 @@ public class EspelhoHistoricoTalhao
                 evento.append ("origemChave", origemChave);
             this.talhoes.criarHistorico (propriedadeId, talhaoId, evento);
         }
-        catch (Exception ignorado)
+        catch (Exception erro)
         {
             // O fluxo principal (atividade, estoque, ocorrencia) nao pode falhar por espelho.
+            System.err.println ("Historico do talhao nao espelhado: " + erro.getMessage ());
         }
     }
 
