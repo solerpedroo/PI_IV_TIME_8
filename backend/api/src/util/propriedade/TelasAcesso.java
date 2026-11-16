@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-package util;
+package util.propriedade;
 
 import java.util.List;
 import org.bson.Document;
