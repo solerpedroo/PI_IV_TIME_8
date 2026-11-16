@@ -3,15 +3,15 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package handlers;
+package handlers.cultivo;
 
-import dados.RepositorioAtividades;
-import dados.RepositorioCulturas;
-import dados.RepositorioCustos;
-import dados.RepositorioColheitas;
-import dados.RepositorioOrcamentos;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.operacao.RepositorioAtividades;
+import dados.cultivo.RepositorioCulturas;
+import dados.financeiro.RepositorioCustos;
+import dados.cultivo.RepositorioColheitas;
+import dados.financeiro.RepositorioOrcamentos;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -27,8 +27,8 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import util.Json;
-import util.Validacao;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Safras (ciclos produtivos) da propriedade de quem esta logado.
