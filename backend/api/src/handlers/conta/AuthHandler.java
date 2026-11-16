@@ -1,11 +1,11 @@
-package handlers;
+package handlers.conta;
 
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
-import dados.RepositorioEquipe;
-import dados.RepositorioUsuarios;
-import util.PapelNaPropriedade;
+import dados.propriedade.RepositorioEquipe;
+import dados.conta.RepositorioUsuarios;
+import util.propriedade.PapelNaPropriedade;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -16,11 +16,11 @@ import seguranca.Senhas;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import seguranca.LimitadorDeTaxa;
-import dados.ConflitoDeCadastro;
-import servicos.CodigosVerificacao;
-import servicos.ServicoEmail;
-import servicos.ClienteDeAlgoritmos;
-import util.Validacao;
+import dados.infra.ConflitoDeCadastro;
+import servicos.conta.CodigosVerificacao;
+import servicos.conta.ServicoEmail;
+import servicos.integracao.ClienteDeAlgoritmos;
+import util.comum.Validacao;
 
 /*
     Cadastro, login, sessao, confirmacao de e-mail e redefinicao de senha.
@@ -80,7 +80,7 @@ public class AuthHandler
     // so o que pode sair do servidor (nada de hash ou token)
     private static Document usuarioPublico (Document usuario)
     {
-        return util.PerfilUsuario.publico (usuario);
+        return util.conta.PerfilUsuario.publico (usuario);
     }
 
     private static Resposta mensagem (String texto)
