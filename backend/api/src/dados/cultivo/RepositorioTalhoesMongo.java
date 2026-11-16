@@ -33,6 +33,7 @@ public class RepositorioTalhoesMongo implements RepositorioTalhoes
 
         this.talhoes.createIndex (Indexes.ascending ("propriedadeId", "nomeNormalizado"),
                                   new IndexOptions ().unique (true));
+        this.historicos.createIndex (Indexes.ascending ("propriedadeId", "talhaoId", "criadoEm"));
     }
 
     // filtro por _id que tambem exige a propriedade (um usuario nunca enxerga talhao de outro)
