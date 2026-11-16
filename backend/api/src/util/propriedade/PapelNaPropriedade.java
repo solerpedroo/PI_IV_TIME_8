@@ -1,8 +1,8 @@
 // Miguel — RA: 25003110
-package util;
+package util.propriedade;
 
-import dados.RepositorioEquipe;
-import dados.RepositorioUsuarios;
+import dados.propriedade.RepositorioEquipe;
+import dados.conta.RepositorioUsuarios;
 import org.bson.Document;
 
 /** Distingue dono da propriedade e colaborador convidado. */
