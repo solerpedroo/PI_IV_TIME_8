@@ -1,9 +1,9 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
 /* Autor secundario: Tomas de Paula Michelon Toniato - RA: 25004211 */
-package handlers;
+package handlers.estoque;
 
-import dados.CalculosEstoque;
-import dados.RepositorioEstoque;
+import dados.estoque.CalculosEstoque;
+import dados.estoque.RepositorioEstoque;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -14,10 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.bson.Document;
 import seguranca.Sessoes;
-import servicos.ClienteDeAlgoritmos;
-import servicos.CustosDeConsumo;
-import util.Json;
-import util.Validacao;
+import servicos.integracao.ClienteDeAlgoritmos;
+import servicos.financeiro.CustosDeConsumo;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /* Catálogo, movimentações e indicadores pertencem à propriedade da sessão.
    As atividades são apenas consultadas para validar o vínculo do consumo. */
