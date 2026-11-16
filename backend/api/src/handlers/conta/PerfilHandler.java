@@ -1,7 +1,7 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-package handlers;
+package handlers.conta;
 
-import dados.RepositorioUsuarios;
+import dados.conta.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -10,11 +10,11 @@ import org.bson.Document;
 import seguranca.LimitadorDeTaxa;
 import seguranca.Senhas;
 import seguranca.Sessoes;
-import servicos.ClienteDeAlgoritmos;
-import servicos.CodigosVerificacao;
-import servicos.ServicoEmail;
-import util.PerfilUsuario;
-import util.Validacao;
+import servicos.integracao.ClienteDeAlgoritmos;
+import servicos.conta.CodigosVerificacao;
+import servicos.conta.ServicoEmail;
+import util.conta.PerfilUsuario;
+import util.comum.Validacao;
 
 /* Perfil do próprio usuário: não aceita ID de usuário enviado pelo navegador.
    E-mail novo só substitui o atual após confirmar o código recebido. */
