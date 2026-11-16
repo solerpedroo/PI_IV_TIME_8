@@ -1,8 +1,8 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package handlers;
+package handlers.conta;
 
-import dados.ConexaoMongo;
+import dados.infra.ConexaoMongo;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
