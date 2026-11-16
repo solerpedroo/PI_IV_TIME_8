@@ -2,12 +2,15 @@
 
 <!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
 
-O produto usa **dois** servidores Java 21, sem Spring no caminho principal:
+O produto usa **dois** servidores Java 21, sem Spring no caminho principal.
+
+**Mapa completo das pastas:** [`ESTRUTURA.md`](ESTRUTURA.md). Dentro da API, o código está dividido por módulo funcional (`handlers/cultivo`, `dados/estoque`, etc.) — veja [`api/MODULOS.md`](api/MODULOS.md).
 
 | Pasta | Porta | Papel |
 |---|---|---|
 | `api/` | 8080 (HTTP) | Páginas estáticas, `/api/**`, sessões, MongoDB |
 | `serversocket/` | 3000 (TCP) | Validações e cálculos via protocolo de objetos (padrão da disciplina) |
+| `mongo-schema/` | — | Scripts `mongosh` para validação estrutural do banco |
 
 O `rodar.sh` de `api/` sobe o `serversocket` em segundo plano, salvo
 `SERVIDOR_ALGORITMOS_DISABLED=1`. Detalhes em [`serversocket/README.md`](serversocket/README.md).
