@@ -1,6 +1,6 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
-package dados;
+package dados.operacao;
 
 import java.util.List;
 import org.bson.Document;
