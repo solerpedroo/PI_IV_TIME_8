@@ -26,8 +26,26 @@ import util.comum.FotoEvidencia;
 import util.comum.Json;
 import util.comum.Validacao;
 
-/* Regras do projeto §8.7. O cliente informa dados; titularidade, status inicial,
-   ordem dos eventos e datas de publicação/resolução são definidos pelo servidor. */
+/*
+    Manipulador HTTP das ocorrências de campo (regras do projeto §8.7).
+
+    O cliente informa título, tipo, prioridade, data e texto. Titularidade,
+    status inicial, ordem dos eventos e datas de publicação ou resolução
+    ficam com o servidor. Cada ocorrência pertence a um usuário e a uma
+    propriedade: outra fazenda não vê o registro nem a timeline.
+
+    O status caminha em uma direção:
+    ABERTA (nasce assim) -> EM_ACOMPANHAMENTO (ação acompanhamento) ->
+    RESOLVIDA (ação resolucao). RESOLVIDA não volta e o cadastro não é
+    mais editado. A ação atualizacao só vale em EM_ACOMPANHAMENTO e não
+    troca o status; ela só acrescenta um fato na timeline.
+
+    A versão é um contador otimista. O cliente devolve o número que leu.
+    Se outra tela já gravou, a versão no banco é outra e a escrita responde
+    409, para ninguém apagar o evento do colega. Cada gravação de texto
+    sobe a versão e gera um evento na timeline, na mesma transação do
+    repositório. Foto também sobe a versão, mas não entra na timeline.
+*/
 public class OcorrenciasHandler
 {
     public static final ZoneId FUSO = ZoneId.of ("America/Sao_Paulo");
@@ -39,12 +57,16 @@ public class OcorrenciasHandler
     private final Clock relogio;
     private EspelhoHistoricoTalhao espelhoHistorico;
 
+    /* Atalho de produção: usa o relógio real do sistema. */
     public OcorrenciasHandler (RepositorioOcorrencias ocorrencias, RepositorioTalhoes talhoes, Sessoes sessoes)
     {
         this (ocorrencias, talhoes, sessoes, Clock.systemUTC ());
     }
 
-    // Um relógio explícito permite testar a virada do mês sem alterar o computador.
+    /*
+        Repositório (memória ou Mongo), talhões para validar o vínculo e sessões.
+        Um relógio explícito permite testar a virada do mês sem alterar o computador.
+    */
     public OcorrenciasHandler (RepositorioOcorrencias ocorrencias, RepositorioTalhoes talhoes, Sessoes sessoes, Clock relogio)
     {
         this.ocorrencias = ocorrencias;
@@ -53,11 +75,16 @@ public class OcorrenciasHandler
         this.relogio = relogio;
     }
 
+    /*
+        Liga o espelho. Registro, acompanhamento, atualização e resolução
+        também aparecem no histórico do talhão, sem o cliente postar lá.
+    */
     public void setEspelhoHistorico (EspelhoHistoricoTalhao espelho)
     {
         this.espelhoHistorico = espelho;
     }
 
+    /* Publica consulta, resumo, timeline, mutações de status e a foto de evidência. */
     public void registrar (Roteador roteador) throws Exception
     {
         roteador.adicionar ("GET", "/api/ocorrencias/resumo", this::resumo);
@@ -75,6 +102,7 @@ public class OcorrenciasHandler
 
     /*
         JSON público: id + campos de negócio + metadados da foto, nunca os bytes BSON.
+        usuarioId sai da resposta; a posse continua só no documento guardado.
     */
     private static Document publico (Document registro)
     {
@@ -87,6 +115,7 @@ public class OcorrenciasHandler
         return ret;
     }
 
+    /* Busca pelo usuário e pela propriedade da sessão. Fora desse par, é 404. */
     private Document buscar (Requisicao r) throws Exception
     {
         Document registro = this.ocorrencias.buscar (r.getSessao ().getUsuarioId (), r.getSessao ().getPropriedadeId (), r.getParametro ("id"));
@@ -94,11 +123,17 @@ public class OcorrenciasHandler
         return registro;
     }
 
+    /* Detalhe de uma ocorrência, inclusive excluída, para a tela de histórico. */
     private Resposta consultar (Requisicao r) throws Exception
     {
         return Resposta.json (200, publico (this.buscar (r)));
     }
 
+    /*
+        Timeline: eventos em ordem crescente (campo ordem, igual à versão
+        do registro na hora do fato). Cada item guarda status e texto daquela
+        etapa. Editar o cadastro depois não reescreve os eventos antigos.
+    */
     private Resposta timeline (Requisicao r) throws Exception
     {
         this.buscar (r);
@@ -108,7 +143,10 @@ public class OcorrenciasHandler
         return Resposta.json (200, Json.escrever (ret));
     }
 
-    // Lista e indicadores compartilham exatamente o mesmo contexto de consulta.
+    /*
+        Lista e indicadores compartilham exatamente o mesmo contexto de consulta.
+        Filtros: talhão da propriedade, trecho do título e, por padrão, sem as excluídas.
+    */
     private List<Document> filtrar (Requisicao r) throws Exception
     {
         String talhao = r.getConsulta ("talhaoId");
@@ -128,6 +166,7 @@ public class OcorrenciasHandler
         return ret;
     }
 
+    /* Lista as ocorrências já filtradas, no formato público. */
     private Resposta listar (Requisicao r) throws Exception
     {
         List<Document> ret = new ArrayList<> ();
@@ -135,6 +174,10 @@ public class OcorrenciasHandler
         return Resposta.json (200, Json.escrever (ret));
     }
 
+    /*
+        Conta ABERTA, EM_ACOMPANHAMENTO, prioridade Alta ainda não resolvida
+        e RESOLVIDA cujo resolvidaEm cai no mês pedido (fuso America/Sao_Paulo).
+    */
     private Resposta resumo (Requisicao r) throws Exception
     {
         String valor = r.getConsulta ("mes");
@@ -161,6 +204,11 @@ public class OcorrenciasHandler
             .append ("fuso", FUSO.toString ()));
     }
 
+    /*
+        Valida o cadastro. O talhão, se vier, precisa ser desta propriedade.
+        A posição no mapa só entra se o ponto cair dentro do polígono do talhão.
+        safraId livre do cliente é recusado: a safra copiada é a do talhão.
+    */
     private Document lerCampos (Document corpo, Validacao v, String propriedade) throws Exception
     {
         String titulo = v.texto ("titulo", "Informe um título.", 160);
@@ -214,6 +262,23 @@ public class OcorrenciasHandler
             v.erro ("vinculos", "Vínculo por safraId não está disponível nesta versão.");
         FotoEvidencia.rejeitarCamposDeUploadNoCadastro (corpo, v);
         if (v.temErros ()) return null;
+        /*
+            Campos que o cliente pode influenciar. append devolve o mesmo Document,
+            agora com estas chaves. mutar() ainda vai acrescentar _id, status e versão
+            antes de gravar na coleção ocorrencias.
+
+            {
+              "titulo": "Lagarta",
+              "tipo": "Praga" | "Doença" | "Clima" | "Equipamento" | "Outro",
+              "prioridade": "Baixa" | "Média" | "Alta",
+              "data": "2026-01-25",          // dia do fato, não o instante do servidor
+              "descricao": "texto livre",
+              "talhaoId": hex ou null,       // null = ocorrência da fazenda inteira
+              "talhaoNome": nome copiado agora, para a lista não quebrar se o talhão for renomeado depois
+              "safra": texto que já estava no talhão, ou null
+              "localizacao": { "lat": ..., "lng": ... } ou null
+            }
+        */
         return new Document ("titulo", titulo).append ("tipo", tipo).append ("prioridade", prioridade)
             .append ("data", data).append ("descricao", descricao)
             .append ("talhaoId", talhao == null ? null : talhao.getObjectId ("_id").toHexString ())
@@ -222,14 +287,43 @@ public class OcorrenciasHandler
             .append ("localizacao", localizacao);
     }
 
+    /* Lê o contador de versão usado no controle otimista. */
     private static long versao (Document registro)
     {
         return ((Number) registro.get ("versao")).longValue ();
     }
 
-    // Cada evento guarda os dados daquela etapa. Editar o cadastro não apaga a descrição original.
+    /*
+        Monta um evento da timeline. A ordem é a versão do registro naquele
+        instante, então a sequência acompanha as gravações. O bloco dados
+        congela título, tipo, prioridade e talhão da etapa: editar o cadastro
+        depois não apaga a descrição original.
+    */
     private static Document evento (Document registro, String acao, String descricao)
     {
+        /*
+            Este Document vai para a coleção ocorrencias_timeline, não para ocorrencias.
+            O cadastro fica numa coleção; cada passo (registro, edição, resolução) fica noutra.
+
+            {
+              "_id": ObjectId deste evento,
+              "usuarioId": dono,
+              "propriedadeId": fazenda,
+              "ocorrenciaId": hex do cadastro,
+              "ordem": versão naquele momento (1, 2, 3...),
+              "data": instante atualizadaEm do cadastro,
+              "acao": "registro" | "editar" | "acompanhamento" | "atualizacao" | "resolucao" | "excluir",
+              "status": status do cadastro DEPOIS desta ação,
+              "descricao": texto deste passo,
+              "dados": {                      // foto do cadastro neste instante
+                "titulo", "tipo", "data", "prioridade", "descricao",
+                "talhaoId", "talhaoNome", "safra", "localizacao"
+              }
+            }
+
+            dados é um Document dentro do Document. Se a pessoa editar o título
+            amanhã, o evento de hoje continua com o título antigo.
+        */
         return new Document ("_id", new ObjectId ()).append ("usuarioId", registro.getString ("usuarioId"))
             .append ("propriedadeId", registro.getString ("propriedadeId"))
             .append ("ocorrenciaId", registro.getObjectId ("_id").toHexString ())
@@ -242,9 +336,23 @@ public class OcorrenciasHandler
                 .append ("localizacao", registro.get ("localizacao")));
     }
 
+    /*
+        Única porta de escrita de texto: criar, editar, excluir ou lançar evento.
+        Criar força status ABERTA e versão 1, com o primeiro evento da timeline.
+        Nas demais ações o corpo precisa trazer a versão lida. Se não bater,
+        a resposta é 409 e nada é gravado.
+
+        Transições de status, sempre a partir do valor já salvo:
+        acompanhamento só sai de ABERTA e vai para EM_ACOMPANHAMENTO;
+        atualizacao só cabe em EM_ACOMPANHAMENTO e mantém o status;
+        resolucao grava RESOLVIDA e preenche resolvidaEm.
+        Ocorrência RESOLVIDA não é editada. Exclusão é lógica: sai da lista
+        ativa e a timeline continua consultável. O espelho recebe registro,
+        acompanhamento, atualização e resolução quando há talhão.
+    */
     private Resposta mutar (Requisicao r, String acao) throws Exception
     {
-        // Coordena escrita com troca/exclusão da propriedade e invalidação da sessão.
+        /* Coordena escrita com troca ou exclusão da propriedade e invalidação da sessão. */
         synchronized (this.sessoes)
         {
             Sessao atual = this.sessoes.buscar (r.getToken ());
@@ -262,6 +370,25 @@ public class OcorrenciasHandler
                     v.erro ("status", "Uma ocorrência deve iniciar aberta.");
                 Document registro = this.lerCampos (corpo, v, propriedade);
                 if (v.temErros ()) return v.resposta ();
+                /*
+                    Completa o cadastro antes do insert na coleção ocorrencias.
+                    lerCampos já pôs título, tipo, talhão etc. Estes append são
+                    campos que o cliente não escolhe:
+
+                    {
+                      ...campos do formulário,
+                      "_id": ObjectId novo,
+                      "usuarioId": quem está logado,
+                      "propriedadeId": fazenda da sessão,
+                      "statusInicial": "ABERTA",   // nunca muda; lembra como nasceu
+                      "status": "ABERTA",
+                      "criadaEm": instante UTC do servidor,
+                      "atualizadaEm": o mesmo instante,
+                      "resolvidaEm": null,         // preenchido só na resolução
+                      "excluida": false,
+                      "versao": 1                  // o próximo PUT precisa mandar 1
+                    }
+                */
                 registro.append ("_id", new ObjectId ()).append ("usuarioId", atual.getUsuarioId ())
                     .append ("propriedadeId", propriedade).append ("statusInicial", "ABERTA").append ("status", "ABERTA")
                     .append ("criadaEm", agora).append ("atualizadaEm", agora).append ("resolvidaEm", null)
@@ -311,7 +438,7 @@ public class OcorrenciasHandler
                 if (operacao.equals ("resolucao")) nova.append ("status", "RESOLVIDA").append ("resolvidaEm", agora);
                 acao = operacao;
             }
-            // O relógio não pode produzir um evento anterior ao último já confirmado.
+            /* O relógio não pode produzir um evento anterior ao último já confirmado. */
             if (Instant.parse (agora).isBefore (Instant.parse (anterior.getString ("atualizadaEm"))))
                 return Resposta.erro (409, "Data do servidor anterior ao último evento. Tente novamente mais tarde.");
             nova.append ("versao", versao (anterior) + 1).append ("atualizadaEm", agora);
@@ -323,7 +450,7 @@ public class OcorrenciasHandler
         }
     }
 
-    /** GET /api/ocorrencias/{id}/foto — devolve image/* autenticado (#176). */
+    /* GET /api/ocorrencias/{id}/foto — devolve image/* autenticado (#176). */
     private Resposta obterFoto (Requisicao r) throws Exception
     {
         Document registro = this.buscar (r);
@@ -336,6 +463,7 @@ public class OcorrenciasHandler
         POST /api/ocorrencias/{id}/foto — grava Binary no documento da ocorrência.
         Exige versao igual ao cadastro para evitar sobrescrever foto de uma revisão antiga.
         Incrementa versao sem evento na timeline (foto é complemento, não alteração de texto).
+        A checagem de versão aqui é a mesma das mutações de status.
     */
     private Resposta enviarFoto (Requisicao r) throws Exception
     {
@@ -363,7 +491,10 @@ public class OcorrenciasHandler
         }
     }
 
-    /** DELETE /api/ocorrencias/{id}/foto — remove o subdocumento fotoEvidencia. */
+    /*
+        DELETE /api/ocorrencias/{id}/foto — remove o subdocumento fotoEvidencia.
+        Também exige a versão atual e a incrementa, sem criar evento na timeline.
+    */
     private Resposta removerFoto (Requisicao r) throws Exception
     {
         synchronized (this.sessoes)

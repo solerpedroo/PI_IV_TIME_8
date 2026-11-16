@@ -31,8 +31,11 @@ import java.util.concurrent.Future;
 import org.bson.Document;
 
 /*
-    Issues #36, #183 e #184: consistencia entre resumos/listas, concorrencia leve
-    e medicao de tempos das consultas usadas pelo painel.
+    Issues #36, #183 e #184. Prova três regras do painel:
+    o resumo de cada módulo fecha com a lista (custos, ocorrências, estoque);
+    outro usuário não herda os lançamentos (isolamento);
+    leituras paralelas do resumo de custos devolvem o mesmo total.
+    Também mede o tempo dessas consultas e, com --mongo, o índice do histórico do talhão.
 */
 public class TesteQualidade
 {
@@ -66,6 +69,13 @@ public class TesteQualidade
     private static Resp bruto (String metodo, String caminho, String json, String token) throws Exception
     {
         byte[] corpo = json == null ? new byte[0] : json.getBytes (StandardCharsets.UTF_8);
+        /*
+            Texto HTTP cru, o mesmo formato que Aceitadora/Supervisora leem.
+            Linha 1: método, caminho e versão.
+            Host, Authorization (se houver token) e Content-Type (se houver JSON).
+            Content-Length é o tamanho do corpo em bytes.
+            \r\n\r\n fecha o cabeçalho. O corpo JSON vai em seguida, se existir.
+        */
         String cabeca = metodo + " " + caminho + " HTTP/1.1\r\nHost: 127.0.0.1\r\n" +
             (token == null ? "" : "Authorization: Bearer " + token + "\r\n") +
             (json == null ? "" : "Content-Type: application/json\r\n") +
@@ -109,12 +119,14 @@ public class TesteQualidade
         return Document.parse ("{\"itens\":" + resposta.corpo + "}").getList ("itens", Document.class);
     }
 
+    /* Login devolve o Bearer. O segundo usuário usa outro token para provar o isolamento. */
     private static String login (String email, String senha) throws Exception
     {
         Document corpo = Document.parse (post ("/api/auth/login", new Document ("email", email).append ("password", senha).toJson (), null).corpo);
         return corpo.getString ("token");
     }
 
+    /* Regra de conta: o cadastro só libera o login depois que o token de confirmação de e-mail é aceito. */
     private static void cadastroConfirmado (String email) throws Exception
     {
         String json = new Document ("name", "Qualidade").append ("email", email).append ("phone", "(19) 99999-0000")
@@ -125,6 +137,8 @@ public class TesteQualidade
         conferir ("confirmacao", post ("/api/auth/confirm-email", new Document ("token", tokenConfirmacao).toJson (), null).status == 200);
     }
 
+    /* Monta a propriedade do cenário: duas culturas, dois talhões, uma safra, custos,
+       saldo de insumos e uma ocorrência aberta ao lado de outra já resolvida. */
     private static String prepararDados (String token) throws Exception
     {
         LocalDate hoje = LocalDate.now (TesteQualidade.FUSO);
@@ -173,6 +187,9 @@ public class TesteQualidade
         return t1;
     }
 
+    /* Prova consistência e isolamento: total e quantidade do resumo batem com a lista,
+       o painel repete essas contagens, outro usuário não vê os custos e o histórico
+       do talhão responde 200 para o dono. */
     private static void conferirConsistencia (String token, String t1) throws Exception
     {
         System.out.println ("\n# qualidade — consistencia (#183)");
@@ -216,6 +233,7 @@ public class TesteQualidade
         conferir ("historico do talhao: resposta 200", hist.status == 200);
     }
 
+    /* Prova que doze leituras paralelas do resumo de custos enxergam o mesmo total. */
     private static void conferirConcorrencia (String token) throws Exception
     {
         System.out.println ("\n# qualidade — concorrencia (#183)");
@@ -240,6 +258,7 @@ public class TesteQualidade
         return copia[copia.length / 2];
     }
 
+    /* Prova que a mediana das consultas do painel cabe no limite local de tempo. */
     private static void medirConsultas (String token) throws Exception
     {
         System.out.println ("\n# qualidade — medicao (#184)");
@@ -270,6 +289,7 @@ public class TesteQualidade
         }
     }
 
+    /* Prova o índice de historicos_talhoes por propriedade e talhão, usado na consulta do histórico. */
     private static void conferirIndicesMongo (ConexaoMongo conexao) throws Exception
     {
         System.out.println ("\n# qualidade — indices Mongo (#183)");
@@ -284,6 +304,7 @@ public class TesteQualidade
         conferir ("indice historicos_talhoes (propriedadeId, talhaoId)", historico);
     }
 
+    /* Com --mongo exige banco terminado em _teste. Sem a flag, as mesmas regras rodam em memória. */
     public static void main (String[] args) throws Exception
     {
         boolean mongo = args.length > 0 && "--mongo".equals (args[0]);

@@ -12,10 +12,12 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Senhas;
 
-/* Servidor de apoio ao teste de navegador. Usa APENAS banco terminado em _teste.
-   As atividades são fixtures do teste, não uma nova API de criação de atividades. */
+/* Servidor de apoio ao teste de navegador do estoque. Usa APENAS banco terminado
+   em _teste. Sobe dois produtores isolados, cada um com uma atividade fixture.
+   As atividades não são uma nova API de criação. */
 public class CenarioEstoqueTeste
 {
+    /* Falha cedo se a URI não apontar para um banco cujo nome termina em _teste. */
     public static String uriSegura () throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
@@ -32,8 +34,8 @@ public class CenarioEstoqueTeste
         ConexaoMongo conexao = new ConexaoMongo (uri);
         if (List.of (args).contains ("--limpar"))
         {
-            // Remove somente os produtores fictícios deste cenário e seus contextos.
-            // Nunca usa drop, nem limpa registros de usuários reais do banco de teste.
+            /* Remove somente os produtores fictícios deste cenário e o estoque, as movimentações e as atividades deles.
+               Nunca usa drop, nem limpa registros de usuários reais do banco de teste. */
             for (String email : List.of ("estoque-e2e@agro.test", "outro-estoque@agro.test"))
             {
                 Document usuario = conexao.getBanco ().getCollection ("usuarios").find (new Document ("email", email)).first ();
@@ -42,6 +44,7 @@ public class CenarioEstoqueTeste
                 for (Document propriedade : conexao.getBanco ().getCollection ("propriedades").find (new Document ("usuarioId", uid)))
                 {
                     String pid = propriedade.getObjectId ("_id").toHexString ();
+                    // Apaga só documentos cuja propriedadeId é desta fazenda fictícia.
                     for (String colecao : List.of ("insumos", "movimentacoes_insumos", "atividades"))
                         conexao.getBanco ().getCollection (colecao).deleteMany (new Document ("propriedadeId", pid));
                     conexao.getBanco ().getCollection ("propriedades").deleteOne (new Document ("_id", propriedade.getObjectId ("_id")));
@@ -54,7 +57,7 @@ public class CenarioEstoqueTeste
         }
         if (List.of (args).contains ("--iniciar-replica-local"))
         {
-            // Inicialização opcional e explícita apenas no Mongo de teste local.
+            /* Inicialização opcional do replica set, e só no Mongo local 127.0.0.1. Fora desse host a opção falha. */
             ConnectionString config = new ConnectionString (uri);
             if (config.getHosts ().size () != 1 || !config.getHosts ().get (0).startsWith ("127.0.0.1:"))
                 throw new Exception ("Inicialização permitida somente em 127.0.0.1.");
@@ -79,6 +82,7 @@ public class CenarioEstoqueTeste
             return;
         }
 
+        /* Garante os dois produtores do teste e uma atividade já gravada em cada propriedade, para o isolamento do consumo. */
         RepositorioUsuariosMongo usuarios = new RepositorioUsuariosMongo (conexao);
         for (String email : List.of ("estoque-e2e@agro.test", "outro-estoque@agro.test"))
         {
@@ -93,6 +97,7 @@ public class CenarioEstoqueTeste
                     .append ("propriedadeId", pid).append ("usuarioId", usuario.getObjectId ("_id").toHexString ())
                     .append ("titulo", "estoque-e2e@agro.test".equals (email) ? "Aplicação persistida" : "Atividade de outro produtor"));
         }
+        /* Sobe a API na 8080 e fica de pé até a linha "desativar", para o navegador exercitar saldo e histórico. */
         Servidor servidor = new Servidor ("127.0.0.1", 8080,
             Servidor.montarRoteador (usuarios, new RepositorioTalhoesMongo (conexao.getBanco ()),
                 new RepositorioEstoqueMongo (conexao), new RepositorioSafrasMongo (conexao.getBanco ()),

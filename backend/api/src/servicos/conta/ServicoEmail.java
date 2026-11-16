@@ -15,9 +15,19 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 /*
-    Envia os codigos de autenticacao por SMTP sobre TLS implicito (porta 465).
-    Sem as variaveis SMTP_* o modo local imprime o codigo no terminal para que
-    cadastro, confirmacao e recuperacao possam ser testados sem credenciais.
+    Envia os códigos de autenticação e o convite de equipe por SMTP.
+
+    Quem chama: AuthHandler (confirmação de cadastro, reenvio e redefinição
+    de senha), PerfilHandler (troca de e-mail) e o fluxo de equipe
+    (enviarConviteEquipe). Não é um handler HTTP: não devolve 401, 400
+    nem 409. Falha de rede ou de credencial sobe como Exception, e cada
+    chamador decide se avisa o cliente ou esconde o erro.
+
+    O que persiste: nada no banco. Com SMTP_* completo, abre TLS na porta
+    465 (ou na SMTP_PORT) e fala o diálogo EHLO, AUTH LOGIN, MAIL, RCPT
+    e DATA. Sem nenhuma variável SMTP_*, o modo simulado só imprime o
+    código no console, para cadastro e recuperação funcionarem sem senha
+    de aplicativo.
 */
 public final class ServicoEmail
 {
@@ -27,6 +37,10 @@ public final class ServicoEmail
     private final String senha;
     private final String remetente;
 
+    /*
+        Construtor privado. Só doAmbiente instancia, já com tudo preenchido
+        ou com host nulo no modo simulado. Não há objeto "meio configurado".
+    */
     private ServicoEmail (String host, int porta, String usuario, String senha, String remetente)
     {
         this.host      = host;
@@ -36,6 +50,11 @@ public final class ServicoEmail
         this.remetente = remetente;
     }
 
+    /*
+        Lê uma variável de ambiente já sem espaços nas pontas e sem aspas
+        que o .env às vezes deixa em volta do valor. SMTP_PASSWORD ainda
+        perde espaços internos: senha de app do Gmail é copiada em grupos.
+    */
     private static String ambiente (String nome)
     {
         String valor = System.getenv (nome);
@@ -53,7 +72,13 @@ public final class ServicoEmail
         return valor;
     }
 
-    // Centraliza a configuracao e impede iniciar parcialmente configurado.
+    /*
+        Monta o serviço a partir do ambiente. Não é rota.
+        Tudo vazio: modo simulado (host nulo), sem exceção.
+        Alguma variável preenchida e outra faltando: exceção, para não
+        subir achando que o e-mail sai quando o AUTH vai falhar.
+        Porta vazia vira 465. Fora de 1..65535, exceção.
+    */
     public static ServicoEmail doAmbiente () throws Exception
     {
         String host      = ServicoEmail.ambiente ("SMTP_HOST");
@@ -75,12 +100,20 @@ public final class ServicoEmail
         return new ServicoEmail (host, numeroPorta, usuario, senha, remetente);
     }
 
+    /*
+        true quando doAmbiente não achou SMTP_*. Os envios então escrevem
+        no console em vez de abrir socket.
+    */
     public boolean simulado ()
     {
         return this.host == null;
     }
 
-  // Avisa no console se o codigo vai para o terminal ou para o SMTP (facilita debug local).
+    /*
+        Avisa no console, na subida do servidor, se o código vai para o
+        terminal ou para o SMTP. Configuração inválida não derruba o
+        processo: só registra o motivo no erro padrão.
+    */
     public static void logModo ()
     {
         try
@@ -97,12 +130,20 @@ public final class ServicoEmail
         }
     }
 
+    /*
+        Recusa endereço nulo ou com quebra de linha. CR/LF no destinatário
+        permitiria injetar cabeçalho SMTP (outro To, outro Subject).
+    */
     private static void conferirEndereco (String endereco) throws Exception
     {
         if (endereco == null || endereco.contains ("\r") || endereco.contains ("\n"))
             throw new Exception ("Endereco de e-mail invalido");
     }
 
+    /*
+        Escreve um comando SMTP e termina com CRLF, como o protocolo exige.
+        O flush é imediato: o servidor só responde depois de receber a linha.
+    */
     private static void comando (BufferedWriter saida, String texto) throws Exception
     {
         saida.write (texto);
@@ -110,7 +151,12 @@ public final class ServicoEmail
         saida.flush ();
     }
 
-    // Respostas SMTP podem ter varias linhas; a ultima tem espaco apos o codigo.
+    /*
+        Lê a resposta SMTP até a última linha. Resposta de várias linhas
+        usa hífen depois do código (250-); a última troca o hífen por espaço.
+        Se o código não for o esperado, lança exceção. 535 ou badcredentials
+        ganham a dica da senha de app, porque é a falha mais comum no Gmail.
+    */
     private static void esperar (BufferedReader entrada, int esperado) throws Exception
     {
         String linha;
@@ -131,11 +177,19 @@ public final class ServicoEmail
         }
     }
 
+    /*
+        AUTH LOGIN pede usuário e senha em Base64, não em texto puro.
+    */
     private static String base64 (String texto)
     {
         return Base64.getEncoder ().encodeToString (texto.getBytes (StandardCharsets.UTF_8));
     }
 
+    /*
+        Assunto e nome do remetente com acento não cabem em ASCII puro.
+        Se houver caractere acima de 127, embrulha no formato MIME
+        =?UTF-8?B?...?= para o servidor não quebrar o cabeçalho.
+    */
     private static String codificarUtf8Mime (String texto)
     {
         boolean soAscii = true;
@@ -148,6 +202,10 @@ public final class ServicoEmail
         return "=?UTF-8?B?" + ServicoEmail.base64 (texto) + "?=";
     }
 
+    /*
+        Escapa &, <, > e aspas antes de colocar texto do usuário no HTML.
+        Sem isso, um nome de fazenda poderia alterar a marcação do convite.
+    */
     private static String escapeHtml (String texto)
     {
         if (texto == null)
@@ -159,6 +217,11 @@ public final class ServicoEmail
                     .replace ("\"", "&quot;");
     }
 
+    /*
+        Pasta dos modelos convite-equipe.txt e convite-equipe.html.
+        SMTP_RECURSOS_EMAIL, se existir, substitui recursos/email sob o
+        diretório de trabalho.
+    */
     private static Path pastaRecursosEmail ()
     {
         String custom = System.getenv ("SMTP_RECURSOS_EMAIL");
@@ -168,6 +231,10 @@ public final class ServicoEmail
         return Path.of (System.getProperty ("user.dir"), "recursos", "email");
     }
 
+    /*
+        Lê o modelo inteiro em UTF-8. Arquivo ausente vira exceção com o
+        caminho, para o convite não sair com corpo vazio.
+    */
     private static String carregarModelo (String nomeArquivo) throws Exception
     {
         Path arquivo = ServicoEmail.pastaRecursosEmail ().resolve (nomeArquivo);
@@ -177,6 +244,10 @@ public final class ServicoEmail
         return Files.readString (arquivo, StandardCharsets.UTF_8);
     }
 
+    /*
+        Troca cada {{CHAVE}} pelo valor. No HTML o valor passa por
+        escapeHtml; no texto puro, não, para o link do convite permanecer legível.
+    */
     private static String aplicarModelo (String modelo, Map<String, String> valores, boolean html)
     {
         String saida = modelo;
@@ -191,6 +262,13 @@ public final class ServicoEmail
         return saida;
     }
 
+    /*
+        Envia um e-mail com parte texto e parte HTML.
+        Endereço com quebra de linha: exceção, antes de qualquer rede.
+        Modo simulado: imprime assunto e texto no console e retorna.
+        Modo real: completa o assunto com "— AgroGestão" se ainda não tiver
+        e entrega o MIME a enviarSmtp.
+    */
     public void enviarMultipart (String destinatario, String assunto, String textoPlano, String html) throws Exception
     {
         ServicoEmail.conferirEndereco (destinatario);
@@ -208,6 +286,10 @@ public final class ServicoEmail
         this.enviarSmtp (destinatario, assuntoCompleto, boundary, mime);
     }
 
+    /*
+        Corpo texto do código de 6 dígitos. Quem não pede HTML ainda lê
+        a mesma instrução.
+    */
     private static String corpoTexto (String titulo, String codigo)
     {
         return titulo + "\n\n"
@@ -216,6 +298,10 @@ public final class ServicoEmail
             + "Se você não solicitou esta ação, ignore esta mensagem.";
     }
 
+    /*
+        Mesmo código em HTML, com o visual do AgroGestão. Título, código
+        e instrução são escapados antes de entrar na marcação.
+    */
     private static String corpoHtml (String titulo, String codigo, String instrucao)
     {
         String tituloEsc = ServicoEmail.escapeHtml (titulo);
@@ -246,6 +332,10 @@ public final class ServicoEmail
             + "</td></tr></table></td></tr></table></body></html>";
     }
 
+    /*
+        Quebra o Base64 a cada 76 caracteres, com CRLF. Limite clássico
+        de linha do MIME para o servidor não recusar o corpo.
+    */
     private static String base64Dobrado (String texto)
     {
         String codificado = Base64.getEncoder ().encodeToString (texto.getBytes (StandardCharsets.UTF_8));
@@ -257,6 +347,10 @@ public final class ServicoEmail
         return saida.toString ();
     }
 
+    /*
+        Junta texto puro e HTML num multipart/alternative. O cliente de
+        e-mail mostra o HTML; quem não sabe HTML fica com o texto.
+    */
     private static String montarMime (String boundary, String textoPlano, String html)
     {
         StringBuilder mime = new StringBuilder ();
@@ -272,11 +366,22 @@ public final class ServicoEmail
         return mime.toString ();
     }
 
+    /*
+        No comando DATA, uma linha só com "." encerra a mensagem. Se o
+        corpo tiver uma linha que começa com ponto, ela é dobrada ("..")
+        para o servidor não cortar o e-mail no meio.
+    */
     private static String dotStuff (String corpo)
     {
         return corpo.replace ("\r\n.", "\r\n..").replace ("\n.", "\n..");
     }
 
+    /*
+        Diálogo SMTP sobre TLS implícito: conecta, autentica, informa
+        remetente e destinatário e envia o MIME. Timeout de 10 segundos
+        no socket. Qualquer código de resposta diferente do esperado
+        interrompe e a exceção volta para o handler.
+    */
     private void enviarSmtp (String destinatario, String assunto, String boundary, String mimeCorpo) throws Exception
     {
         SSLSocketFactory fabrica = (SSLSocketFactory) SSLSocketFactory.getDefault ();
@@ -288,20 +393,24 @@ public final class ServicoEmail
              BufferedWriter saida = new BufferedWriter (new OutputStreamWriter (socket.getOutputStream (), StandardCharsets.UTF_8)))
         {
             socket.setSoTimeout (10000);
+            // 220: o servidor aceitou a conexão TLS.
             ServicoEmail.esperar (entrada, 220);
             ServicoEmail.comando (saida, "EHLO agrogestao.local");
+            // 250: EHLO aceito. AUTH LOGIN em seguida pede usuário e senha.
             ServicoEmail.esperar (entrada, 250);
             ServicoEmail.comando (saida, "AUTH LOGIN");
             ServicoEmail.esperar (entrada, 334);
             ServicoEmail.comando (saida, ServicoEmail.base64 (this.usuario));
             ServicoEmail.esperar (entrada, 334);
             ServicoEmail.comando (saida, ServicoEmail.base64 (this.senha));
+            // 235: autenticação ok. 535 cairia na dica de senha de app.
             ServicoEmail.esperar (entrada, 235);
             ServicoEmail.comando (saida, "MAIL FROM:<" + this.remetente + ">");
             ServicoEmail.esperar (entrada, 250);
             ServicoEmail.comando (saida, "RCPT TO:<" + destinatario + ">");
             ServicoEmail.esperar (entrada, 250);
             ServicoEmail.comando (saida, "DATA");
+            // 354: o servidor espera o corpo, terminado por uma linha só com ponto.
             ServicoEmail.esperar (entrada, 354);
 
             saida.write ("From: " + remetenteExibicao + "\r\n");
@@ -317,6 +426,13 @@ public final class ServicoEmail
         }
     }
 
+    /*
+        Envia o código de 6 dígitos (cadastro, reenvio, senha ou e-mail novo).
+        Endereço inválido: exceção.
+        Modo simulado: imprime o código e retorna, sem chamar o multipart.
+        A frase do HTML muda se o assunto fala de redefinição ou de confirmação.
+        Quem chama trata a exceção de SMTP.
+    */
     public void enviarCodigo (String destinatario, String assunto, String codigo) throws Exception
     {
         ServicoEmail.conferirEndereco (destinatario);
@@ -340,7 +456,14 @@ public final class ServicoEmail
         this.enviarMultipart (destinatario, assunto, texto, html);
     }
 
-    /** Convite de equipe: modelos UTF-8 em recursos/email/convite-equipe.{html,txt}. */
+    /*
+        Convite de equipe. Modelos em recursos/email/convite-equipe.txt
+        e convite-equipe.html, com os marcadores {{CHAVE}}.
+        Nome ou fazenda em branco ganham uma saudação e um texto genéricos.
+        Devolve true só quando o SMTP real aceitou a mensagem. No modo
+        simulado devolve false: o texto foi para o console, não para a caixa.
+        Falha de envio é registrada e relançada para o chamador.
+    */
     public boolean enviarConviteEquipe (String destinatario, String nomeConvidado, String nomePropriedade, String linkConvite) throws Exception
     {
         ServicoEmail.conferirEndereco (destinatario);

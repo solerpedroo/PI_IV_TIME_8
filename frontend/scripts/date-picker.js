@@ -6,14 +6,19 @@
 (() => {
   "use strict";
 
+  /* Primeiro elemento da página (ou de um trecho) que casa com o seletor. */
   const $ = (selector, root = document) => root.querySelector(selector);
   let sequence = 0;
 
+  /* Avisa o restante da página que a data mudou, como se a pessoa
+     tivesse editado o campo original. */
   function publish(input) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  /* Quando outro script altera o valor do campo escondido, o texto
+     do botão visível acompanha a nova data. */
   function mirrorValue(input, sync) {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     Object.defineProperty(input, "value", {
@@ -27,6 +32,8 @@
     });
   }
 
+  /* Fecha só o calendário que está por cima quando a pessoa aperta Esc,
+     sem fechar um modal que esteja atrás dele. */
   function bindEscape(modal, close) {
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !modal.classList.contains("is-open")) return;
@@ -38,10 +45,13 @@
     });
   }
 
+  /* Converte o dia escolhido no formato AAAA-MM-DD que o formulário envia. */
   function dateToISO(date) {
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
   }
 
+  /* Mostra a data no botão no formato brasileiro, ou o convite enquanto
+     nada foi escolhido. */
   function displayDate(value) {
     if (!value) return "Selecione a data";
     const parsed = new Date(`${value}T12:00:00`);
@@ -49,11 +59,15 @@
     return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(parsed);
   }
 
+  /* Troca o campo nativo de data por um botão que abre o calendário em modal. */
   function enhance(input) {
     if (!input || input.dataset.dateEnhanced === "true" || input.dataset.keepNative === "true") return;
     input.dataset.dateEnhanced = "true";
     if (!input.id) input.id = `agro-date-${++sequence}`;
+    // Custos usa o id date-form porque o teste de interface procura esse modal.
+    // Os outros campos ganham um id próprio para não colidir.
     const modalId = input.id === "cost-date" ? "date-form" : `date-picker-${input.id}`;
+    // O input continua no formulário para o submit mandar AAAA-MM-DD, mas some da tela.
     input.type = "hidden";
 
     const trigger = document.createElement("button");
@@ -83,11 +97,14 @@
     document.body.appendChild(modal);
     let viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
 
+    /* Atualiza o texto do botão e o resumo dentro do calendário. */
     function syncLabel() {
       $("[data-date-label]", trigger).textContent = displayDate(input.value);
       $("[data-calendar-selected]", modal).textContent = input.value ? `Data selecionada: ${displayDate(input.value)}` : hint;
     }
 
+    /* Desenha os dias do mês visível, marcando o selecionado, o de hoje
+       e os dias que pertencem ao mês vizinho. */
     function renderCalendar() {
       const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(viewDate);
       $("[data-calendar-month]", modal).textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
@@ -114,6 +131,7 @@
       }
     }
 
+    /* Abre o calendário no mês da data já escolhida, ou no mês atual. */
     function openCalendar() {
       viewDate = input.value ? new Date(`${input.value}T12:00:00`) : new Date();
       if (Number.isNaN(viewDate.getTime())) viewDate = new Date();
@@ -123,6 +141,7 @@
       modal.setAttribute("aria-hidden", "false");
     }
 
+    /* Fecha o calendário e devolve o foco ao botão que o abriu. */
     function closeCalendar() {
       modal.classList.remove("is-open");
       modal.setAttribute("aria-hidden", "true");
@@ -130,19 +149,24 @@
     }
 
     trigger.addEventListener("click", openCalendar);
+    /* Mostra o mês anterior na grade, sem fechar o modal. */
     $("[data-calendar-prev]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
+    /* Mostra o mês seguinte na grade, sem fechar o modal. */
     $("[data-calendar-next]", modal).addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
+    /* Apaga a data do campo e fecha o calendário. Só existe se o campo não for obrigatório. */
     $("[data-calendar-clear]", modal)?.addEventListener("click", () => {
       input.value = "";
       publish(input);
       closeCalendar();
     });
+    /* Preenche o campo com o dia de hoje e fecha o calendário. */
     $("[data-calendar-today]", modal).addEventListener("click", () => {
       input.value = dateToISO(new Date());
       publish(input);
       closeCalendar();
     });
     $("[data-calendar-close]", modal).addEventListener("click", closeCalendar);
+    /* Clique no fundo escuro, fora do calendário, também fecha o modal. */
     modal.addEventListener("click", (event) => { if (event.target === modal) closeCalendar(); });
     bindEscape(modal, closeCalendar);
     input.addEventListener("change", syncLabel);
@@ -150,6 +174,7 @@
     syncLabel();
   }
 
+  /* Troca o campo de mês por um botão que abre a grade dos doze meses. */
   function enhanceMonth(input) {
     if (!input || input.dataset.dateEnhanced === "true") return;
     input.dataset.dateEnhanced = "true";
@@ -179,11 +204,13 @@
     document.body.appendChild(modal);
     let year = Number((input.value || "").slice(0, 4)) || new Date().getFullYear();
 
+    /* Escreve no botão o mês abreviado e o ano, por exemplo Jan 2026. */
     function label(value) {
       if (!/^\d{4}-\d{2}$/.test(value || "")) return "Selecione o mês";
       return `${names[Number(value.slice(5, 7)) - 1]} ${value.slice(0, 4)}`;
     }
 
+    /* Monta os doze meses do ano em exibição e destaca o já escolhido. */
     function render() {
       $("[data-month-year]", modal).textContent = String(year);
       const grid = $("[data-month-grid]", modal);
@@ -204,17 +231,20 @@
       });
     }
 
+    /* Espelha o mês escolhido no botão e no texto de resumo do modal. */
     function sync() {
       $("[data-month-label]", trigger).textContent = label(input.value);
       $("[data-month-selected]", modal).textContent = input.value ? `Mês selecionado: ${label(input.value)}` : "Escolha o mês.";
     }
 
+    /* Fecha o seletor de mês e devolve o foco ao botão. */
     function close() {
       modal.classList.remove("is-open");
       modal.setAttribute("aria-hidden", "true");
       trigger.focus();
     }
 
+    /* Abre a grade no ano do mês já escolhido, ou no ano atual. */
     trigger.addEventListener("click", () => {
       year = Number((input.value || "").slice(0, 4)) || new Date().getFullYear();
       render();
@@ -222,14 +252,18 @@
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
     });
+    /* Volta um ano na grade, sem fechar o modal. */
     $("[data-month-prev]", modal).addEventListener("click", () => { year -= 1; render(); });
+    /* Avança um ano na grade, sem fechar o modal. */
     $("[data-month-next]", modal).addEventListener("click", () => { year += 1; render(); });
+    /* Apaga o mês do campo e fecha o seletor. */
     $("[data-month-clear]", modal).addEventListener("click", () => {
       input.value = "";
       publish(input);
       close();
     });
     $("[data-month-close]", modal).addEventListener("click", close);
+    /* Clique no fundo escuro, fora da grade, também fecha o modal. */
     modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
     bindEscape(modal, close);
     input.addEventListener("change", sync);
@@ -237,6 +271,7 @@
     sync();
   }
 
+  /* Aplica o calendário a cada campo de data e o seletor a cada campo de mês da página. */
   function init() {
     document.querySelectorAll('input[type="date"]').forEach(enhance);
     document.querySelectorAll('input[type="month"]').forEach(enhanceMonth);

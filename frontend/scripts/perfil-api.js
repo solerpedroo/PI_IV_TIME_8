@@ -3,12 +3,17 @@
    sua projeção pública; senhas, códigos e preferências não vão ao localStorage. */
 (() => {
   "use strict";
+  /* Primeiro elemento da página (ou de um trecho) que casa com o seletor. */
   const $ = (selector, root = document) => root.querySelector(selector);
+  /* Todos os elementos que casam com o seletor, em forma de lista. */
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const base = window.location.origin;
   let user = null;
+  /* Aviso flutuante com o resultado da ação na tela de perfil. */
   const toast = (type, title, description) => window.AgroToast?.show({type, title, description});
 
+  /* Chama a API do perfil com o token da sessão. Se o servidor recusar,
+     devolve a mensagem e os campos inválidos para a tela marcar o formulário. */
   async function api(path, options = {}) {
     const response = await fetch(base + path, {...options, signal: AbortSignal.timeout(15000),
       headers: {Authorization: "Bearer " + sessionStorage.getItem("agro.sessionToken"), "Content-Type": "application/json"}});
@@ -17,6 +22,8 @@
     return data;
   }
 
+  /* Apaga os erros visíveis do formulário. Se a API apontar campos inválidos,
+     escreve a mensagem embaixo de cada um e leva o foco ao primeiro. */
   function errors(form, fields = {}) {
     $$(".field-error", form).forEach(el => { el.textContent = ""; });
     $$("[aria-invalid]", form).forEach(el => el.removeAttribute("aria-invalid"));
@@ -29,6 +36,8 @@
     $("[aria-invalid]", form)?.focus();
   }
 
+  /* Enquanto o envio está em andamento, desliga os botões do formulário
+     para a pessoa não disparar o mesmo salvamento outra vez. */
   function busy(form, value) {
     form.setAttribute("aria-busy", String(value));
     const buttons = $$('button[type="submit"], button:not([type])', form);
@@ -36,12 +45,16 @@
     buttons.forEach(button => { button.disabled = value; });
   }
 
+  /* Se o e-mail digitado for diferente do atual, mostra o campo de senha
+     atual. Se voltar ao e-mail original, esconde o campo e o limpa. */
   function updateEmailPassword() {
     const changed = user && $("#profile-email").value.trim().toLowerCase() !== user.email;
     $("[data-email-password]").hidden = !changed;
     if (!changed) $("#profile-current").value = "";
   }
 
+  /* Deixa o perfil indisponível: limpa os campos, desliga botões e
+     preferências e mostra a mensagem com o botão de tentar de novo. */
   function unavailable(message) {
     user = null;
     $("[data-profile-message]").textContent = message;
@@ -53,6 +66,8 @@
     $("[data-email-pending]").hidden = true;
   }
 
+  /* Preenche o seletor de propriedade padrão só com as fazendas da pessoa
+     (não as em que ela colabora) e marca a que já está salva. */
   async function defaultOptions() {
     const properties = await api("/api/propriedades");
     const owned = window.AgroContextoPropriedade?.propriedadesProprias(properties)
@@ -63,8 +78,11 @@
     select.disabled = false;
   }
 
+  /* Busca o perfil e preenche nome, e-mail, telefone, preferências, iniciais
+     do avatar e o aviso de e-mail ainda pendente de confirmação. */
   async function load() {
     try {
+      // GET /api/perfil devolve { usuario: {...}, preferencias: { stock, weather, ... } }.
       const data = await api("/api/perfil");
       user = data.usuario;
       const form = $("#profile-form");
@@ -88,6 +106,8 @@
     } catch (error) { unavailable("Perfil indisponível. " + error.message); throw error; }
   }
 
+  /* Envia o formulário, recarrega o que o servidor confirmou e mostra o aviso
+     de sucesso. Se a API recusar, devolve o erro para os campos. */
   async function save(form, action) {
     if (!user || form.getAttribute("aria-busy") === "true") return;
     errors(form); busy(form, true);
@@ -106,6 +126,8 @@
     } finally { busy(form, false); if (!user) unavailable("Perfil indisponível. Tente consultar novamente."); }
   }
 
+  /* Encerra a sessão nesta tela e volta ao login, levando a mensagem
+     de sucesso que a tela de entrar vai exibir. */
   function leave(message) {
     sessionStorage.removeItem("agro.sessionToken");
     sessionStorage.removeItem("agro.sessionUser");
@@ -113,6 +135,8 @@
     location.href = "login.html";
   }
 
+  /* Troca de senha ou confirmação de e-mail. Se o servidor aceitar, limpa o
+     formulário e sai para o login. Se recusar, mostra o erro no campo. */
   async function security(form, endpoint, payload) {
     if (!user || form.getAttribute("aria-busy") === "true") return;
     errors(form); busy(form, true);
@@ -123,25 +147,36 @@
     finally { busy(form, false); }
   }
 
+  /* Liga os formulários da página: dados, notificações, propriedade padrão,
+     senha, código de e-mail e o botão de reenviar o código. */
   function init() {
     window.AgroSenha?.iniciar();
     unavailable("Carregando perfil…");
+    /* Tenta buscar o perfil de novo quando a carga anterior falhou. */
     $("[data-profile-retry]").addEventListener("click", () => load().catch(() => {}));
+    /* Mostra ou esconde a senha atual conforme o e-mail digitado muda. */
     $("#profile-email").addEventListener("input", updateEmailPassword);
+    /* Salva nome, e-mail, telefone e, se o e-mail mudou, a senha atual. */
     $("#profile-form").addEventListener("submit", e => {
       e.preventDefault(); const form = e.currentTarget;
+      // Corpo do PUT /api/perfil. senhaAtual só é exigida no servidor se o e-mail mudou.
+      // { name, email, phone, senhaAtual }
       const data = Object.fromEntries(["name", "email", "phone", "senhaAtual"].map(key => [key, form.elements.namedItem(key).value]));
       save(form, () => api("/api/perfil", {method: "PUT", body: JSON.stringify(data)}));
     });
+    /* Grava na conta os interruptores de notificação marcados na tela. */
     $("[data-save-notifications]").addEventListener("click", async e => {
       const button = e.currentTarget; if (!user || button.disabled) return; button.disabled = true;
       try {
+        // { stock: true, weather: false, activities: true, occurrences: true, reports: false }
+        // A chave vem de data-preference no HTML; o valor é o checkbox marcado ou não.
         const data = Object.fromEntries($$("[data-preference]").map(control => [control.dataset.preference, control.checked]));
         await api("/api/perfil/preferencias", {method: "PUT", body: JSON.stringify(data)});
         toast("success", "Preferências salvas", "Seleção persistida na sua conta.");
       } catch (error) { toast("error", "Preferências não confirmadas", error.message); }
       finally { button.disabled = !user; }
     });
+    /* Define qual propriedade a tela vai abrir no próximo login. */
     $("[data-default-property-form]").addEventListener("submit", e => {
       e.preventDefault(); const form = e.currentTarget;
       save(form, async () => {
@@ -149,19 +184,25 @@
         return {message: "Propriedade padrão salva. Será usada no próximo login."};
       });
     });
+    /* Troca a senha e, se o servidor confirmar, encerra a sessão. */
     $("[data-security-form]").addEventListener("submit", e => {
       e.preventDefault(); const form = e.currentTarget;
+      // PUT /api/perfil/senha. current = senha atual, new e confirm = senha nova.
+      // Se o servidor aceitar, security() apaga o token e manda para login.html.
       security(form, "/api/perfil/senha", Object.fromEntries(["current", "new", "confirm"].map(key => [key, form.elements.namedItem(key).value])));
     });
+    /* Confirma o e-mail novo com o código e, se aceito, volta ao login. */
     $("[data-email-confirm-form]").addEventListener("submit", e => {
       e.preventDefault(); security(e.currentTarget, "/api/perfil/email/confirmar", {codigo: e.currentTarget.elements.codigo.value});
     });
+    /* Pede outro código de confirmação sem sair da página. */
     $("[data-email-resend]").addEventListener("click", async e => {
       const button = e.currentTarget; if (button.disabled) return; button.disabled = true;
       try { const data = await api("/api/perfil/email/reenviar", {method: "POST", body: "{}"}); toast(data.aviso ? "warning" : "success", "Confirmação de e-mail", data.aviso || data.message); }
       catch (error) { toast("error", "Reenvio não confirmado", error.message); }
       finally { button.disabled = false; }
     });
+    /* Quando a lista de propriedades chega, atualiza o seletor da padrão. */
     document.addEventListener("agro:properties-loaded", () => { if (user) defaultOptions().catch(error => toast("error", "Propriedades indisponíveis", error.message)); });
     load().catch(() => {});
   }

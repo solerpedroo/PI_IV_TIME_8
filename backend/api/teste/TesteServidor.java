@@ -41,8 +41,12 @@ import java.time.Instant;
 import http.Requisicao;
 
 /*
-    Testes sem JUnit. Sobe o servidor de verdade (porta livre, repositorios em memoria)
-    e faz requisicoes HTTP reais por socket, inclusive requisicoes mal formadas.
+    Testes sem JUnit. Sobe o servidor de verdade (porta livre, repositórios em memória)
+    e faz requisições HTTP reais por socket, inclusive requisições mal formadas.
+
+    Cada testar* prova uma regra: 401 sem token, isolamento entre propriedades,
+    saldo de estoque que não negativa, histórico que permanece depois da exclusão
+    e proteção contra abuso. O método conferir só registra o resultado.
 */
 public class TesteServidor
 {
@@ -59,6 +63,8 @@ public class TesteServidor
 
     // ------------------------------------------------------------------ auxiliares
 
+    /* Prova a escolha do banco: o path da URI vence o ambiente, e path divergente
+       de MONGODB_DATABASE falha para não gravar no banco errado. */
     private static void testarResolucaoMongoBanco () throws Exception
     {
         String atlasSemPath = "mongodb+srv://u:p@cluster.mongodb.net/?retryWrites=true";
@@ -130,7 +136,8 @@ public class TesteServidor
         }
     }
 
-    // manda bytes crus e le tudo ate o servidor fechar
+    /* Envia bytes crus e lê a resposta até o servidor fechar. É o que permite provar
+       pedido malformado, corpo incompleto e CORS. */
     private static Resp bruto (int porta, byte[] envio) throws Exception
     {
         try (Socket conexao = new Socket ("127.0.0.1", porta))
@@ -155,6 +162,7 @@ public class TesteServidor
 
             String texto = lido.toString (StandardCharsets.UTF_8);
             Resp   ret   = new Resp ();
+            // A linha em branco separa cabeçalhos e corpo. O status é o segundo token da 1ª linha.
             int    fim   = texto.indexOf ("\r\n\r\n");
 
             if (fim < 0)
@@ -177,10 +185,22 @@ public class TesteServidor
         return TesteServidor.bruto (TesteServidor.porta, envio.getBytes (StandardCharsets.UTF_8));
     }
 
+    /* Monta o pedido HTTP com Bearer. Token nulo é o caso das rotas que devem responder 401. */
     private static Resp requisitar (String metodo, String caminho, String json, String token) throws Exception
     {
         byte[] corpo = json == null ? new byte[0] : json.getBytes (StandardCharsets.UTF_8);
 
+        /*
+            Monta a mensagem que o navegador mandaria.
+            Exemplo de cadastro:
+              POST /api/auth/register HTTP/1.1
+              Host: 127.0.0.1
+              Content-Type: application/json
+              Content-Length: 180
+
+              {"name":"Maria Silva",...}
+            Sem token, a linha Authorization não existe: o teste do 401 depende disso.
+        */
         String cabeca = metodo + " " + caminho + " HTTP/1.1\r\n" +
                         "Host: 127.0.0.1\r\n" +
                         (token == null ? "" : "Authorization: Bearer " + token + "\r\n") +
@@ -195,6 +215,7 @@ public class TesteServidor
         return TesteServidor.bruto (TesteServidor.porta, envio.toByteArray ());
     }
 
+    /* Atalhos de GET, POST e PUT. O token segue a mesma regra de 401 de requisitar. */
     private static Resp get (String caminho, String token) throws Exception
     {
         return TesteServidor.requisitar ("GET", caminho, null, token);
@@ -210,14 +231,21 @@ public class TesteServidor
         return TesteServidor.requisitar ("PUT", caminho, json, token);
     }
 
+    /* Corpo de cadastro válido. Os casos de 400 partem daqui e quebram um campo. */
     private static String cadastro (String email)
     {
+        /*
+            JSON de POST /api/auth/register usado como base dos testes.
+            password e password-confirm precisam ser iguais. terms precisa ser true.
+            Os testes de 400 copiam este texto e estragam um campo de cada vez.
+        */
         return new Document ("name", "Maria Silva").append ("email", email).append ("phone", "(11) 98765-4321")
                    .append ("password", "Senha@123").append ("password-confirm", "Senha@123")
                    .append ("farm", "Fazenda Boa Vista").append ("area", "150 hectares").append ("terms", true)
                    .toJson ();
     }
 
+    /* Devolve o token da sessão, ou null quando a senha ou a conta é recusada. */
     private static String login (String email, String senha) throws Exception
     {
         Resp resp = TesteServidor.post ("/api/auth/login",
@@ -225,6 +253,7 @@ public class TesteServidor
         return resp.status == 200 ? resp.json ().getString ("token") : null;
     }
 
+    /* Lê o mapa fields do 400. Serve para provar qual campo o cadastro recusou. */
     private static Document camposComErro (Resp resp)
     {
         if (resp.status != 400)
@@ -232,6 +261,7 @@ public class TesteServidor
         return resp.json ().get ("fields", new Document ());
     }
 
+    /* Id da conta, usado para envelhecer o token de confirmação e o de redefinição. */
     private static String idDoUsuario (String email) throws Exception
     {
         return ((ObjectId) TesteServidor.usuarios.buscarPor ("email", email).get ("_id")).toHexString ();
@@ -239,6 +269,8 @@ public class TesteServidor
 
     // ------------------------------------------------------------------ grupos de teste
 
+    /* Prova o contrato do parser: pedido inválido vira 400, 413, 431, 501 ou 505;
+       método não permitido vira 405 com Allow; o CORS só libera a origem local. */
     private static void testarHttp () throws Exception
     {
         System.out.println ("\n# parse HTTP");
@@ -291,6 +323,8 @@ public class TesteServidor
         conferir ("CORS nao libera outra origem",             corsRuim.cabecalho ("Access-Control-Allow-Origin") == null);
     }
 
+    /* Prova saúde e arquivos públicos, e que travessia de diretório, arquivo oculto
+       e extensão fora da lista ficam inacessíveis (404). */
     private static void testarSaudeEEstaticos () throws Exception
     {
         System.out.println ("\n# saude e estaticos");
@@ -325,6 +359,8 @@ public class TesteServidor
         conferir ("bloqueia ponto no fim (Windows)",         404, get ("/login.html.", null));
     }
 
+    /* Prova o cadastro: campo inválido aponta o erro, a senha sai só como hash PBKDF2,
+       o e-mail nasce não confirmado e a repetição, mesmo em maiúsculas, é 409. */
     private static void testarCadastro () throws Exception
     {
         System.out.println ("\n# cadastro");
@@ -367,6 +403,8 @@ public class TesteServidor
         conferir ("aceita o campo confirm no lugar de password-confirm", 201, post ("/api/auth/register", comConfirm.toJson (), null));
     }
 
+    /* Prova o login: senha errada e conta inexistente devolvem o mesmo 401;
+       conta sem e-mail confirmado recebe 403. */
     private static void testarLogin () throws Exception
     {
         System.out.println ("\n# login, logout e token");
@@ -382,6 +420,9 @@ public class TesteServidor
                   post ("/api/auth/login", "{\"email\":\" Maria@Agro.com \",\"password\":\"Senha@123\"}", null));
     }
 
+    /* Prova confirmação, sessão e redefinição: sem token /api/me é 401, logout invalida
+       o Bearer, reenvio antes de 30 s é 429, e a senha nova derruba a sessão antiga
+       e o token de redefinição, inclusive o vencido. */
     private static void testarConfirmacaoERedefinicao () throws Exception
     {
         System.out.println ("\n# confirmacao de e-mail e redefinicao de senha");
@@ -462,6 +503,7 @@ public class TesteServidor
                   post ("/api/auth/reset-password", new Document ("token", vencido).append ("password", "Nova@1234").append ("password-confirm", "Nova@1234").toJson (), null));
     }
 
+    /* Corpo de talhão. Hectares e status inválidos são o que os testes de 400 recusam. */
     private static String talhao (String nome, String cultura, Object hectares, String status)
     {
         Document ret = new Document ("nome", nome).append ("cultura", cultura).append ("hectares", hectares);
@@ -470,12 +512,15 @@ public class TesteServidor
         return ret.toJson ();
     }
 
+    /* Pré-condição: talhão e safra só aceitam cultura já cadastrada na propriedade. */
     private static void cadastrarCulturas (String token, String... nomes) throws Exception
     {
         for (String nome : nomes)
             conferir ("cadastrar cultura " + nome, 201, post ("/api/culturas", new Document ("nome", nome).toJson (), token));
     }
 
+    /* Prova a equipe da propriedade: sem token é 401, nome duplicado é 409, e outra
+       propriedade não lista, não altera e não exclui o integrante (404). */
     private static void testarEquipe () throws Exception
     {
         System.out.println ("\n# equipe da propriedade");
@@ -529,6 +574,8 @@ public class TesteServidor
         conferir ("excluir novamente -> 404", 404, requisitar ("DELETE", "/api/equipe/" + id, null, token));
     }
 
+    /* Prova talhões: 401 sem token, a cultura precisa existir no catálogo, o nome é único
+       só dentro da propriedade, e o histórico de um usuário é 404 para o outro. */
     private static void testarTalhoes () throws Exception
     {
         System.out.println ("\n# talhoes e isolamento entre usuarios");
@@ -606,6 +653,7 @@ public class TesteServidor
                   get ("/api/talhoes?q=t-02", a).corpo.contains ("t-02 sul") && !get ("/api/talhoes", a).corpo.contains ("Roubado"));
     }
 
+    /* Corpo de atividade no formato do calendário, com data curta ou ISO. */
     private static String atividade (String nome, String tipo, String talhao, String data, String horario)
     {
         Document ret = new Document ("nome", nome).append ("tipo", tipo).append ("talhao", talhao).append ("data", data);
@@ -616,7 +664,7 @@ public class TesteServidor
         return ret.toJson ();
     }
 
-    // dia do calendario com essa data
+    /* Dia do calendário. Total zero prova que o período inclui o dia vazio. */
     private static Document dia (Document calendario, String data)
     {
         for (Document dia : calendario.getList ("dias", Document.class))
@@ -625,6 +673,7 @@ public class TesteServidor
         return new Document ("total", -1);
     }
 
+    /* Total do período. Zero para o outro usuário prova o isolamento do calendário. */
     private static int totalDoCalendario (String consulta, String token) throws Exception
     {
         Resp resp = get ("/api/calendario?" + consulta, token);
@@ -632,6 +681,8 @@ public class TesteServidor
         return resp.status == 200 ? resp.json ().getInteger ("total") : -1;
     }
 
+    /* Prova o calendário: período inválido é 400; a contagem respeita semana, mês, tipo,
+       talhão e status; o outro usuário não vê as atividades. */
     private static void testarCalendario () throws Exception
     {
         System.out.println ("\n# calendario de atividades por semana e mes");
@@ -739,7 +790,9 @@ public class TesteServidor
                   LocalDate.of (2024, 1, 1).equals (CalendarioHandler.resolver ("1 jan", LocalDate.of (2024, 7, 2))));
     }
 
-    /* A API única de status preserva os mesmos eventos para Lista, arraste e menu. */
+    /* Prova atividades. A rota única de status é a mesma para lista, arraste e menu:
+       não se pula etapa nem se volta de um estado terminal. O histórico guarda a
+       conclusão, o motivo do cancelamento e a foto. Sem token a lista é 401. */
     private static void testarAtividadesEHistorico () throws Exception
     {
         System.out.println ("\n# atividades e historico");
@@ -833,7 +886,9 @@ public class TesteServidor
             post ("/api/atividades/" + id + "/foto", "{\"versao\":1,\"conteudoBase64\":\"" + png1x1 + "\"}", token));
     }
 
-    /* Exercita o contrato do estoque, inclusive a saída concorrente que não pode negativar saldo. */
+    /* Prova o estoque: isolamento por propriedade, saída acima do saldo é 409, duas
+       saídas simultâneas não negativam o saldo, e a exclusão com saldo zero preserva
+       o histórico. Catálogo sem token é 401. */
     private static void testarEstoque () throws Exception
     {
         System.out.println ("\n# estoque persistente");
@@ -908,6 +963,8 @@ public class TesteServidor
         conferir ("unidade histórica não pode ser reinterpretada", 400, put ("/api/insumos/" + conhecido, produto.toJson (), a));
     }
 
+    /* Prova propriedades: outro usuário recebe 404, a sessão passa a usar o contexto
+       selecionado, e não se exclui a ativa, a última nem a que ainda tem safra. */
     private static void testarPropriedades () throws Exception
     {
         System.out.println ("\n# propriedades, contexto e autorizacao");
@@ -956,18 +1013,20 @@ public class TesteServidor
         conferir ("repositorio tambem preserva ultima propriedade", !repo.excluirPropriedade (uid, p.getObjectId ("_id").toHexString ()));
     }
 
+    /* Lê um array JSON. O tamanho é o que a propriedade enxerga, e o que o isolamento compara. */
     private static List<Document> lista (Resp resp)
     {
         return Document.parse ("{\"l\":" + resp.corpo + "}").getList ("l", Document.class);
     }
 
+    /* Corpo de safra. A lista de talhões é o vínculo que o conflito de período protege. */
     private static String safra (String nome, String cultura, String inicio, String fim, String... talhoes)
     {
         return new Document ("nome", nome).append ("cultura", cultura).append ("dataInicio", inicio)
                    .append ("dataFim", fim).append ("talhoes", List.of (talhoes)).toJson ();
     }
 
-    // id do talhao com esse nome na propriedade ativa de quem tem o token
+    /* Id do talhão com esse nome na propriedade ativa do token, para amarrar safra e custo. */
     private static String idDoTalhao (String token, String nome) throws Exception
     {
         for (Document talhao : lista (get ("/api/talhoes", token)))
@@ -976,7 +1035,7 @@ public class TesteServidor
         return null;
     }
 
-    // custos de consumo da propriedade de quem tem o token
+    /* Só os custos com origem de estoque. Lista vazia no outro usuário prova o isolamento. */
     private static List<Document> custosDeConsumo (String token) throws Exception
     {
         ArrayList<Document> ret = new ArrayList<Document> ();
@@ -988,6 +1047,9 @@ public class TesteServidor
         return ret;
     }
 
+    /* Prova que a saída de estoque ligada a uma atividade gera um custo (quantidade
+       vezes o custo unitário) no talhão e na safra, sem duplicar no sync. Saída sem
+       atividade e entrada não geram custo. O outro usuário não vê o lançamento. */
     private static void testarCustosDeConsumo () throws Exception
     {
         System.out.println ("\n# custo gerado pelo consumo de estoque");
@@ -1117,6 +1179,9 @@ public class TesteServidor
         conferir ("criadoEm invalido ainda gera custo", custoRuim != null && custoRuim.getString ("date") != null);
     }
 
+    /* Prova safras: 401 sem token, talhão de outro usuário é recusado, o mesmo talhão
+       não ocupa duas safras no mesmo período, e o histórico da safra só traz eventos
+       dos seus talhões. Fora do planejamento a safra não é excluída. */
     private static void testarSafras () throws Exception
     {
         System.out.println ("\n# safras, ciclo produtivo e isolamento");
@@ -1231,12 +1296,14 @@ public class TesteServidor
         conferir ("PATCH nao existe -> 405", 405, requisitar ("PATCH", "/api/safras/" + id1, "{}", a));
     }
 
+    /* Corpo de lançamento manual. Valor, data e vínculos inválidos são recusados à parte. */
     private static String custo (String descricao, String categoria, Object valor, String data, String talhaoId, String safraId)
     {
         return new Document ("description", descricao).append ("category", categoria).append ("value", valor)
                    .append ("date", data).append ("talhaoId", talhaoId).append ("safraId", safraId).toJson ();
     }
 
+    /* Acha a safra pelo nome na propriedade do token, para ligar custo, talhão e área. */
     private static String idDaSafra (String token, String nome) throws Exception
     {
         for (Document safra : lista (get ("/api/safras", token)))
@@ -1250,7 +1317,7 @@ public class TesteServidor
         return documento.get (campo, Number.class).doubleValue ();
     }
 
-    // total do item de uma lista do resumo (porCategoria, porCultura...) cuja chave tem esse valor
+    /* Total de um recorte do resumo (categoria, cultura, talhão ou mês), comparado à soma fechada dos lançamentos. */
     private static double totalDe (Document resumo, String lista, String chave, String valor)
     {
         for (Document item : resumo.getList (lista, Document.class))
@@ -1259,6 +1326,8 @@ public class TesteServidor
         return -1;
     }
 
+    /* Prova custos: 401 sem token, o resumo fecha com a soma dos lançamentos, o outro
+       usuário não vê nem altera (404), e safra ou propriedade com custo não é excluída. */
     private static void testarCustos () throws Exception
     {
         System.out.println ("\n# custos, indicadores e vinculos");
@@ -1416,7 +1485,9 @@ public class TesteServidor
         conferir ("sem custos a propriedade pode ser excluida", 204, requisitar ("DELETE", "/api/propriedades/" + outra, null, a));
     }
 
-    /* Roteiro #180/#181/#35: ciclo produtivo + ocorrencias com historico espelhado no talhao. */
+    /* Roteiro #180/#181/#35. Prova o ciclo de ponta a ponta: atividade concluída,
+       consumo de estoque e ocorrência resolvida aparecem no histórico do talhão,
+       e uma falha posterior não apaga esse histórico. */
     private static void testarValidacaoCiclosOficiais () throws Exception
     {
         System.out.println ("\n# validacao — ciclos oficiais (#35 / #180-#182)");
@@ -1497,6 +1568,8 @@ public class TesteServidor
                   TesteServidor.talhoes.listarHistorico (propriedadeId, talhaoId).size () >= 3);
     }
 
+    /* Prova concorrência: cadastros paralelos do mesmo e-mail ou do mesmo nome de
+       talhão deixam passar só um (201) e o resto vira 409. Um 500 não derruba o servidor. */
     private static void testarConcorrencia () throws Exception
     {
         System.out.println ("\n# concorrencia e erros");
@@ -1580,6 +1653,8 @@ public class TesteServidor
         conferir ("servidor segue respondendo depois de clientes quebrados", 200, get ("/health", null));
     }
 
+    /* Prova o teto de conexões: a terceira conexão simultânea recebe 503, e a vaga
+       volta a responder 200 quando as anteriores fecham. */
     private static void testarLimiteDeConexoes () throws Exception
     {
         System.out.println ("\n# limite de conexoes simultaneas (503)");
@@ -1617,6 +1692,8 @@ public class TesteServidor
         conferir ("desativar fecha a porta", recusou);
     }
 
+    /* Prova proteção contra abuso: o limitador corta a tentativa acima da janela,
+       a conta guarda no máximo cinco sessões, e estático grande demais é 413. */
     private static void testarProtecoesDeAbuso () throws Exception
     {
         System.out.println ("\n# protecoes de abuso");
@@ -1666,6 +1743,7 @@ public class TesteServidor
         }
     }
 
+    /* Sobe a suíte em memória, na ordem das regras, e sai com erro se algum conferir falhar. */
     public static void main (String[] args) throws Exception
     {
         TesteServidor.usuarios = new RepositorioUsuariosMemoria ();
