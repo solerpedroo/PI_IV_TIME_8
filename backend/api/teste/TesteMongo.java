@@ -1,11 +1,11 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-import dados.ConexaoMongo;
-import dados.RepositorioCustosMongo;
-import dados.RepositorioAtividadesMongo;
-import dados.RepositorioSafrasMongo;
-import dados.RepositorioUsuariosMongo;
+import dados.infra.ConexaoMongo;
+import dados.financeiro.RepositorioCustosMongo;
+import dados.operacao.RepositorioAtividadesMongo;
+import dados.cultivo.RepositorioSafrasMongo;
+import dados.conta.RepositorioUsuariosMongo;
 import com.mongodb.ConnectionString;
 import org.bson.Document;
 
@@ -54,7 +54,7 @@ public class TesteMongo
             {
                 usuarios.criar (usuario, propriedade);
             }
-            catch (dados.ConflitoDeCadastro conflito)
+            catch (dados.infra.ConflitoDeCadastro conflito)
             {
                 duplicou = "email".equals (conflito.getCampo ());
             }
