@@ -1,13 +1,13 @@
 // Miguel — RA: 25003110
 /*
- * Validação estrutural das coleções do servidor AgroGestão.
+ * Validação estrutural das coleções no MongoDB Atlas.
  *
  * Uso (preferir o wrapper):
- *   ./backend/servidor/mongo/aplicar-schema.sh
+ *   ./backend/mongo-schema/aplicar-schema.sh
  *
  * Ou diretamente:
  *   MONGODB_DATABASE=agrogestao_ci_teste mongosh "$MONGODB_URI" --quiet \
- *     --file mongo/schema-validation.js
+ *     --file schema-validation.js
  *
  * Por padrão só bancos terminados em `_teste` são aceitos. Para outro nome
  * (ex.: agrogestao_dev após revisão do grupo), exporte ALLOW_NON_TEST_SCHEMA=1.
