@@ -1,7 +1,8 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
-package dados;
+package dados.operacao;
 
+import dados.infra.ConexaoMongo;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
