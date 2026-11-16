@@ -1,4 +1,4 @@
-package dados;
+package dados.infra;
 
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
