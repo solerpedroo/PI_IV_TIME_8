@@ -1,15 +1,15 @@
 /* Miguel — RA: 25003110 */
-package handlers;
+package handlers.estoque;
 
-import dados.RepositorioEstoque;
-import dados.RepositorioUsuarios;
+import dados.estoque.RepositorioEstoque;
+import dados.conta.RepositorioUsuarios;
 import http.*;
 import java.time.*;
 import java.util.*;
 import org.bson.Document;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import servicos.RelatorioSafra;
+import servicos.relatorios.RelatorioSafra;
 
 /* Saldo atual é distinto das movimentações do período, inclusive ajustes. */
 public class RelatorioEstoqueHandler implements Manipulador
