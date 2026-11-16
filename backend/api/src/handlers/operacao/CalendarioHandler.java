@@ -2,9 +2,9 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package handlers;
+package handlers.operacao;
 
-import dados.RepositorioAtividades;
+import dados.operacao.RepositorioAtividades;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Locale;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import util.Json;
-import util.Validacao;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Calendario das atividades da propriedade de quem esta logado.
