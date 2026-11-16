@@ -2,20 +2,20 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-import dados.ConexaoMongo;
-import dados.RepositorioAtividadesMemoria;
-import dados.RepositorioColheitas;
-import dados.RepositorioColheitasMemoria;
-import dados.RepositorioColheitasMongo;
-import dados.RepositorioCustosMemoria;
-import dados.RepositorioSafras;
-import dados.RepositorioSafrasMemoria;
-import dados.RepositorioSafrasMongo;
-import dados.RepositorioTalhoes;
-import dados.RepositorioTalhoesMemoria;
-import dados.RepositorioTalhoesMongo;
-import handlers.ColheitasHandler;
-import handlers.SafrasHandler;
+import dados.infra.ConexaoMongo;
+import dados.operacao.RepositorioAtividadesMemoria;
+import dados.cultivo.RepositorioColheitas;
+import dados.cultivo.RepositorioColheitasMemoria;
+import dados.cultivo.RepositorioColheitasMongo;
+import dados.financeiro.RepositorioCustosMemoria;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioSafrasMemoria;
+import dados.cultivo.RepositorioSafrasMongo;
+import dados.cultivo.RepositorioTalhoes;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.cultivo.RepositorioTalhoesMongo;
+import handlers.cultivo.ColheitasHandler;
+import handlers.cultivo.SafrasHandler;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -195,7 +195,7 @@ public class TesteColheitas
 
             SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, new RepositorioCustosMemoria (),
                                                              new RepositorioAtividadesMemoria (),
-                                                             new dados.RepositorioCulturasMemoria (), sessoes);
+                                                             new dados.cultivo.RepositorioCulturasMemoria (), sessoes);
             handlerSafras.setColheitas (colheitas);
             handlerSafras.registrar (roteador);
             new ColheitasHandler (colheitas, safras, talhoes, sessoes).registrar (roteador);
