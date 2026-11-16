@@ -2,7 +2,7 @@
 # Smoke das coleções reais. Não reaplica o schema — rode aplicar-schema.sh antes.
 set -eu
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")"
 : "${MONGODB_URI:?Defina MONGODB_URI antes de testar o schema}"
 : "${MONGODB_DATABASE:?Defina MONGODB_DATABASE antes de testar o schema}"
 
@@ -21,4 +21,4 @@ command -v mongosh >/dev/null 2>&1 || {
   exit 127
 }
 
-mongosh "$MONGODB_URI" --quiet --file mongo/schema-smoke.js
+mongosh "$MONGODB_URI" --quiet --file schema-smoke.js
