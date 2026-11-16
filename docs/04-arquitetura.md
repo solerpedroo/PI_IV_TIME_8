@@ -190,7 +190,10 @@ importadas: não há como saber a qual conta pertencem. Os detalhes estão em
 
 ### 4.1 Papel
 
-`backend/api` é o ponto de entrada do sistema. É Java 21 puro: o HTTP é lido e
+`backend/api` é o ponto de entrada do sistema. O código Java está agrupado por
+módulo funcional (`handlers/cultivo`, `dados/estoque`, etc.); mapa em
+[backend/ESTRUTURA.md](../backend/ESTRUTURA.md) e [backend/api/MODULOS.md](../backend/api/MODULOS.md).
+É Java 21 puro: o HTTP é lido e
 escrito à mão sobre `java.net.ServerSocket`/`Socket`, sem `HttpServer`, Spring ou
 Netty. A única biblioteca externa é o driver oficial do MongoDB 5.13.0
 (`backend/api/lib/`). Os scripts `compilar`, `rodar` e `testar` dispensam Maven.
