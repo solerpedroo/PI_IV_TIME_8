@@ -1,5 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-package dados;
+package dados.operacao;
 
 import java.util.List;
 import org.bson.Document;
