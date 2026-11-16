@@ -1,7 +1,8 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
 /* Autor secundario: Tomas de Paula Michelon Toniato - RA: 25004211 */
-package dados;
+package dados.estoque;
 
+import dados.operacao.RepositorioAtividades;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
