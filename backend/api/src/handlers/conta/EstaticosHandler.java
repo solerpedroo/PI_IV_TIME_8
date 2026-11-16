@@ -1,4 +1,4 @@
-package handlers;
+package handlers.conta;
 
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
