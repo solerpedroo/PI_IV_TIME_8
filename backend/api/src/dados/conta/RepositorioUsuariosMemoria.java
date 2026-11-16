@@ -1,5 +1,6 @@
-package dados;
+package dados.conta;
 
+import dados.infra.ConflitoDeCadastro;
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import java.util.ArrayList;
