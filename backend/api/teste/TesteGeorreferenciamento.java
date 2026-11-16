@@ -199,6 +199,7 @@ public class TesteGeorreferenciamento
             String   b           = sessoes.criar (new ObjectId ().toHexString (), outra);
 
             TesteGeorreferenciamento.chamar (roteador, a, "POST", "/api/culturas", "{\"nome\":\"Soja\"}");
+            TesteGeorreferenciamento.chamar (roteador, a, "POST", "/api/culturas", "{\"nome\":\"Milho\"}");
             TesteGeorreferenciamento.chamar (roteador, b, "POST", "/api/culturas", "{\"nome\":\"Soja\"}");
 
             String norte = TesteGeorreferenciamento.talhao (roteador, a, "Norte", 10);
