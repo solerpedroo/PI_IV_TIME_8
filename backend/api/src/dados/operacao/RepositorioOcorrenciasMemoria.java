@@ -1,5 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-package dados;
+package dados.operacao;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
