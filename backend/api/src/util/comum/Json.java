@@ -1,6 +1,6 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package util;
+package util.comum;
 
 import java.util.List;
 import org.bson.Document;
