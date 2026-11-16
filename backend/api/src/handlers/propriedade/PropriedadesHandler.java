@@ -2,15 +2,15 @@
 /* Miguel — RA: 25003110 */
 /* Autor secundário: Pedro Henrique Contardi Soler - 25005592 */
 
-package handlers;
+package handlers.propriedade;
 
-import dados.RepositorioEquipe;
-import dados.RepositorioCustos;
-import dados.RepositorioAtividades;
-import dados.RepositorioTalhoes;
-import dados.RepositorioOcorrencias;
-import dados.ConflitoDeCadastro;
-import dados.RepositorioUsuarios;
+import dados.propriedade.RepositorioEquipe;
+import dados.financeiro.RepositorioCustos;
+import dados.operacao.RepositorioAtividades;
+import dados.cultivo.RepositorioTalhoes;
+import dados.operacao.RepositorioOcorrencias;
+import dados.infra.ConflitoDeCadastro;
+import dados.conta.RepositorioUsuarios;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -22,10 +22,10 @@ import org.bson.types.ObjectId;
 import seguranca.Sessoes;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
-import util.Json;
-import util.PapelNaPropriedade;
-import util.PeriodoSafra;
-import util.Validacao;
+import util.comum.Json;
+import util.propriedade.PapelNaPropriedade;
+import util.cultivo.PeriodoSafra;
+import util.comum.Validacao;
 
 /*
     CRUD das propriedades pertencentes ao usuario autenticado.
@@ -38,17 +38,17 @@ public class PropriedadesHandler
     private final RepositorioTalhoes  talhoes;
     private final RepositorioCustos   custos;
     private final Sessoes             sessoes;
-    private dados.RepositorioEstoque estoque;
+    private dados.estoque.RepositorioEstoque estoque;
     private RepositorioAtividades atividades;
-    private dados.RepositorioSafras safras;
-    private dados.RepositorioEquipamentos equipamentos;
+    private dados.cultivo.RepositorioSafras safras;
+    private dados.manutencao.RepositorioEquipamentos equipamentos;
 
-    public void setSafras (dados.RepositorioSafras safras)
+    public void setSafras (dados.cultivo.RepositorioSafras safras)
     {
         this.safras = safras;
     }
 
-    public void setEquipamentos (dados.RepositorioEquipamentos equipamentos)
+    public void setEquipamentos (dados.manutencao.RepositorioEquipamentos equipamentos)
     {
         this.equipamentos = equipamentos;
     }
@@ -61,7 +61,7 @@ public class PropriedadesHandler
     private RepositorioEquipe equipe;
 
     // O servidor injeta o estoque para impedir exclusão de propriedade com histórico.
-    public void setEstoque (dados.RepositorioEstoque estoque)
+    public void setEstoque (dados.estoque.RepositorioEstoque estoque)
     {
         this.estoque = estoque;
     }
