@@ -1,6 +1,7 @@
 /* Miguel — RA: 25003110 */
-package dados;
+package dados.operacao;
 
+import dados.infra.ConexaoMongo;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
@@ -306,7 +307,7 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
             return false;
         return this.atividades.updateOne (filtroVersao (propriedadeId, id, versaoEsperada),
-            Updates.combine (Updates.set (util.FotoEvidencia.CAMPO_RAIZ, subdocumento), Updates.set ("versao", versaoEsperada + 1))).getModifiedCount () == 1;
+            Updates.combine (Updates.set (util.comum.FotoEvidencia.CAMPO_RAIZ, subdocumento), Updates.set ("versao", versaoEsperada + 1))).getModifiedCount () == 1;
     }
 
     @Override
@@ -318,6 +319,6 @@ public class RepositorioAtividadesMongo implements RepositorioAtividades
         if (RepositorioAtividadesMongo.versaoAtual (atual) != versaoEsperada)
             return false;
         return this.atividades.updateOne (filtroVersao (propriedadeId, id, versaoEsperada),
-            Updates.combine (Updates.unset (util.FotoEvidencia.CAMPO_RAIZ), Updates.set ("versao", versaoEsperada + 1))).getMatchedCount () == 1;
+            Updates.combine (Updates.unset (util.comum.FotoEvidencia.CAMPO_RAIZ), Updates.set ("versao", versaoEsperada + 1))).getMatchedCount () == 1;
     }
 }
