@@ -1,5 +1,5 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-package util;
+package util.conta;
 
 import org.bson.Document;
 
