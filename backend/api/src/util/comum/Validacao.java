@@ -1,6 +1,6 @@
 /* Autor principal: Pedro Henrique Contardi Soler - RA: 25005592 */
 
-package util;
+package util.comum;
 
 import http.Resposta;
 import java.time.LocalDate;
