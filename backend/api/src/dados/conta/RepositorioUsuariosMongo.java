@@ -1,6 +1,8 @@
 // Miguel — RA: 25003110
-package dados;
+package dados.conta;
 
+import dados.infra.ConexaoMongo;
+import dados.infra.ConflitoDeCadastro;
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 
 import com.mongodb.ErrorCategory;
