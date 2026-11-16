@@ -1,5 +1,5 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package dados;
+package dados.manutencao;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoWriteException;
