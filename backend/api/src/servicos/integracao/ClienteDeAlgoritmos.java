@@ -5,8 +5,13 @@
    Relatório: servicos/RelatorioSafra — Miguel RA 25003110
    Senha: AuthHandler (reset) e PerfilHandler — Pedro Soler RA 25005592
 */
-package servicos;
+package servicos.integracao;
 
+import handlers.conta.AuthHandler;
+import handlers.conta.PerfilHandler;
+import handlers.cultivo.TalhoesHandler;
+import handlers.estoque.EstoqueHandler;
+import servicos.relatorios.RelatorioSafra;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
