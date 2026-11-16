@@ -45,7 +45,7 @@ done
 PRECISA_COMPILAR=false
 if [ "$BUILD" = true ] || [ ! -f "$BIN" ]; then
   PRECISA_COMPILAR=true
-elif [ ! -f "$API_DIR/bin/handlers/EquipeHandler.class" ]; then
+elif [ ! -f "$API_DIR/bin/handlers/propriedade/EquipeHandler.class" ]; then
   PRECISA_COMPILAR=true
 elif find "$API_DIR/src" -name '*.java' -newer "$BIN" -print -quit | grep -q .; then
   PRECISA_COMPILAR=true
