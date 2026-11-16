@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.bson.Document;
-import util.Json;
+import util.comum.Json;
 
 /*
     Resposta HTTP montada pelos handlers e escrita pelo ParceiroHttp.
