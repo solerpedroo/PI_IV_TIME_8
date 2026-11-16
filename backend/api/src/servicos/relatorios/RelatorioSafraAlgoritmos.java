@@ -1,7 +1,7 @@
 /* Miguel — RA: 25003110 */
-package servicos;
+package servicos.relatorios;
 
-import handlers.SafrasHandler;
+import handlers.cultivo.SafrasHandler;
 import http.ErroHttp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
