@@ -14,6 +14,7 @@ rm -rf bin && mkdir bin
 PROTO=$(find ../serversocket/src/protocolo -name '*.java')
 javac --release 21 -encoding UTF-8 -cp "lib/*" -d bin $(find src teste -name "*.java") $PROTO &&
 java -cp "bin${SEP}lib/*" TesteServidor &&
+java -cp "bin${SEP}lib/*" TesteQualidade &&
 java -cp "bin${SEP}lib/*" TesteOrcamentos &&
 java -cp "bin${SEP}lib/*" TestePerfil &&
 java -cp "bin${SEP}lib/*" TesteGeorreferenciamento &&
