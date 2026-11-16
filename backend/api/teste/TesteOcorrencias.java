@@ -1,8 +1,15 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
-import dados.*;
-import handlers.OcorrenciasHandler;
-import handlers.PropriedadesHandler;
+import dados.conta.RepositorioUsuariosMemoria;
+import dados.cultivo.RepositorioTalhoes;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.cultivo.RepositorioTalhoesMongo;
+import dados.infra.ConexaoMongo;
+import dados.operacao.RepositorioOcorrencias;
+import dados.operacao.RepositorioOcorrenciasMemoria;
+import dados.operacao.RepositorioOcorrenciasMongo;
+import handlers.operacao.OcorrenciasHandler;
+import handlers.propriedade.PropriedadesHandler;
 import http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
