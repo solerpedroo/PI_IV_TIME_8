@@ -2,12 +2,13 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package handlers;
+package handlers.financeiro;
 
-import dados.RepositorioCustos;
-import dados.RepositorioOrcamentos;
-import dados.RepositorioSafras;
-import dados.RepositorioTalhoes;
+import dados.financeiro.RepositorioCustos;
+import handlers.cultivo.SafrasHandler;
+import dados.financeiro.RepositorioOrcamentos;
+import dados.cultivo.RepositorioSafras;
+import dados.cultivo.RepositorioTalhoes;
 import http.Manipulador;
 import http.Requisicao;
 import http.Resposta;
@@ -20,8 +21,8 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
-import util.Json;
-import util.Validacao;
+import util.comum.Json;
+import util.comum.Validacao;
 
 /*
     Orcamento planejado versus realizado por safra (controle gerencial, nao contabil).
