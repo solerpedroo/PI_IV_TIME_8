@@ -2,7 +2,7 @@
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
 */
-package dados;
+package dados.financeiro;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
