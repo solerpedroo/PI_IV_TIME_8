@@ -15,6 +15,7 @@ import java.util.List;
 import org.bson.Document;
 import seguranca.Sessoes;
 import servicos.integracao.ClienteDeAlgoritmos;
+import servicos.integracao.EspelhoHistoricoTalhao;
 import servicos.financeiro.CustosDeConsumo;
 import util.comum.Json;
 import util.comum.Validacao;
@@ -28,6 +29,7 @@ public class EstoqueHandler
     private final RepositorioEstoque estoque;
     private final Sessoes sessoes;
     private CustosDeConsumo consumo;
+    private EspelhoHistoricoTalhao espelhoHistorico;
 
     public EstoqueHandler (RepositorioEstoque estoque, Sessoes sessoes) throws Exception
     {
@@ -40,6 +42,11 @@ public class EstoqueHandler
     public void setConsumo (CustosDeConsumo consumo)
     {
         this.consumo = consumo;
+    }
+
+    public void setEspelhoHistorico (EspelhoHistoricoTalhao espelho)
+    {
+        this.espelhoHistorico = espelho;
     }
 
     public void registrar (Roteador r) throws Exception
@@ -259,7 +266,12 @@ public class EstoqueHandler
             try
             {
                 Document gerado = this.consumo.registrar (propriedadeId, movimento, atualizado, atividade);
-                if (gerado != null) ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
+                if (gerado != null)
+                {
+                    ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
+                    if (this.espelhoHistorico != null)
+                        this.espelhoHistorico.consumoDeInsumo (propriedadeId, atividade, gerado);
+                }
             }
             catch (Exception erro)
             {
@@ -274,7 +286,11 @@ public class EstoqueHandler
                     recuperado = null;
                 }
                 if (recuperado != null)
+                {
                     ret.append ("custoId", Json.publico (recuperado).getString ("id")).append ("custoValor", recuperado.get ("value"));
+                    if (this.espelhoHistorico != null)
+                        this.espelhoHistorico.consumoDeInsumo (propriedadeId, atividade, recuperado);
+                }
                 else
                     ret.append ("custoPendente", true);
             }
