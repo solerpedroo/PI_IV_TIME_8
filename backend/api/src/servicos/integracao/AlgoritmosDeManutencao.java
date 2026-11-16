@@ -1,5 +1,5 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package servicos;
+package servicos.integracao;
 
 import http.ErroHttp;
 import java.math.BigDecimal;
