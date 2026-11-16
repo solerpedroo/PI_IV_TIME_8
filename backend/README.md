@@ -2,12 +2,15 @@
 
 <!-- Autor secundário: Pedro Henrique Contardi Soler - 25005592 -->
 
-O produto usa **dois** servidores Java 21, sem Spring no caminho principal:
+O produto usa **dois** servidores Java 21, sem Spring no caminho principal.
+
+**Mapa completo das pastas:** [`ESTRUTURA.md`](ESTRUTURA.md). Dentro da API, o código está dividido por módulo funcional (`handlers/cultivo`, `dados/estoque`, etc.) — veja [`api/MODULOS.md`](api/MODULOS.md).
 
 | Pasta | Porta | Papel |
 |---|---|---|
 | `api/` | 8080 (HTTP) | Páginas estáticas, `/api/**`, sessões, MongoDB |
 | `serversocket/` | 3000 (TCP) | Validações e cálculos via protocolo de objetos (padrão da disciplina) |
+| `mongo-schema/` | — | Scripts `mongosh` para validação estrutural do banco |
 
 O `rodar.sh` de `api/` sobe o `serversocket` em segundo plano, salvo
 `SERVIDOR_ALGORITMOS_DISABLED=1`. Detalhes em [`serversocket/README.md`](serversocket/README.md).
@@ -23,24 +26,14 @@ safras e a tela `frontend/safras.html` usam a `api` (`SafrasHandler` + Bearer).
 
 ## Executar o servidor
 
-Com JDK 21 no PATH, a partir da raiz do projeto:
+Com JDK 21 no PATH, configure `.env` na raiz ([mongodb-atlas.md](../docs/mongodb-atlas.md)) e suba tudo com:
 
 ```bash
-bash backend/api/testar.sh
-cd backend/api
-bash compilar.sh
-bash rodar.sh --memoria
+bash emular.sh
 ```
 
-Abra `http://127.0.0.1:8080/login.html`. O modo `--memoria` perde os registros
-do servidor ao encerrar e serve apenas para desenvolvimento/testes. Para
-persistência, configure `MONGODB_URI` (MongoDB local ou Atlas) e execute
-`bash rodar.sh` sem `--memoria`. Não é necessário Docker para usar Atlas.
-No Windows, use os scripts `.bat` equivalentes. Consulte
-[api/README.md](api/README.md) para configuração de SMTP e MongoDB.
-
-O `compose.yaml` na raiz sobe um Mongo local com replica set (loopback), útil
-para o servidor e para `testar-mongo.sh`.
+No Windows: `emular.bat`. Abra `http://127.0.0.1:8080/login.html`. Suítes rápidas sem Atlas: `bash backend/api/testar.sh` (`--memoria` só interno aos testes).
+Consulte [api/README.md](api/README.md).
 
 `GET /health` verifica o processo; `GET /ready` verifica também o banco quando
 configurado. Cadastro, confirmação de e-mail, login e talhões usam `/api/**`.

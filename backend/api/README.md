@@ -66,28 +66,26 @@ O mesmo servidor entrega:
 ## Requisitos
 
 - JDK 21 (`java` e `javac` no PATH). Não precisa de Maven.
-- MongoDB 8 em `127.0.0.1:27017`, só se for rodar com banco. Sem banco, use `--memoria`.
+- MongoDB Atlas (`MONGODB_URI` no `.env` na raiz). Emulação: `bash emular.sh` na raiz do repositório.
 
 Os jars do driver já estão em `lib/`: `mongodb-driver-sync`, `mongodb-driver-core`
 e `bson`, versão 5.13.0, baixados do Maven Central.
 
 ## Comandos
 
-Todos rodam a partir de qualquer pasta. Os scripts entram em `backend/api/` sozinhos.
+**Recomendado (raiz do repositório):** `bash emular.sh` ou `emular.bat` — carrega `.env`, compila se preciso, Atlas + socket + API.
+
+Scripts em `backend/api/` (entram nesta pasta sozinhos):
 
 | Ação | Windows | Linux/macOS/Git Bash |
 |---|---|---|
 | Compilar | `compilar.bat` | `./compilar.sh` |
-| Rodar com MongoDB | `rodar.bat` | `./rodar.sh` |
-| Rodar sem banco | `rodar.bat --memoria` | `./rodar.sh --memoria` |
+| Rodar com MongoDB | `rodar.bat` (lê `.env` da raiz) | `./rodar.sh` (lê `.env` da raiz) |
 | Rodar em outra porta | `rodar.bat 9000` | `./rodar.sh 9000` |
-| Testes automáticos | `testar.bat` | `./testar.sh` |
+| Testes automáticos (memória) | `testar.bat` | `./testar.sh` |
 | Integração MongoDB | — | `./testar-mongo.sh` |
 
-Rode `compilar` antes de `rodar`. O `testar` compila sozinho. Os scripts Unix
-são executáveis e fixam a compilação em Java 21. Para validar a persistência
-real, suba `docker compose up -d mongo` e execute `./testar-mongo.sh`; ele usa
-exclusivamente o banco `agrogestao_teste` e o limpa ao terminar.
+O `testar` compila sozinho. Compilação fixada em Java 21. Para `./testar-mongo.sh`, use `MONGODB_URI` com banco `_teste` (via `.env` ou ambiente).
 
 Com o servidor no ar:
 
@@ -106,14 +104,13 @@ No modo `--memoria` os dados somem ao desligar. Com MongoDB, os dados persistem.
 | `SERVIDOR_ALGORITMOS_HOST` | `127.0.0.1` | Host do ServerSocket de validações (`backend/serversocket`, porta **3000**). |
 | `SERVIDOR_ALGORITMOS_PORT` | `3000` | Porta TCP do ServerSocket. `testar.sh` usa **30100**. |
 | `SERVIDOR_ALGORITMOS_DISABLED` | — | Se definida, `rodar.sh` não sobe o ServerSocket (rotas delegadas falham com 503). |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0&serverSelectionTimeoutMS=2000` (posto pelos scripts `rodar`) | Conexão com o banco. O replica set permite transações de cadastro. |
+| `MONGODB_URI` | — (obrigatória para `rodar.sh` sem `--memoria`) | Conexão com o MongoDB Atlas. Veja `docs/mongodb-atlas.md`. |
 | `MONGODB_DATABASE` | — | Usada pelo `backend/core`. Na API, fallback quando a URI **não** traz nome de banco; se URI e variável divergirem, o processo **não sobe**. |
 | `SERVIDOR_RAIZ` | `../../frontend` | Pasta do front, relativa a `backend/api/`. |
 | `SMTP_HOST`, `SMTP_PORT` | —, `465` | Host e porta SMTP com TLS implícito para e-mail real. |
 | `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | — | Credenciais SMTP e remetente. As quatro variáveis SMTP devem ser configuradas juntas. |
 
-**Local vs Atlas:** `rodar.sh` usa o banco **`agrogestao`** na URI (Docker de desenvolvimento).
-No Atlas, inclua `/agrogestao_dev` antes de `?` na `MONGODB_URI` para alinhar com
+**Atlas:** inclua `/agrogestao_dev` antes de `?` na `MONGODB_URI` para alinhar com
 `MONGODB_DATABASE` do `.env.example`. URI sem path + `MONGODB_DATABASE=agrogestao_dev`
 também funciona na API. Confira `authSource` em **Atlas → Connect → Drivers**
 (em geral `authSource=admin` para usuários SCRAM).
@@ -122,12 +119,6 @@ Rotas que já delegam validação/cálculo ao ServerSocket: `POST /api/auth/regi
 
 Se o MongoDB estiver fora do ar na partida, o servidor não sobe e mostra
 `MongoDB indisponivel`. Se cair depois, `/ready` responde 503.
-
-Para subir o MongoDB com Docker (na raiz do repositório):
-
-```
-docker compose up -d mongo
-```
 
 ## Testando manualmente
 

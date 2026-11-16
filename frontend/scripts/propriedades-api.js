@@ -57,7 +57,10 @@
   }
 
   function renderSelector() {
-    if (!selector || !ctx()) return;
+    if (!ctx()) return;
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    const mostrar = ctx().aplicarVisibilidadeSeletor(properties, { user });
+    if (!mostrar || !selector) return;
     ctx().preencherSelect(selector, properties, currentId);
     if (selector.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(selector);
   }
@@ -99,7 +102,8 @@
     }
     if (selected || properties.length) renderSelector();
     aplicarModoPropriedade();
-    document.dispatchEvent(new Event("agro:properties-loaded"));
+    document.dispatchEvent(new CustomEvent("agro:properties-loaded", { detail: { properties } }));
+    document.dispatchEvent(new CustomEvent("agro:properties-context-updated", { detail: { properties } }));
   }
 
   document.querySelector("[data-new-property]")?.addEventListener("click", () => {

@@ -79,6 +79,25 @@
     return propriedades.filter((p) => p.papel !== "colaborador");
   }
 
+  /** Troca de contexto só faz sentido com mais de uma fazenda (própria ou colaboração). */
+  function aplicarVisibilidadeSeletor(propriedades, options = {}) {
+    const lista = Array.isArray(propriedades) ? propriedades : [];
+    const mostrar = lista.length > 1;
+    const colaborador = options.user?.papel === "colaborador";
+    document.querySelectorAll("[data-property-switcher]").forEach((el) => {
+      el.hidden = !mostrar;
+    });
+    document.querySelectorAll("[data-property-context-field]").forEach((el) => {
+      el.hidden = !mostrar;
+    });
+    document.querySelectorAll("[data-settings-property-switch-hint]").forEach((el) => {
+      el.hidden = !mostrar;
+    });
+    const bloco = document.querySelector("[data-sidebar-property-context]");
+    if (bloco) bloco.hidden = !mostrar && !colaborador;
+    return mostrar;
+  }
+
   window.AgroContextoPropriedade = {
     listar,
     selecionar,
@@ -86,5 +105,6 @@
     preencherSelect,
     ligarTroca,
     propriedadesProprias,
+    aplicarVisibilidadeSeletor,
   };
 })();

@@ -1,5 +1,5 @@
 // Miguel — RA: 25003110
-/* Gestão da equipe: referência local, convite por link e permissões por tela. */
+/* Gestão da equipe: convite por link e permissões por tela. */
 (() => {
   "use strict";
 
@@ -148,13 +148,16 @@
         '<button type="button" class="btn btn-outline btn-small" data-equipe-copiar-link>Copiar</button>' +
         '<button type="button" class="btn btn-outline btn-small" data-equipe-renovar-convite>Novo link</button>' +
       "</div>" +
-      '<small>Válido por 7 dias. O convidado precisa entrar com o mesmo e-mail.</small>';
+      '<small>Válido por 7 dias. O convidado precisa entrar com o mesmo e-mail (reenvio automático ao renovar).</small>';
     $("[data-equipe-link]", painel).value = membro.conviteLink;
     $("[data-equipe-copiar-link]", painel).addEventListener("click", () => copiarLink(membro.conviteLink));
     $("[data-equipe-renovar-convite]", painel).addEventListener("click", async () => {
       try {
         const resposta = await api(`/api/equipe/${encodeURIComponent(membro.id)}/convite/renovar`, { method: "POST" });
-        toast("success", "Link renovado", "Novo prazo de validade.");
+        const detalhe = resposta?.conviteEmailEnviado
+          ? "Novo prazo e e-mail reenviado ao convidado."
+          : "Novo prazo — copie o link se o e-mail não chegar.";
+        toast("success", "Link renovado", detalhe);
         await carregar();
         if (resposta?.conviteLink) copiarLink(resposta.conviteLink);
       } catch (erro) {
@@ -210,17 +213,13 @@
     article.className = "team-member-card";
     article.dataset.equipeItem = "novo";
     article.innerHTML =
-      '<div class="team-mode-row">' +
-        '<label class="team-mode-option"><input type="radio" name="modo" value="convite" checked> Convidar usuário por e-mail</label>' +
-        '<label class="team-mode-option"><input type="radio" name="modo" value="local"> Só referência local (sem login)</label>' +
-      "</div>" +
       '<div class="team-member-head">' +
         '<span class="team-member-avatar" data-equipe-avatar aria-hidden="true">—</span>' +
         '<div class="team-member-fields">' +
-          '<div class="input-group" data-equipe-grupo-email><label>E-mail do usuário *</label>' +
-          '<input name="email" type="email" autocomplete="email" placeholder="colega@exemplo.com">' +
+          '<div class="input-group"><label>E-mail do convidado *</label>' +
+          '<input name="email" type="email" required autocomplete="email" placeholder="colega@exemplo.com">' +
           '<p class="field-error" data-error-for="email"></p></div>' +
-          '<div class="input-group" data-equipe-grupo-nome><label>Nome de exibição</label>' +
+          '<div class="input-group"><label>Nome de exibição</label>' +
           '<input name="nome" maxlength="120" placeholder="Opcional até aceitar o convite">' +
           '<p class="field-error" data-error-for="nome"></p></div>' +
           '<div class="input-group"><label>Função na fazenda</label>' +
@@ -230,21 +229,9 @@
           '<button type="button" class="btn btn-primary btn-small" data-equipe-save>Gerar convite</button>' +
         "</div>" +
       "</div>" +
+      '<p class="team-invite-help">Enviaremos o convite por e-mail (se o SMTP estiver configurado). O link também fica disponível para copiar.</p>' +
       htmlPainelAcessos("novo", true);
 
-    const syncModo = () => {
-      const convite = $("input[value='convite']", article).checked;
-      const nomeInput = $("input[name='nome']", article);
-      const emailGroup = $("[data-equipe-grupo-email]", article);
-      const nomeGroup = $("[data-equipe-grupo-nome]", article);
-      emailGroup.hidden = !convite;
-      nomeGroup.querySelector("label").textContent = convite ? "Nome de exibição" : "Nome *";
-      nomeInput.required = !convite;
-      nomeInput.placeholder = convite ? "Opcional até aceitar o convite" : "Ex.: Ana Silva";
-      $("[data-equipe-save]", article).textContent = convite ? "Gerar convite" : "Adicionar";
-    };
-
-    $$("input[name='modo']", article).forEach((radio) => radio.addEventListener("change", syncModo));
     const nomeInput = $("input[name='nome']", article);
     const emailInput = $("input[name='email']", article);
     const avatar = $("[data-equipe-avatar]", article);
@@ -254,7 +241,6 @@
     nomeInput.addEventListener("input", syncAvatar);
     emailInput.addEventListener("input", syncAvatar);
     renderAcessos(article, padraoTelas());
-    syncModo();
     syncAvatar();
     return article;
   }
@@ -276,23 +262,19 @@
     const nome = $("input[name='nome']", card)?.value.trim();
     const cargo = $("input[name='cargo']", card)?.value.trim();
     const email = $("input[name='email']", card)?.value.trim();
-    const convite = id === "novo" && $("input[value='convite']", card)?.checked;
+    const novoConvite = id === "novo";
 
-    if (convite && !email) {
+    if (novoConvite && !email) {
       aplicarErros(card, { email: "Informe o e-mail do convidado." });
       return;
     }
-    if (!convite && id === "novo" && (!nome || nome.length < 2)) {
-      aplicarErros(card, { nome: "Use pelo menos 2 caracteres." });
-      return;
-    }
-    if (id !== "novo" && !convite && (!nome || nome.length < 2)) {
+    if (id !== "novo" && (!nome || nome.length < 2)) {
       aplicarErros(card, { nome: "Use pelo menos 2 caracteres." });
       return;
     }
 
     const corpo = { nome, cargo, telas: coletarTelas(card) };
-    if (convite) corpo.email = email;
+    if (novoConvite) corpo.email = email;
 
     const botao = $("[data-equipe-save]", card);
     botao.disabled = true;
@@ -301,11 +283,12 @@
       const resposta = id && id !== "novo"
         ? await api(`/api/equipe/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(corpo) })
         : await api("/api/equipe", { method: "POST", body: JSON.stringify(corpo) });
-      const msg = convite && id === "novo"
-        ? "Convite criado. Copie o link e envie manualmente."
-        : id === "novo"
-        ? "Integrante adicionado à propriedade."
-        : "Permissões e dados salvos.";
+      let msg = "Permissões e dados salvos.";
+      if (novoConvite) {
+        msg = resposta?.conviteEmailEnviado
+          ? "Convite enviado por e-mail. O link também foi copiado."
+          : "Convite criado. SMTP indisponível — copie o link e envie manualmente.";
+      }
       toast("success", "Equipe atualizada", msg);
       await carregar();
       if (resposta?.conviteLink) copiarLink(resposta.conviteLink);
@@ -374,7 +357,10 @@
         return;
       }
       status.textContent = "Não foi possível carregar a equipe.";
-      toast("error", "Equipe indisponível", erro.message);
+      const detalhe = erro.status === 404
+        ? "A API não expõe /api/equipe. Pare o servidor e suba de novo com bash emular.sh --build."
+        : erro.message;
+      toast("error", "Equipe indisponível", detalhe);
     }
   }
 

@@ -1,13 +1,18 @@
 /* Miguel — RA: 25003110 */
-import dados.*;
-import handlers.RelatorioSafraHandler;
+import dados.conta.RepositorioUsuariosMemoria;
+import dados.cultivo.RepositorioSafrasMemoria;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.financeiro.RepositorioCustosMemoria;
+import dados.operacao.RepositorioAtividadesMemoria;
+import dados.operacao.RepositorioOcorrenciasMemoria;
+import handlers.relatorios.RelatorioSafraHandler;
 import http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import seguranca.Sessoes;
-import servicos.RelatorioSafra;
+import servicos.relatorios.RelatorioSafra;
 
 /* Casos determinísticos do recorte e da segurança, sem depender da interface. */
 public class TesteRelatorioSafra

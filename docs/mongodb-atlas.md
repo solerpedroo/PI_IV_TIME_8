@@ -1,6 +1,9 @@
 # MongoDB Atlas com Java puro
 
-O projeto utiliza MongoDB Atlas Free e o driver oficial `mongodb-driver-sync` para Java. Não utiliza Spring, Spring Data, Hibernate ou outro framework para acessar o banco. Maven serve apenas para baixar o driver e compilar o Java.
+O projeto utiliza **somente** MongoDB Atlas (online) para persistência. Não há
+MongoDB local via Docker no repositório. O driver oficial `mongodb-driver-sync`
+para Java acessa o cluster. Não utiliza Spring, Spring Data, Hibernate ou outro
+framework para acessar o banco. Maven serve apenas para baixar o driver e compilar o Java.
 
 ## O que existe nesta branch
 
@@ -100,18 +103,17 @@ Esses testes não acessam o Atlas nem precisam de credenciais.
 
 ## Etapa 6 — iniciar a API com o Atlas
 
-Na raiz do repositório, no Linux, macOS ou Git Bash, carregue o arquivo local no terminal que iniciará a API. Execute apenas arquivos `.env` de confiança, pois o comando `.` interpreta seu conteúdo como comandos de shell:
+Na raiz do repositório:
 
 ```bash
-set -a
-. ./.env
-set +a
-cd backend/api
-bash compilar.sh
-bash rodar.sh
+bash emular.sh
 ```
 
-Em outro terminal, execute `curl -i http://127.0.0.1:8080/ready`. HTTP 200 confirma que a API conseguiu consultar o banco; HTTP 503 indica indisponibilidade. Se a API não iniciar, confira o IP autorizado, usuário, senha, nome do banco e a URI, sem compartilhar a URI completa. Cada novo terminal precisa carregar o `.env` novamente. Sem essa etapa, o script usa o MongoDB local por padrão.
+No Windows: `emular.bat`. O script carrega o `.env` (somente arquivos de confiança), compila se necessário e sobe a API com o MongoDB Atlas.
+
+Em outro terminal, execute `curl -i http://127.0.0.1:8080/ready`. HTTP 200 confirma que a API conseguiu consultar o banco; HTTP 503 indica indisponibilidade. Se a API não iniciar, confira o IP autorizado, usuário, senha, nome do banco e a URI, sem compartilhar a URI completa.
+
+Alternativa manual: `bash backend/api/rodar.sh` (ele também lê `.env` na raiz quando `MONGODB_URI` não está no ambiente).
 
 Para validar também o módulo core, volte à raiz do repositório, carregue o `.env` no terminal e inicie o core:
 
@@ -195,9 +197,9 @@ O último comando deve indicar uma regra do `.gitignore`. Se `.env` aparecer em 
 
 As coleções, referências, índices, históricos e cenários dos dois ciclos estão em [modelo-dados.md](modelo-dados.md). Execute `./backend/core/testar.sh` na raiz para validar o core sem credenciais; após carregar o `.env`, use `./backend/core/testar.sh --atlas` para repetir também a #100 e os ciclos persistentes.
 
-## Schema validation do servidor
+## Schema validation no MongoDB
 
-Scripts em `backend/servidor/mongo/` (ops ao lado do artefato de deploy; a
+Scripts em `backend/mongo-schema/` (ops ao lado do artefato de deploy; a
 fonte Java continua em `backend/api`). Aplicam `$jsonSchema` com
 `validationAction: "error"` e `validationLevel: "moderate"`: inserts e updates
 em documentos válidos respeitam os tipos essenciais; documentos legados
@@ -221,8 +223,8 @@ Fluxo em banco de teste:
 ```bash
 export MONGODB_DATABASE=agrogestao_ci_teste
 export MONGODB_URI='mongodb+srv://...'
-./backend/servidor/mongo/aplicar-schema.sh
-./backend/servidor/mongo/testar-schema.sh
+./backend/mongo-schema/aplicar-schema.sh
+./backend/mongo-schema/testar-schema.sh
 ```
 
 `aplicar-schema.sh` só aplica validators. `testar-schema.sh` **não** reaplica:

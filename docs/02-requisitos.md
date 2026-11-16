@@ -609,7 +609,7 @@ módulo):
 ```bash
 sh backend/serversocket/testar.sh          # JUnit: algoritmos e protocolo do ServerSocket
 bash backend/api/testar.sh                 # suítes HTTP em memória (TesteServidor e suítes por módulo)
-docker compose up -d --wait mongo          # MongoDB local em replica set (opcional)
+# Carregue .env com MONGODB_URI (Atlas) antes de rodar.sh sem --memoria
 node tests/atividades-reinicio.cjs         # persistência após reinício com MongoDB
 npm install --no-save playwright@1.49.1
 npx playwright install chromium --with-deps

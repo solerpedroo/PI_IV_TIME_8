@@ -1,5 +1,6 @@
 /* Autor Principal: Pedro Henrique Contardi Soler - 25005592 */
-import dados.*;
+import dados.estoque.RepositorioEstoqueMongo;
+import dados.infra.ConexaoMongo;
 import java.time.Instant;
 import java.util.concurrent.*;
 import org.bson.Document;

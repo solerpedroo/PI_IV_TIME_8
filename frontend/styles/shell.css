@@ -222,27 +222,40 @@
   color: #8fa396;
 }
 
-.sidebar-context-select {
+/* Select do design system (.select--sidebar) na barra lateral escura */
+.sidebar-context .select--sidebar {
   width: 100%;
+}
+
+.sidebar-context .select--sidebar .select-trigger {
   min-height: 36px;
-  border: 1px solid #2d4a38;
-  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  border-color: #2d4a38;
   background: rgba(12, 24, 18, 0.55);
   color: var(--text-inverse);
-  font-size: 12px;
-  padding: 6px 8px;
-  cursor: pointer;
 }
 
-.sidebar-context-select:disabled {
-  opacity: 0.65;
-  cursor: wait;
+.sidebar-context .select--sidebar .select-trigger:hover {
+  border-color: #3d5c48;
+  background: rgba(16, 30, 23, 0.72);
 }
 
-.sidebar-context-select:focus {
-  outline: none;
+.sidebar-context .select--sidebar .select-value.is-placeholder {
+  color: #a8bfb0;
+}
+
+.sidebar-context .select--sidebar .select-chevron {
+  color: #8fa396;
+}
+
+.sidebar-context .select--sidebar.is-open .select-trigger {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.sidebar-context .select--sidebar .select-menu {
+  z-index: 40;
 }
 
 .sidebar-context-hint {

@@ -64,7 +64,7 @@
               <div class="settings-card-header">
                 <div>
                   <h2>Dados da Propriedade</h2>
-                  <p>Esses dados aparecem no cabeçalho e nos relatórios. O contexto ativo também pode ser trocado na barra lateral.</p>
+                  <p>Esses dados aparecem no cabeçalho e nos relatórios. <span data-settings-property-switch-hint hidden>Com mais de uma fazenda, troque o contexto na barra lateral ou abaixo.</span></p>
                   <p class="settings-callout" data-property-collab-notice hidden>Modo colaboração: estes campos são somente leitura. Use o seletor <strong>Propriedade ativa</strong> na barra lateral para voltar à sua fazenda.</p>
                 </div>
                 <div class="settings-card-actions">
@@ -73,7 +73,7 @@
                 </div>
               </div>
               <form class="settings-form settings-form-single" id="property-form" data-settings-form="property" novalidate>
-                <div class="input-group">
+                <div class="input-group" data-property-context-field hidden>
                   <label for="property-context">Propriedade ativa</label>
                   <select id="property-context" class="property-context-select" data-property-context data-enhance-select data-placeholder="Selecione a propriedade" aria-label="Propriedade ativa"></select>
                 </div>
@@ -116,7 +116,7 @@
               <div class="settings-card-header">
                 <div>
                   <h2>Equipe da propriedade</h2>
-                  <p>Cadastre subordinados, defina a função na fazenda e escolha quais telas cada pessoa pode acessar.</p>
+                  <p>Convide colaboradores por e-mail, defina a função e quais telas cada pessoa pode acessar após aceitar o convite.</p>
                 </div>
                 <button type="button" class="btn btn-outline btn-small" data-equipe-retry>Tentar novamente</button>
               </div>

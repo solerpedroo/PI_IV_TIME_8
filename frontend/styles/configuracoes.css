@@ -117,6 +117,7 @@
 .team-invite-label { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .team-invite-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .team-invite-row input { width: 100%; min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; font: inherit; font-size: 12px; }
+.team-invite-help { margin: 0 20px 12px; font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
 
 @media (max-width: 900px) { .settings-content { grid-template-columns: 1fr; } .settings-nav { display: grid; grid-template-columns: repeat(3, 1fr); } .settings-nav-item { justify-content: center; } }
 @media (max-width: 620px) { .settings-nav { grid-template-columns: repeat(2, 1fr); } .settings-nav-item { justify-content: flex-start; } .settings-card-header, .settings-form { padding: 18px; } .settings-card-header { flex-direction: column; } .settings-form { grid-template-columns: 1fr; } .form-grid-2 { grid-template-columns: 1fr; } .profile-avatar-column { justify-items: start; } .team-member-head { grid-template-columns: 1fr; } .team-member-actions { justify-content: stretch; } .team-member-actions .btn { flex: 1 1 auto; } }

@@ -238,7 +238,10 @@
     if (!ctx || !select) return;
     try {
       const lista = await ctx.listar();
+      const mostrar = ctx.aplicarVisibilidadeSeletor(lista, { user });
+      if (!mostrar) return;
       const ativa = ctx.preencherSelect(select, lista, user?.propriedadeId);
+      if (select.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(select);
       ctx.ligarTroca(select, ativa);
       const configSelect = document.querySelector("#property-context[data-property-context]");
       if (configSelect && configSelect !== select) {
@@ -254,6 +257,22 @@
       });
     }
   }
+
+  function sincronizarSeletorPropriedade(lista) {
+    const ctx = window.AgroContextoPropriedade;
+    const select = document.querySelector("[data-property-context-switch]");
+    if (!ctx || !select || !Array.isArray(lista)) return;
+    const user = JSON.parse(sessionStorage.getItem("agro.sessionUser") || "null");
+    const mostrar = ctx.aplicarVisibilidadeSeletor(lista, { user });
+    if (!mostrar) return;
+    const ativa = ctx.preencherSelect(select, lista, user?.propriedadeId);
+    if (select.dataset.selectEnhanced !== "true" && window.AgroSelect) window.AgroSelect.enhance(select);
+    ctx.ligarTroca(select, ativa);
+  }
+
+  document.addEventListener("agro:properties-context-updated", (event) => {
+    sincronizarSeletorPropriedade(event.detail?.properties);
+  });
   document.addEventListener("agro:profile-updated", e => fillProfile(e.detail));
 
   /** Itens navegáveis de um popover com role="menu". */

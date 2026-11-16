@@ -37,8 +37,7 @@ uma opcional:
 - o **ServerSocket de algoritmos** (`backend/serversocket`, porta **3000**), que
   recebe dados da API, valida ou calcula e devolve o resultado, sem acesso a
   banco nem a HTTP;
-- o **MongoDB 8** (porta **27017** no Docker local, ou Atlas), que guarda os
-  dados de negócio;
+- o **MongoDB Atlas**, que guarda os dados de negócio via `MONGODB_URI`;
 - o **gateway** (`backend/gateway`), um proxy Java **opcional** para `/api/**`,
   que não faz parte do caminho usado pela interface.
 
@@ -84,8 +83,8 @@ impressos no console da API; o gateway só existe quando alguém o inicia.
 | Porta | Processo | Quando se aplica |
 | --- | --- | --- |
 | **8080** | API HTTP (`backend/api`) | Sempre. Configurável por argumento ou `SERVIDOR_PORT`. É a porta aberta no navegador. |
-| **3000** | ServerSocket de algoritmos | Sempre. `backend/api/rodar.sh` sobe o socket antes da API; o `rodar.bat` não, e no Windows ele é iniciado à parte com `backend/serversocket/rodar.bat`. Configurável na API por `SERVIDOR_ALGORITMOS_PORT`. |
-| **27017** | MongoDB local (`compose.yaml`) | Só com o banco em Docker; publicado apenas em `127.0.0.1`. Com Atlas, o endereço vem da URI do cluster e nada é aberto localmente. Sem banco (`--memoria`), não se aplica. |
+| **3000** | ServerSocket de algoritmos | Sempre. `emular.sh` / `rodar.sh` / `rodar.bat` sobem o socket antes da API. Configurável por `SERVIDOR_ALGORITMOS_PORT`. |
+| **Atlas** | MongoDB na nuvem (`MONGODB_URI`) | Persistência única do projeto; porta e host vêm do cluster. Sem banco (`--memoria`), não se aplica. |
 | 30100 | ServerSocket de teste | Só em `backend/api/testar.sh`, para não colidir com um socket na 3000. |
 | 8081 | `backend/core` | Só ao executar o `CoreApplication` (`JAVA_PORT`). |
 | livre, ex.: 8082 | Gateway | Só se o gateway for iniciado; ver [§7](#7-gateway-opcional). |
@@ -101,7 +100,7 @@ API, ServerSocket e gateway escutam em `127.0.0.1` por padrão.
 | Frontend | [`frontend/`](../frontend/) | Telas, formulários, validação imediata para o usuário, exibição dos dados, guarda do token e de caches de leitura | Não decide regra de negócio nem confirma gravação por conta própria |
 | API HTTP | [`backend/api/`](../backend/api/) | HTTP feito à mão, rotas `/api/**`, arquivos estáticos, autenticação e sessões, autorização por propriedade, regras que dependem do banco (unicidade, vínculos, saldo atual), transações e e-mail | Não executa os algoritmos delegados (validações e cálculos do ServerSocket) |
 | ServerSocket | [`backend/serversocket/`](../backend/serversocket/) | Validações de campo e cálculos puros: cadastro, senha, talhão, geometria, estoque, relatório de safra, manutenção | Não tem HTTP, rotas, banco, sessão nem estado entre pedidos |
-| MongoDB | [`compose.yaml`](../compose.yaml) ou Atlas | Persistência dos dados de negócio, índices únicos, transações | Não tem chave estrangeira; a integridade entre coleções é garantida pela API |
+| MongoDB | Atlas (`docs/mongodb-atlas.md`) | Persistência dos dados de negócio, índices únicos, transações | Não tem chave estrangeira; a integridade entre coleções é garantida pela API |
 | Gateway | [`backend/gateway/`](../backend/gateway/) | Proxy opcional de `/api/**` com `/health` e `/ready` próprios | Não serve as páginas e não é usado pela interface |
 | Núcleo de modelo | [`backend/core/`](../backend/core/) | Modelo de domínio (#100–#105), validação do Atlas, `/health` e `/ready` (Maven) | Não atende o frontend nem publica as rotas de negócio |
 
@@ -191,7 +190,10 @@ importadas: não há como saber a qual conta pertencem. Os detalhes estão em
 
 ### 4.1 Papel
 
-`backend/api` é o ponto de entrada do sistema. É Java 21 puro: o HTTP é lido e
+`backend/api` é o ponto de entrada do sistema. O código Java está agrupado por
+módulo funcional (`handlers/cultivo`, `dados/estoque`, etc.); mapa em
+[backend/ESTRUTURA.md](../backend/ESTRUTURA.md) e [backend/api/MODULOS.md](../backend/api/MODULOS.md).
+É Java 21 puro: o HTTP é lido e
 escrito à mão sobre `java.net.ServerSocket`/`Socket`, sem `HttpServer`, Spring ou
 Netty. A única biblioteca externa é o driver oficial do MongoDB 5.13.0
 (`backend/api/lib/`). Os scripts `compilar`, `rodar` e `testar` dispensam Maven.
@@ -227,7 +229,7 @@ memória; sem a opção, a implementação Mongo.
 
 | Modo | Comando | Banco | Uso |
 | --- | --- | --- | --- |
-| Com MongoDB | `bash backend/api/rodar.sh` | `MONGODB_URI` (padrão do script: `mongodb://127.0.0.1:27017/agrogestao?replicaSet=rs0…`) | Uso normal, com persistência |
+| Com MongoDB | `bash emular.sh` (raiz) ou `bash backend/api/rodar.sh` | `MONGODB_URI` no `.env` na raiz (Atlas) | Uso normal, com persistência |
 | Memória | `bash backend/api/rodar.sh --memoria` | nenhum | Desenvolvimento e testes; os dados somem ao encerrar |
 | Sem ServerSocket | `SERVIDOR_ALGORITMOS_DISABLED=1 bash rodar.sh …` | conforme o modo | Não recomendado: as rotas delegadas respondem 503 |
 
@@ -312,7 +314,7 @@ for aquele.
 
 | Ambiente | Como sobe | Observação |
 | --- | --- | --- |
-| Docker local | `docker compose up -d --wait mongo` na raiz | `mongo:8.0.32`, replica set `rs0` de um membro, porta `127.0.0.1:27017`, volume `mongo-data` |
+| MongoDB Atlas | `.env` na raiz com `MONGODB_URI` | Cluster compartilhado; bancos `agrogestao_dev` e `*_teste` conforme [mongodb-atlas.md](mongodb-atlas.md) |
 | Atlas | URI individual no `.env` local | Ver [mongodb-atlas.md](mongodb-atlas.md). O `.env` não é carregado automaticamente e não entra no Git |
 | Testes | bancos com nome terminado em `_teste` | As suítes `--mongo` e os scripts de schema exigem esse sufixo e limpam só o banco de teste |
 
@@ -341,7 +343,7 @@ Os repositórios da API usam 19 coleções: `usuarios`, `propriedades`, `equipe_
   safra, safra no custo, talhão na colheita) dentro da mesma propriedade antes de
   gravar.
 - Validadores `$jsonSchema` opcionais, com `validationLevel: moderate`, ficam em
-  `backend/servidor/mongo/` e são aplicados à mão com `mongosh`
+  `backend/mongo-schema/` e são aplicados à mão com `mongosh`
   (`aplicar-schema.sh`); a API não depende deles para funcionar.
 
 ### 6.3 O que não fica no banco
@@ -525,7 +527,7 @@ As verificações correspondentes são RNF-001 a RNF-008 em
 | --- | --- | --- |
 | Algoritmos | JUnit 5 em `backend/serversocket/src/test/java` (tags `unitario`, `contrato`, `integracao`) | `sh backend/serversocket/testar.sh` ou `mvn verify`; workflow `serversocket-testes.yml` |
 | API | `backend/api/teste/Teste*.java`, sem JUnit: sobem a API real numa porta livre, com repositórios em memória, e fazem HTTP por socket | `bash backend/api/testar.sh` (sobe o socket na 30100); variantes `--mongo` exigem banco `_teste` |
-| Banco | `TesteMongo`, `TesteEstoqueMongo`, `testar-mongo.sh`, `backend/core/testar.sh --atlas`, `backend/servidor/mongo/testar-schema.sh` | MongoDB local ou Atlas com banco `_teste` |
+| Banco | `TesteMongo`, `TesteEstoqueMongo`, `testar-mongo.sh`, `backend/core/testar.sh --atlas`, `backend/mongo-schema/testar-schema.sh` | MongoDB local ou Atlas com banco `_teste` |
 | Gateway | `backend/gateway/teste/TesteGateway.java` | `bash backend/gateway/testar.sh` |
 | Navegador | `tests/*-real.cjs` (Playwright, com a API em `--memoria` e o socket na 3000) e `tests/local-*.cjs` (sem backend) | `node tests/<arquivo>.cjs`; workflows por módulo |
 

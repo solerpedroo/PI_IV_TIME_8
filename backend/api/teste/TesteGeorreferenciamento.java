@@ -1,19 +1,19 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
 import com.mongodb.ConnectionString;
-import dados.ConexaoMongo;
-import dados.RepositorioAtividades;
-import dados.RepositorioAtividadesMemoria;
-import dados.RepositorioAtividadesMongo;
-import dados.RepositorioOcorrencias;
-import dados.RepositorioOcorrenciasMemoria;
-import dados.RepositorioOcorrenciasMongo;
-import dados.RepositorioTalhoes;
-import dados.RepositorioTalhoesMemoria;
-import dados.RepositorioTalhoesMongo;
-import handlers.GeorreferenciamentoHandler;
-import handlers.OcorrenciasHandler;
-import handlers.CulturasHandler;
-import handlers.TalhoesHandler;
+import dados.infra.ConexaoMongo;
+import dados.operacao.RepositorioAtividades;
+import dados.operacao.RepositorioAtividadesMemoria;
+import dados.operacao.RepositorioAtividadesMongo;
+import dados.operacao.RepositorioOcorrencias;
+import dados.operacao.RepositorioOcorrenciasMemoria;
+import dados.operacao.RepositorioOcorrenciasMongo;
+import dados.cultivo.RepositorioTalhoes;
+import dados.cultivo.RepositorioTalhoesMemoria;
+import dados.cultivo.RepositorioTalhoesMongo;
+import handlers.cultivo.GeorreferenciamentoHandler;
+import handlers.operacao.OcorrenciasHandler;
+import handlers.cultivo.CulturasHandler;
+import handlers.cultivo.TalhoesHandler;
 import http.Requisicao;
 import http.Resposta;
 import http.Roteador;
@@ -168,7 +168,7 @@ public class TesteGeorreferenciamento
     {
         Roteador ret = new Roteador (sessoes);
 
-        dados.RepositorioCulturas culturas = new dados.RepositorioCulturasMemoria ();
+        dados.cultivo.RepositorioCulturas culturas = new dados.cultivo.RepositorioCulturasMemoria ();
         new CulturasHandler (culturas, talhoes, null).registrar (ret);
         new TalhoesHandler (talhoes, atividades, culturas, sessoes).registrar (ret);
         new OcorrenciasHandler (ocorrencias, talhoes, sessoes).registrar (ret);

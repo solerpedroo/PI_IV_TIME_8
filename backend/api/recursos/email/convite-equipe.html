@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{TITULO}}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f2;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1a2e24;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f2;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #d8e5dc;overflow:hidden;">
+          <tr>
+            <td style="background:#1a4d3a;padding:20px 24px;">
+              <p style="margin:0;font-size:18px;font-weight:600;color:#ffffff;">AgroGestão</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#c8ddd3;">Gestão agrícola</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px 8px;">
+              <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#1a2e24;">{{TITULO}}</h1>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#3d5247;">{{SAUDACAO}}</p>
+              <p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:#3d5247;">
+                Você foi convidado(a) para colaborar na propriedade
+                <strong style="color:#1a4d3a;">{{NOME_PROPRIEDADE}}</strong>.
+                Use o botão abaixo para aceitar — é preciso entrar com o mesmo e-mail deste convite.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+                <tr>
+                  <td style="border-radius:8px;background:#2d6a4f;">
+                    <a href="{{LINK_CONVITE}}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">{{BOTAO_TEXTO}}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#5c7368;">
+                Ou copie o link: <a href="{{LINK_CONVITE}}" style="color:#2d6a4f;word-break:break-all;">{{LINK_CONVITE}}</a>
+              </p>
+              <p style="margin:0;font-size:13px;line-height:1.5;color:#8a9d94;">
+                O convite expira em {{VALIDADE}}. Se você não esperava este e-mail, pode ignorá-lo.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px 24px;border-top:1px solid #e8f0eb;">
+              <p style="margin:0;font-size:12px;color:#8a9d94;">Mensagem automática do AgroGestão.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
