@@ -2,7 +2,7 @@
  * Smoke das validações reais (não reaplica schema).
  * Pré-requisito: ./aplicar-schema.sh já rodou neste banco *_teste.
  *
- *   mongosh "$MONGODB_URI" --quiet --file mongo/schema-smoke.js
+ *   mongosh "$MONGODB_URI" --quiet --file schema-smoke.js
  */
 
 const databaseName = process.env.MONGODB_DATABASE || db.getName();
