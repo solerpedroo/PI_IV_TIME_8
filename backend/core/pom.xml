@@ -1,36 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Autor: Vinícius Panutti Salgado — R.A. 25007329 -->
+<!-- Declara o projeto Maven e os namespaces do POM; o atributo da linha seguinte identifica o esquema XML de validação. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!-- Usa a versão 4.0.0 do modelo de configuração do Maven. -->
   <modelVersion>4.0.0</modelVersion>
+  <!-- Identifica a organização dos artefatos Java do projeto. -->
   <groupId>br.com.agrogestao</groupId>
+  <!-- Identifica este módulo como core nas coordenadas Maven. -->
   <artifactId>core</artifactId>
+  <!-- Define a versão deste artefato. -->
   <version>0.1.0</version>
+  <!-- Dá um nome legível ao módulo de dados. -->
   <name>agrogestao-core</name>
+  <!-- Centraliza as versões e opções usadas pelo compilador e pelas dependências. -->
   <properties>
+    <!-- Compila o módulo para a linguagem e a API do Java 21. -->
     <maven.compiler.release>21</maven.compiler.release>
+    <!-- Lê os fontes em UTF-8, preservando os textos e identificadores em português. -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Define o diretório de saída padrão e permite substituí-lo por propriedade de linha de comando. -->
     <agro.build.directory>${project.basedir}/target</agro.build.directory>
+    <!-- Centraliza a versão do driver MongoDB usada nas dependências deste módulo. -->
     <mongodb.driver.version>5.8.1</mongodb.driver.version>
   </properties>
+  <!-- Declara as bibliotecas necessárias para compilar e executar o core. -->
   <dependencies>
+    <!-- Inicia a configuração da dependência do driver síncrono MongoDB. -->
     <dependency>
+      <!-- Seleciona o grupo oficial do driver MongoDB. -->
       <groupId>org.mongodb</groupId>
+      <!-- Seleciona o driver de acesso síncrono usado pelos repositórios. -->
       <artifactId>mongodb-driver-sync</artifactId>
+      <!-- Reutiliza a versão declarada na propriedade mongodb.driver.version. -->
       <version>${mongodb.driver.version}</version>
     </dependency>
   </dependencies>
+  <!-- Agrupa a configuração de geração e execução do módulo. -->
   <build>
+    <!-- Direciona os artefatos para o caminho configurável agro.build.directory. -->
     <directory>${agro.build.directory}</directory>
+    <!-- Declara os plugins que compilam e executam as classes do projeto. -->
     <plugins>
+      <!-- Inicia a configuração explícita do plugin de compilação. -->
       <plugin>
+        <!-- Identifica o grupo dos plugins oficiais do Maven. -->
         <groupId>org.apache.maven.plugins</groupId>
+        <!-- Seleciona o plugin que compila os fontes Java. -->
         <artifactId>maven-compiler-plugin</artifactId>
+        <!-- Fixa a versão do plugin de compilação para tornar a execução reproduzível. -->
         <version>3.14.1</version>
       </plugin>
+      <!-- Inicia a configuração do plugin usado para executar as classes de teste com main. -->
       <plugin>
+        <!-- Identifica o grupo mantenedor do plugin de execução. -->
         <groupId>org.codehaus.mojo</groupId>
+        <!-- Seleciona o plugin que permite executar Java com o classpath do módulo. -->
         <artifactId>exec-maven-plugin</artifactId>
+        <!-- Fixa a versão do plugin de execução usado pelo script testar.sh. -->
         <version>3.6.3</version>
       </plugin>
     </plugins>
