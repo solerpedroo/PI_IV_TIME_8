@@ -11,14 +11,14 @@ public class PedidoDeValidacaoDeCadastro extends Pedido
 {
     private static final long serialVersionUID = 1L;
 
-    private final String  name;
-    private final String  email;
-    private final String  phone;
-    private final String  password;
-    private final String  passwordConfirm;
-    private final String  farm;
-    private final String  area;
-    private final boolean terms;
+    private final String  name;            // ate 120, sem espacos nas pontas
+    private final String  email;           // vira minusculas se o formato passar
+    private final String  phone;           // texto livre ate 20, depois o formato (DD) 9XXXX-XXXX
+    private final String  password;        // sem trim; 8 a 128, maiuscula, numero e simbolo
+    private final String  passwordConfirm; // igual a password; erro no campo password-confirm
+    private final String  farm;            // nome da propriedade, ate 120
+    private final String  area;            // texto da area (ex.: "150 hectares"), ate 60; nao e numero
+    private final boolean terms;           // precisa ser true
 
     public PedidoDeValidacaoDeCadastro (String name, String email, String phone, String password,
                                         String passwordConfirm, String farm, String area, boolean terms)
