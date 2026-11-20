@@ -1,4 +1,4 @@
-package algoritmos;
+package algoritmos.safra;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.*;
-import static algoritmos.ApoioDeTeste.*;
+import protocolo.mensagens.safra.*;
+import static algoritmos.comum.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /*
