@@ -1,4 +1,4 @@
-package algoritmos;
+package algoritmos.safra;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Map;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.ItemDoRelatorio;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.RegistroDaSafra;
-import protocolo.mensagens.RespostaDeRelatorioDeSafra;
-import protocolo.mensagens.TalhaoDaSafra;
+import protocolo.mensagens.safra.ItemDoRelatorio;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.safra.RegistroDaSafra;
+import protocolo.mensagens.safra.RespostaDeRelatorioDeSafra;
+import protocolo.mensagens.safra.TalhaoDaSafra;
 
 /*
     Consolida a safra: somente leitura e sem efeito colateral. O mesmo resultado alimenta a tela e a exportacao.
