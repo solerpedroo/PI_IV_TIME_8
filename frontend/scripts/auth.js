@@ -360,7 +360,10 @@
       try {
         await requestApi("/api/auth/confirm-email", { token });
         sessionStorage.setItem(STORAGE.flashSuccess, "E-mail confirmado. Agora você já pode entrar.");
-        window.location.href = "login.html";
+        const convite = sessionStorage.getItem("agro.convitePendente");
+        window.location.href = convite
+          ? `login.html?redirect=${encodeURIComponent(`equipe-convite.html?token=${convite}`)}`
+          : "login.html";
       } catch (error) {
         showApiErrors(form, error);
       } finally {
@@ -395,6 +398,10 @@
 
     // Checkboxes não marcados não aparecem no FormData.
     if (form.elements.terms) data.terms = form.elements.terms.checked;
+    if (form.dataset.semPropriedade === "true") {
+      delete data.farm;
+      delete data.area;
+    }
     return data;
   }
 
@@ -549,6 +556,51 @@
     });
   }
 
+  async function initCadastroPorConvite() {
+    const form = document.querySelector('form[data-auth-route="/api/auth/register"]');
+    if (!form) return;
+    const token = sessionStorage.getItem("agro.convitePendente");
+    if (!token) return;
+
+    const botao = form.querySelector("[type=submit]");
+    if (botao) botao.disabled = true;
+    try {
+      const response = await fetch(`${API_BASE}/api/equipe/convite?token=${encodeURIComponent(token)}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      const info = await response.json().catch(() => ({}));
+      if (!response.ok || info.expirado || !info.emailConvidado) {
+        sessionStorage.removeItem("agro.convitePendente");
+        return;
+      }
+
+      form.dataset.semPropriedade = "true";
+      const bloco = document.querySelector("[data-propriedade-cadastro]");
+      if (bloco) bloco.hidden = true;
+      for (const nome of ["farm", "area"]) {
+        const campo = form.elements[nome];
+        if (!campo) continue;
+        campo.required = false;
+        campo.value = "";
+      }
+      const email = form.elements.email;
+      if (email) {
+        email.value = info.emailConvidado;
+        email.readOnly = true;
+      }
+      const lead = document.querySelector("[data-signup-lead]");
+      if (lead) {
+        lead.textContent = info.propriedade
+          ? `Crie sua conta para colaborar em ${info.propriedade}. A fazenda já é a do convite.`
+          : "Crie sua conta para aceitar o convite. Você não precisa cadastrar uma propriedade.";
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (botao) botao.disabled = false;
+    }
+  }
+
   function init() {
     initPasswordToggles();
     initPasswordMeter();
@@ -558,6 +610,7 @@
     initResend();
     initConfirmEmailForm();
     aplicarRedirectLogin();
+    initCadastroPorConvite();
     initAuthForms();
     consumeFlashMessage();
   }
