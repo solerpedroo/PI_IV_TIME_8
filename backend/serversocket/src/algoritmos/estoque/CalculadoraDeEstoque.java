@@ -1,4 +1,6 @@
-package algoritmos;
+package algoritmos.estoque;
+
+import algoritmos.comum.Validacao;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -6,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
-import protocolo.mensagens.RespostaDeMovimentacaoDeEstoque;
+import protocolo.mensagens.estoque.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.estoque.RespostaDeMovimentacaoDeEstoque;
 
 /*
     Efeito de uma movimentacao sobre o saldo e o custo medio de um insumo.
