@@ -1,4 +1,5 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
+/* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
 package algoritmos;
 
 import java.util.ArrayList;
@@ -26,10 +27,10 @@ import protocolo.mensagens.RespostaDeValidacao;
 */
 public class GeometriaDeTalhao
 {
-    public static final String PONTO              = "ponto";
-    public static final String POLIGONO           = "poligono";
-    public static final int    MINIMO_DE_VERTICES = 3;
-    public static final int    MAXIMO_DE_VERTICES = 50;
+    public static final String PONTO              = "ponto";    // um unico par lat/lng
+    public static final String POLIGONO           = "poligono"; // 3 a 50 vertices; o fechamento e implicito
+    public static final int    MINIMO_DE_VERTICES = 3;          // triangulo: menos que isso nao fecha area
+    public static final int    MAXIMO_DE_VERTICES = 50;         // teto para o O(n2) dos lados e para o filtro de serializacao
 
     private static final double METROS_POR_GRAU_LAT = 110540;
     private static final double METROS_POR_GRAU_LNG = 111320; // no equador; multiplicado pelo cos da latitude
@@ -39,17 +40,19 @@ public class GeometriaDeTalhao
 
     // ------------------------------------------------------------------ contas
 
-    // 6 casas decimais (~0,1 m): o que fica gravado
+    // 6 casas decimais (~0,1 m). E o que a API grava e o que o mapa compara.
     public static double arredondar (double valor)
     {
         return Math.round (valor * 1e6) / 1e6;
     }
 
+    // hectares do mapa: duas casas, so informativo. Nao e o hectare digitado no cadastro.
     private static double duasCasas (double valor)
     {
         return Math.round (valor * 100) / 100.0;
     }
 
+    // um grau de longitude encolhe com o cos da latitude; no equador vale os 111320 m
     private static double escalaDaLongitude (double lat0)
     {
         return Math.cos (Math.toRadians (lat0)) * GeometriaDeTalhao.METROS_POR_GRAU_LNG;
@@ -96,6 +99,7 @@ public class GeometriaDeTalhao
         return Math.abs (GeometriaDeTalhao.areaComSinal (xy[0], xy[1]));
     }
 
+    // 1 ha = 10.000 m2. Arredonda para a tela; o cadastro do talhao guarda outro numero.
     public static double hectares (double metrosQuadrados)
     {
         return GeometriaDeTalhao.duasCasas (metrosQuadrados / 10000);
@@ -198,7 +202,11 @@ public class GeometriaDeTalhao
         return ret || borda;
     }
 
-    // -1, 0 ou 1: lado em que c fica em relacao a reta ab
+    /*
+        Produto vetorial (b-a) x (c-a).
+        1: c fica a esquerda da reta ab. -1: a direita. 0: os tres estao alinhados.
+        O sinal basta; o valor nao e uma distancia.
+    */
     private static int orientacao (double ax, double ay, double bx, double by, double cx, double cy)
     {
         double valor = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
@@ -212,14 +220,21 @@ public class GeometriaDeTalhao
         return ret;
     }
 
-    // c esta na caixa do segmento ab (usado quando os tres estao alinhados)
+    /*
+        c esta no retangulo do segmento ab. So entra quando a orientacao deu 0:
+        alinhado fora do segmento nao e contato; alinhado entre a e b e sobreposicao.
+    */
     private static boolean naCaixa (double ax, double ay, double bx, double by, double cx, double cy)
     {
         return Math.min (ax, bx) <= cx && cx <= Math.max (ax, bx) &&
                Math.min (ay, by) <= cy && cy <= Math.max (ay, by);
     }
 
-    // os segmentos ab e cd se tocam (cruzam, encostam ou se sobrepoem)?
+    /*
+        ab e cd se tocam se cada um ve os extremos do outro em lados opostos (cruzamento),
+        ou se um extremo cai em cima do outro segmento (encoste ou sobreposicao).
+        Lados vizinhos do poligono compartilham vertice de proposito: isso NAO passa por aqui.
+    */
     private static boolean segmentosSeTocam (double ax, double ay, double bx, double by,
                                              double cx, double cy, double dx, double dy)
     {
@@ -242,7 +257,11 @@ public class GeometriaDeTalhao
         return ret;
     }
 
-    // a e b saem do mesmo vertice s: estao alinhados e para o mesmo lado (um lado "volta" sobre o outro)?
+    /*
+        a e b saem do mesmo vertice s. Cruzado pequeno (seno ~ 0) e alinhados;
+        produto escalar positivo e os dois apontam para o mesmo lado, entao um lado volta sobre o outro.
+        Vizinhos que so encostam no vertice, em angulo, nao dobram.
+    */
     private static boolean dobram (double sx, double sy, double ax, double ay, double bx, double by)
     {
         double ux     = ax - sx;
@@ -283,7 +302,7 @@ public class GeometriaDeTalhao
         return ret;
     }
 
-    // todos os vertices na mesma reta (poligono sem area)?
+    // todos os vertices na mesma reta? o produto vetorial com o primeiro lado fica ~0
     private static boolean alinhados (double[] x, double[] y)
     {
         boolean ret  = true;
@@ -304,17 +323,22 @@ public class GeometriaDeTalhao
         return ret;
     }
 
+    // null e NaN/infinito nao sao coordenada; o intervalo e o da Terra, nao o do talhao
     private static boolean latitudeValida (Double lat)
     {
         return lat != null && Double.isFinite (lat.doubleValue ()) && lat.doubleValue () >= -90 && lat.doubleValue () <= 90;
     }
 
+    // mesma regra da latitude, no intervalo -180 a 180
     private static boolean longitudeValida (Double lng)
     {
         return lng != null && Double.isFinite (lng.doubleValue ()) && lng.doubleValue () >= -180 && lng.doubleValue () <= 180;
     }
 
-    // vertices completos: listas do mesmo tamanho, sem null, com o minimo pedido
+    /*
+        Listas do mesmo tamanho, sem buraco e com coordenadas da Terra.
+        minimo e 1 no ponto e 3 no poligono. Vertice invalido reprova a lista inteira.
+    */
     private static boolean completos (List<Double> lats, List<Double> lngs, int minimo)
     {
         boolean ret = lats != null && lngs != null && lats.size () >= minimo && lats.size () == lngs.size ();
@@ -328,7 +352,12 @@ public class GeometriaDeTalhao
 
     // ------------------------------------------------------------------ pedidos
 
-    // PedidoDeValidacaoDeLocalizacao -> RespostaDeValidacao (erros em "tipo" e "pontos")
+    /*
+        PedidoDeValidacaoDeLocalizacao -> RespostaDeValidacao.
+        Erros so em "tipo" e "pontos": o front destaca esses dois campos.
+        Com sucesso, devolve vertices ja arredondados, centro e, no poligono, a area em hectares.
+        Ponto com area nula: nao ha poligono para medir.
+    */
     public static Resposta validarLocalizacao (PedidoDeValidacaoDeLocalizacao pedido)
     {
         Validacao         v          = new Validacao ();
@@ -347,6 +376,7 @@ public class GeometriaDeTalhao
             v.erro ("pontos", "Informe os pontos da localiza\u00e7\u00e3o.");
         else
         {
+            // para no primeiro vertice ruim: a mensagem cita o numero do ponto (1, 2, ...)
             for (int i = 0; i < latitudes.size (); i++)
             {
                 if (!GeometriaDeTalhao.latitudeValida (latitudes.get (i)))
@@ -399,7 +429,10 @@ public class GeometriaDeTalhao
         return new RespostaDeValidacao (pedido.getId (), v.getErros (), normalizados);
     }
 
-    // regras do poligono, na ordem em que o usuario consegue corrigir
+    /*
+        Regras na ordem em que da para corrigir: quantidade, vertices repetidos, tudo na mesma reta,
+        lados que se cruzam, area menor que 1 m2. O primeiro erro encerra; nao empilha os seguintes.
+    */
     private static void validarPoligono (Validacao v, List<Double> lats, List<Double> lngs)
     {
         int n = lats.size ();
@@ -431,7 +464,11 @@ public class GeometriaDeTalhao
             v.erro ("pontos", "O pol\u00edgono precisa ter \u00e1rea maior que zero.");
     }
 
-    // PedidoDePontoNoTalhao -> RespostaDeValidacao (erro em "localizacao"; normalizados lat e lng)
+    /*
+        PedidoDePontoNoTalhao -> RespostaDeValidacao.
+        Poligono do talhao incompleto e pedido invalido (dado que a API leu do banco), nao erro de campo.
+        A ocorrencia fora da cerca erra em "localizacao". Dentro, devolve lat/lng ja arredondados.
+    */
     public static Resposta pontoNoTalhao (PedidoDePontoNoTalhao pedido)
     {
         if (!GeometriaDeTalhao.completos (pedido.getLatitudes (), pedido.getLongitudes (), GeometriaDeTalhao.MINIMO_DE_VERTICES))
@@ -463,7 +500,13 @@ public class GeometriaDeTalhao
         return new RespostaDeValidacao (pedido.getId (), v.getErros (), normalizados);
     }
 
-    // PedidoDeGeometriaDoMapa -> RespostaDeGeometriaDoMapa (centro, area e limites de todos)
+    /*
+        PedidoDeGeometriaDoMapa -> RespostaDeGeometriaDoMapa.
+        Um talhao sem id ou com vertices que nao fecham o tipo pedido invalida o mapa inteiro:
+        a API so deveria mandar localizacoes que ela mesma ja gravou.
+        Ponto entra no centro e nos limites, mas nao em areaHectares.
+        Lista vazia devolve mapas vazios e limites nulos (nao ha o que enquadrar).
+    */
     public static Resposta geometriaDoMapa (PedidoDeGeometriaDoMapa pedido)
     {
         List<GeometriaParaMapa> talhoes = pedido.getTalhoes ();
@@ -504,6 +547,7 @@ public class GeometriaDeTalhao
 
             for (int i = 0; i < lats.size (); i++)
             {
+                // caixa do mapa: o menor retangulo que cobre todos os vertices de todos os talhoes
                 double la = lats.get (i).doubleValue ();
                 double ln = lngs.get (i).doubleValue ();
 
