@@ -7,7 +7,9 @@ import java.util.concurrent.atomic.AtomicLong;
     O id nasce aqui, no construtor, com um contador atomico: varias threads da API
     podem criar pedidos ao mesmo tempo sem repetir o numero. A Resposta devolve o mesmo id
     para o Cliente descartar uma resposta atrasada de um pedido que estourou o tempo.
-    Nao ha campos neste nivel: cada subclasse em protocolo.mensagens carrega os dados do algoritmo.
+    Nao ha campos neste nivel: cada subclasse em protocolo.mensagens.<funcionalidade>
+    carrega os dados do algoritmo. O nome completo da classe vai no fio; API e socket
+    precisam da mesma versao.
 */
 public abstract class Pedido extends Comunicado
 {
