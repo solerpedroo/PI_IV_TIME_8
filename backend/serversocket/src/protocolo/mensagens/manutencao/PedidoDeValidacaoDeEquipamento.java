@@ -1,5 +1,5 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package protocolo.mensagens;
+package protocolo.mensagens.manutencao;
 
 import protocolo.Pedido;
 
