@@ -11,6 +11,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Soma de hectares e contagem de ativos. Lista nula, item nulo e area invalida sao erro de pedido,
+    nao RespostaDeValidacao.
+*/
 @Tag("unitario")
 class CalculadoraDeTalhoesTest
 {
