@@ -1,4 +1,4 @@
-package algoritmos;
+package algoritmos.comum;
 
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
