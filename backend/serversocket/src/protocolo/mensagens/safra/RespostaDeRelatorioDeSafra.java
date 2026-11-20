@@ -1,4 +1,4 @@
-package protocolo.mensagens;
+package protocolo.mensagens.safra;
 
 import java.util.ArrayList;
 import java.util.Collections;
