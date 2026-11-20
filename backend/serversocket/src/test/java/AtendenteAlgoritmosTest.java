@@ -1,26 +1,26 @@
-import algoritmos.PeriodoSafra;
+import algoritmos.talhao.PeriodoSafra;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import protocolo.Pedido;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.ItemDoRelatorio;
-import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
-import protocolo.mensagens.PedidoDePing;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.PedidoDeResumoDeTalhoes;
-import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
-import protocolo.mensagens.PedidoDeValidacaoDeSenha;
-import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
-import protocolo.mensagens.RegistroDaSafra;
-import protocolo.mensagens.RespostaDeMovimentacaoDeEstoque;
-import protocolo.mensagens.RespostaDePing;
-import protocolo.mensagens.RespostaDeRelatorioDeSafra;
-import protocolo.mensagens.RespostaDeResumoDeTalhoes;
-import protocolo.mensagens.RespostaDeValidacao;
-import protocolo.mensagens.TalhaoDaSafra;
-import protocolo.mensagens.TalhaoParaResumo;
+import protocolo.mensagens.safra.ItemDoRelatorio;
+import protocolo.mensagens.estoque.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.ping.PedidoDePing;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.PedidoDeResumoDeTalhoes;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeCadastro;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeSenha;
+import protocolo.mensagens.talhao.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.safra.RegistroDaSafra;
+import protocolo.mensagens.estoque.RespostaDeMovimentacaoDeEstoque;
+import protocolo.mensagens.ping.RespostaDePing;
+import protocolo.mensagens.safra.RespostaDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.RespostaDeResumoDeTalhoes;
+import protocolo.mensagens.comum.RespostaDeValidacao;
+import protocolo.mensagens.safra.TalhaoDaSafra;
+import protocolo.mensagens.talhao.TalhaoParaResumo;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -125,7 +125,7 @@ class AtendenteAlgoritmosTest
 
         verificar ("status vazio vale Ativo", "Ativo".equals (atender (new PedidoDeValidacaoDeTalhao ("T", "Milho", "2026/27", 1.0, ""), RespostaDeValidacao.class).getNormalizados ().get ("status")));
 
-        RespostaDeValidacao ruim = atender (new PedidoDeValidacaoDeTalhao ("", "Banana", "1999/00", 0.0, "Quebrado"), RespostaDeValidacao.class);
+        RespostaDeValidacao ruim = atender (new PedidoDeValidacaoDeTalhao ("", "Banana", "1999/01", 0.0, "Quebrado"), RespostaDeValidacao.class);
         verificar ("talhão acusa nome, safra, hectares e status", ruim.getErros ().keySet ().containsAll (List.of ("nome", "safra", "hectares", "status")) && ruim.getErros ().size () == 4);
 
         for (Double hectares : new Double[] { null, 0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY, 1000000.01 })
