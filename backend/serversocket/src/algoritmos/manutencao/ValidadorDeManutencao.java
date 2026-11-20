@@ -1,5 +1,7 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package algoritmos;
+package algoritmos.manutencao;
+
+import algoritmos.comum.Validacao;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -9,10 +11,10 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeValidacaoDeEquipamento;
-import protocolo.mensagens.PedidoDeValidacaoDeIntervencao;
-import protocolo.mensagens.PedidoDeValidacaoDePreventiva;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeEquipamento;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeIntervencao;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDePreventiva;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 /*
     Regras de campo da manutencao de equipamentos (#235, #236): equipamento, preventiva e intervencao.
