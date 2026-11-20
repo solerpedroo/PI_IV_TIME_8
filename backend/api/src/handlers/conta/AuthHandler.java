@@ -201,7 +201,8 @@ public class AuthHandler
 
             propriedade é outro documento, coleção propriedades, criado na mesma
             transação: { "farm", "area", "criadaEm" }. O repositório ainda
-            preenche _id, usuarioId e o nome normalizado.
+            preenche _id, usuarioId e o nome normalizado. Sem fazenda no
+            cadastro (convite), propriedade fica null e o usuário nasce sem propriedadeId.
         */
         Document usuario = new Document ("name",                   name)
                                .append  ("email",                  email)
@@ -213,7 +214,9 @@ public class AuthHandler
                                .append  ("onboardingConcluido",    false)
                                .append  ("criadoEm",               agora);
 
-        Document propriedade = new Document ("farm", farm).append ("area", area).append ("criadaEm", agora);
+        Document propriedade = null;
+        if (farm != null && !farm.isBlank ())
+            propriedade = new Document ("farm", farm).append ("area", area).append ("criadaEm", agora);
 
         Document criado;
         try
@@ -308,13 +311,16 @@ public class AuthHandler
             // Uma exclusão pode ter alterado a propriedade padrão durante o hash.
             usuario = this.usuarios.buscarPorId (((ObjectId) usuario.get ("_id")).toHexString ());
             // 401 de novo se a conta sumiu, a senha mudou, o e-mail mudou,
-            // a confirmação foi desfeita ou a propriedade padrão não existe mais.
+            // a confirmação foi desfeita ou a propriedade padrão sumiu do banco.
+            // Conta sem propriedadeId entra: o convite ainda não virou a fazenda ativa.
+            String propriedadePadrao = usuario == null ? null : usuario.getString ("propriedadeId");
+            boolean semFazenda = propriedadePadrao == null || propriedadePadrao.isBlank ();
             if (usuario == null || !hashConferido.equals (usuario.getString ("senhaHash")) ||
                 !emailConferido.equals (usuario.getString ("email")) || !Boolean.TRUE.equals (usuario.getBoolean ("emailConfirmado")) ||
-                this.usuarios.buscarPropriedade (usuario.getString ("propriedadeId")) == null)
+                (!semFazenda && this.usuarios.buscarPropriedade (propriedadePadrao) == null))
                 return Resposta.erro (401, "E-mail ou senha inválidos.");
             token = this.sessoes.criar (((ObjectId) usuario.get ("_id")).toHexString (),
-                                        usuario.getString ("propriedadeId"));
+                                        semFazenda ? null : propriedadePadrao);
         }
 
         return Resposta.json (200, new Document ("token", token).append ("usuario", AuthHandler.usuarioPublico (usuario)));
