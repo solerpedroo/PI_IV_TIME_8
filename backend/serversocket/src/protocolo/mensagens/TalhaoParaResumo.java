@@ -2,13 +2,17 @@ package protocolo.mensagens;
 
 import java.io.Serializable;
 
-// So o que o resumo precisa de um talhao: a area e o status.
+/*
+    Recorte de um talhao para o resumo. A API leu o documento no banco e mandou so estes dois campos:
+    o servidor soma hectares e conta quantos estao com status "Ativo". Nome, id e cultura nao entram.
+    Nao e um Comunicado sozinho: viaja dentro de PedidoDeResumoDeTalhoes, por isso so Serializable.
+*/
 public class TalhaoParaResumo implements Serializable
 {
     private static final long serialVersionUID = 1L;
 
-    private final double hectares;
-    private final String status;
+    private final double hectares; // area ja gravada; negativo ou NaN vira DADOS_INCONSISTENTES
+    private final String status;   // so "Ativo" entra em quantidadeAtivos; os outros contam so no total
 
     public TalhaoParaResumo (double hectares, String status)
     {
