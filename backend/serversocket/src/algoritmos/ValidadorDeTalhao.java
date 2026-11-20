@@ -13,6 +13,11 @@ public class ValidadorDeTalhao
     public static final List<String> STATUS = List.of ("Ativo", "Irrigação pendente", "Em preparo");
     public static final String STATUS_PADRAO = "Ativo";
 
+    /*
+        Criar e editar usam isto. Safra nula vira o periodo atual (julho em diante = ano corrente).
+        Status vazio vira Ativo. Com qualquer erro, normalizados volta vazio.
+        nomeNormalizado e o nome em minusculas para a API nao criar dois "Norte" e "norte".
+    */
     public static Resposta validar (PedidoDeValidacaoDeTalhao pedido)
     {
         Validacao v = new Validacao ();
