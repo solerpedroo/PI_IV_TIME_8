@@ -21,7 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import protocolo.mensagens.RespostaDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.RespostaDeAgendaDeManutencao;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import servicos.integracao.AlgoritmosDeManutencao;
