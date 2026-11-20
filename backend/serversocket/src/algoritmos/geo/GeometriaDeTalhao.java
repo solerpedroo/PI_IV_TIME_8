@@ -1,18 +1,20 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
 /* Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 */
-package algoritmos;
+package algoritmos.geo;
+
+import algoritmos.comum.Validacao;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.GeometriaParaMapa;
-import protocolo.mensagens.PedidoDeGeometriaDoMapa;
-import protocolo.mensagens.PedidoDePontoNoTalhao;
-import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
-import protocolo.mensagens.RespostaDeGeometriaDoMapa;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.geo.GeometriaParaMapa;
+import protocolo.mensagens.geo.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.geo.PedidoDePontoNoTalhao;
+import protocolo.mensagens.geo.PedidoDeValidacaoDeLocalizacao;
+import protocolo.mensagens.geo.RespostaDeGeometriaDoMapa;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 /*
     Localizacao simplificada do talhao (ponto ou poligono leve) e as contas do mapa. Funcoes puras.
