@@ -51,7 +51,7 @@ public class FiltroDeClasses
 
             String nome = classe.getName ();
 
-            // protocolo. cobre Comunicado, Pedido, Resposta e tudo em protocolo.mensagens
+            // protocolo. cobre Comunicado, Pedido, Resposta e as pastas de protocolo.mensagens
             if (nome.startsWith ("protocolo.") || FiltroDeClasses.DO_JDK.contains (nome))
                 return ObjectInputFilter.Status.ALLOWED;
 
