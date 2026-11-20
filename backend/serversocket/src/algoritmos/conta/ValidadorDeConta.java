@@ -1,10 +1,12 @@
-package algoritmos;
+package algoritmos.conta;
+
+import algoritmos.comum.Validacao;
 
 import java.util.LinkedHashMap;
 import protocolo.Resposta;
-import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
-import protocolo.mensagens.PedidoDeValidacaoDeSenha;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeCadastro;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeSenha;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 // Validacoes de conta: criar conta e redefinir senha. Nao consulta nada: so olha os campos recebidos.
 public class ValidadorDeConta
