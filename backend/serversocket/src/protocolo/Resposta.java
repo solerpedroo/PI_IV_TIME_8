@@ -1,6 +1,11 @@
 package protocolo;
 
-// Comunicado que o servidor devolve para um Pedido. idDoPedido = 0 quando nao ha pedido associado.
+/*
+    Comunicado que o servidor devolve para um Pedido.
+    idDoPedido repete o id do Pedido que originou a resposta.
+    Zero significa que nao ha pedido associado: recusa de conexao, comunicado proibido
+    ou servidor lotado, antes de existir um id para devolver.
+*/
 public abstract class Resposta extends Comunicado
 {
     private static final long serialVersionUID = 1L;
