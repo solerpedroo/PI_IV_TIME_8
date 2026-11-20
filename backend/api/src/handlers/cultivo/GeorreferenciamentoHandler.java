@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import protocolo.mensagens.RespostaDeGeometriaDoMapa;
+import protocolo.mensagens.geo.RespostaDeGeometriaDoMapa;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import servicos.integracao.AlgoritmosDeGeo;

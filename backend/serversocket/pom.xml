@@ -44,7 +44,7 @@
               <rules>
                 <rule>
                   <element>PACKAGE</element>
-                  <includes><include>algoritmos</include></includes>
+                  <includes><include>algoritmos*</include></includes>
                   <limits>
                     <limit>
                       <counter>LINE</counter>

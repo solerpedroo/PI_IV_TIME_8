@@ -223,10 +223,15 @@ o mesmo nome na mesma propriedade também devolve 409.
 
 ## Testes automáticos
 
-`testar.bat` / `./testar.sh` compila tudo e roda `teste/TesteServidor.java`
-(sem JUnit). Ele sobe o servidor numa porta livre com os repositórios em
-memória (não precisa de banco nem do `rodar` ligado) e faz requisições HTTP
-reais por socket. Cobre:
+`testar.bat` / `./testar.sh` compila tudo e roda `teste/TesteServidor.java` e
+`teste/TesteQualidade.java` (sem JUnit). Eles sobem o servidor numa porta livre
+com os repositórios em memória (não precisa de banco nem do `rodar` ligado) e
+fazem requisições HTTP reais por socket. Detalhes de consistência e medição:
+[`docs/qualidade-backend.md`](../../docs/qualidade-backend.md) (#36/#183/#184).
+`medir-qualidade.sh` executa só a suíte de qualidade. Cobre:
+
+- **Qualidade (`TesteQualidade`):** resumos vs listas, leitura concorrente, mediana
+  das rotas do painel; com `--mongo`, checagem de índice em `historicos_talhoes`.
 
 - parse HTTP: 400, 404, 405, 413, 431, 501, 505, corpo incompleto, JSON inválido, HEAD, OPTIONS/CORS;
 - estáticos: tipos de conteúdo e bloqueio de `../`, `.env`, `.git`, `backend/` e extensões fora da lista;

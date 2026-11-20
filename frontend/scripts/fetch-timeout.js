@@ -6,7 +6,11 @@
 (() => {
   "use strict";
   if (typeof AbortSignal === "undefined" || typeof AbortSignal.timeout === "function") return;
-  /** @param {number} ms */
+  /**
+   * Cancela a requisição se ela passar de ms milissegundos, para a tela
+   * não ficar esperando uma resposta que não chega.
+   * @param {number} ms
+   */
   AbortSignal.timeout = function timeout(ms) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), ms);

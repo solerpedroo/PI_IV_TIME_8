@@ -105,11 +105,22 @@ public class RepositorioUsuariosMongo implements RepositorioUsuarios
         if (usuario == null)
             throw new Exception ("Usuario ausente");
 
+        ObjectId idUsuario = new ObjectId ();
         if (propriedade == null)
-            throw new Exception ("Propriedade ausente");
+        {
+            Document semFazenda = new Document (usuario).append ("_id", idUsuario);
+            try
+            {
+                this.usuarios.insertOne (semFazenda);
+            }
+            catch (MongoWriteException erro)
+            {
+                throw RepositorioUsuariosMongo.conflitoDe (erro);
+            }
+            return semFazenda;
+        }
 
         // o usuario entra primeiro: se o e-mail repetir, nenhuma propriedade orfa fica no banco
-        ObjectId idUsuario     = new ObjectId ();
         ObjectId idPropriedade = new ObjectId ();
         Document novoUsuario   = new Document (usuario).append ("_id", idUsuario)
                                                        .append ("propriedadeId", idPropriedade.toHexString ());

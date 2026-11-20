@@ -73,7 +73,8 @@
         options.innerHTML = '<p class="empty-hint" style="padding: 8px 0">Nenhum período carregado. Recarregue a página ou reinicie a API.</p>';
         return;
       }
-      options.innerHTML = items.map((option) => `<button class="harvest-option ${option.value === pending ? "is-selected" : ""}" type="button" data-harvest-option="${option.value}" role="option" aria-selected="${option.value === pending}"><span><strong>${option.textContent}</strong><small>${option.value === native.value ? "Safra atual da propriedade" : "Período disponível"}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>`).join("");
+      const escape = window.AgroLocal.escape;
+      options.innerHTML = items.map((option) => `<button class="harvest-option ${option.value === pending ? "is-selected" : ""}" type="button" data-harvest-option="${escape(option.value)}" role="option" aria-selected="${option.value === pending}"><span><strong>${escape(option.textContent)}</strong><small>${option.value === native.value ? "Safra atual da propriedade" : "Período disponível"}</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>`).join("");
       $$('[data-harvest-option]', modal).forEach((option) => option.addEventListener("click", () => {
         pending = option.dataset.harvestOption;
         renderOptions();

@@ -46,11 +46,25 @@ Detalhes e exemplos de caminho: [`api/MODULOS.md`](api/MODULOS.md).
 
 | Pasta | Conteúdo |
 | --- | --- |
-| `protocolo/` | Mensagens serializadas e ciclo pedido/resposta |
-| `algoritmos/` | Classes puras: talhão, safra, estoque, conta, manutenção, geometria |
-| Raiz | `Servidor`, `Atendente`, aceitação de conexão |
+| `protocolo/` | Ciclo da conversa TCP: socket, streams, filtro e pedidos/respostas |
+| `protocolo/mensagens/comum/` | `RespostaDeValidacao`, compartilhada pelas validações de campo |
+| `protocolo/mensagens/conta/` | Cadastro e senha nova |
+| `protocolo/mensagens/talhao/` | Talhão e resumo de área |
+| `protocolo/mensagens/estoque/` | Movimentação de estoque |
+| `protocolo/mensagens/safra/` | Relatório da safra |
+| `protocolo/mensagens/manutencao/` | Equipamento, preventiva, intervenção e agenda |
+| `protocolo/mensagens/geo/` | Localização, cerca e mapa |
+| `protocolo/mensagens/ping/` | Ping de vida e versão |
+| `algoritmos/comum/` | Regras de campo compartilhadas (texto, e-mail, senha) |
+| `algoritmos/conta/` | Cadastro e senha nova |
+| `algoritmos/talhao/` | Talhão, período de safra e resumo de área |
+| `algoritmos/estoque/` | Movimentação, saldo e custo médio |
+| `algoritmos/safra/` | Relatório da safra |
+| `algoritmos/manutencao/` | Equipamento, preventiva, intervenção e agenda |
+| `algoritmos/geo/` | Localização, cerca da ocorrência e mapa |
+| Raiz | `Servidor`, `Atendente` (encaminha o pedido para a pasta da funcionalidade), aceitação de conexão |
 
-Testes JUnit em `src/test/java/` espelham o mesmo recorte (`algoritmos/`, contrato, integração).
+Testes JUnit em `src/test/java/algoritmos/` repetem as mesmas pastas.
 
 ## Core Maven (`core/src/main/java/.../core/`)
 

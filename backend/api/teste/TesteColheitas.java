@@ -1,10 +1,12 @@
 /*
     Autor: Tomas de Paula Michelon Toniato
     RA: 25004211
+    Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592
 */
 import dados.infra.ConexaoMongo;
 import dados.operacao.RepositorioAtividadesMemoria;
 import dados.cultivo.RepositorioColheitas;
+import dados.cultivo.RepositorioCulturasMemoria;
 import dados.cultivo.RepositorioColheitasMemoria;
 import dados.cultivo.RepositorioColheitasMongo;
 import dados.financeiro.RepositorioCustosMemoria;
@@ -193,9 +195,14 @@ public class TesteColheitas
             String   a        = sessoes.criar (new ObjectId ().toHexString (), propriedade);
             String   b        = sessoes.criar (new ObjectId ().toHexString (), outra);
 
+            RepositorioCulturasMemoria culturas = new RepositorioCulturasMemoria ();
+            for (String nome : new String[] { "Soja", "Milho", "Trigo" })
+                culturas.criar (propriedade, propriedade, nome);
+            culturas.criar (outra, outra, "Soja");
+
             SafrasHandler handlerSafras = new SafrasHandler (safras, talhoes, new RepositorioCustosMemoria (),
                                                              new RepositorioAtividadesMemoria (),
-                                                             new dados.cultivo.RepositorioCulturasMemoria (), sessoes);
+                                                             culturas, sessoes);
             handlerSafras.setColheitas (colheitas);
             handlerSafras.registrar (roteador);
             new ColheitasHandler (colheitas, safras, talhoes, sessoes).registrar (roteador);

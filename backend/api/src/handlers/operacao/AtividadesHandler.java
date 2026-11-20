@@ -16,6 +16,7 @@ import org.bson.types.ObjectId;
 import seguranca.Sessao;
 import seguranca.Sessoes;
 import java.time.Instant;
+import servicos.integracao.EspelhoHistoricoTalhao;
 import util.comum.FotoEvidencia;
 import util.comum.Json;
 import util.comum.Validacao;
@@ -38,6 +39,7 @@ public class AtividadesHandler
     private final RepositorioSafras      safras;
     private final RepositorioTalhoes    talhoes;
     private final Sessoes               sessoes;
+    private EspelhoHistoricoTalhao      espelhoHistorico;
 
     public AtividadesHandler (RepositorioAtividades atividades, RepositorioTalhoes talhoes, RepositorioSafras safras,
                               Sessoes sessoes) throws Exception
@@ -55,6 +57,11 @@ public class AtividadesHandler
         this.talhoes    = talhoes;
         this.safras     = safras;
         this.sessoes    = sessoes;
+    }
+
+    public void setEspelhoHistorico (EspelhoHistoricoTalhao espelho)
+    {
+        this.espelhoHistorico = espelho;
     }
 
     public void registrar (Roteador roteador) throws Exception
@@ -436,6 +443,8 @@ public class AtividadesHandler
         try { this.atividades.mudarStatus (propriedadeId, id, statusAtual, "Concluída", "conclusao", desc); }
         catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
+        if (this.espelhoHistorico != null)
+            this.espelhoHistorico.atividadeConcluida (propriedadeId, atualizado, desc);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));
     }
@@ -524,6 +533,8 @@ public class AtividadesHandler
         try { this.atividades.mudarStatus (propriedadeId, id, statusAtual, novoStatus, acao, desc); }
         catch (IllegalStateException conflito) { return Resposta.json (409, new Document ("error", "Estado alterado; consulte novamente.")); }
         Document atualizado = this.atividades.buscarPorId (propriedadeId, id);
+        if (this.espelhoHistorico != null && "Concluída".equals (novoStatus))
+            this.espelhoHistorico.atividadeConcluida (propriedadeId, atualizado, desc);
 
         return Resposta.json (200, AtividadesHandler.publico (atualizado));
     }

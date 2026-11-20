@@ -19,9 +19,26 @@ import util.comum.Json;
 import util.comum.Validacao;
 
 /*
-    Talhoes (areas de cultivo) da propriedade de quem esta logado.
-    GET /api/talhoes?cultura=&q=, GET /api/talhoes/resumo, POST /api/talhoes, PUT /api/talhoes/{id}.
-    Sem DELETE nesta entrega.
+    Talhões (áreas de cultivo) da propriedade de quem está logado.
+
+    Quem chama: a tela de talhões e o histórico do talhão. O id da
+    propriedade não vem no corpo: tudo usa a propriedade ativa da sessão.
+    CulturasHandler é consultado antes de gravar, para o nome da cultura
+    existir no catálogo.
+
+    Rotas autenticadas (sem token o roteador responde 401):
+      GET  /api/talhoes?cultura=&q=
+      GET  /api/talhoes/resumo
+      GET  /api/talhoes/{id}/historico
+      POST /api/talhoes/{id}/historico
+      POST /api/talhoes
+      PUT  /api/talhoes/{id}
+    Não há DELETE nesta entrega. /resumo e /{id}/historico são registrados
+    como caminhos próprios, para "resumo" não ser lido como um id.
+
+    O que persiste: o documento do talhão (nome, cultura, hectares, status,
+    safra) na propriedade, e os eventos do histórico (tipo e descrição).
+    Renomear é recusado com 409 se alguma atividade ainda cita o nome antigo.
 */
 public class TalhoesHandler
 {
@@ -32,6 +49,11 @@ public class TalhoesHandler
     private final RepositorioCulturas   culturas;
     private final seguranca.Sessoes     sessoes;
 
+    /*
+        Talhões, atividades, culturas e sessões são obrigatórios.
+        Atividades entram para impedir renomear talhão que já tem lançamento.
+        Sessões entram na trava de criar e de atualizar.
+    */
     public TalhoesHandler (RepositorioTalhoes talhoes, RepositorioAtividades atividades,
                          RepositorioCulturas culturas, seguranca.Sessoes sessoes) throws Exception
     {
@@ -47,9 +69,13 @@ public class TalhoesHandler
         this.sessoes = sessoes;
     }
 
+    /*
+        /resumo e /{id}/historico vêm antes de um eventual /{id} solto.
+        O casamento do roteador é por segmento, então "resumo" não cai num id.
+    */
     public void registrar (Roteador roteador) throws Exception
     {
-        // /resumo antes de /{id} para nao ser confundido com um id
+        // /resumo antes de /{id} para não ser confundido com um id
         roteador.adicionar ("GET",  "/api/talhoes/resumo", this::resumo);
         roteador.adicionar ("GET",  "/api/talhoes/{id}/historico", this::historico);
         roteador.adicionar ("POST", "/api/talhoes/{id}/historico", this::registrarHistorico);
@@ -58,17 +84,28 @@ public class TalhoesHandler
         roteador.adicionar ("PUT",  "/api/talhoes/{id}",   this::atualizar);
     }
 
+    /*
+        JSON do talhão sem propriedadeId nem o nome já normalizado para busca.
+        Esses campos são internos.
+    */
     private static Document publico (Document talhao)
     {
         return Json.publico (talhao, "propriedadeId", "nomeNormalizado");
     }
 
-    // GET /api/talhoes?cultura=Soja&q=norte
+    /*
+        GET /api/talhoes?cultura=Soja&q=norte
+        Lista os talhões da propriedade ativa.
+        cultura em branco ou "todos" não filtra. q é comparado, em minúsculas,
+        com nomeNormalizado.
+        200 com o array filtrado, possivelmente vazio. Não há 400 de query.
+    */
     private Resposta listar (Requisicao requisicao) throws Exception
     {
         String cultura = requisicao.getConsulta ("cultura");
         String busca   = requisicao.getConsulta ("q");
 
+        // "todos" e vazio significam a lista inteira, não um nome de cultura.
         if (cultura != null && (cultura.isBlank () || cultura.equalsIgnoreCase ("todos")))
             cultura = null;
 
@@ -90,13 +127,22 @@ public class TalhoesHandler
         return Resposta.json (200, Json.escrever (ret));
     }
 
-    // GET /api/talhoes/resumo — cálculo no ServerSocket (CalculadoraDeTalhoes)
+    /*
+        GET /api/talhoes/resumo
+        Manda a lista da propriedade ao ServerSocket (CalculadoraDeTalhoes)
+        e devolve o JSON que ele calculou. O status sai de lá.
+        Esta API não recalcula hectares nem contagens.
+    */
     private Resposta resumo (Requisicao requisicao) throws Exception
     {
         return ClienteDeAlgoritmos.resumoTalhoes (this.talhoes.listar (requisicao.getSessao ().getPropriedadeId ()));
     }
 
-    // valida POST/PUT via ServerSocket (ValidadorDeTalhao); unicidade de nome continua no repositório
+    /*
+        Valida POST e PUT no ServerSocket (ValidadorDeTalhao).
+        Devolve null se o corpo foi recusado; o chamador então pede o 400.
+        Unicidade do nome não é daqui: fica no repositório, como 409.
+    */
     private static Document lerTalhao (Document corpo) throws Exception
     {
         ClienteDeAlgoritmos.ResultadoTalhao remoto = ClienteDeAlgoritmos.validarTalhao (corpo);
@@ -107,19 +153,34 @@ public class TalhoesHandler
         return new Document (remoto.campos).append ("atualizadoEm", Instant.now ().toString ());
     }
 
+    /*
+        Repete a validação remota para obter o 400 com os campos.
+        Se essa segunda chamada não trouxer o detalhe, responde 400 genérico.
+    */
     private static Resposta respostaTalhaoInvalido (Document corpo) throws Exception
     {
         ClienteDeAlgoritmos.ResultadoTalhao remoto = ClienteDeAlgoritmos.validarTalhao (corpo);
         return remoto.respostaErro != null ? remoto.respostaErro : Resposta.erro (400, "Dados inválidos.");
     }
 
+    /*
+        409 usado em criar e em atualizar quando o nome normalizado já existe
+        em outro talhão da mesma propriedade.
+    */
     private static Resposta nomeRepetido ()
     {
         return Resposta.json (409, new Document ("error", "Já existe um talhão com esse nome.")
                                        .append ("fields", new Document ("nome", "Já existe um talhão com esse nome.")));
     }
 
-    // POST /api/talhoes
+    /*
+        POST /api/talhoes
+        Cria o talhão na propriedade que a sessão ainda aponta.
+        synchronized (sessoes): a mesma trava de selecionar e de excluir fazenda.
+        401: o token sumiu enquanto esta chamada esperava a trava.
+        409: a propriedade ativa mudou depois que a requisição foi lida.
+        Os outros status estão em criarProtegido.
+    */
     private Resposta criar (Requisicao requisicao) throws Exception
     {
         // Serializa com seleção/exclusão: uma requisição que capturou o contexto
@@ -128,12 +189,19 @@ public class TalhoesHandler
         {
             seguranca.Sessao atual = this.sessoes.buscar (requisicao.getToken ());
             if (atual == null) return Resposta.erro (401, "Não autorizado.");
+            // 409: outra aba trocou a fazenda; o corpo foi montado para a anterior.
             if (!atual.getPropriedadeId ().equals (requisicao.getSessao ().getPropriedadeId ()))
                 return Resposta.erro (409, "A propriedade ativa mudou. Recarregue antes de salvar.");
             return this.criarProtegido (requisicao);
         }
     }
 
+    /*
+        Corpo do POST, já com a sessão conferida.
+        400: validador remoto recusou o corpo, ou a cultura não está no catálogo.
+        409: já existe talhão com esse nome na propriedade.
+        201: talhão público, com propriedadeId e nomeNormalizado ocultos.
+    */
     private Resposta criarProtegido (Requisicao requisicao) throws Exception
     {
         Document corpo  = requisicao.getCorpoJson ();
@@ -147,6 +215,19 @@ public class TalhoesHandler
         if (!this.culturas.existeNome (propriedadeId, talhao.getString ("cultura")))
             return CulturasHandler.erroCulturaNaoCadastrada ();
 
+        /*
+            O validador remoto já devolveu nome, cultura, hectares, status e atualizadoEm.
+            Estes dois append completam o documento da coleção talhoes:
+
+            {
+              "nome", "cultura", "hectares", "status", "atualizadoEm",
+              "propriedadeId": fazenda da sessão,   // o cliente não escolhe
+              "criadoEm": o mesmo instante de atualizadoEm
+            }
+
+            O repositório ainda gera _id e nomeNormalizado (nome em minúsculas,
+            para o índice único por fazenda). A resposta 201 esconde esses dois.
+        */
         talhao.append ("propriedadeId", propriedadeId)
               .append ("criadoEm",      talhao.getString ("atualizadoEm"));
 
@@ -156,7 +237,17 @@ public class TalhoesHandler
         return Resposta.json (201, TalhoesHandler.publico (talhao));
     }
 
-    // PUT /api/talhoes/{id}  (troca nome, cultura, hectares e status)
+    /*
+        PUT /api/talhoes/{id}
+        Troca nome, cultura, hectares e status do talhão desta propriedade.
+        synchronized (sessoes): não grava em paralelo com login, seleção ou
+        exclusão da fazenda, que usam o mesmo monitor.
+        404: o id não existe nesta propriedade.
+        400: corpo recusado pelo validador, ou cultura fora do catálogo.
+        409: o nome mudou e alguma atividade ainda cita o nome antigo,
+        ou o nome novo já pertence a outro talhão.
+        200: documento relido.
+    */
     private Resposta atualizar (Requisicao requisicao) throws Exception
     {
         synchronized (this.sessoes)
@@ -191,7 +282,12 @@ public class TalhoesHandler
         }
     }
 
-    // GET retorna somente eventos da propriedade do usuario autenticado.
+    /*
+        GET /api/talhoes/{id}/historico
+        Eventos deste talhão, só da propriedade da sessão.
+        404: o talhão não existe nessa propriedade.
+        200: lista sem propriedadeId e sem talhaoId.
+    */
     private Resposta historico (Requisicao requisicao) throws Exception
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
@@ -203,7 +299,15 @@ public class TalhoesHandler
         return Resposta.json (200, Json.escrever (ret));
     }
 
-    // POST registra a origem da operacao sem permitir que o cliente altere os vinculos internos.
+    /*
+        POST /api/talhoes/{id}/historico
+        Grava um evento. O cliente informa tipo e descrição; propriedade e
+        talhão vêm da sessão e da URL, não do corpo.
+        404: talhão inexistente nesta propriedade.
+        400: tipo ou descrição ausentes, longos demais, ou tipo fora de
+        atividade, ocorrencia e custo.
+        201: o evento gravado, com criadoEm preenchido aqui.
+    */
     private Resposta registrarHistorico (Requisicao requisicao) throws Exception
     {
         String propriedadeId = requisicao.getSessao ().getPropriedadeId ();
@@ -213,6 +317,7 @@ public class TalhoesHandler
         Validacao validacao = new Validacao (corpo);
         String tipo = validacao.texto ("tipo", "Informe o tipo.", 20);
         String descricao = validacao.texto ("descricao", "Informe a descricao.", 240);
+        // Lista fechada: outro texto, mesmo curto, é 400 no campo tipo.
         if (tipo != null && !List.of ("atividade", "ocorrencia", "custo").contains (tipo)) validacao.erro ("tipo", "Tipo invalido.");
         if (validacao.temErros ()) return validacao.resposta ();
         Document evento = new Document ("tipo", tipo).append ("descricao", descricao).append ("criadoEm", Instant.now ().toString ());

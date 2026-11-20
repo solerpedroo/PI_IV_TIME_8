@@ -8,12 +8,12 @@ import java.util.Map;
 import org.bson.Document;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.GeometriaParaMapa;
-import protocolo.mensagens.PedidoDeGeometriaDoMapa;
-import protocolo.mensagens.PedidoDePontoNoTalhao;
-import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
-import protocolo.mensagens.RespostaDeGeometriaDoMapa;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.geo.GeometriaParaMapa;
+import protocolo.mensagens.geo.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.geo.PedidoDePontoNoTalhao;
+import protocolo.mensagens.geo.PedidoDeValidacaoDeLocalizacao;
+import protocolo.mensagens.geo.RespostaDeGeometriaDoMapa;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 /*
     Ponte do georreferenciamento com o servidor de algoritmos (GeometriaDeTalhao no serversocket).

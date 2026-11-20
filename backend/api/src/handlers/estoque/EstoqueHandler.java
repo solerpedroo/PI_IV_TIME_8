@@ -15,12 +15,25 @@ import java.util.List;
 import org.bson.Document;
 import seguranca.Sessoes;
 import servicos.integracao.ClienteDeAlgoritmos;
+import servicos.integracao.EspelhoHistoricoTalhao;
 import servicos.financeiro.CustosDeConsumo;
 import util.comum.Json;
 import util.comum.Validacao;
 
-/* Catálogo, movimentações e indicadores pertencem à propriedade da sessão.
-   As atividades são apenas consultadas para validar o vínculo do consumo. */
+/*
+    Manipulador HTTP do estoque de insumos da fazenda ativa.
+
+    O saldo de cada produto não é um número solto no cadastro. Ele só muda
+    por movimentação: entrada soma, saída subtrai e ajuste informa o saldo
+    novo. A saída é recusada quando a quantidade passa do saldo disponível.
+    Catálogo, movimentações e indicadores ficam isolados pela propriedade
+    da sessão: uma fazenda não lê nem grava o estoque de outra.
+
+    Se a saída aponta para uma atividade, o handler registra o custo de
+    consumo (a baixa guarda o custo médio daquele momento) e, quando o
+    espelho está ligado, copia esse fato para o histórico do talhão.
+    As atividades são apenas consultadas para validar o vínculo do consumo.
+*/
 public class EstoqueHandler
 {
     public static final List<String> CATEGORIAS = List.of ("Herbicida", "Fertilizante", "Semente", "Fungicida", "Inseticida");
@@ -28,7 +41,9 @@ public class EstoqueHandler
     private final RepositorioEstoque estoque;
     private final Sessoes sessoes;
     private CustosDeConsumo consumo;
+    private EspelhoHistoricoTalhao espelhoHistorico;
 
+    /* Recebe o repositório (memória nos testes ou Mongo em produção) e as sessões. */
     public EstoqueHandler (RepositorioEstoque estoque, Sessoes sessoes) throws Exception
     {
         if (estoque == null || sessoes == null) throw new Exception ("Dependência de estoque ausente");
@@ -36,12 +51,25 @@ public class EstoqueHandler
         this.sessoes = sessoes;
     }
 
-    // Saida vinculada a atividade tambem gera o custo de Insumos (#156).
+    /*
+        Liga o serviço financeiro. Sem ele a baixa de estoque ainda ocorre,
+        mas não nasce o custo de Insumos da saída vinculada a uma atividade (#156).
+    */
     public void setConsumo (CustosDeConsumo consumo)
     {
         this.consumo = consumo;
     }
 
+    /*
+        Liga o espelho do histórico do talhão. Ele só copia o fato depois que
+        o custo de consumo foi gravado; se a cópia falhar, a movimentação permanece.
+    */
+    public void setEspelhoHistorico (EspelhoHistoricoTalhao espelho)
+    {
+        this.espelhoHistorico = espelho;
+    }
+
+    /* Publica as rotas. Leituras respondem direto; criações e baixas passam por gravar. */
     public void registrar (Roteador r) throws Exception
     {
         r.adicionar ("GET", "/api/insumos/resumo", this::resumo);
@@ -55,8 +83,12 @@ public class EstoqueHandler
         r.adicionar ("POST", "/api/insumos/{id}/movimentacoes", q -> this.gravar (q, "movimentar"));
     }
 
-    // A mesma coordenação da seleção/exclusão de propriedades evita gravar
-    // em um contexto antigo enquanto a sessão está trocando de fazenda.
+    /*
+        A mesma coordenação da seleção/exclusão de propriedades evita gravar
+        em um contexto antigo enquanto a sessão está trocando de fazenda.
+        O synchronized na sessão segura a escrita até a propriedade ativa
+        ser a mesma que a requisição carregou.
+    */
     private Resposta gravar (Requisicao q, String operacao) throws Exception
     {
         synchronized (this.sessoes)
@@ -75,11 +107,17 @@ public class EstoqueHandler
         }
     }
 
+    /* Identificador da fazenda ativa. Todo acesso ao repositório usa este valor. */
     private static String propriedade (Requisicao q)
     {
         return q.getSessao ().getPropriedadeId ();
     }
 
+    /*
+        JSON enviado ao cliente. O status nasce do saldo, não de um campo gravado:
+        Crítico se o saldo chegou ao limiar informado, Baixo se ficou abaixo do
+        mínimo e Normal nos demais casos. propriedadeId não sai na resposta.
+    */
     private static Document publico (Document item)
     {
         Document ret = Json.publico (item, "propriedadeId");
@@ -92,6 +130,7 @@ public class EstoqueHandler
         return ret.append ("status", status);
     }
 
+    /* Lê um número do corpo: faixa de zero a um bilhão e no máximo as casas pedidas. */
     private static double numero (Document corpo, String campo, Validacao v, boolean opcional, int casas)
     {
         Object valor = corpo.get (campo);
@@ -108,6 +147,7 @@ public class EstoqueHandler
         return ret;
     }
 
+    /* Texto que pode faltar. Se vier, precisa ser string dentro do tamanho máximo. */
     private static String textoOpcional (Document corpo, String campo, Validacao v, int maximo)
     {
         Object valor = corpo.get (campo);
@@ -120,6 +160,10 @@ public class EstoqueHandler
         return ((String) valor).trim ();
     }
 
+    /*
+        Monta o cadastro do insumo. Na criação o saldo inicial entra no documento;
+        na edição este método não reescreve o saldo, porque só a movimentação muda quantidade.
+    */
     private static Document lerInsumo (Document corpo, Validacao v, boolean criar)
     {
         String nome = v.texto ("nome", "Informe o nome.", 100);
@@ -132,6 +176,22 @@ public class EstoqueHandler
         if (limiar != null && limiar > minimo) v.erro ("limiarCritico", "O limiar crítico não pode superar o mínimo.");
         double saldo = criar ? numero (corpo, "saldo", v, false, 6) : 0;
         if (v.temErros ()) return null;
+        /*
+            append monta o cadastro do insumo ainda na memória. criar() em seguida
+            coloca propriedadeId e o repositório grava na coleção insumos.
+
+            {
+              "nome": "Ureia",
+              "categoria": "Fertilizante",   // uma de CATEGORIAS
+              "unidade": "kg",
+              "minimo": 4.0,                 // alerta de estoque baixo
+              "custoUnitario": 2.5,          // custo médio; a movimentação pode mudar
+              "limiarCritico": 1.0 ou null,  // se saldo <= limiar, status vira Crítico
+              "atualizadoEm": "2026-...Z",
+              "saldo": 10.0,                 // só na criação; edição não manda este campo
+              "criadoEm": o mesmo instante de atualizadoEm, só na criação
+            }
+        */
         Document ret = new Document ("nome", nome).append ("categoria", categoria).append ("unidade", unidade)
             .append ("minimo", minimo).append ("custoUnitario", custo).append ("limiarCritico", limiar)
             .append ("atualizadoEm", Instant.now ().toString ());
@@ -139,12 +199,14 @@ public class EstoqueHandler
         return ret;
     }
 
+    /* Busca o insumo desta propriedade e trata o excluído logicamente como inexistente. */
     private Document ativo (Requisicao q) throws Exception
     {
         Document item = this.estoque.buscarPorId (propriedade (q), q.getParametro ("id"));
         return item == null || Boolean.TRUE.equals (item.getBoolean ("excluido")) ? null : item;
     }
 
+    /* Lista o catálogo ativo da propriedade, já com o status calculado. */
     private Resposta listar (Requisicao q) throws Exception
     {
         ArrayList<Document> lista = new ArrayList<> ();
@@ -152,12 +214,14 @@ public class EstoqueHandler
         return Resposta.json (200, Json.escrever (lista));
     }
 
+    /* Devolve um insumo ativo. Arquivado ou de outra fazenda responde 404. */
     private Resposta consultar (Requisicao q) throws Exception
     {
         Document item = this.ativo (q);
         return item == null ? Resposta.erro (404, "Produto não encontrado.") : Resposta.json (200, publico (item));
     }
 
+    /* Cria o produto nesta propriedade. O repositório registra o saldo inicial no histórico. */
     private Resposta criar (Requisicao q) throws Exception
     {
         Document corpo = q.getCorpoJson ();
@@ -169,6 +233,7 @@ public class EstoqueHandler
         return Resposta.json (201, publico (item));
     }
 
+    /* Atualiza nome, categoria, unidade, mínimo e custos. O saldo fica fora desta rota. */
     private Resposta atualizar (Requisicao q) throws Exception
     {
         Document anterior = this.ativo (q);
@@ -176,8 +241,10 @@ public class EstoqueHandler
         Document corpo = q.getCorpoJson ();
         Validacao v = new Validacao (corpo);
         Document campos = lerInsumo (corpo, v, false);
-        // Trocar kg por L reinterpretaria saldos antigos. Permitimos mudar a
-        // unidade somente antes da primeira movimentação e com saldo zero.
+        /*
+            Trocar kg por L reinterpretaria saldos antigos. A unidade só muda
+            antes da primeira movimentação e com saldo zero.
+        */
         if (campos != null && !anterior.getString ("unidade").equals (campos.getString ("unidade")) &&
             (CalculosEstoque.numero (anterior, "saldo") != 0 || !this.estoque.listarMovimentacoes (propriedade (q), q.getParametro ("id")).isEmpty ()))
             v.erro ("unidade", "Crie outro produto para mudar a unidade de um item com saldo ou histórico.");
@@ -186,6 +253,7 @@ public class EstoqueHandler
         return this.consultar (q);
     }
 
+    /* Exclusão lógica. O repositório recusa se ainda houver saldo, para não sumir quantidade. */
     private Resposta excluir (Requisicao q) throws Exception
     {
         if (this.ativo (q) == null) return Resposta.erro (404, "Produto não encontrado.");
@@ -193,11 +261,13 @@ public class EstoqueHandler
         return Resposta.semConteudo ();
     }
 
+    /* O cadastro de atividade usa titulo ou nome, conforme a origem do documento. */
     private static String tituloAtividade (Document atividade)
     {
         return atividade.getString ("titulo") != null ? atividade.getString ("titulo") : atividade.getString ("nome");
     }
 
+    /* Lista atividades do usuário nesta propriedade para o cliente escolher o vínculo da saída. */
     private Resposta atividades (Requisicao q) throws Exception
     {
         ArrayList<Document> lista = new ArrayList<> ();
@@ -206,6 +276,19 @@ public class EstoqueHandler
         return Resposta.json (200, Json.escrever (lista));
     }
 
+    /*
+        Registra entrada, saída ou ajuste e atualiza o saldo na mesma operação
+        do repositório. Tipos: entrada aumenta, saída diminui, ajuste substitui
+        o saldo pela quantidade informada. Só a saída pode citar uma atividade.
+        Se o corpo não manda custo, a saída vinculada usa o custo médio atual
+        do produto. Esse valor fica na movimentação: compras futuras não
+        reescrevem o custo já gerado.
+
+        Depois da baixa confirmada, o custo de consumo é lançado no financeiro
+        e o espelho copia o evento para o histórico do talhão. Uma falha nessa
+        etapa não desfaz o saldo; o handler tenta sincronizar e, se ainda
+        faltar o custo, devolve custoPendente para o cliente saber.
+    */
     private Resposta movimentar (Requisicao q) throws Exception
     {
         Document produto = this.ativo (q);
@@ -229,7 +312,7 @@ public class EstoqueHandler
             if (atividade == null) v.erro ("atividadeId", "Selecione uma atividade existente desta propriedade.");
         }
         if (v.temErros ()) return v.resposta ();
-        // O consumo guarda o custo medio da baixa: o custo gerado nao muda com compras futuras.
+        /* O consumo guarda o custo médio da baixa: o custo gerado não muda com compras futuras. */
         if (atividade != null && custo == null) custo = CalculosEstoque.numero (produto, "custoUnitario");
 
         ClienteDeAlgoritmos.ResultadoMovimentacao remoto = ClienteDeAlgoritmos.calcularMovimentacao (
@@ -243,6 +326,26 @@ public class EstoqueHandler
         if (remoto.respostaErro != null)
             return remoto.respostaErro;
 
+        /*
+            Documento da movimentação, ainda sem saldoAnterior/saldoPosterior.
+            CalculosEstoque.movimentar completa esses campos e o repositório
+            insere o resultado em movimentacoes_insumos, junto com o update
+            do saldo em insumos.
+
+            {
+              "tipo": "entrada" | "saida" | "ajuste",
+              "quantidade": 5.0,
+              "observacao": "",
+              "fornecedor": "",
+              "atividadeId": null ou o hex da atividade (só saída),
+              "atividade": "" ou o título, para o histórico continuar legível,
+              "custoUnitario": preço desta baixa/compra, ou null,
+              "criadoEm": "2026-...Z"
+            }
+
+            O append de custoId mais abaixo NÃO entra nesse documento do banco.
+            Ele entra só no JSON da resposta 201, para a tela saber qual custo nasceu.
+        */
         Document movimento = new Document ("tipo", tipo).append ("quantidade", quantidade).append ("observacao", observacao)
             .append ("fornecedor", fornecedor).append ("atividadeId", atividadeId.isBlank () ? null : atividadeId)
             .append ("atividade", atividade == null ? "" : tituloAtividade (atividade)).append ("custoUnitario", custo)
@@ -253,13 +356,21 @@ public class EstoqueHandler
         Document ret = Json.publico (movimento, "propriedadeId", "insumoId");
         if (this.consumo != null && atividade != null)
         {
-            // A baixa ja esta gravada: uma falha aqui nao pode virar erro e induzir outra baixa.
-            // Se o registro pontual falhar, sincronizar () tenta recuperar na propria escrita.
+            /*
+                A baixa já está gravada: uma falha aqui não pode virar erro e induzir outra baixa.
+                Se o registro pontual falhar, sincronizar () tenta recuperar na própria escrita.
+                O espelho só roda quando o custo existe, para o histórico do talhão não ficar sem valor.
+            */
             String propriedadeId = propriedade (q);
             try
             {
                 Document gerado = this.consumo.registrar (propriedadeId, movimento, atualizado, atividade);
-                if (gerado != null) ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
+                if (gerado != null)
+                {
+                    ret.append ("custoId", Json.publico (gerado).getString ("id")).append ("custoValor", gerado.get ("value"));
+                    if (this.espelhoHistorico != null)
+                        this.espelhoHistorico.consumoDeInsumo (propriedadeId, atividade, gerado);
+                }
             }
             catch (Exception erro)
             {
@@ -274,7 +385,11 @@ public class EstoqueHandler
                     recuperado = null;
                 }
                 if (recuperado != null)
+                {
                     ret.append ("custoId", Json.publico (recuperado).getString ("id")).append ("custoValor", recuperado.get ("value"));
+                    if (this.espelhoHistorico != null)
+                        this.espelhoHistorico.consumoDeInsumo (propriedadeId, atividade, recuperado);
+                }
                 else
                     ret.append ("custoPendente", true);
             }
@@ -282,6 +397,7 @@ public class EstoqueHandler
         return Resposta.json (201, ret);
     }
 
+    /* Histórico de movimentações do insumo, inclusive depois da exclusão lógica do produto. */
     private Resposta historico (Requisicao q) throws Exception
     {
         if (this.estoque.buscarPorId (propriedade (q), q.getParametro ("id")) == null) return Resposta.erro (404, "Produto não encontrado.");
@@ -291,7 +407,11 @@ public class EstoqueHandler
         return Resposta.json (200, Json.escrever (lista));
     }
 
-    // YearMonth compara mês E ano no fuso da operação, inclusive na virada UTC.
+    /*
+        Indicadores da propriedade: produtos, críticos, abaixo do mínimo,
+        entradas do mês corrente e valor em estoque (saldo vezes custo médio).
+        YearMonth compara mês e ano no fuso da operação, inclusive na virada UTC.
+    */
     private Resposta resumo (Requisicao q) throws Exception
     {
         List<Document> itens = this.estoque.listar (propriedade (q));

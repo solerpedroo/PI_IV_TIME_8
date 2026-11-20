@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgroGestão | Apresentação à banca</title>
+    <link rel="stylesheet" href="../slides/styles/deck.css" />
+    <style>
+      .banca-cover-brand { display: flex; align-items: center; gap: clamp(14px, 1.8vw, 24px); }
+      .banca-cover-brand img { width: clamp(76px, 8vw, 112px); height: auto; flex: none; }
+      .banca-cover-name { margin: 0; font-size: clamp(48px, 5.8vw, 82px); line-height: 1; letter-spacing: -0.065em; color: var(--green-2); font-weight: 700; }
+      .banca-cover-name span { font-weight: 400; }
+      .banca-features .tile-card { padding: clamp(16px, 1.7vw, 22px); }
+      .banca-features .tile-card p { font-size: clamp(15px, 1.15vw, 18px); line-height: 1.45; }
+      .banca-features .tile-card h3 { font-size: clamp(18px, 1.55vw, 22px); }
+      .banca-stack .stack-lane-head { text-align: center; }
+      .banca-stack .stack-lane-data .stack-techs { justify-content: center; }
+      .banca-stack .stack-lane-data {
+        background: linear-gradient(145deg, #fff, #edf6ef);
+        border-color: var(--green-edge);
+      }
+      .banca-stack .tech-chip { min-width: 120px; }
+      .banca-stack .stack-lane-data .tech-chip {
+        border-color: var(--green-edge);
+        box-shadow: 0 12px 28px -16px rgba(45, 106, 79, 0.32);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="deck">
+      <main id="stage" aria-live="polite"></main>
+    </div>
+
+    <div id="slideCounter" aria-hidden="true">01 / 05</div>
+    <div id="progressOverlay"><div id="progressFill"></div></div>
+    <div id="hint">setas navegar, F tela cheia, P PDF</div>
+
+    <template id="slides">
+      <!-- 01 · Capa -->
+      <section class="slide" data-title="Capa">
+        <div class="meta-bar reveal">
+          <div class="meta-left">
+            <div class="brand-lockup">
+              <img class="brand-logo" src="../slides/brand/assets/agro-logo-mark.png" width="40" height="40" alt="AgroGestão" />
+              <span class="brand-word">Agro<span>Gestão</span></span>
+            </div>
+            <div class="pageno">01 / 05 APRESENTAÇÃO</div>
+          </div>
+          <div class="author">Projeto Integrador IV, Time 8, Engenharia de Software, PUC-Campinas, 2026</div>
+        </div>
+        <div class="body cover">
+          <div class="cover-main">
+            <div class="banca-cover-brand reveal reveal-d1">
+              <img src="../frontend/Assets/brand/simbolo.svg" width="112" height="112" alt="" />
+              <h1 class="banca-cover-name">Agro<span>Gestão</span></h1>
+            </div>
+            <p class="cover-tagline reveal reveal-d2">Plataforma integrada de gestão agrícola</p>
+            <p class="lead reveal reveal-d3">Apresentação do estado atual do projeto para a banca.</p>
+          </div>
+          <div class="cover-side reveal reveal-d2">
+            <div class="side-label">Projeto acadêmico</div>
+            <div class="tile-board tile-board-2">
+              <article class="tile-card">
+                <span class="tile-tag">Curso</span>
+                <h3>Engenharia de Software</h3>
+              </article>
+              <article class="tile-card">
+                <span class="tile-tag">Instituição</span>
+                <h3>PUC-Campinas</h3>
+              </article>
+              <article class="tile-card tile-card-accent">
+                <span class="tile-tag">Equipe</span>
+                <h3>Time 8</h3>
+              </article>
+              <article class="tile-card">
+                <span class="tile-tag">Disciplina</span>
+                <h3>Projeto Integrador IV</h3>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 · Contextualização -->
+      <section class="slide" data-title="Contextualização">
+        <div class="meta-bar reveal">
+          <div class="meta-left">
+            <div class="brand-lockup">
+              <img class="brand-logo" src="../slides/brand/assets/agro-logo-mark.png" width="40" height="40" alt="" />
+              <span class="brand-word">Agro<span>Gestão</span></span>
+            </div>
+            <div class="pageno">02 / 05 CONTEXTO</div>
+          </div>
+          <div class="author">Projeto Integrador IV, Time 8, Engenharia de Software, PUC-Campinas</div>
+        </div>
+        <div class="body statement-split">
+          <div class="statement-copy reveal reveal-d1">
+            <p class="eyebrow">Problema e objetivo</p>
+            <h2 class="title">A operação rural precisa de uma visão <span class="hl">única e rastreável</span></h2>
+            <p class="lead">Informações em cadernos, planilhas e mensagens dificultam acompanhar atividades, insumos, ocorrências e custos. O AgroGestão centraliza esses dados por propriedade, talhão e safra.</p>
+          </div>
+          <div class="side-panel reveal reveal-d2">
+            <div class="side-label">O que o projeto organiza</div>
+            <div class="tile-board tile-board-2">
+              <article class="tile-card"><h3>Operação</h3><p>Propriedades, talhões, culturas e safras.</p></article>
+              <article class="tile-card"><h3>Execução</h3><p>Atividades, calendário e ocorrências de campo.</p></article>
+              <article class="tile-card"><h3>Recursos</h3><p>Estoque, custos, orçamento e manutenção.</p></article>
+              <article class="tile-card tile-card-accent"><h3>Acompanhamento</h3><p>Dashboard, notificações e relatórios.</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 · Funcionalidades -->
+      <section class="slide" data-title="Funcionalidades">
+        <div class="meta-bar reveal">
+          <div class="meta-left">
+            <div class="brand-lockup">
+              <img class="brand-logo" src="../slides/brand/assets/agro-logo-mark.png" width="40" height="40" alt="" />
+              <span class="brand-word">Agro<span>Gestão</span></span>
+            </div>
+            <div class="pageno">03 / 05 FUNCIONALIDADES</div>
+          </div>
+          <div class="author">Projeto Integrador IV, Time 8, Engenharia de Software, PUC-Campinas</div>
+        </div>
+        <div class="body">
+          <div class="slide-head reveal reveal-d1">
+            <p class="eyebrow">Estado atual</p>
+            <h2 class="title">Funcionalidades disponíveis hoje</h2>
+          </div>
+          <div class="tile-board tile-board-3 banca-features">
+            <article class="tile-card reveal reveal-d2"><span class="tile-num">01</span><h3>Propriedades e equipe</h3><p>Cadastro de propriedades, seleção da propriedade ativa e gestão da equipe.</p></article>
+            <article class="tile-card reveal reveal-d2"><span class="tile-num">02</span><h3>Cultivo e safras</h3><p>Talhões, culturas, ciclos de safra, colheitas e produtividade.</p></article>
+            <article class="tile-card reveal reveal-d2"><span class="tile-num">03</span><h3>Atividades</h3><p>Planejamento, quadro Kanban, calendário e histórico de execução.</p></article>
+            <article class="tile-card reveal reveal-d3"><span class="tile-num">04</span><h3>Estoque e ocorrências</h3><p>Entradas e saídas de insumos, alertas de estoque e registro de ocorrências.</p></article>
+            <article class="tile-card reveal reveal-d3"><span class="tile-num">05</span><h3>Custos e manutenção</h3><p>Despesas, orçamento por safra e manutenção de equipamentos.</p></article>
+            <article class="tile-card tile-card-accent reveal reveal-d3"><span class="tile-num">06</span><h3>Acompanhamento</h3><p>Dashboard, notificações e relatórios da operação.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 · Tecnologias -->
+      <section class="slide" data-title="Tecnologias">
+        <div class="meta-bar reveal">
+          <div class="meta-left">
+            <div class="brand-lockup">
+              <img class="brand-logo" src="../slides/brand/assets/agro-logo-mark.png" width="40" height="40" alt="" />
+              <span class="brand-word">Agro<span>Gestão</span></span>
+            </div>
+            <div class="pageno">04 / 05 TECNOLOGIAS</div>
+          </div>
+          <div class="author">Projeto Integrador IV, Time 8, Engenharia de Software, PUC-Campinas</div>
+        </div>
+        <div class="body stack-layout banca-stack">
+          <div class="slide-head reveal reveal-d1">
+            <p class="eyebrow">Stack real do repositório</p>
+            <h2 class="title">Tecnologias utilizadas</h2>
+          </div>
+          <div class="stack-board reveal reveal-d2">
+            <div class="stack-row stack-row-apps">
+              <article class="stack-lane">
+                <header class="stack-lane-head"><span class="stack-lane-label">Frontend</span></header>
+                <div class="stack-techs">
+                  <div class="tech-chip"><img class="tech-icon" src="../slides/brand/assets/stack/html5.svg" alt="" width="56" height="56" /><span class="tech-name">HTML</span></div>
+                  <div class="tech-chip"><img class="tech-icon" src="../slides/brand/assets/stack/css3.svg" alt="" width="56" height="56" /><span class="tech-name">CSS</span></div>
+                  <div class="tech-chip"><img class="tech-icon" src="../slides/brand/assets/stack/javascript.svg" alt="" width="56" height="56" /><span class="tech-name">JavaScript</span></div>
+                </div>
+              </article>
+              <article class="stack-lane">
+                <header class="stack-lane-head"><span class="stack-lane-label">Backend e servidor</span></header>
+                <div class="stack-techs">
+                  <div class="tech-chip"><img class="tech-icon" src="../slides/brand/assets/stack/java.svg" alt="" width="56" height="56" /><span class="tech-name">Java 21</span></div>
+                </div>
+              </article>
+            </div>
+            <div class="stack-bridge" aria-hidden="true"><span class="stack-bridge-line"></span><span class="stack-bridge-node"></span><span class="stack-bridge-line"></span></div>
+            <article class="stack-lane stack-lane-data reveal reveal-d3">
+              <header class="stack-lane-head"><span class="stack-lane-label">Banco de dados</span></header>
+              <div class="stack-techs">
+                <div class="tech-chip"><img class="tech-icon" src="../slides/brand/assets/stack/mongodb.svg" alt="" width="56" height="56" /><span class="tech-name">MongoDB</span></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 · Demonstração -->
+      <section class="slide" data-title="Demonstração">
+        <div class="meta-bar reveal">
+          <div class="meta-left">
+            <div class="brand-lockup">
+              <img class="brand-logo" src="../slides/brand/assets/agro-logo-mark.png" width="40" height="40" alt="" />
+              <span class="brand-word">Agro<span>Gestão</span></span>
+            </div>
+            <div class="pageno">05 / 05 DEMONSTRAÇÃO</div>
+          </div>
+          <div class="author">Projeto Integrador IV, Time 8, Engenharia de Software, PUC-Campinas</div>
+        </div>
+        <div class="body thanks-only">
+          <div class="thanks reveal reveal-d1">
+            <img class="thanks-logo" src="../slides/brand/assets/agro-logo-mark.png" width="72" height="72" alt="AgroGestão" />
+            <h1 class="display">Vamos à <span class="hl">demonstração.</span></h1>
+            <p class="lead">Agora apresentaremos o projeto na prática.</p>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <script src="../slides/scripts/deck.js" defer></script>
+  </body>
+</html>

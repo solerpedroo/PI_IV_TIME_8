@@ -1,0 +1,36 @@
+package algoritmos.comum;
+
+import protocolo.Pedido;
+import protocolo.Resposta;
+import protocolo.RespostaDeErro;
+import protocolo.mensagens.comum.RespostaDeValidacao;
+import static org.junit.jupiter.api.Assertions.*;
+
+/*
+    Atalhos dos testes de algoritmo: a resposta tem de ser do tipo esperado e carregar o id do pedido.
+    erro() exige RespostaDeErro com o codigo. Assim um teste que esquece a correlacao quebra aqui.
+*/
+public final class ApoioDeTeste
+{
+    private ApoioDeTeste () {}
+
+    public static <T extends Resposta> T resposta (Pedido pedido, Resposta resposta, Class<T> tipo)
+    {
+        T resultado = assertInstanceOf (tipo, resposta);
+        assertEquals (pedido.getId (), resultado.getIdDoPedido (), "Correlação entre pedido e resposta");
+        return resultado;
+    }
+
+    public static void erro (Pedido pedido, Resposta resposta, String codigo)
+    {
+        assertEquals (codigo, resposta (pedido, resposta, RespostaDeErro.class).getCodigo ());
+    }
+
+    public static void campoInvalido (RespostaDeValidacao resposta, String campo)
+    {
+        assertAll (
+            () -> assertFalse (resposta.isValido ()),
+            () -> assertNotNull (resposta.getErros ().get (campo), "Erro esperado no campo " + campo),
+            () -> assertTrue (resposta.getNormalizados ().isEmpty (), "Não devolver dados parciais para gravação"));
+    }
+}

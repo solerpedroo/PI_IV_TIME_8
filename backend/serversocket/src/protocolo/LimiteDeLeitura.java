@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 // Limita bytes lidos por mensagem serializada (protege contra payloads enormes na rede).
+// ObjectInputStream le por read() e read(byte[], int, int); os dois passam por contar().
+// O contador nao zera entre mensagens: o teto vale para o que ja entrou nesta conexao desde a abertura do stream.
 class LimiteDeLeitura extends FilterInputStream
 {
     private long lidos;

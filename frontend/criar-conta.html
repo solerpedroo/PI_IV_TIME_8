@@ -42,7 +42,7 @@
       <div class="auth-card auth-card--signup">
         <header class="auth-header">
           <h2 id="signup-title">Criar conta</h2>
-          <p>Cadastre-se como produtor rural</p>
+          <p data-signup-lead>Cadastre-se como produtor rural</p>
         </header>
 
         <form
@@ -171,8 +171,8 @@
             </div>
           </div>
 
-          <!-- Linha: propriedade + área -->
-          <div class="form-row">
+          <!-- Linha: propriedade + área. Some quando o cadastro vem de um convite. -->
+          <div class="form-row" data-propriedade-cadastro>
             <div class="input-group">
               <label for="farm">Nome da propriedade</label>
               <input

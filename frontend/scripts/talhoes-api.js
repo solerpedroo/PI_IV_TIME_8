@@ -4,9 +4,12 @@
 (() => {
   "use strict";
   const base = window.location.origin;
+  /* Token da sessão usado nas consultas de talhão. Sem ele a tela não chama a API. */
   const token = () => sessionStorage.getItem("agro.sessionToken");
   let talhoes = [];
 
+  /* Consulta a API dos talhões. Se a sessão ou o servidor falhar, os seletores
+     da tela ficam sem opções novas e um aviso explica o que aconteceu. */
   async function request(path, options = {}) {
     if (!token()) throw new Error("Sessão ausente.");
     const response = await fetch(base + path, {
@@ -18,6 +21,8 @@
     return response.json();
   }
 
+  /* Recoloca as opções do seletor com os talhões carregados e, se a escolha
+     anterior ainda existir, deixa ela selecionada na tela. */
   function preencherSelect(select) {
     const atual = select.value;
     select.replaceChildren(new Option(select.dataset.placeholder || "Selecione o talhão", ""),
@@ -27,6 +32,8 @@
     select.dispatchEvent(new Event("change"));
   }
 
+  /* Ao abrir a página, busca os talhões confirmados e preenche cada seletor
+     de talhão (atividades, custos e demais módulos da tela). */
   async function iniciar() {
     try {
       talhoes = await request("/api/talhoes");
@@ -43,11 +50,22 @@
 
   // O módulo emite este evento apenas depois de confirmar a persistência.
   // Um submit inválido ou uma falha de armazenamento nunca gera histórico.
+  // Na tela, o histórico do talhão só entra depois que a operação foi salva.
   document.addEventListener("agro:operation-saved", async ({detail}) => {
     if (!detail?.talhao) return;
     const talhao = talhoes.find((item) => item.nome === detail.talhao);
     if (!talhao) return;
     try {
+      /*
+        Corpo JSON do POST /api/talhoes/{id}/historico. Não é o cadastro do talhão.
+        O servidor grava um evento em historicos_talhoes com esta forma, mais
+        propriedadeId, talhaoId e criadoEm que ele mesmo preenche:
+
+        { "tipo": "atividade" | "ocorrencia" | "custo", "descricao": "texto da operação" }
+
+        detail vem do evento agro:operation-saved, disparado depois que a tela
+        já confirmou o salvamento da atividade, ocorrência ou custo.
+      */
       await request("/api/talhoes/" + encodeURIComponent(talhao.id) + "/historico", {
         method: "POST", body: JSON.stringify({tipo: detail.tipo, descricao: detail.descricao}),
       });

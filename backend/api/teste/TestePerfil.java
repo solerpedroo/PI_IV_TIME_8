@@ -16,8 +16,10 @@ import java.util.*;
 import org.bson.Document;
 import seguranca.Senhas;
 
-/* Contratos de perfil por HTTP real. --mongo também encerra/reabre o servidor
-   e a conexão para conferir persistência. Não usa JUnit nem apaga coleções. */
+/* Contratos de perfil por HTTP real. Prova 401 sem token, onboarding, segredo
+   fora da resposta, troca de e-mail que só vale depois do código, senha que
+   invalida a sessão e, com --mongo, persistência depois de reiniciar o servidor.
+   Não usa JUnit nem apaga coleções. */
 public class TestePerfil
 {
     private static int total;
@@ -33,8 +35,11 @@ public class TestePerfil
         System.out.println ("ok perfil: " + texto);
     }
 
+    /* Chamada HTTP real. O status exigido é a regra: 401, 400, 404, 429 ou 200. */
     private static HttpResponse<String> chamar (String metodo, String caminho, Document corpo, String token, int status) throws Exception
     {
+        // Pedido real na porta que o Servidor sorteou (0 = porta livre).
+        // Cabeçalho Authorization só entra quando o teste já fez login.
         HttpRequest.Builder req = HttpRequest.newBuilder (URI.create ("http://127.0.0.1:" + servidor.getPorta () + caminho))
             .header ("Content-Type", "application/json");
         if (token != null) req.header ("Authorization", "Bearer " + token);
@@ -55,6 +60,7 @@ public class TestePerfil
         return ret.getString ("token");
     }
 
+    /* Sobe o servidor em porta livre. Com mongo, usuários e talhões usam o banco de teste. */
     private static void iniciar (boolean mongo) throws Exception
     {
         if (mongo)
@@ -69,6 +75,7 @@ public class TestePerfil
         servidor = new Servidor ("127.0.0.1", 0, rotas, conexao, 100);
     }
 
+    /* Recusa qualquer URI cujo banco não termine em _teste, para não tocar produção. */
     public static String uriTeste () throws Exception
     {
         String uri = System.getenv ("MONGODB_URI");
@@ -78,6 +85,7 @@ public class TestePerfil
         return uri;
     }
 
+    /* Apaga só o usuário informado e as propriedades dele. Não dá drop na coleção. */
     public static void limpar (ConexaoMongo banco, String uid) throws Exception
     {
         for (String colecao : List.of ("propriedades"))
@@ -121,41 +129,50 @@ public class TestePerfil
             ids.add (outro.getObjectId ("_id").toHexString ());
             String token = login (email, "Senha@123", 200);
             String outraSessao = login (email, "Senha@123", 200);
+            /* Sem Bearer o perfil responde 401: a rota não é pública. */
             chamar ("GET", "/api/perfil", null, null, 401);
             Document perfil = get (token);
             conferir (perfil.get ("usuario", Document.class).getString ("email").equals (email), "dados do usuário real");
+            /* Conta antiga, sem o campo, é tratada como onboarding já concluído. */
             conferir (Boolean.TRUE.equals (perfil.get ("usuario", Document.class).getBoolean ("onboardingConcluido")),
                       "conta sem campo onboarding é tratada como concluída");
+            /* Conta criada com onboarding pendente continua pendente até o POST, que persiste a conclusão. */
             String tokenNovato = login (outro.getString ("email"), "Senha@123", 200);
             conferir (Boolean.FALSE.equals (Document.parse (chamar ("GET", "/api/me", null, tokenNovato, 200).body ())
                 .get ("usuario", Document.class).getBoolean ("onboardingConcluido")), "/api/me expõe onboarding pendente");
             chamar ("POST", "/api/perfil/onboarding", new Document (), tokenNovato, 200);
             conferir (Boolean.TRUE.equals (Document.parse (chamar ("GET", "/api/me", null, tokenNovato, 200).body ())
                 .get ("usuario", Document.class).getBoolean ("onboardingConcluido")), "onboarding persiste como concluído");
+            /* A resposta do perfil não devolve senhaHash nem o token de troca de e-mail. */
             conferir (!perfil.toJson ().contains ("senhaHash") && !perfil.toJson ().contains ("tokenTrocaEmail"), "API não expõe segredos");
+            /* Nome e telefone válidos persistem. Nome vazio, telefone ou e-mail inválidos são 400. */
             Document campos = new Document ("name", "Nome editado").append ("email", email).append ("phone", "(11) 98888-1234");
             chamar ("PUT", "/api/perfil", campos, token, 200);
             conferir (get (token).get ("usuario", Document.class).getString ("name").equals ("Nome editado"), "nome e telefone persistidos");
             chamar ("PUT", "/api/perfil", new Document (campos).append ("name", ""), token, 400);
             chamar ("PUT", "/api/perfil", new Document (campos).append ("phone", "inválido"), token, 400);
             chamar ("PUT", "/api/perfil", new Document (campos).append ("email", "inválido"), token, 400);
+            /* Preferências de aviso gravam booleanos. Texto no lugar de boolean é 400. */
             Document prefs = new Document ("stock", false).append ("weather", false).append ("activities", true).append ("occurrences", false).append ("reports", true);
             chamar ("PUT", "/api/perfil/preferencias", prefs, token, 200);
             conferir (get (token).get ("preferencias", Document.class).equals (prefs), "preferências recuperadas exatamente");
             chamar ("PUT", "/api/perfil/preferencias", new Document (prefs).append ("stock", "false"), token, 400);
             Document segunda = usuarios.criarPropriedade (uid, new Document ("nome", "Segunda fazenda"));
             String pid = segunda.getObjectId ("_id").toHexString ();
+            /* Propriedade de outro produtor é 404. A sessão já aberta não muda de contexto; o próximo login nasce na padrão. */
             chamar ("PUT", "/api/perfil/propriedade-padrao", new Document ("propriedadeId", outro.getString ("propriedadeId")), token, 404);
             chamar ("PUT", "/api/perfil/propriedade-padrao", new Document ("propriedadeId", pid), token, 200);
             Document me = Document.parse (chamar ("GET", "/api/me", null, token, 200).body ());
             conferir (me.get ("usuario", Document.class).getString ("propriedadeId").equals (u.getString ("propriedadeId")), "padrão não altera sessão já aberta");
             String novoLogin = login (email, "Senha@123", 200);
             conferir (Document.parse (chamar ("GET", "/api/me", null, novoLogin, 200).body ()).get ("usuario", Document.class).getString ("propriedadeId").equals (pid), "novo login inicia na propriedade padrão");
+            /* Troca de e-mail: endereço já usado é 400, falta a senha atual é 400, e o e-mail antigo vale até a confirmação. */
             chamar ("PUT", "/api/perfil", new Document (campos).append ("email", outro.getString ("email")).append ("senhaAtual", "Senha@123"), token, 400);
             chamar ("PUT", "/api/perfil", new Document (campos).append ("email", novoEmail), token, 400);
             chamar ("PUT", "/api/perfil", new Document (campos).append ("email", novoEmail).append ("senhaAtual", "Senha@123"), token, 200);
             Document pendente = get (token).get ("usuario", Document.class);
             conferir (pendente.getString ("email").equals (email) && pendente.getString ("emailPendente").equals (novoEmail), "e-mail antigo preservado até confirmação");
+            /* Reenvio imediato é 429. Código errado, expirado ou de um envio anterior é 400. */
             chamar ("POST", "/api/perfil/email/reenviar", new Document (), token, 429);
             chamar ("POST", "/api/perfil/email/confirmar", new Document ("codigo", "inválido"), token, 400);
             String codigo = usuarios.buscarPorId (uid).getString ("tokenTrocaEmail");
@@ -166,10 +183,12 @@ public class TestePerfil
             chamar ("POST", "/api/perfil/email/confirmar", new Document ("codigo", codigo), token, 400);
             codigo = usuarios.buscarPorId (uid).getString ("tokenTrocaEmail");
             chamar ("POST", "/api/perfil/email/confirmar", new Document ("codigo", codigo), token, 200);
+            /* Confirmar o e-mail novo invalida as outras sessões e o login pelo endereço antigo. */
             chamar ("GET", "/api/me", null, outraSessao, 401);
             login (email, "Senha@123", 401);
             token = login (novoEmail, "Senha@123", 200);
             chamar ("POST", "/api/perfil/email/confirmar", new Document ("codigo", codigo), token, 400);
+            /* Troca de senha: atual errada, senha fraca ou confirmação diferente é 400. A senha nova invalida a sessão, a senha antiga e o token de redefinição pendente. */
             Document senha = new Document ("current", "errada").append ("new", "Nova@1234").append ("confirm", "Nova@1234");
             chamar ("PUT", "/api/perfil/senha", senha, token, 400);
             chamar ("PUT", "/api/perfil/senha", new Document (senha).append ("current", "Senha@123").append ("new", "fraca"), token, 400);
@@ -180,7 +199,9 @@ public class TestePerfil
             login (novoEmail, "Senha@123", 401);
             token = login (novoEmail, "Nova@1234", 200);
             chamar ("POST", "/api/auth/reset-password", new Document ("token", "token-antigo-perfil").append ("password", "Velha@1234").append ("confirm", "Velha@1234"), null, 400);
+            /* Gravação condicional recusa atualizar a conta se o hash apresentado já não é o vigente. */
             conferir (!usuarios.atualizarCondicional (uid, new Document ("senhaHash", "hash-antigo"), new Document ("name", "Não deve salvar")), "comparação impede gravação com credencial obsoleta");
+            /* No Mongo, preferências e propriedade padrão sobrevivem a derrubar e subir o servidor de novo. */
             if (mongo)
             {
                 servidor.desativar (); iniciar (true);
@@ -188,6 +209,7 @@ public class TestePerfil
                 perfil = get (token);
                 conferir (perfil.get ("preferencias", Document.class).equals (prefs) && perfil.get ("usuario", Document.class).getString ("propriedadePadraoId").equals (pid), "preferências e padrão sobrevivem a reinício real");
             }
+            /* Logout invalida o token: o perfil volta a responder 401. */
             chamar ("POST", "/api/auth/logout", null, token, 204);
             chamar ("GET", "/api/perfil", null, token, 401);
             System.out.println ("TestePerfil: " + total + " verificações OK" + (mongo ? " com MongoDB e reinício" : " em memória"));
