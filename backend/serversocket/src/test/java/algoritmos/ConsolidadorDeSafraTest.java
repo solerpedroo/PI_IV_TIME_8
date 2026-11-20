@@ -14,6 +14,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Relatorio da safra sem banco: periodo inclusivo, pendencia de data, vinculo de talhao e total em centavos.
+    O mesmo resultado serve a tela e o CSV.
+*/
 @Tag("unitario")
 class ConsolidadorDeSafraTest
 {
