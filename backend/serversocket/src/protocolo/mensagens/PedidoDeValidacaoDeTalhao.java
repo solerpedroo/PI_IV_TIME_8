@@ -11,11 +11,11 @@ public class PedidoDeValidacaoDeTalhao extends Pedido
 {
     private static final long serialVersionUID = 1L;
 
-    private final String nome;
-    private final String cultura;
-    private final String safra;
-    private final Double hectares;
-    private final String status;
+    private final String nome;     // ate 80
+    private final String cultura;  // pelo menos 2 caracteres, ate 40
+    private final String safra;    // nula vira o periodo atual; senao AAAA/AA
+    private final Double hectares; // maior que zero e no maximo 1.000.000; NaN e recusado
+    private final String status;   // nulo ou vazio vira Ativo; fora da lista e erro
 
     public PedidoDeValidacaoDeTalhao (String nome, String cultura, String safra, Double hectares, String status)
     {
