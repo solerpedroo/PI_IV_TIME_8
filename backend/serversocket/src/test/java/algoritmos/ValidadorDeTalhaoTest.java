@@ -9,6 +9,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Talhao valido, safra e status padrao, hectares zero ou NaN, cultura curta e status fora da lista.
+    nomeNormalizado sai em minusculas para a API comparar unicidade sem diferenciar caixa.
+*/
 @Tag("unitario")
 class ValidadorDeTalhaoTest
 {
