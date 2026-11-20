@@ -11,6 +11,7 @@ public class Validacao
 {
     private final LinkedHashMap<String, String> erros = new LinkedHashMap<String, String> ();
 
+    // guarda so o primeiro erro do campo: o front mostra uma mensagem por input
     public void erro (String campo, String mensagem)
     {
         if (!this.erros.containsKey (campo))
@@ -22,6 +23,7 @@ public class Validacao
         return !this.erros.isEmpty ();
     }
 
+    // copia: quem recebe nao altera o mapa interno desta validacao
     public Map<String, String> getErros ()
     {
         return new LinkedHashMap<String, String> (this.erros);
@@ -113,6 +115,10 @@ public class Validacao
         return valor;
     }
 
+    /*
+        So compara quando a senha ja passou. Senha nula (fraca ou ausente) nao acusa
+        "nao coincidem" em cima do erro da propria senha.
+    */
     public void confirmacao (String campo, String senha, String confirmacao)
     {
         if (confirmacao == null || confirmacao.isEmpty ())
