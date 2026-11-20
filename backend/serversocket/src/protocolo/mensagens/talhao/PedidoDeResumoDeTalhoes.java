@@ -1,4 +1,4 @@
-package protocolo.mensagens;
+package protocolo.mensagens.talhao;
 
 import java.util.ArrayList;
 import java.util.List;
