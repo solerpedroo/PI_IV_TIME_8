@@ -6,6 +6,10 @@ import protocolo.RespostaDeErro;
 import protocolo.mensagens.RespostaDeValidacao;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Atalhos dos testes de algoritmo: a resposta tem de ser do tipo esperado e carregar o id do pedido.
+    erro() exige RespostaDeErro com o codigo. Assim um teste que esquece a correlacao quebra aqui.
+*/
 final class ApoioDeTeste
 {
     private ApoioDeTeste () {}
