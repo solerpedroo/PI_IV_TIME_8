@@ -1,36 +1,37 @@
-import algoritmos.CalculadoraDeEstoque;
-import algoritmos.CalculadoraDeTalhoes;
-import algoritmos.ConsolidadorDeSafra;
-import algoritmos.GeometriaDeTalhao;
-import algoritmos.ValidadorDeConta;
-import algoritmos.ValidadorDeTalhao;
-import algoritmos.AgendaDeManutencao;
-import algoritmos.ValidadorDeManutencao;
+import algoritmos.conta.ValidadorDeConta;
+import algoritmos.estoque.CalculadoraDeEstoque;
+import algoritmos.geo.GeometriaDeTalhao;
+import algoritmos.manutencao.AgendaDeManutencao;
+import algoritmos.manutencao.ValidadorDeManutencao;
+import algoritmos.safra.ConsolidadorDeSafra;
+import algoritmos.talhao.CalculadoraDeTalhoes;
+import algoritmos.talhao.ValidadorDeTalhao;
 import protocolo.Pedido;
 import protocolo.Protocolo;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
-import protocolo.mensagens.PedidoDeGeometriaDoMapa;
-import protocolo.mensagens.PedidoDePontoNoTalhao;
-import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
-import protocolo.mensagens.PedidoDePing;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.PedidoDeResumoDeTalhoes;
-import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
-import protocolo.mensagens.PedidoDeValidacaoDeSenha;
-import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
-import protocolo.mensagens.PedidoDeAgendaDeManutencao;
-import protocolo.mensagens.PedidoDeProximaPreventiva;
-import protocolo.mensagens.PedidoDeValidacaoDeEquipamento;
-import protocolo.mensagens.PedidoDeValidacaoDeIntervencao;
-import protocolo.mensagens.PedidoDeValidacaoDePreventiva;
-import protocolo.mensagens.RespostaDePing;
+import protocolo.mensagens.estoque.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.geo.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.geo.PedidoDePontoNoTalhao;
+import protocolo.mensagens.geo.PedidoDeValidacaoDeLocalizacao;
+import protocolo.mensagens.ping.PedidoDePing;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.PedidoDeResumoDeTalhoes;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeCadastro;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeSenha;
+import protocolo.mensagens.talhao.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.manutencao.PedidoDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.PedidoDeProximaPreventiva;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeEquipamento;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeIntervencao;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDePreventiva;
+import protocolo.mensagens.ping.RespostaDePing;
 
 /*
     Recebe um Pedido e devolve a Resposta, chamando o algoritmo certo.
     Sem estado e sem entrada e saida: varias threads usam ao mesmo tempo sem trava, e os testes chamam
-    direto, sem socket. Para incluir um algoritmo novo: classe em algoritmos, par Pedido/Resposta em
+    direto, sem socket. Para incluir um algoritmo novo: classe na pasta da funcionalidade
+    (algoritmos/conta, talhao, estoque, safra, manutencao ou geo), par Pedido/Resposta em
     protocolo.mensagens e um "if" aqui.
 */
 public class Atendente
