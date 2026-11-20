@@ -76,6 +76,11 @@ public class ConsolidadorDeSafra
         return new RespostaDeErro (id, RespostaDeErro.DADOS_INCONSISTENTES, mensagem);
     }
 
+    /*
+        Monta a resposta da safra. Periodo invertido ou data impossivel e pedido invalido.
+        Registro de tipo desconhecido ou custo que nao vira centavos e dado inconsistente.
+        O restante que nao entra no total vira pendencia, nao erro.
+    */
     public static Resposta consolidar (PedidoDeRelatorioDeSafra pedido)
     {
         long id = pedido.getId ();
