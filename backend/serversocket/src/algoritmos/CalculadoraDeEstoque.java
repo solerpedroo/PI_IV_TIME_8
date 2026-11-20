@@ -47,6 +47,7 @@ public class CalculadoraDeEstoque
         return new RespostaDeMovimentacaoDeEstoque (id, situacao, v.getErros (), 0, 0, 0);
     }
 
+    // media ponderada so na entrada COM custo. Entrada sem custo, saida e ajuste mantem o custo medio anterior.
     public static Resposta movimentar (PedidoDeMovimentacaoDeEstoque pedido)
     {
         long   id         = pedido.getId ();
