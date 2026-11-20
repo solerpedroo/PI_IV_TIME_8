@@ -30,6 +30,7 @@ public class AgendaDeManutencao
     public static final int     AVISO_PADRAO     = 7;
     public static final int     INTERVALO_MAXIMO = 3650;
 
+    // classifica cada preventiva programada e devolve contagens. "hoje" e diasDeAviso vem no pedido, nao do relogio daqui.
     public static Resposta agenda (PedidoDeAgendaDeManutencao pedido)
     {
         LocalDate                  hoje        = ValidadorDeManutencao.data (pedido.getHoje ());
@@ -86,6 +87,7 @@ public class AgendaDeManutencao
         return new RespostaDeAgendaDeManutencao (pedido.getId (), situacao, diasAte, atrasadas, proximas, futuras);
     }
 
+    // data realizada + intervalo. Sem intervalo, a resposta traz data nula: nao ha proxima.
     public static Resposta proxima (PedidoDeProximaPreventiva pedido)
     {
         LocalDate realizada = ValidadorDeManutencao.data (pedido.getDataRealizada ());
