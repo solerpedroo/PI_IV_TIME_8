@@ -19,17 +19,17 @@ import org.bson.Document;
 import protocolo.Cliente;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.PedidoDeResumoDeTalhoes;
-import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
-import protocolo.mensagens.PedidoDeValidacaoDeSenha;
-import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
-import protocolo.mensagens.RespostaDeMovimentacaoDeEstoque;
-import protocolo.mensagens.RespostaDeRelatorioDeSafra;
-import protocolo.mensagens.RespostaDeResumoDeTalhoes;
-import protocolo.mensagens.RespostaDeValidacao;
-import protocolo.mensagens.TalhaoParaResumo;
+import protocolo.mensagens.estoque.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.PedidoDeResumoDeTalhoes;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeCadastro;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeSenha;
+import protocolo.mensagens.talhao.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.estoque.RespostaDeMovimentacaoDeEstoque;
+import protocolo.mensagens.safra.RespostaDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.RespostaDeResumoDeTalhoes;
+import protocolo.mensagens.comum.RespostaDeValidacao;
+import protocolo.mensagens.talhao.TalhaoParaResumo;
 
 /*
     Ponte HTTP -> ServerSocket: a API delega validações e cálculos ao servidor de algoritmos (TCP, porta 3000).
