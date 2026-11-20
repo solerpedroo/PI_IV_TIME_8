@@ -12,7 +12,8 @@ import org.bson.Document;
 */
 public interface RepositorioUsuarios
 {
-    // grava o usuario e a propriedade dele; devolve o usuario com _id e propriedadeId.
+    // grava o usuario. propriedade null cria a conta sem fazenda (convite ainda não aceito).
+    // Com propriedade, devolve o usuario com propriedadeId.
     // ConflitoDeCadastro se email ou nome da propriedade ja existir (indice unico).
     public Document criar (Document usuario, Document propriedade) throws Exception;
 
