@@ -6,9 +6,14 @@ import protocolo.mensagens.PedidoDeResumoDeTalhoes;
 import protocolo.mensagens.RespostaDeResumoDeTalhoes;
 import protocolo.mensagens.TalhaoParaResumo;
 
+/*
+    Soma area e conta talhoes que a API ja leu. Nao valida nome nem cultura:
+    isso e do ValidadorDeTalhao, na gravacao. Lista nula ou item nulo e pedido invalido,
+    nao erro de campo. Area negativa ou NaN e dado inconsistente vindo do banco.
+*/
 public class CalculadoraDeTalhoes
 {
-    // total de hectares, quantidade de talhoes e quantidade de ativos
+    // total de hectares, quantidade de talhoes e quantidade de ativos (status "Ativo")
     public static Resposta resumir (PedidoDeResumoDeTalhoes pedido)
     {
         if (pedido.getTalhoes () == null)
