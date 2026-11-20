@@ -1,4 +1,4 @@
-package protocolo.mensagens;
+package protocolo.mensagens.estoque;
 
 import protocolo.Pedido;
 
