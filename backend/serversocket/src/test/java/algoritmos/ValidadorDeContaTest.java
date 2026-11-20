@@ -10,6 +10,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Cadastro e redefinicao de senha pelo ValidadorDeConta, direto, sem socket.
+    Senha fraca, confirmacao diferente, telefone fora do formato e termos desmarcados tem de voltar no campo certo.
+*/
 @Tag("unitario")
 class ValidadorDeContaTest
 {
