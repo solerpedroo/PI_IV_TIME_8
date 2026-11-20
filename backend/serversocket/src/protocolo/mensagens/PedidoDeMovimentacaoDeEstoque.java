@@ -12,12 +12,12 @@ public class PedidoDeMovimentacaoDeEstoque extends Pedido
 {
     private static final long serialVersionUID = 1L;
 
-    private final double saldoAtual;
-    private final double custoUnitarioAtual;
-    private final String tipo;
-    private final Double quantidade;
-    private final Double custoUnitario;
-    private final String observacao;
+    private final double saldoAtual;         // lido do banco; negativo ou NaN e pedido invalido, nao erro de campo
+    private final double custoUnitarioAtual; // custo medio atual, mesma regra do saldo
+    private final String tipo;               // entrada, saida ou ajuste
+    private final Double quantidade;         // seis casas; ajuste pode ser zero
+    private final Double custoUnitario;      // so a entrada com custo recalcula a media; null mantem a atual
+    private final String observacao;         // obrigatoria no ajuste, ate 240
 
     public PedidoDeMovimentacaoDeEstoque (double saldoAtual, double custoUnitarioAtual, String tipo,
                                           Double quantidade, Double custoUnitario, String observacao)
