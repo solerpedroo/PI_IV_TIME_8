@@ -1,12 +1,13 @@
-package algoritmos;
+package algoritmos.talhao;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
-import protocolo.mensagens.*;
-import static algoritmos.ApoioDeTeste.*;
+import protocolo.mensagens.talhao.*;
+import protocolo.mensagens.comum.*;
+import static algoritmos.comum.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /*
@@ -82,7 +83,7 @@ class ValidadorDeTalhaoTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"invalida", "1999/00", "2025/99"})
+    @ValueSource(strings = {"invalida", "1999/01", "2025/99"})
     void recusaPeriodoInvalido (String safra)
     {
         campoInvalido (validar ("T", "Soja", safra, 1.0, null), "safra");
@@ -91,7 +92,7 @@ class ValidadorDeTalhaoTest
     @Test
     void recusaTodosOsCamposInvalidosSemNormalizacaoParcial ()
     {
-        var r = validar ("", "Banana", "1999/00", 0.0, "Quebrado");
+        var r = validar ("", "Banana", "1999/01", 0.0, "Quebrado");
         assertEquals (Set.of ("nome", "safra", "hectares", "status"), r.getErros ().keySet ());
         assertTrue (r.getNormalizados ().isEmpty ());
     }
