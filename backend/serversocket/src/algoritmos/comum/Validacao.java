@@ -1,4 +1,4 @@
-package algoritmos;
+package algoritmos.comum;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
