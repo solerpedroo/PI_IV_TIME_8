@@ -1,4 +1,5 @@
 // Miguel — RA: 25003110
+// Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592
 (() => {
   "use strict";
 
@@ -75,8 +76,25 @@
       });
       sessionStorage.removeItem("agro.convitePendente");
       toast("success", "Convite aceito", resposta.message || "Você agora colabora nesta propriedade.");
-      $("[data-convite-status]").textContent =
-        "Convite aceito. Use o seletor Propriedade ativa na barra lateral para abrir essa fazenda.";
+      let status = "Convite aceito. Essa fazenda já é a propriedade ativa.";
+      if (resposta.propriedadeId) {
+        try {
+          await api(`/api/propriedades/${encodeURIComponent(resposta.propriedadeId)}/selecionar`, {
+            method: "POST",
+            body: "{}",
+          });
+          const bruto = sessionStorage.getItem("agro.sessionUser");
+          if (bruto) {
+            const user = JSON.parse(bruto);
+            user.propriedadeId = resposta.propriedadeId;
+            sessionStorage.setItem("agro.sessionUser", JSON.stringify(user));
+          }
+        } catch (erroSelecao) {
+          status = "Convite aceito. Entre de novo para abrir a fazenda do convite.";
+          toast("error", "Convite aceito", status);
+        }
+      }
+      $("[data-convite-status]").textContent = status;
       botao.hidden = true;
       $("[data-convite-ir]").hidden = false;
     } catch (erro) {

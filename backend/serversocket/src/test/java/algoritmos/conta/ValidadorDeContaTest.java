@@ -47,7 +47,7 @@ class ValidadorDeContaTest
     void cadastroVazioInformaTodosOsCamposObrigatorios ()
     {
         var r = validar (cadastro (null, null, null, null, null, null, null, false));
-        assertEquals (Set.of ("name", "email", "phone", "password", "password-confirm", "farm", "area", "terms"), r.getErros ().keySet ());
+        assertEquals (Set.of ("name", "email", "phone", "password", "password-confirm", "terms"), r.getErros ().keySet ());
         assertTrue (r.getNormalizados ().isEmpty ());
     }
 
@@ -70,6 +70,28 @@ class ValidadorDeContaTest
         var r = validar (cadastro (nome, email, telefone, "Senha@123", "Senha@123", propriedade, area, termos));
         campoInvalido (r, campo);
         assertEquals (Set.of (campo), r.getErros ().keySet ());
+    }
+
+    @Test
+    void cadastroSemFazendaNemAreaGuardaSoAPessoa ()
+    {
+        var r = validar (cadastro ("Ana Souza", "ana@teste.com", "(11) 91234-5678", "Senha@123", "Senha@123", null, "  ", true));
+        assertTrue (r.isValido ());
+        assertEquals (Set.of ("name", "email", "phone"), r.getNormalizados ().keySet ());
+    }
+
+    @Test
+    void fazendaSemAreaExigeOPar ()
+    {
+        var r = validar (cadastro ("Ana", "a@b.co", "(11) 91234-5678", "Senha@123", "Senha@123", "Fazenda Sol", null, true));
+        assertEquals (Set.of ("area"), r.getErros ().keySet ());
+    }
+
+    @Test
+    void areaSemFazendaExigeOPar ()
+    {
+        var r = validar (cadastro ("Ana", "a@b.co", "(11) 91234-5678", "Senha@123", "Senha@123", "", "120 ha", true));
+        assertEquals (Set.of ("farm"), r.getErros ().keySet ());
     }
 
     @Test

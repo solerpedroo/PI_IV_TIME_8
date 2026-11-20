@@ -98,7 +98,7 @@ public class Sessoes
     {
         this.removerExpiradas ();
         for (Sessao sessao : this.sessoes.values ())
-            if (sessao.getPropriedadeId ().equals (propriedadeId))
+            if (propriedadeId != null && propriedadeId.equals (sessao.getPropriedadeId ()))
                 return true;
         return false;
     }

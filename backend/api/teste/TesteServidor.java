@@ -366,8 +366,16 @@ public class TesteServidor
         System.out.println ("\n# cadastro");
 
         Document vazio = camposComErro (post ("/api/auth/register", "{}", null));
-        conferir ("corpo vazio -> 400 apontando todos os campos",
-                  vazio.keySet ().containsAll (List.of ("name", "email", "phone", "password", "confirm", "farm", "area", "terms")));
+        conferir ("corpo vazio -> 400 apontando os campos da pessoa",
+                  vazio.keySet ().containsAll (List.of ("name", "email", "phone", "password", "confirm", "terms")) &&
+                  !vazio.containsKey ("farm") && !vazio.containsKey ("area"));
+
+        Document soFazenda = Document.parse (cadastro ("x@agro.com"));
+        soFazenda.remove ("area");
+        conferir ("fazenda sem area -> 400", camposComErro (post ("/api/auth/register", soFazenda.toJson (), null)).containsKey ("area"));
+        Document soArea = Document.parse (cadastro ("x@agro.com"));
+        soArea.remove ("farm");
+        conferir ("area sem fazenda -> 400", camposComErro (post ("/api/auth/register", soArea.toJson (), null)).containsKey ("farm"));
 
         Document base = Document.parse (cadastro ("x@agro.com"));
 
@@ -401,6 +409,21 @@ public class TesteServidor
         comConfirm.remove ("password-confirm");
         comConfirm.put ("confirm", "Senha@123");
         conferir ("aceita o campo confirm no lugar de password-confirm", 201, post ("/api/auth/register", comConfirm.toJson (), null));
+
+        Document semFazenda = Document.parse (cadastro ("colaborador@agro.com"));
+        semFazenda.remove ("farm");
+        semFazenda.remove ("area");
+        Resp contaSemFazenda = post ("/api/auth/register", semFazenda.toJson (), null);
+        conferir ("cadastro sem propriedade -> 201", 201, contaSemFazenda);
+        Document gravado = usuarios.buscarPor ("email", "colaborador@agro.com");
+        conferir ("conta sem propriedade nao grava fazenda", gravado != null && gravado.getString ("propriedadeId") == null);
+        conferir ("confirmar colaborador -> 200", 200,
+                  post ("/api/auth/confirm-email", new Document ("token", gravado.getString ("tokenConfirmacao")).toJson (), null));
+        String tokenColab = login ("colaborador@agro.com", "Senha@123");
+        conferir ("colaborador entra sem fazenda", tokenColab != null);
+        Resp euColab = get ("/api/me", tokenColab);
+        conferir ("sessao sem fazenda nao inventa propriedade",
+                  euColab.status == 200 && euColab.json ().get ("propriedade") == null);
     }
 
     /* Prova o login: senha errada e conta inexistente devolvem o mesmo 401;

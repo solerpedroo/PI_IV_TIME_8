@@ -24,14 +24,12 @@ public class Sessao
     // Número crescente. Sessoes usa para achar a sessão mais recente do mesmo usuário.
     private final long   ordem;
 
-    // Recusa sessão sem dono ou sem fazenda: o restante da API assume que os dois existem.
+    // Recusa sessão sem dono. propriedadeId null é conta que ainda não aceitou o convite:
+    // o login existe, e o aceite troca esta sessão pela fazenda convidada.
     public Sessao (String usuarioId, String propriedadeId, long expiraEm, long ordem) throws Exception
     {
         if (usuarioId == null)
             throw new Exception ("Usuario ausente");
-
-        if (propriedadeId == null)
-            throw new Exception ("Propriedade ausente");
 
         // Nada é copiado do banco aqui. Quem chama (Sessoes.criar) já leu o usuário e a fazenda.
         this.usuarioId     = usuarioId;

@@ -93,8 +93,8 @@ class AtendenteAlgoritmosTest
                    "Ana Souza".equals (ok.getNormalizados ().get ("name")) && "ana@teste.com".equals (ok.getNormalizados ().get ("email")));
 
         RespostaDeValidacao vazio = atender (cadastro (null, null, null, null, null, null, null, false), RespostaDeValidacao.class);
-        verificar ("cadastro vazio acusa os 8 campos", vazio.getErros ().size () == 8 &&
-                   vazio.getErros ().keySet ().containsAll (List.of ("name", "email", "phone", "password", "password-confirm", "farm", "area", "terms")));
+        verificar ("cadastro vazio acusa os campos da pessoa", vazio.getErros ().size () == 6 &&
+                   vazio.getErros ().keySet ().containsAll (List.of ("name", "email", "phone", "password", "password-confirm", "terms")));
         verificar ("cadastro inválido não devolve valores normalizados", vazio.getNormalizados ().isEmpty ());
 
         RespostaDeValidacao ruim = atender (cadastro ("Ana", "sem-arroba", "11 91234-5678", "fraca", "outra", "F", "1", true), RespostaDeValidacao.class);
