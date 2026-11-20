@@ -4,12 +4,12 @@ import java.util.List;
 import protocolo.Pedido;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.GeometriaParaMapa;
-import protocolo.mensagens.PedidoDeGeometriaDoMapa;
-import protocolo.mensagens.PedidoDePontoNoTalhao;
-import protocolo.mensagens.PedidoDeValidacaoDeLocalizacao;
-import protocolo.mensagens.RespostaDeGeometriaDoMapa;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.geo.GeometriaParaMapa;
+import protocolo.mensagens.geo.PedidoDeGeometriaDoMapa;
+import protocolo.mensagens.geo.PedidoDePontoNoTalhao;
+import protocolo.mensagens.geo.PedidoDeValidacaoDeLocalizacao;
+import protocolo.mensagens.geo.RespostaDeGeometriaDoMapa;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
