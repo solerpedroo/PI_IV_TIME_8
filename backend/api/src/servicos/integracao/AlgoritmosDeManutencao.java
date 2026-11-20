@@ -10,15 +10,15 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeAgendaDeManutencao;
-import protocolo.mensagens.PedidoDeProximaPreventiva;
-import protocolo.mensagens.PedidoDeValidacaoDeEquipamento;
-import protocolo.mensagens.PedidoDeValidacaoDeIntervencao;
-import protocolo.mensagens.PedidoDeValidacaoDePreventiva;
-import protocolo.mensagens.PreventivaParaAgenda;
-import protocolo.mensagens.RespostaDeAgendaDeManutencao;
-import protocolo.mensagens.RespostaDeProximaPreventiva;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.manutencao.PedidoDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.PedidoDeProximaPreventiva;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeEquipamento;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDeIntervencao;
+import protocolo.mensagens.manutencao.PedidoDeValidacaoDePreventiva;
+import protocolo.mensagens.manutencao.PreventivaParaAgenda;
+import protocolo.mensagens.manutencao.RespostaDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.RespostaDeProximaPreventiva;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 /*
     Ponte da manutencao com o servidor de algoritmos (ValidadorDeManutencao e AgendaDeManutencao).
