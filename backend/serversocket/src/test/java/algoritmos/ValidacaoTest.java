@@ -7,6 +7,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Regras soltas de campo (texto, e-mail, senha, confirmacao, checkbox), sem rede e sem Atendente.
+    Confere a mensagem exata que o front mostra e que so o primeiro erro de cada campo fica gravado.
+*/
 @Tag("unitario")
 class ValidacaoTest
 {
