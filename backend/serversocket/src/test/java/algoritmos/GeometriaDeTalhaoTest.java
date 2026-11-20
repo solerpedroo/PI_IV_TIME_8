@@ -11,6 +11,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Ponto, poligono, lados cruzados, area zero, ponto na borda e fora do talhao.
+    As contas sao puras: nao abrem socket nem leem mapa.
+*/
 @Tag("unitario")
 class GeometriaDeTalhaoTest
 {
