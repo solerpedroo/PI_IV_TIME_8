@@ -27,8 +27,15 @@ public class ValidadorDeConta
         String email    = v.email ("email", pedido.getEmail ());
         String phone    = v.texto ("phone", pedido.getPhone (), "Informe seu telefone.", 20);
         String password = v.senha ("password", pedido.getPassword (), "Crie uma senha.");
-        String farm     = v.texto ("farm", pedido.getFarm (), "Informe a propriedade.", 120);
-        String area     = v.texto ("area", pedido.getArea (), "Informe a área.", 60);
+        // Fazenda e área vão juntas. As duas ausentes é conta de quem só vai aceitar convite.
+        // Uma sem a outra continua erro: o dono não grava fazenda pela metade.
+        String farm = null;
+        String area = null;
+        if (!ValidadorDeConta.emBranco (pedido.getFarm ()) || !ValidadorDeConta.emBranco (pedido.getArea ()))
+        {
+            farm = v.texto ("farm", pedido.getFarm (), "Informe a propriedade.", 120);
+            area = v.texto ("area", pedido.getArea (), "Informe a área.", 60);
+        }
         v.confirmacao ("password-confirm", password, pedido.getPasswordConfirm ());
         v.marcado ("terms", pedido.isTerms (), "Aceite os termos para continuar.");
 
@@ -42,11 +49,19 @@ public class ValidadorDeConta
             normalizados.put ("name",  name);
             normalizados.put ("email", email);
             normalizados.put ("phone", phone);
-            normalizados.put ("farm",  farm);
-            normalizados.put ("area",  area);
+            if (farm != null)
+            {
+                normalizados.put ("farm", farm);
+                normalizados.put ("area", area);
+            }
         }
 
         return new RespostaDeValidacao (pedido.getId (), v.getErros (), normalizados);
+    }
+
+    private static boolean emBranco (String valor)
+    {
+        return valor == null || valor.isBlank ();
     }
 
     /*
