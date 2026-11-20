@@ -11,6 +11,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Equipamento, preventiva e intervencao: listas fechadas, data impossivel, ano, horimetro e valor com 2 casas.
+    Nao cobre nome unico nem safra finalizada: isso e da API, que tem o banco.
+*/
 @Tag("unitario")
 class ValidadorDeManutencaoTest
 {
