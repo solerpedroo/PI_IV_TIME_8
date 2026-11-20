@@ -1,4 +1,5 @@
 <!-- Autor principal: Pedro André do Carmo Chavier - RA: 25018639 -->
+<!-- Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592 -->
 
 # Arquitetura do AgroGestão
 
@@ -329,10 +330,8 @@ Os repositórios da API usam 19 coleções: `usuarios`, `propriedades`, `equipe_
 `talhoes`, `historicos_talhoes`, `culturas`, `safras`, `colheitas`, `atividades`,
 `atividades_historico`, `insumos`, `movimentacoes_insumos`, `ocorrencias`,
 `ocorrencias_timeline`, `custos`, `orcamentos`, `equipamentos`, `preventivas` e
-`intervencoes`. Campos, domínios e índices estão no
-[dicionário de dados](05-dicionario-de-dados.md), que ainda não descreve
-`equipe_membros` (a gestão de equipe entrou depois; ver
-[13-rastreabilidade.md](13-rastreabilidade.md#43-implementado-sem-requisito-correspondente)).
+`intervencoes`. As entidades e os atributos estão no
+[dicionário de dados](05-dicionario-de-dados.md), inclusive o membro da equipe.
 
 - Toda coleção operacional carrega `propriedadeId`; os repositórios incluem a
   propriedade da sessão em todo filtro.
@@ -516,7 +515,7 @@ As verificações correspondentes são RNF-001 a RNF-008 em
 - **Integridade entre coleções na aplicação.** Sem chave estrangeira, um id
   órfão gravado fora da API não é barrado pelo banco.
 - **Dinheiro gravado em reais.** Os cálculos usam centavos, mas alguns campos são
-  gravados como `double` em reais ([dicionário, §9](05-dicionario-de-dados.md#9-limitações-e-divergências-conhecidas)).
+  gravados como `double` em reais ([dicionário, Custo](05-dicionario-de-dados.md#14-custo)).
 - **`backend/core` com modelo anterior.** [modelo-dados.md](modelo-dados.md)
   descreve o domínio do `core`; os formatos gravados pela API são os do
   dicionário de dados.
