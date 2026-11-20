@@ -9,8 +9,14 @@ import protocolo.mensagens.RespostaDeValidacao;
 // Validacoes de conta: criar conta e redefinir senha. Nao consulta nada: so olha os campos recebidos.
 public class ValidadorDeConta
 {
+    // (DD) 9XXXX-XXXX: celular com nono digito. Fixo e numero sem mascara ficam para o if abaixo.
     public static final String FORMATO_DO_TELEFONE = "\\(\\d{2}\\) 9\\d{4}-\\d{4}";
 
+    /*
+        Campos do formulario de criar conta. Senha fraca nao gera segundo erro de confirmacao
+        (confirmacao so compara quando a senha passou). Com erro, normalizados volta vazio:
+        a API nao grava pedaco de cadastro.
+    */
     public static Resposta validarCadastro (PedidoDeValidacaoDeCadastro pedido)
     {
         Validacao v = new Validacao ();
@@ -41,6 +47,10 @@ public class ValidadorDeConta
         return new RespostaDeValidacao (pedido.getId (), v.getErros (), normalizados);
     }
 
+    /*
+        So a senha nova e a confirmacao. Nao devolve normalizados: a senha nao e reescrita,
+        a API guarda o hash do valor original (com espacos, se houver).
+    */
     public static Resposta validarSenha (PedidoDeValidacaoDeSenha pedido)
     {
         Validacao v = new Validacao ();
