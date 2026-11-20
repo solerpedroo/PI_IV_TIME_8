@@ -1,4 +1,4 @@
-package protocolo.mensagens;
+package protocolo.mensagens.safra;
 
 import java.io.Serializable;
 
