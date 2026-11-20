@@ -1,11 +1,13 @@
-package algoritmos;
+package algoritmos.talhao;
+
+import algoritmos.comum.Validacao;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import protocolo.Resposta;
-import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
-import protocolo.mensagens.RespostaDeValidacao;
+import protocolo.mensagens.talhao.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.comum.RespostaDeValidacao;
 
 // Regras de um talhao (as mesmas para criar e editar). As listas abaixo sao as do cadastro atual.
 public class ValidadorDeTalhao
