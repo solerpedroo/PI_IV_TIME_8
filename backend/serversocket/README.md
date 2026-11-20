@@ -30,16 +30,31 @@ src/
   AceitadoraDeConexao.java      accept() + limite de conexões (Semaphore)
   SupervisoraDeConexao.java     uma Thread por conexão: lê Pedido, devolve Resposta
   Atendente.java                Pedido -> algoritmo -> Resposta (sem estado, sem E/S)
-  protocolo/                    PACOTE QUE A API COPIA
+  protocolo/                    PACOTE QUE A API COPIA (o nome da classe vai no fio TCP)
     Comunicado, Pedido, Resposta, RespostaDeErro, ComunicadoDeBoasVindas,
     ComunicadoDeDesligamento, PedidoParaSair, Protocolo
     Parceiro                    socket + streams (usado pelos dois lados)
     Cliente                     lado da API: conectar e chamar(pedido)
     FiltroDeClasses             lista de permissão do ObjectInputStream
-    mensagens/                  os pedidos e respostas de cada algoritmo
-  algoritmos/                   funções puras, uma classe por assunto
+    mensagens/                  pedidos e respostas, a mesma pasta da funcionalidade
+      comum/                    RespostaDeValidacao
+      conta/                    cadastro e senha nova
+      talhao/                   talhão e resumo de área
+      estoque/                  movimentação
+      safra/                    relatório da safra
+      manutencao/               equipamento, preventiva, intervenção e agenda
+      geo/                      localização, cerca e mapa
+      ping/                     ping de vida e versão
+  algoritmos/                   validações e cálculos, uma pasta por funcionalidade
+    comum/                      texto, e-mail, senha e confirmação (usado pelas outras)
+    conta/                      cadastro e senha nova
+    talhao/                     campos do talhão, período AAAA/AA e resumo de área
+    estoque/                    saldo e custo médio da movimentação
+    safra/                      relatório da safra
+    manutencao/                 equipamento, preventiva, intervenção e agenda
+    geo/                        ponto, polígono, cerca da ocorrência e mapa
   test/java/
-    algoritmos/                 testes unitários por classe de regra, sem rede ou banco
+    algoritmos/                 os mesmos recortes, sem rede ou banco
     Atendente*Test.java          contratos de pedido -> Atendente -> resposta, sem rede
     ProtocoloTest.java           integração TCP em loopback e porta livre
 pom.xml                         Maven opcional (`mvn test`); o `testar.sh` também roda só com JDK
