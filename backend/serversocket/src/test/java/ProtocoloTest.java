@@ -12,20 +12,20 @@ import protocolo.PedidoParaSair;
 import protocolo.Protocolo;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeMovimentacaoDeEstoque;
-import protocolo.mensagens.PedidoDePing;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.PedidoDeResumoDeTalhoes;
-import protocolo.mensagens.PedidoDeValidacaoDeCadastro;
-import protocolo.mensagens.PedidoDeValidacaoDeTalhao;
-import protocolo.mensagens.RegistroDaSafra;
-import protocolo.mensagens.RespostaDeMovimentacaoDeEstoque;
-import protocolo.mensagens.RespostaDePing;
-import protocolo.mensagens.RespostaDeRelatorioDeSafra;
-import protocolo.mensagens.RespostaDeResumoDeTalhoes;
-import protocolo.mensagens.RespostaDeValidacao;
-import protocolo.mensagens.TalhaoDaSafra;
-import protocolo.mensagens.TalhaoParaResumo;
+import protocolo.mensagens.estoque.PedidoDeMovimentacaoDeEstoque;
+import protocolo.mensagens.ping.PedidoDePing;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.PedidoDeResumoDeTalhoes;
+import protocolo.mensagens.conta.PedidoDeValidacaoDeCadastro;
+import protocolo.mensagens.talhao.PedidoDeValidacaoDeTalhao;
+import protocolo.mensagens.safra.RegistroDaSafra;
+import protocolo.mensagens.estoque.RespostaDeMovimentacaoDeEstoque;
+import protocolo.mensagens.ping.RespostaDePing;
+import protocolo.mensagens.safra.RespostaDeRelatorioDeSafra;
+import protocolo.mensagens.talhao.RespostaDeResumoDeTalhoes;
+import protocolo.mensagens.comum.RespostaDeValidacao;
+import protocolo.mensagens.safra.TalhaoDaSafra;
+import protocolo.mensagens.talhao.TalhaoParaResumo;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -142,7 +142,7 @@ class ProtocoloTest
                    "ana@x.com".equals (validacao.getNormalizados ().get ("email")));
 
         RespostaDeValidacao talhao = como (cliente.chamar (new PedidoDeValidacaoDeTalhao ("", "Banana", null, -1.0, null)), RespostaDeValidacao.class);
-        verificar ("erros por campo atravessam o socket", talhao.getErros ().size () == 3 && talhao.getErros ().containsKey ("hectares"));
+        verificar ("erros por campo atravessam o socket", talhao.getErros ().size () == 2 && talhao.getErros ().containsKey ("nome") && talhao.getErros ().containsKey ("hectares"));
 
         RespostaDeResumoDeTalhoes resumo = como (cliente.chamar (new PedidoDeResumoDeTalhoes (List.of (new TalhaoParaResumo (12.5, "Ativo"), new TalhaoParaResumo (7.5, "Em preparo")))), RespostaDeResumoDeTalhoes.class);
         verificar ("resumo de talhões (lista imutável do lado da API vira ArrayList)", resumo.getTotalHectares () == 20 && resumo.getQuantidadeAtivos () == 1);
@@ -241,7 +241,7 @@ class ProtocoloTest
                     {
                         // cada thread tem seus proprios numeros: resposta trocada entre conexoes seria detectada
                         RespostaDeMovimentacaoDeEstoque r = (RespostaDeMovimentacaoDeEstoque) cliente.chamar (entrada (saldo));
-                        double custo = algoritmos.CalculadoraDeEstoque.arredondar ((saldo * 2.0 + 10 * 4.0) / (saldo + 10), 6);
+                        double custo = algoritmos.estoque.CalculadoraDeEstoque.arredondar ((saldo * 2.0 + 10 * 4.0) / (saldo + 10), 6);
 
                         RespostaDeValidacao v = (RespostaDeValidacao) cliente.chamar (new PedidoDeValidacaoDeTalhao ("Talhão " + saldo, "Soja", null, saldo + 1.0, null));
 
