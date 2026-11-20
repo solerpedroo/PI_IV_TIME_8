@@ -11,6 +11,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Agenda: atrasada, proxima dentro do aviso e futura. Proxima data soma o intervalo, inclusive 29/02.
+    Realizada e cancelada nao entram na contagem.
+*/
 @Tag("unitario")
 class AgendaDeManutencaoTest
 {
