@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Map;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import protocolo.mensagens.ItemDoRelatorio;
-import protocolo.mensagens.PedidoDeRelatorioDeSafra;
-import protocolo.mensagens.RegistroDaSafra;
-import protocolo.mensagens.RespostaDeRelatorioDeSafra;
-import protocolo.mensagens.TalhaoDaSafra;
+import protocolo.mensagens.safra.ItemDoRelatorio;
+import protocolo.mensagens.safra.PedidoDeRelatorioDeSafra;
+import protocolo.mensagens.safra.RegistroDaSafra;
+import protocolo.mensagens.safra.RespostaDeRelatorioDeSafra;
+import protocolo.mensagens.safra.TalhaoDaSafra;
 
 /*
     Monta o pedido do ServerSocket e converte a resposta para o JSON do relatório de safra.
