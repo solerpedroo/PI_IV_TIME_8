@@ -8,16 +8,20 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /*
-    O "outro lado" da conversa: encapsula o socket e os dois streams de objetos.
-    Os nomes seguem o exemplo da disciplina: receba (o parceiro recebe o comunicado, ou seja, enviamos a ele),
-    envie (o parceiro nos envia o proximo comunicado, ou seja, lemos dele) e adeus.
-    O mesmo Parceiro e usado pelo servidor (um por cliente) e pela API (um para o servidor).
+    O outro lado da conversa: um socket e os dois streams de objetos.
+    Os nomes seguem o exemplo da disciplina, vistos daqui:
+      receba: o parceiro recebe o comunicado, ou seja, nos escrevemos nele;
+      envie:  o parceiro nos envia o proximo comunicado, ou seja, nos lemos dele;
+      adeus:  fecha o socket.
+    O servidor tem um Parceiro por cliente. A API tem um Parceiro para o servidor, dentro de Cliente.
+    Quem constroi precisa criar o seu transmissor antes de bloquear no receptor, senao os dois lados
+    ficam esperando o cabecalho um do outro.
 */
 public class Parceiro
 {
     private final Socket             conexao;
-    private final ObjectOutputStream transmissor;
-    private final ObjectInputStream  receptor;
+    private final ObjectOutputStream transmissor; // saida: writeObject
+    private final ObjectInputStream  receptor;    // entrada: readObject, ja com filtro e teto de bytes
 
     public Parceiro (Socket conexao) throws Exception
     {
@@ -26,10 +30,10 @@ public class Parceiro
 
         this.conexao = conexao;
 
-        // mensagens pequenas e uma por vez: sem isto o Nagle atrasa cada resposta
+        // uma mensagem pequena por vez: o Nagle juntaria a resposta com a proxima e a API esperaria a toa
         conexao.setTcpNoDelay (true);
 
-        // primeiro o transmissor, com flush: o ObjectInputStream do outro lado fica esperando este cabecalho
+        // o cabecalho do ObjectOutputStream so sai no flush; o ObjectInputStream do outro lado le isso primeiro
         this.transmissor = new ObjectOutputStream (conexao.getOutputStream ());
         this.transmissor.flush ();
 
@@ -38,18 +42,23 @@ public class Parceiro
         this.receptor.setObjectInputFilter (FiltroDeClasses.criar ());
     }
 
-    // evita que o servidor (ou a API) fique parado para sempre esperando o outro lado
+    // SoTimeout da leitura. Zero esperaria para sempre. A supervisora troca isto depois do cumprimento.
     public void setTempoLimite (int milissegundos) throws Exception
     {
         this.conexao.setSoTimeout (milissegundos);
     }
 
+    // ip:porta do outro lado, para o log. Nao entra no protocolo.
     public String getEndereco ()
     {
         return String.valueOf (this.conexao.getRemoteSocketAddress ());
     }
 
-    // synchronized: o desligamento do servidor escreve de outra thread
+    /*
+        Escreve um comunicado e empurra os bytes agora.
+        synchronized porque o desligamento escreve desta thread e a supervisora escreve de outra:
+        dois writeObject ao mesmo tempo corrompem o stream.
+    */
     public synchronized void receba (Comunicado comunicado) throws Exception
     {
         if (comunicado == null)
@@ -60,7 +69,7 @@ public class Parceiro
             this.transmissor.writeObject (comunicado);
             this.transmissor.flush ();
 
-            // sem o reset, o ObjectOutputStream guarda todo objeto ja enviado e a memoria cresce a cada mensagem
+            // sem reset o stream guarda todo objeto ja escrito, para reaproveitar referencia; aqui cada mensagem e nova
             this.transmissor.reset ();
         }
         catch (IOException erro)
@@ -70,9 +79,9 @@ public class Parceiro
     }
 
     /*
-        Le o proximo comunicado; bloqueia ate ele chegar.
-        Devolve null se o parceiro fechou a conexao. SocketTimeoutException (tempo limite),
-        InvalidClassException (classe recusada pelo filtro) e ErroDeProtocolo sobem para quem chamou.
+        Le o proximo comunicado. Bloqueia ate chegar, ate estourar o SoTimeout ou ate o outro lado fechar.
+        null: EOF, a conexao acabou sem objeto. Quem chamou decide se isso e saida normal ou erro.
+        SocketTimeoutException, InvalidClassException (filtro) e ErroDeProtocolo nao sao engolidos aqui.
     */
     public Comunicado envie () throws Exception
     {
@@ -93,7 +102,7 @@ public class Parceiro
         return (Comunicado) lido;
     }
 
-    // fecha tudo; ignora erro porque nao ha o que fazer se ja estava fechado
+    // fecha o socket (e, com ele, os dois streams). Ja fechado nao e falha: nao ha o que avisar.
     public void adeus ()
     {
         try
