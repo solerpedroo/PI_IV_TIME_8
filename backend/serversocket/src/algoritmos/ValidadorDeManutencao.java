@@ -99,6 +99,7 @@ public class ValidadorDeManutencao
 
     // ------------------------------------------------------------------ equipamento
 
+    // nome, tipo fechado, ano entre 1950 e anoAtual+1, horimetro >= 0. Status vazio vira "Ativo".
     public static Resposta validarEquipamento (PedidoDeValidacaoDeEquipamento pedido)
     {
         if (pedido.getAnoAtual () == null)
@@ -149,6 +150,7 @@ public class ValidadorDeManutencao
 
     // ------------------------------------------------------------------ preventiva
 
+    // descricao, data prevista real (nao exige que seja futura) e intervalo de 1 a 3650 dias, ou nulo
     public static Resposta validarPreventiva (PedidoDeValidacaoDePreventiva pedido)
     {
         Validacao v         = new Validacao ();
@@ -178,6 +180,7 @@ public class ValidadorDeManutencao
 
     // ------------------------------------------------------------------ intervencao
 
+    // tipo fechado, data <= hoje do pedido, horimetro e valor em reais com 2 casas. Sem valor, a API nao lanca custo.
     public static Resposta validarIntervencao (PedidoDeValidacaoDeIntervencao pedido)
     {
         LocalDate hoje = ValidadorDeManutencao.data (pedido.getHoje ());
