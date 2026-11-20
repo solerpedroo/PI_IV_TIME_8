@@ -26,7 +26,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import static org.junit.jupiter.api.Assertions.*;
 
-/* Contratos entre pedidos, roteamento pelo Atendente e respostas, sem rede. */
+/*
+    Contratos entre pedidos, roteamento pelo Atendente e respostas, sem rede.
+    Cada tipo de Pedido tem de cair no algoritmo certo e devolver o id. Pedido desconhecido vira PEDIDO_DESCONHECIDO.
+    Uma excecao dentro do algoritmo vira ERRO_INTERNO, sem vazar o detalhe na resposta.
+*/
 @Tag("contrato")
 class AtendenteAlgoritmosTest
 {
