@@ -1,4 +1,4 @@
-package algoritmos;
+package algoritmos.talhao;
 
 import java.util.Arrays;
 import java.util.List;
@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.*;
-import static algoritmos.ApoioDeTeste.*;
+import protocolo.mensagens.talhao.*;
+import static algoritmos.comum.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /*
