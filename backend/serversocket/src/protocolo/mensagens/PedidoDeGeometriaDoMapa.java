@@ -6,6 +6,7 @@ import java.util.List;
 import protocolo.Pedido;
 
 // Centro, area e limites dos talhoes com localizacao que a API leu do banco (para desenhar o mapa).
+// Lista nula e pedido invalido. Talhao sem vertices e pulado na resposta, nao derruba o mapa inteiro.
 public class PedidoDeGeometriaDoMapa extends Pedido
 {
     private static final long serialVersionUID = 1L;
