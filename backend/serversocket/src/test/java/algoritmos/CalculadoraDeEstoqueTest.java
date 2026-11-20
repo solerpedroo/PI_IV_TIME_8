@@ -10,6 +10,10 @@ import protocolo.mensagens.*;
 import static algoritmos.ApoioDeTeste.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Entrada com e sem custo, saida, ajuste e saldo insuficiente.
+    O custo medio so muda na entrada que informa custo; saida maior que o saldo nao altera nada.
+*/
 @Tag("unitario")
 class CalculadoraDeEstoqueTest
 {
