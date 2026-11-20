@@ -1,5 +1,5 @@
 /* Autor: Pedro Andre do Carmo Chavier - RA: 25018639 */
-package algoritmos;
+package algoritmos.manutencao;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -7,11 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeAgendaDeManutencao;
-import protocolo.mensagens.PedidoDeProximaPreventiva;
-import protocolo.mensagens.PreventivaParaAgenda;
-import protocolo.mensagens.RespostaDeAgendaDeManutencao;
-import protocolo.mensagens.RespostaDeProximaPreventiva;
+import protocolo.mensagens.manutencao.PedidoDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.PedidoDeProximaPreventiva;
+import protocolo.mensagens.manutencao.PreventivaParaAgenda;
+import protocolo.mensagens.manutencao.RespostaDeAgendaDeManutencao;
+import protocolo.mensagens.manutencao.RespostaDeProximaPreventiva;
 
 /*
     Agenda das preventivas (#235, #237). Funcoes puras: "hoje" vem no pedido.
