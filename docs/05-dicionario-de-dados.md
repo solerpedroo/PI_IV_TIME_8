@@ -1,504 +1,422 @@
-# Dicionário de dados
-
-Descreve as coleções MongoDB que a API Java (`backend/api`) lê e grava, campo a campo. O conteúdo foi conferido nos repositórios `Repositorio*Mongo`, nos handlers e nos validadores do ServerSocket. Onde o código e documentos antigos divergem, vale o código.
-
-## 1. Objetivo e convenções
-
-| Convenção | Significado |
-|---|---|
-| Tipo `string` | texto UTF-8, sempre com limite de tamanho validado na API |
-| Tipo `ObjectId` | identificador `_id` gerado pelo MongoDB; na API sai como `id` (texto hexadecimal de 24 caracteres) |
-| Tipo `double` | número decimal (BSON double) |
-| Tipo `data ISO` | texto `AAAA-MM-DD`, sem fuso |
-| Tipo `instante ISO` | texto UTC gerado por `Instant.now().toString()`, por exemplo `2026-11-13T14:00:00Z` |
-| Obrigatório `sim` | a API recusa o cadastro sem o campo |
-| Obrigatório `não` | pode faltar ou ser `null` |
-| Obrigatório `sistema` | gravado pelo servidor; o cliente não escolhe |
-
-Regras que valem para todas as coleções operacionais:
-
-- O cliente nunca informa `_id`, `propriedadeId` nem `usuarioId`. O servidor grava esses campos a partir da sessão autenticada.
-- Toda consulta e toda gravação filtram pela propriedade ativa da sessão (seção 7).
-- Validações de texto, número e data ficam no Java: nos handlers da API e, para conta, talhão e manutenção, no ServerSocket (porta 3000).
-- Os campos `nomeNormalizado` guardam o nome em minúsculas e servem só para unicidade e busca. A API não os devolve.
-- Valores em dinheiro **não** estão em centavos neste código: `custos.value`, `orcamentos.valor`, `intervencoes.valor` e `insumos.custoUnitario` são `double` em reais, arredondados a 2 casas nos custos e orçamentos. Os cálculos de centavos acontecem em memória, antes da gravação. Ver [seção 9](#9-limitações-e-divergências-conhecidas).
-
-## 2. Visão geral das coleções
-
-| Coleção | Finalidade | Repositório |
-|---|---|---|
-| `usuarios` | conta do produtor, credenciais, confirmações e preferências | `RepositorioUsuariosMongo` |
-| `propriedades` | fazendas do produtor | `RepositorioUsuariosMongo` |
-| `talhoes` | áreas de cultivo da propriedade | `RepositorioTalhoesMongo` |
-| `historicos_talhoes` | eventos que apontam para um talhão | `RepositorioTalhoesMongo` |
-| `culturas` | catálogo de culturas por propriedade | `RepositorioCulturasMongo` |
-| `safras` | ciclos de cultivo com etapas | `RepositorioSafrasMongo` |
-| `atividades` | tarefas de campo planejadas e executadas | `RepositorioAtividadesMongo` |
-| `atividades_historico` | trilha de eventos de cada atividade | `RepositorioAtividadesMongo` |
-| `insumos` | catálogo e saldo do estoque | `RepositorioEstoqueMongo` |
-| `movimentacoes_insumos` | entradas, saídas e ajustes de estoque | `RepositorioEstoqueMongo` |
-| `ocorrencias` | registros de problemas e eventos do campo | `RepositorioOcorrenciasMongo` |
-| `ocorrencias_timeline` | versões e acompanhamentos de cada ocorrência | `RepositorioOcorrenciasMongo` |
-| `custos` | lançamentos de custo, manuais ou gerados | `RepositorioCustosMongo` |
-| `orcamentos` | orçamento planejado por safra | `RepositorioOrcamentosMongo` |
-| `colheitas` | produção registrada por safra e talhão | `RepositorioColheitasMongo` |
-| `equipamentos` | máquinas e implementos | `RepositorioEquipamentosMongo` |
-| `preventivas` | agenda de manutenção preventiva | `RepositorioPreventivasMongo` |
-| `intervencoes` | manutenções realizadas | `RepositorioIntervencoesMongo` |
-
-Existem 18 coleções. No modo `--memoria` do servidor, cada repositório tem uma versão `Memoria` com a mesma estrutura de documento; este dicionário descreve o formato do MongoDB.
-
-## 3. Diagrama de relacionamento
-
-O MongoDB não tem chave estrangeira. Os vínculos abaixo são referências por `id` (ou, onde indicado, por nome) verificadas pela aplicação.
-
-```mermaid
-erDiagram
-    usuarios ||--o{ propriedades : "usuarioId"
-    propriedades ||--o{ talhoes : "propriedadeId"
-    propriedades ||--o{ culturas : "propriedadeId"
-    propriedades ||--o{ safras : "propriedadeId"
-    propriedades ||--o{ insumos : "propriedadeId"
-    propriedades ||--o{ equipamentos : "propriedadeId"
-    talhoes ||--o{ historicos_talhoes : "talhaoId"
-    safras }o--o{ talhoes : "talhoes[]"
-    safras ||--o| orcamentos : "safraId"
-    safras ||--o{ colheitas : "safraId"
-    talhoes ||--o{ colheitas : "talhaoId"
-    safras ||--o{ custos : "safraId"
-    talhoes ||--o{ custos : "talhaoId"
-    atividades ||--o{ atividades_historico : "atividadeId"
-    safras ||--o{ atividades : "safraId"
-    insumos ||--o{ movimentacoes_insumos : "insumoId"
-    atividades ||--o{ movimentacoes_insumos : "atividadeId"
-    movimentacoes_insumos ||--o| custos : "origem.movimentacaoId"
-    talhoes ||--o{ ocorrencias : "talhaoId"
-    ocorrencias ||--o{ ocorrencias_timeline : "ocorrenciaId"
-    equipamentos ||--o{ preventivas : "equipamentoId"
-    equipamentos ||--o{ intervencoes : "equipamentoId"
-    preventivas ||--o| intervencoes : "intervencaoId"
-    intervencoes ||--o| custos : "origem.intervencaoId"
-```
-
-Vínculos por nome (não por `id`): `atividades.talhao` guarda o nome do talhão; `talhoes.cultura` e `safras.cultura` guardam o nome da cultura.
-
-## 4. Dicionário por coleção
-
-Os campos `_id` (ObjectId, sistema) existem em todas as coleções e não são repetidos nas tabelas.
-
-### 4.1 `usuarios`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `name` | string | sim | nome do produtor, até 120 caracteres |
-| `email` | string | sim | e-mail de login, único em toda a coleção |
-| `phone` | string | sim | telefone, até 20 caracteres, formato `(DD) 9XXXX-XXXX` |
-| `senhaHash` | string | sistema | hash da senha (classe `Senhas`); nunca sai pela API |
-| `emailConfirmado` | boolean | sistema | `false` até o código de 6 dígitos ser confirmado |
-| `tokenConfirmacao` | string | não | código de confirmação do cadastro; `null` após confirmar |
-| `ultimoEnvioConfirmacao` | long | sistema | instante (ms) do último envio, para limitar reenvios |
-| `tokenRedefinicao` | string | não | código de redefinição de senha |
-| `redefinicaoExpiraEm` | long | não | instante (ms) em que o código de redefinição expira |
-| `emailPendente` | string | não | novo e-mail aguardando confirmação |
-| `tokenTrocaEmail` | string | não | código enviado ao novo e-mail |
-| `trocaEmailExpiraEm` | long | não | instante (ms) de expiração da troca de e-mail |
-| `ultimoEnvioTrocaEmail` | long | não | instante (ms) do último envio do código de troca |
-| `propriedadeId` | string | sistema | propriedade padrão do usuário |
-| `versaoPropriedades` | long | sistema | contador incrementado quando uma propriedade é excluída |
-| `preferencias` | documento | não | chaves booleanas `stock`, `weather`, `activities`, `occurrences`, `reports` |
-| `onboardingConcluido` | boolean | sistema | `false` no cadastro; `true` após concluir o tour |
-| `onboardingConcluidoEm` | instante ISO | não | quando o tour foi concluído |
-| `criadoEm` | instante ISO | sistema | criação da conta |
-| `atualizadoEm` | instante ISO | não | última alteração de nome ou telefone |
-
-Quando `preferencias` não existe, a API devolve todas como `true`, exceto `reports`, que vem `false`.
-
-### 4.2 `propriedades`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `usuarioId` | string | sistema | dono da propriedade (id do usuário) |
-| `proprietarioId` | ObjectId | sistema | mesmo dono, em `ObjectId` |
-| `nome` | string | sim | nome da propriedade, até 120 caracteres, único por usuário |
-| `localizacao` | string | sim | texto de localização, até 160 caracteres |
-| `municipio` | string | sim | município, até 120 caracteres |
-| `safraAtual` | string | sim | período no formato `AAAA/AA`, por exemplo `2026/27` |
-| `areaHectares` | double | sim | área total, maior que 0 e até 100.000.000 |
-| `criadaEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-| `farm` | string | não | campo legado do primeiro cadastro; a leitura usa como `nome` quando `nome` falta |
-| `area` | string | não | campo legado de área em texto; não é convertido em número |
-
-### 4.3 `talhoes`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `nome` | string | sim | até 80 caracteres |
-| `nomeNormalizado` | string | sistema | nome em minúsculas; único por propriedade |
-| `cultura` | string | sim | nome da cultura, até 40 caracteres |
-| `safra` | string | sim | período `AAAA/AA` |
-| `hectares` | double | sim | área, maior que 0 e até 1.000.000 |
-| `status` | string | não | `Ativo` (padrão), `Irrigação pendente` ou `Em preparo` |
-| `localizacao` | documento | não | geometria `ponto` ou `poligono` com lista de pontos `{lat, lng}`; validada no ServerSocket |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-Um talhão com atividades vinculadas não pode ser renomeado.
-
-### 4.4 `historicos_talhoes`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `talhaoId` | string | sistema | talhão de origem do evento |
-| `tipo` | string | sim | `atividade`, `ocorrencia` ou `custo` |
-| `descricao` | string | sim | até 240 caracteres |
-| `criadoEm` | instante ISO | sistema | momento do registro |
-
-### 4.5 `culturas`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `proprietarioId` | string | sistema | titular que criou |
-| `nome` | string | sim | no mínimo 2 caracteres |
-| `nomeNormalizado` | string | sistema | único por propriedade (índice `cultura_nome_por_propriedade`) |
-| `criadoEm` | instante ISO | sistema | criação |
-
-O catálogo nasce vazio; o produtor cadastra as culturas.
-
-### 4.6 `safras`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `nome` | string | sim | até 80 caracteres |
-| `nomeNormalizado` | string | sistema | único por propriedade |
-| `cultura` | string | sim | nome da cultura, até 40 caracteres |
-| `talhoes` | lista de string | sim | ids de talhões da propriedade, sem repetição, de 1 a 200 |
-| `dataInicio` | data ISO | sim | início do ciclo |
-| `dataFim` | data ISO | sim | fim; não pode ser anterior ao início |
-| `etapa` | string | sistema | etapa atual (seção 5) |
-| `historicoEtapas` | lista de `{etapa, em}` | sistema | cada etapa vencida com o instante ISO |
-| `finalizadaEm` | instante ISO | não | preenchido ao chegar em `Finalização` |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-Um talhão não pode estar em duas safras com períodos que se cruzam. Safra finalizada não aceita alteração.
-
-### 4.7 `atividades`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `usuarioId` | string | sistema | usuário que criou |
-| `propriedadeId` | string | sistema | propriedade dona |
-| `nome` | string | sim | até 100 caracteres |
-| `tipo` | string | sim | valor de `Tipos de atividade` (seção 5) |
-| `talhao` | string | sim | **nome** do talhão (comparado sem diferenciar maiúsculas), até 60 caracteres |
-| `data` | string | sim | data planejada, formato ISO (`2026-08-12`) ou do protótipo (`12 ago`) |
-| `status` | string | sim | começa `Pendente` (padrão) ou `Agendada` |
-| `responsavel` | string | não | até 100 caracteres |
-| `prioridade` | string | não | `Baixa`, `Média` ou `Alta` |
-| `horario` | string | não | `HH:MM` de 00:00 a 23:59 |
-| `safraId` | string | não | safra vinculada; o talhão precisa pertencer a ela |
-| `safra` | string | sistema | nome da safra, copiado do vínculo |
-| `cultura` | string | sistema | cultura da safra, copiada do vínculo |
-| `fotoEvidencia` | documento | não | foto anexada depois do cadastro (seção 4.19) |
-| `versao` | long | sistema | controle de concorrência; começa em 1 |
-| `criadaEm` | instante ISO | sistema | criação |
-
-### 4.8 `atividades_historico`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `atividadeId` | string | sistema | atividade de origem |
-| `propriedadeId` | string | sistema | propriedade dona |
-| `ordem` | inteiro | sistema | sequência a partir de 0; único por atividade |
-| `registradoEm` | instante ISO | sistema | momento do evento |
-| `status` | string | sistema | status da atividade neste evento |
-| `acao` | string | sistema | por exemplo `criacao` |
-| `descricao` | string | sistema | texto do evento; o evento 0 é "Registro inicial da atividade" |
-
-A atividade e o evento 0 são gravados na mesma transação.
-
-### 4.9 `insumos`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `nome` | string | sim | até 100 caracteres |
-| `categoria` | string | sim | `Herbicida`, `Fertilizante`, `Semente`, `Fungicida` ou `Inseticida` |
-| `unidade` | string | sim | até 12 caracteres, por exemplo `kg` |
-| `minimo` | double | sim | estoque mínimo, de 0 a 1 bilhão, até 6 casas |
-| `custoUnitario` | double | não | custo médio por unidade, em reais, até 6 casas; padrão 0 |
-| `limiarCritico` | double | não | não pode superar `minimo` |
-| `saldo` | double | sim na criação | saldo atual; depois só muda por movimentação |
-| `excluido` | boolean | não | exclusão lógica; só é permitida com saldo 0 |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-### 4.10 `movimentacoes_insumos`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `insumoId` | string | sistema | insumo movimentado |
-| `tipo` | string | sim | `entrada`, `saida` ou `ajuste` |
-| `quantidade` | double | sim | positiva em entrada e saída; o ajuste usa a diferença |
-| `unidade` | string | sistema | copiada do insumo |
-| `saldoAnterior` | double | sistema | saldo antes da movimentação |
-| `saldoPosterior` | double | sistema | saldo depois da movimentação |
-| `observacao` | string | não | até 240 caracteres; obrigatória no ajuste |
-| `fornecedor` | string | não | até 120 caracteres |
-| `atividadeId` | string | não | só em `saida`; precisa ser atividade da propriedade |
-| `atividade` | string | sistema | título da atividade vinculada, ou vazio |
-| `custoUnitario` | double | não | custo da movimentação; na saída com atividade, usa o custo médio do insumo |
-| `criadoEm` | instante ISO | sistema | momento da movimentação |
-
-A saída que ultrapassa o saldo é recusada (409). O cadastro de um insumo com saldo inicial também gera um ajuste com a observação "Saldo inicial do cadastro".
-
-### 4.11 `ocorrencias`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `usuarioId` | string | sistema | usuário que criou |
-| `propriedadeId` | string | sistema | propriedade dona |
-| `titulo` | string | sim | até 160 caracteres |
-| `tipo` | string | sim | `Praga`, `Doença`, `Clima`, `Equipamento` ou `Outro` |
-| `prioridade` | string | sim | `Baixa`, `Média` ou `Alta` |
-| `data` | data ISO | sim | data da ocorrência |
-| `descricao` | string | não | até 6000 caracteres |
-| `talhaoId` | string | não | talhão da propriedade |
-| `talhaoNome` | string | sistema | nome do talhão, copiado |
-| `safra` | string | sistema | período `AAAA/AA` do talhão, copiado |
-| `localizacao` | documento | não | ponto marcado; só aceito dentro do polígono do talhão |
-| `status` | string | sistema | `ABERTA`, `EM_ACOMPANHAMENTO` ou `RESOLVIDA` |
-| `statusInicial` | string | sistema | sempre `ABERTA` |
-| `fotoEvidencia` | documento | não | foto anexada depois do cadastro (seção 4.19) |
-| `criadaEm` | instante ISO | sistema | criação |
-| `atualizadaEm` | instante ISO | sistema | última versão |
-| `resolvidaEm` | instante ISO | não | preenchido ao resolver |
-| `excluida` | boolean | sistema | exclusão lógica |
-| `excluidaEm` | instante ISO | não | quando foi excluída |
-| `versao` | long | sistema | começa em 1 e cresce a cada alteração |
-
-### 4.12 `ocorrencias_timeline`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `usuarioId` | string | sistema | usuário dono |
-| `propriedadeId` | string | sistema | propriedade dona |
-| `ocorrenciaId` | string | sistema | ocorrência de origem |
-| `ordem` | long | sistema | igual à `versao` da ocorrência; único por ocorrência |
-| `data` | instante ISO | sistema | `atualizadaEm` da versão |
-| `acao` | string | sistema | operação registrada (por exemplo `acompanhamento`, `atualizacao`, `resolucao`) |
-| `status` | string | sistema | status da ocorrência naquela versão |
-| `descricao` | string | sistema | texto do evento, até 6000 caracteres |
-| `dados` | documento | sistema | cópia dos campos da ocorrência naquela versão (título, tipo, data, prioridade, descrição, talhão, safra, localização) |
-
-### 4.13 `custos`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `description` | string | sim | até 120 caracteres |
-| `category` | string | sim | `Insumos`, `Mão de Obra`, `Maquinário`, `Combustível` ou `Outros` |
-| `value` | double | sim | em reais, de 0,01 até 1.000.000.000, arredondado a 2 casas |
-| `date` | data ISO | sim | data do custo |
-| `talhaoId` | string | não | talhão da propriedade |
-| `safraId` | string | não | safra da propriedade; o talhão precisa estar nela |
-| `origem` | documento | não | presente em custo gerado automaticamente |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-Subdocumento `origem`:
-
-| Campo | Quando | Descrição |
-|---|---|---|
-| `tipo` | sempre | `consumo` (saída de estoque) ou `manutencao` (intervenção de equipamento) |
-| `movimentacaoId`, `insumoId`, `atividadeId`, `quantidade`, `unidade`, `custoUnitario` | `consumo` | dados da baixa de estoque que gerou o custo |
-| `intervencaoId`, `equipamentoId` | manutenção | intervenção e equipamento que geraram o custo |
-
-Custo com `origem` só muda pela operação de origem; `PUT` e `DELETE` direto respondem 409. Custo em safra finalizada não pode ser alterado.
-
-### 4.14 `orcamentos`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `safraId` | string | sistema | safra do orçamento; um orçamento por safra |
-| `valor` | double | sim | planejado, em reais, maior que 0 e até R$ 1.000.000.000,00 |
-| `alerta` | inteiro | não | percentual do planejado que dispara o alerta, de 50 a 100; padrão 80 |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-Saldo, desvio e percentual usado não são gravados: a API calcula a partir dos custos da safra.
-
-### 4.15 `colheitas`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `safraId` | string | sim | safra da propriedade, a partir do plantio |
-| `talhaoId` | string | sim | talhão que pertence à safra |
-| `quantidade` | double | sim | na unidade escolhida, mínimo 0,001, 3 casas |
-| `unidade` | string | sim | `kg`, `t` ou `sc` (saca de 60 kg) |
-| `quantidadeKg` | double | sistema | quantidade convertida para kg |
-| `data` | data ISO | sim | não pode ser futura nem anterior ao início da safra |
-| `observacao` | string | não | até 200 caracteres |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-### 4.16 `equipamentos`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `nome` | string | sim | até 80 caracteres |
-| `nomeNormalizado` | string | sistema | único por propriedade |
-| `tipo` | string | sim | `Trator`, `Colheitadeira`, `Pulverizador`, `Plantadeira`, `Implemento`, `Veículo` ou `Outro` |
-| `marca` | string | não | texto livre com limite |
-| `modelo` | string | não | texto livre com limite |
-| `identificacao` | string | não | placa ou identificação |
-| `ano` | inteiro | não | de 1950 até o ano atual |
-| `horimetro` | double | não | de 0 a 1.000.000 horas |
-| `status` | string | não | `Ativo` (padrão), `Em manutenção` ou `Inativo` |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-### 4.17 `preventivas`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `equipamentoId` | string | sim | equipamento da propriedade |
-| `descricao` | string | sim | até 120 caracteres |
-| `dataPrevista` | data ISO | sim | próxima data prevista |
-| `intervaloDias` | inteiro | não | de 1 a 3650; permite gerar a próxima preventiva |
-| `status` | string | sistema | `programada`, `realizada` ou `cancelada` |
-| `intervencaoId` | string | não | intervenção que realizou a preventiva |
-| `realizadaEm` | data ISO | não | data em que foi realizada |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-### 4.18 `intervencoes`
-
-| Campo | Tipo | Obrig. | Descrição e regra |
-|---|---|---|---|
-| `propriedadeId` | string | sistema | propriedade dona |
-| `equipamentoId` | string | sim | equipamento da propriedade |
-| `preventivaId` | string | não | preventiva que esta intervenção realizou |
-| `tipo` | string | sim | `preventiva` ou `corretiva` |
-| `data` | data ISO | sim | não pode ser futura |
-| `descricao` | string | sim | até 240 caracteres |
-| `responsavel` | string | não | texto livre com limite |
-| `horimetro` | double | não | horímetro na data da intervenção |
-| `valor` | double | não | custo em reais, de 0,01 a 1 bilhão; gera custo na categoria Maquinário |
-| `talhaoId` | string | não | talhão em que a máquina atuou |
-| `safraId` | string | não | safra vinculada |
-| `custoId` | string | sistema | custo gerado a partir de `valor` |
-| `proximaPreventivaId` | string | sistema | preventiva criada a partir do intervalo |
-| `criadoEm` | instante ISO | sistema | criação |
-| `atualizadoEm` | instante ISO | sistema | última alteração |
-
-### 4.19 Subdocumento `fotoEvidencia`
-
-Usado em `atividades` e `ocorrencias`. O cadastro recusa upload no corpo; a imagem é enviada por rota própria depois que o registro existe.
-
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `dados` | binário | bytes da imagem, até 5 MB; não sai na API JSON |
-| `mime` | string | `image/jpeg`, `image/png`, `image/webp` ou `image/gif` |
-| `nomeArquivo` | string | nome informado no envio |
-| `tamanhoBytes` | inteiro | tamanho em bytes |
-| `enviadaEm` | instante ISO | momento do envio |
-
-A API devolve `temFoto`, `fotoMime`, `fotoNomeArquivo`, `fotoTamanhoBytes` e `fotoEnviadaEm` no lugar do subdocumento.
-
-## 5. Domínios de valores
-
-| Domínio | Valores | Onde é validado |
-|---|---|---|
-| Etapas da safra | `Planejamento`, `Preparação`, `Plantio`, `Manejo`, `Colheita`, `Finalização` (avanço sequencial) | `SafrasHandler.ETAPAS` |
-| Status do talhão | `Ativo`, `Irrigação pendente`, `Em preparo` | `ValidadorDeTalhao` |
-| Status da atividade | `Pendente`, `Agendada`, `Em andamento`, `Concluída`, `Cancelada` | `AtividadesHandler.STATUS_VALIDOS` |
-| Tipos de atividade | `Aplicação`, `Irrigação`, `Colheita`, `Manutenção`, `Manejo` | `AtividadesHandler.TIPOS_VALIDOS` |
-| Prioridade | `Baixa`, `Média`, `Alta` | atividades e ocorrências |
-| Categorias de insumo | `Herbicida`, `Fertilizante`, `Semente`, `Fungicida`, `Inseticida` | `EstoqueHandler.CATEGORIAS` |
-| Tipos de movimentação | `entrada`, `saida`, `ajuste` | `EstoqueHandler` |
-| Tipos de ocorrência | `Praga`, `Doença`, `Clima`, `Equipamento`, `Outro` | `OcorrenciasHandler` |
-| Status da ocorrência | `ABERTA`, `EM_ACOMPANHAMENTO`, `RESOLVIDA` | `OcorrenciasHandler` |
-| Ações da timeline | `acompanhamento`, `atualizacao`, `resolucao` | `OcorrenciasHandler` |
-| Categorias de custo | `Insumos`, `Mão de Obra`, `Maquinário`, `Combustível`, `Outros` | `CustosHandler.CATEGORIAS` |
-| Unidades de colheita | `kg`, `t`, `sc` | `ColheitasHandler.UNIDADES` |
-| Tipos de equipamento | `Trator`, `Colheitadeira`, `Pulverizador`, `Plantadeira`, `Implemento`, `Veículo`, `Outro` | `ValidadorDeManutencao` |
-| Status do equipamento | `Ativo`, `Em manutenção`, `Inativo` | `ValidadorDeManutencao` |
-| Tipos de intervenção | `preventiva`, `corretiva` | `ValidadorDeManutencao` |
-| Status da preventiva | `programada`, `realizada`, `cancelada` | `ManutencaoHandler` |
-| Tipos de histórico do talhão | `atividade`, `ocorrencia`, `custo` | `TalhoesHandler` |
-
-## 6. Índices e unicidade
-
-| Coleção | Chave do índice | Único | Efeito |
-|---|---|---|---|
-| `usuarios` | `email` | sim | um e-mail por conta |
-| `usuarios` | `tokenConfirmacao` | não | busca por código de confirmação |
-| `usuarios` | `tokenRedefinicao` | não | busca por código de redefinição |
-| `propriedades` | `usuarioId` | não | lista as propriedades do produtor |
-| `talhoes` | `propriedadeId`, `nomeNormalizado` | sim | nome de talhão único por propriedade |
-| `culturas` | `propriedadeId`, `nomeNormalizado` | sim | nome de cultura único por propriedade |
-| `safras` | `propriedadeId`, `nomeNormalizado` | sim | nome de safra único por propriedade |
-| `atividades` | `propriedadeId`, `data` | não | agenda por data |
-| `atividades_historico` | `propriedadeId`, `atividadeId`, `ordem` | sim | sem evento repetido |
-| `insumos` | `propriedadeId`, `excluido` | não | lista insumos ativos |
-| `movimentacoes_insumos` | `propriedadeId`, `insumoId`, `criadoEm` | não | extrato do insumo |
-| `ocorrencias` | `usuarioId`, `propriedadeId`, `talhaoId` | não | consulta por talhão |
-| `ocorrencias_timeline` | `usuarioId`, `propriedadeId`, `ocorrenciaId`, `ordem` | sim | sem versão repetida |
-| `custos` | `propriedadeId`, `date` | não | filtro por período |
-| `custos` | `propriedadeId`, `safraId` | não | custos da safra |
-| `custos` | `propriedadeId`, `origem.movimentacaoId` | sim (parcial) | um custo por movimentação de consumo |
-| `custos` | `propriedadeId`, `origem.intervencaoId` | sim (parcial) | um custo por intervenção |
-| `orcamentos` | `propriedadeId`, `safraId` | sim | um orçamento por safra |
-| `colheitas` | `propriedadeId`, `safraId` | não | colheitas da safra |
-| `colheitas` | `propriedadeId`, `data` | não | filtro por período |
-| `colheitas` | `propriedadeId`, `talhaoId` | não | colheitas do talhão |
-| `equipamentos` | `propriedadeId`, `nomeNormalizado` | sim | nome de equipamento único por propriedade |
-| `preventivas` | `propriedadeId`, `dataPrevista` | não | agenda por data |
-| `intervencoes` | `propriedadeId`, `equipamentoId`, `data` | não | histórico do equipamento |
-
-Os índices dos custos com `origem.*` são únicos apenas quando o campo existe (índice parcial), para que custos manuais não colidam.
-
-## 7. Isolamento por usuário e propriedade
-
-- O login devolve um token Bearer. A sessão guarda o `usuarioId` e a `propriedadeId` ativa.
-- Todas as coleções operacionais carregam `propriedadeId`; `atividades`, `ocorrencias` e `ocorrencias_timeline` também carregam `usuarioId`.
-- Os repositórios recebem a propriedade da sessão e a incluem em todo filtro. Um id de outra propriedade responde como inexistente (404).
-- As referências cruzadas (talhão em safra, safra em custo, talhão em colheita) são conferidas dentro da mesma propriedade antes de gravar.
-- Excluir uma propriedade é recusado (409) enquanto ela tiver talhões, estoque, ocorrências, custos, atividades, safras ou equipamentos, e quando for a última propriedade do produtor.
-
-## 8. Dados fora do banco
-
-| Dado | Onde fica | Observação |
-|---|---|---|
-| Sessão e token | memória da API (`Sessoes`) | expira em 12 horas; reiniciar a API encerra as sessões |
-| Token no navegador | `sessionStorage` | só o token de acesso |
-| Estado de tela (filtro, período, aba) | `localStorage`, via `AgroLocal` | conveniência; não é dado de negócio |
-
-Dado de negócio só existe no MongoDB; o navegador não é fonte de verdade.
-
-## 9. Limitações e divergências conhecidas
-
-- **Dinheiro em reais, não em centavos.** A regra de projeto prevê centavos inteiros, mas `custos.value`, `orcamentos.valor`, `intervencoes.valor` e `insumos.custoUnitario` são `double` em reais. Os serviços calculam em centavos na memória e gravam `centavos / 100.0`.
-- **Vínculo por nome.** `atividades.talhao`, `talhoes.cultura` e `safras.cultura` guardam nomes, não ids. Renomear um talhão com atividades é bloqueado por isso.
-- **Campos legados.** `propriedades.farm` e `propriedades.area` vêm do primeiro cadastro e continuam sendo lidos.
-- **Sem chave estrangeira.** A integridade depende dos repositórios; o banco não impede um id órfão se a gravação ocorrer fora da API.
-- **Modelo `core`.** [modelo-dados.md](modelo-dados.md) descreve um modelo de domínio anterior (`backend/core`), com campos como `proprietarioId` e valores `ATIVO/INATIVO`. A API em uso grava os formatos deste dicionário.
-
-## 10. Referências
-
-- [Modelo de dados do domínio](modelo-dados.md)
-- [Servidor Java e rotas](servidor-java.md)
-- [Casos de uso](03-casos-de-uso.md)
-- [MongoDB Atlas](mongodb-atlas.md)
-- Módulos: [safras](safras.md), [atividades](atividades.md), [estoque](estoque.md), [ocorrencias](ocorrencias.md), [custos](custos.md), [orcamento](orcamento.md), [colheita](colheita.md), [manutencao](manutencao.md), [perfil](perfil.md), [georreferenciamento](georreferenciamento.md)
+# Dicionário de Dados do Sistema de Gestão Agrícola de Propriedades Rurais AgroGestão
+
+## Histórico de Revisões (ou Versões)
+
+| Data | Autor | Versão | Observações |
+| ---- | ----- | ------ | ----------- |
+| 19/11/2026 | Pedro Henrique Contardi Soler | 2.0.0 | Reescrita no padrão de dicionário de dados: título específico do AgroGestão, histórico e atributos por entidade. Inclui o membro da equipe, que a versão anterior não descrevia. |
+
+## Entidades
+
+A seguir são documentadas as entidades e seus dados (atributos) necessários para suportar a gestão de uma propriedade rural no AgroGestão: conta, fazenda, equipe, áreas de cultivo, safra, atividades, estoque, ocorrências, custos e manutenção. Um registro existe mesmo quando ainda não participou de outra operação. Um talhão sem atividade, um insumo sem saída e um convite ainda não aceito também são representados.
+
+O código de cada entidade é um identificador único gerado pelo sistema, em texto hexadecimal de 24 caracteres. Não é um número sequencial. O usuário não escolhe esse código. Onde um atributo aponta para outra entidade, o valor é o código dessa entidade, e ela precisa já existir na mesma propriedade.
+
+### 1. Usuário
+
+Descrição: Representa a pessoa que possui conta no AgroGestão e pode ser dona de uma ou mais propriedades ou colaboradora de uma propriedade de outra pessoa. A conta existe antes de existir qualquer fazenda, como no cadastro feito a partir de um convite ainda não aceito.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o usuário em relação aos demais em todas as partes do sistema. Gerado pelo sistema. |
+| Nome | Texto | Sim | Nome da pessoa. Até 120 caracteres. Exemplo: "Ana Souza". |
+| E-mail | Texto | Sim | E-mail de acesso. Único em todo o sistema, guardado em minúsculas. Exemplo: "ana@teste.com". |
+| Telefone | Texto | Sim | Celular no formato "(DD) 9XXXX-XXXX". Exemplo: "(11) 91234-5678". |
+| Senha | Texto | Sim | Guarda somente o resultado do embaralhamento. A senha escolhida pela pessoa não é armazenada e este valor não é devolvido nas consultas. |
+| E-mail confirmado | Lógico | Sim | Começa falso. Passa a verdadeiro depois que a pessoa informa o código de 6 dígitos enviado ao e-mail. Sem isso, o acesso é recusado. |
+| Código de confirmação | Texto | Não | Seis dígitos enviados no cadastro. Fica vazio depois da confirmação. |
+| Último envio da confirmação | Inteiro | Sim | Instante, em milissegundos, do último envio do código. Serve para impedir reenvios seguidos. |
+| Código de redefinição | Texto | Não | Seis dígitos enviados quando a pessoa pede uma senha nova. Vazio quando não há pedido em aberto. |
+| Validade da redefinição | Inteiro | Não | Instante, em milissegundos, em que o código de redefinição deixa de valer. |
+| E-mail pendente | Texto | Não | Novo e-mail aguardando confirmação. A conta continua no e-mail antigo até a troca ser confirmada. |
+| Código da troca de e-mail | Texto | Não | Código enviado ao e-mail novo. |
+| Validade da troca de e-mail | Inteiro | Não | Instante, em milissegundos, em que o código da troca deixa de valer. |
+| Último envio da troca de e-mail | Inteiro | Não | Instante, em milissegundos, do último envio desse código. |
+| Propriedade padrão | Texto | Não | Código da propriedade aberta no próximo acesso. Vazio enquanto a pessoa ainda não tem fazenda, como no convite não aceito. |
+| Versão das propriedades | Inteiro | Não | Contador aumentado quando uma propriedade do usuário é excluída. |
+| Preferências do painel | Par chave-valor | Não | Chaves fixas: estoque, clima, atividades, ocorrências e relatórios. O valor de cada uma é lógico. Se o conjunto não existir, todas nascem ligadas, exceto relatórios. |
+| Tour concluído | Lógico | Sim | Falso no cadastro. Verdadeiro depois que a pessoa encerra o passeio inicial do painel. |
+| Conclusão do tour | Data e hora | Não | Momento em que o tour foi concluído. Vazio enquanto ele não foi feito. |
+| Criado em | Data e hora | Sim | Momento da criação da conta, no horário universal. |
+| Atualizado em | Data e hora | Não | Momento da última alteração de nome ou telefone. |
+
+### 2. Propriedade
+
+Descrição: Representa uma fazenda gerida no sistema. Uma pessoa pode ter mais de uma. Os demais registros da operação (talhão, safra, estoque, custo, equipe) pertencem a uma propriedade e não são vistos a partir de outra. A propriedade existe mesmo sem talhão, safra ou colaborador.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a propriedade em relação às demais. Gerado pelo sistema. |
+| Proprietário | Texto | Sim | Código do usuário dono. Preenchido pelo sistema a partir de quem está autenticado. |
+| Nome | Texto | Sim | Nome da fazenda, até 120 caracteres. Único entre as propriedades do mesmo dono. Exemplo: "Fazenda São João". |
+| Localização | Texto | Sim | Descrição do lugar, até 160 caracteres. |
+| Município | Texto | Sim | Município da fazenda, até 120 caracteres. Exemplo: "Campinas". |
+| Safra atual | Texto | Sim | Período agrícola no formato AAAA/AA. O segundo número é o ano seguinte, com dois dígitos. Exemplo: "2026/27". |
+| Área | Decimal | Sim | Área total em hectares. Maior que zero e até 100.000.000. |
+| Criada em | Data e hora | Sim | Momento da criação. |
+| Atualizada em | Data e hora | Sim | Momento da última alteração. |
+| Nome legado | Texto | Não | Nome gravado no primeiro cadastro da conta, antes de existirem localização e município. A leitura usa este valor somente quando o nome atual está vazio. |
+| Área legada | Texto | Não | Área informada em texto no primeiro cadastro. Não é convertida em número. |
+
+Não é possível excluir a última propriedade de um dono, nem uma propriedade que ainda tenha talhão, estoque, ocorrência, custo, atividade, safra ou equipamento.
+
+### 3. Membro da equipe
+
+Descrição: Representa uma pessoa ligada a uma propriedade para colaborar nela. Pode ser um registro local, sem conta; um convite enviado a um e-mail que ainda não aceitou; ou um colaborador ativo, depois do aceite. O membro existe mesmo que a pessoa convidada ainda não tenha conta.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o membro em relação aos demais. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda em que a pessoa colabora. |
+| Proprietário | Texto | Sim | Código do usuário dono que incluiu o membro. |
+| Usuário | Texto | Não | Código da conta do colaborador. Vazio no registro local e no convite ainda não aceito. Preenchido no aceite. |
+| Nome | Texto | Sim | Nome do integrante, até 120 caracteres. No aceite, passa a ser o nome da conta, se ela tiver nome. |
+| E-mail do convite | Texto | Não | E-mail para o qual o convite foi enviado. Obrigatório no convite. O aceite só vale se a conta autenticada tiver esse mesmo e-mail. |
+| Cargo | Texto | Não | Função informada pelo dono, até 80 caracteres. Exemplo: "Operador de máquinas". |
+| Situação | Lista lateral e estática de valores | Sim | Apenas um valor: "local", "convite_pendente" ou "ativo". Não devem ser acrescentados outros. |
+| Telas | Par chave-valor | Sim | Chave é uma lista estática das telas do sistema: painel, áreas de cultivo, culturas, safras, atividades, insumos, manutenção, ocorrências, custos e configurações. Valor: lógico, indicando se a tela está liberada. Configurações nasce fechada. As demais nascem liberadas. |
+| Token do convite | Texto | Não | Segredo do link de aceite. Existe só enquanto a situação é convite pendente. É apagado no aceite. |
+| Validade do convite | Data e hora | Não | Momento em que o link deixa de valer. Vazio depois do aceite. |
+| Criado em | Data e hora | Sim | Momento da inclusão. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+### 4. Talhão
+
+Descrição: Representa uma área de cultivo dentro de uma propriedade. O talhão existe mesmo que ainda não tenha atividade, ocorrência, custo ou colheita.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o talhão em relação aos demais. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda dona. Preenchido pelo sistema. |
+| Nome | Texto | Sim | Até 80 caracteres. Único na propriedade, sem diferenciar maiúsculas. Um talhão que já tenha atividade não pode ser renomeado. |
+| Cultura | Texto | Sim | Nome da cultura cadastrada na propriedade, até 40 caracteres. É o nome, não o código da cultura. Exemplo: "Soja". |
+| Safra | Texto | Sim | Período AAAA/AA do talhão. Exemplo: "2026/27". O período 1999/00 é válido, porque o sufixo 00 é o ano 2000. |
+| Área | Decimal | Sim | Hectares do talhão. Maior que zero e até 1.000.000. |
+| Situação | Lista lateral e estática de valores | Não | "Ativo", "Irrigação pendente" ou "Em preparo". Se ficar vazio, vale "Ativo". Apenas um valor. |
+| Localização | Par chave-valor | Não | Chave é o tipo da marca no mapa: "ponto" ou "poligono". Valor: lista de pontos, cada um com latitude e longitude. |
+| Criado em | Data e hora | Sim | Momento do cadastro. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+### 5. Histórico do talhão
+
+Descrição: Representa um acontecimento que aponta para um talhão, para que a área tenha uma linha do tempo. O histórico existe para atividade, ocorrência e custo já registrados. Não existe talhão só de histórico.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o evento. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Talhão | Texto | Sim | Código do talhão de origem. |
+| Tipo | Lista lateral e estática de valores | Sim | "atividade", "ocorrencia" ou "custo". Apenas um valor. |
+| Descrição | Texto | Sim | Texto do evento, até 240 caracteres. |
+| Criado em | Data e hora | Sim | Momento do registro. |
+
+### 6. Cultura
+
+Descrição: Representa uma cultura agrícola disponível no catálogo de uma propriedade, para ser escolhida em talhões e safras. A cultura existe mesmo que nenhum talhão a utilize ainda. O catálogo nasce vazio. O produtor inclui os nomes.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a cultura. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Proprietário | Texto | Sim | Código do usuário que incluiu a cultura. |
+| Nome | Texto | Sim | No mínimo 2 caracteres. Único na propriedade, sem diferenciar maiúsculas. Exemplo: "Milho". |
+| Criada em | Data e hora | Sim | Momento da inclusão. |
+
+### 7. Safra
+
+Descrição: Representa um ciclo de cultivo de uma cultura, em um ou mais talhões, entre uma data de início e uma data de fim. A safra existe desde o planejamento, mesmo sem colheita, custo ou atividade.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a safra. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Nome | Texto | Sim | Até 80 caracteres. Único na propriedade, sem diferenciar maiúsculas. Exemplo: "Soja 26". |
+| Cultura | Texto | Sim | Nome de uma cultura já cadastrada na propriedade, até 40 caracteres. |
+| Talhões | Lista | Sim | Códigos dos talhões da propriedade que participam do ciclo. De 1 a 200, sem repetição. |
+| Data de início | Data | Sim | Primeiro dia do ciclo, no formato AAAA-MM-DD. |
+| Data de fim | Data | Sim | Último dia do ciclo. Não pode ser anterior ao início. |
+| Etapa | Lista lateral e estática de valores | Sim | "Planejamento", "Preparação", "Plantio", "Manejo", "Colheita" ou "Finalização". O avanço é só para a etapa seguinte. Apenas um valor. |
+| Histórico de etapas | Lista | Sim | Cada item guarda a etapa vencida e o momento em que ela foi registrada. |
+| Finalizada em | Data e hora | Não | Preenchido ao chegar em "Finalização". Safra finalizada não aceita alteração. |
+| Criada em | Data e hora | Sim | Momento do cadastro. |
+| Atualizada em | Data e hora | Sim | Momento da última alteração. |
+
+Um talhão não pode estar em duas safras cujos períodos se cruzam. A safra não perde um talhão que já tenha colheita, e a data de início não pode ficar depois de uma colheita já registrada.
+
+### 8. Atividade
+
+Descrição: Representa uma tarefa de campo planejada ou executada em um talhão. A atividade existe desde que é criada, mesmo que ainda esteja pendente e sem foto.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a atividade. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Usuário | Texto | Sim | Código de quem criou. |
+| Nome | Texto | Sim | Até 100 caracteres. |
+| Tipo | Lista lateral e estática de valores | Sim | "Aplicação", "Irrigação", "Colheita", "Manutenção" ou "Manejo". Apenas um valor. |
+| Talhão | Texto | Sim | Nome do talhão, até 60 caracteres, comparado sem diferenciar maiúsculas. Não é o código do talhão. |
+| Data | Data | Sim | Dia planejado. Aceita AAAA-MM-DD, como "2026-08-12", ou a forma curta "12 ago". |
+| Situação | Lista lateral e estática de valores | Sim | "Pendente", "Agendada", "Em andamento", "Concluída" ou "Cancelada". Nasce "Pendente" ou "Agendada". |
+| Responsável | Texto | Não | Até 100 caracteres. |
+| Prioridade | Lista lateral e estática de valores | Não | "Baixa", "Média" ou "Alta". Apenas um valor. |
+| Horário | Texto | Não | Hora do dia, de 00:00 a 23:59. |
+| Safra | Texto | Não | Código da safra vinculada. O talhão precisa pertencer a ela. |
+| Nome da safra | Texto | Não | Cópia do nome da safra no momento do vínculo. Preenchido pelo sistema. |
+| Cultura | Texto | Não | Cópia da cultura da safra. Preenchida pelo sistema. |
+| Foto de evidência | Par chave-valor | Não | Anexada depois do cadastro, não no mesmo envio. Chaves: conteúdo da imagem (até 5 MB, não sai nas consultas), tipo ("image/jpeg", "image/png", "image/webp" ou "image/gif"), nome do arquivo, tamanho em bytes e momento do envio. |
+| Versão | Inteiro | Sim | Começa em 1 e controla alterações simultâneas. |
+| Criada em | Data e hora | Sim | Momento do cadastro. |
+
+A atividade e o primeiro evento do histórico dela são gravados juntos.
+
+### 9. Histórico da atividade
+
+Descrição: Representa um evento da vida de uma atividade, da criação até as mudanças de situação. Toda atividade tem pelo menos o evento inicial.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o evento. Gerado pelo sistema. |
+| Atividade | Texto | Sim | Código da atividade de origem. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Ordem | Inteiro | Sim | Sequência a partir de 0. Única dentro da atividade. |
+| Registrado em | Data e hora | Sim | Momento do evento. |
+| Situação | Texto | Sim | Situação da atividade neste evento. |
+| Ação | Texto | Sim | O que aconteceu. O primeiro evento usa "criacao". |
+| Descrição | Texto | Sim | Texto do evento. O evento 0 é "Registro inicial da atividade". |
+
+### 10. Insumo
+
+Descrição: Representa um item do estoque da propriedade, com saldo e custo médio. O insumo existe mesmo com saldo zero e sem movimentação posterior à entrada inicial.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o insumo. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Nome | Texto | Sim | Até 100 caracteres. |
+| Categoria | Lista lateral e estática de valores | Sim | "Herbicida", "Fertilizante", "Semente", "Fungicida" ou "Inseticida". Apenas um valor. |
+| Unidade | Texto | Sim | Até 12 caracteres. Exemplo: "kg". |
+| Estoque mínimo | Decimal | Sim | De 0 a 1 bilhão, com até 6 casas decimais. |
+| Custo unitário | Decimal | Não | Custo médio por unidade, em reais, com até 6 casas. Se ficar vazio, vale 0. Não é armazenado em centavos. |
+| Limiar crítico | Decimal | Não | Não pode ser maior que o estoque mínimo. |
+| Saldo | Decimal | Sim | Quantidade atual. No cadastro pode ser informada. Depois disso só muda por movimentação. |
+| Excluído | Lógico | Não | Exclusão lógica. Só é permitida quando o saldo é zero. |
+| Criado em | Data e hora | Sim | Momento do cadastro. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+### 11. Movimentação de insumo
+
+Descrição: Representa uma entrada, uma saída ou um ajuste no saldo de um insumo. O cadastro de um insumo que já nasce com saldo também gera um ajuste, com a observação "Saldo inicial do cadastro".
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a movimentação. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Insumo | Texto | Sim | Código do insumo movimentado. |
+| Tipo | Lista lateral e estática de valores | Sim | "entrada", "saida" ou "ajuste". Apenas um valor. |
+| Quantidade | Decimal | Sim | Positiva na entrada e na saída. No ajuste, a quantidade registrada é a diferença até o novo saldo. |
+| Unidade | Texto | Sim | Copiada do insumo no momento da movimentação. |
+| Saldo anterior | Decimal | Sim | Saldo antes da operação. Preenchido pelo sistema. |
+| Saldo posterior | Decimal | Sim | Saldo depois da operação. Preenchido pelo sistema. A saída que deixaria o saldo negativo é recusada. |
+| Observação | Texto | Não | Até 240 caracteres. Obrigatória no ajuste. |
+| Fornecedor | Texto | Não | Até 120 caracteres. |
+| Atividade | Texto | Não | Só na saída. Código de uma atividade da mesma propriedade. |
+| Nome da atividade | Texto | Não | Título da atividade vinculada, copiado pelo sistema. Vazio quando não há vínculo. |
+| Custo unitário | Decimal | Não | Custo desta movimentação, em reais. Na saída ligada a uma atividade, usa o custo médio do insumo. |
+| Criada em | Data e hora | Sim | Momento da movimentação. |
+
+### 12. Ocorrência
+
+Descrição: Representa um problema ou evento de campo, como praga, doença ou clima. A ocorrência existe desde a abertura, mesmo sem acompanhamento e sem foto.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a ocorrência. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Usuário | Texto | Sim | Código de quem registrou. |
+| Título | Texto | Sim | Até 160 caracteres. |
+| Tipo | Lista lateral e estática de valores | Sim | "Praga", "Doença", "Clima", "Equipamento" ou "Outro". Apenas um valor. |
+| Prioridade | Lista lateral e estática de valores | Sim | "Baixa", "Média" ou "Alta". Apenas um valor. |
+| Data | Data | Sim | Dia da ocorrência, AAAA-MM-DD. |
+| Descrição | Texto | Não | Até 6000 caracteres. |
+| Talhão | Texto | Não | Código de um talhão da propriedade. |
+| Nome do talhão | Texto | Não | Cópia do nome do talhão. Preenchida pelo sistema. |
+| Safra do talhão | Texto | Não | Período AAAA/AA copiado do talhão. |
+| Localização | Par chave-valor | Não | Ponto marcado no mapa. Só é aceito dentro do polígono do talhão informado. |
+| Situação | Lista lateral e estática de valores | Sim | "ABERTA", "EM_ACOMPANHAMENTO" ou "RESOLVIDA". Nasce "ABERTA". |
+| Situação inicial | Texto | Sim | Sempre "ABERTA". Guardada para a linha do tempo. |
+| Foto de evidência | Par chave-valor | Não | Mesma estrutura da foto da atividade: conteúdo, tipo, nome, tamanho e momento do envio. Anexada depois do cadastro. |
+| Criada em | Data e hora | Sim | Momento da abertura. |
+| Atualizada em | Data e hora | Sim | Momento da última versão. |
+| Resolvida em | Data e hora | Não | Preenchido ao resolver. |
+| Excluída | Lógico | Sim | Exclusão lógica. Nasce falso. |
+| Excluída em | Data e hora | Não | Momento da exclusão lógica. |
+| Versão | Inteiro | Sim | Começa em 1 e aumenta a cada alteração. |
+
+### 13. Acompanhamento da ocorrência
+
+Descrição: Representa uma versão da ocorrência, para que o histórico do que foi escrito e da situação não se perca. Cada alteração da ocorrência gera um acompanhamento.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o acompanhamento. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Usuário | Texto | Sim | Código do dono do registro. |
+| Ocorrência | Texto | Sim | Código da ocorrência de origem. |
+| Ordem | Inteiro | Sim | Igual à versão da ocorrência naquele momento. Única dentro da ocorrência. |
+| Data | Data e hora | Sim | Momento da versão. |
+| Ação | Lista lateral e estática de valores | Sim | "acompanhamento", "atualizacao" ou "resolucao". |
+| Situação | Texto | Sim | Situação da ocorrência naquela versão. |
+| Descrição | Texto | Sim | Texto do evento, até 6000 caracteres. |
+| Dados | Par chave-valor | Sim | Cópia dos campos da ocorrência naquela versão: título, tipo, data, prioridade, descrição, talhão, safra e localização. |
+
+### 14. Custo
+
+Descrição: Representa um lançamento de dinheiro gasto na propriedade. Pode ser digitado pela pessoa ou nascer de uma saída de estoque ou de uma manutenção de equipamento. O valor fica em reais, com duas casas, e não em centavos.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o custo. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Descrição | Texto | Sim | Até 120 caracteres. |
+| Categoria | Lista lateral e estática de valores | Sim | "Insumos", "Mão de Obra", "Maquinário", "Combustível" ou "Outros". Apenas um valor. |
+| Valor | Decimal | Sim | Em reais, de 0,01 até 1.000.000.000,00, arredondado a duas casas. Exemplo: 350,50. |
+| Data | Data | Sim | Dia do gasto, AAAA-MM-DD. |
+| Talhão | Texto | Não | Código de um talhão da propriedade. |
+| Safra | Texto | Não | Código de uma safra da propriedade. Se o talhão também for informado, ele precisa participar dessa safra. |
+| Origem | Par chave-valor | Não | Presente só quando o custo foi gerado sozinho. A chave "tipo" vale "consumo" ou "manutencao". No consumo, o valor traz a movimentação, o insumo, a atividade, a quantidade, a unidade e o custo unitário. Na manutenção, traz a intervenção e o equipamento. |
+| Criado em | Data e hora | Sim | Momento do lançamento. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+Custo com origem não é alterado nem apagado direto. Ele só muda pela operação que o gerou. Custo de safra finalizada não pode ser alterado. Há no máximo um custo por movimentação de consumo e um por intervenção.
+
+### 15. Orçamento
+
+Descrição: Representa o valor planejado para uma safra. Existe no máximo um orçamento por safra. O quanto já foi gasto, o desvio e o percentual não são gravados. Eles são calculados a partir dos custos da safra.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o orçamento. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Safra | Texto | Sim | Código da safra. Único na propriedade: uma safra, um orçamento. |
+| Valor | Decimal | Sim | Planejado, em reais, maior que zero e até 1.000.000.000,00. |
+| Alerta | Inteiro | Não | Percentual do planejado que dispara o aviso, de 50 a 100. Se ficar vazio, vale 80. |
+| Criado em | Data e hora | Sim | Momento do cadastro. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+### 16. Colheita
+
+Descrição: Representa a produção colhida em um talhão de uma safra, em um dia. A colheita só existe depois que a safra já começou e o talhão faz parte dela.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a colheita. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Safra | Texto | Sim | Código da safra, a partir da etapa de plantio. |
+| Talhão | Texto | Sim | Código de um talhão que pertence a essa safra. |
+| Quantidade | Decimal | Sim | Na unidade escolhida. Mínimo 0,001, com 3 casas. |
+| Unidade | Lista lateral e estática de valores | Sim | "kg", "t" (1.000 kg) ou "sc" (saca de 60 kg). Apenas um valor. |
+| Quantidade em quilos | Decimal | Sim | A mesma quantidade convertida para kg. Preenchida pelo sistema. |
+| Data | Data | Sim | Dia da colheita. Não pode ser futuro nem anterior ao início da safra. |
+| Observação | Texto | Não | Até 200 caracteres. |
+| Criada em | Data e hora | Sim | Momento do registro. |
+| Atualizada em | Data e hora | Sim | Momento da última alteração. |
+
+Safra finalizada não aceita inclusão, alteração nem exclusão de colheita.
+
+### 17. Equipamento
+
+Descrição: Representa uma máquina ou implemento da propriedade. O equipamento existe mesmo sem preventiva e sem intervenção.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia o equipamento. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Nome | Texto | Sim | Até 80 caracteres. Único na propriedade, sem diferenciar maiúsculas. |
+| Tipo | Lista lateral e estática de valores | Sim | "Trator", "Colheitadeira", "Pulverizador", "Plantadeira", "Implemento", "Veículo" ou "Outro". Apenas um valor. |
+| Marca | Texto | Não | Texto livre, com limite de tamanho. Exemplo: "John Deere". |
+| Modelo | Texto | Não | Texto livre, com limite de tamanho. |
+| Identificação | Texto | Não | Placa ou outro identificador livre. |
+| Ano | Inteiro | Não | De 1950 até o ano corrente. |
+| Horímetro | Decimal | Não | Horas de uso, de 0 a 1.000.000. |
+| Situação | Lista lateral e estática de valores | Não | "Ativo", "Em manutenção" ou "Inativo". Se ficar vazio, vale "Ativo". |
+| Criado em | Data e hora | Sim | Momento do cadastro. |
+| Atualizado em | Data e hora | Sim | Momento da última alteração. |
+
+### 18. Preventiva
+
+Descrição: Representa uma manutenção prevista para um equipamento, em uma data. A preventiva existe mesmo que ainda não tenha sido realizada.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a preventiva. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Equipamento | Texto | Sim | Código de um equipamento da propriedade. |
+| Descrição | Texto | Sim | Até 120 caracteres. Exemplo: "Troca de óleo". |
+| Data prevista | Data | Sim | Próximo dia previsto, AAAA-MM-DD. |
+| Intervalo em dias | Inteiro | Não | De 1 a 3650. Quando existe, permite gerar a preventiva seguinte ao realizar esta. |
+| Situação | Lista lateral e estática de valores | Sim | "programada", "realizada" ou "cancelada". Nasce "programada". |
+| Intervenção | Texto | Não | Código da intervenção que realizou esta preventiva. |
+| Realizada em | Data | Não | Dia em que foi realizada. Vazio enquanto estiver programada. |
+| Criada em | Data e hora | Sim | Momento do cadastro. |
+| Atualizada em | Data e hora | Sim | Momento da última alteração. |
+
+### 19. Intervenção
+
+Descrição: Representa uma manutenção já feita em um equipamento, preventiva ou corretiva. Pode gerar um custo e, quando a preventiva de origem tem intervalo, a próxima data.
+
+Atributos:
+
+| Nome | Tipo | Obrigatoriedade | Exemplos/Comentários |
+| ---- | ---- | --------------- | -------------------- |
+| Código | Texto único | Sim | Diferencia a intervenção. Gerado pelo sistema. |
+| Propriedade | Texto | Sim | Código da fazenda. |
+| Equipamento | Texto | Sim | Código do equipamento atendido. |
+| Preventiva | Texto | Não | Código da preventiva que esta intervenção encerrou. |
+| Tipo | Lista lateral e estática de valores | Sim | "preventiva" ou "corretiva". Apenas um valor. |
+| Data | Data | Sim | Dia do serviço. Não pode ser futura. |
+| Descrição | Texto | Sim | Até 240 caracteres. |
+| Responsável | Texto | Não | Texto livre, com limite de tamanho. |
+| Horímetro | Decimal | Não | Horas do equipamento na data do serviço. |
+| Valor | Decimal | Não | Custo em reais, de 0,01 a 1.000.000.000,00. Quando informado, gera um custo na categoria Maquinário. |
+| Talhão | Texto | Não | Código do talhão em que a máquina atuou. |
+| Safra | Texto | Não | Código da safra vinculada. |
+| Custo | Texto | Não | Código do custo gerado a partir do valor. Preenchido pelo sistema. |
+| Próxima preventiva | Texto | Não | Código da preventiva criada a partir do intervalo. Preenchido pelo sistema. |
+| Criada em | Data e hora | Sim | Momento do registro. |
+| Atualizada em | Data e hora | Sim | Momento da última alteração. |
