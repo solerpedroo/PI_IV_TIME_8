@@ -1,4 +1,5 @@
 // Miguel — RA: 25003110
+// Autor secundário: Pedro Henrique Contardi Soler - RA: 25005592
 package handlers.propriedade;
 
 import dados.propriedade.RepositorioEquipe;
@@ -354,6 +355,11 @@ public class EquipeHandler
             return Resposta.json (409, new Document ("error", "Não foi possível aceitar o convite.")
                                          .append ("fields", new Document ("token",
                                              "Convite inválido, expirado, e-mail diferente ou você é o proprietário.")));
+
+        String atual = usuario.getString ("propriedadeId");
+        if (propriedadeId != null && (atual == null || atual.isBlank ()))
+            this.usuarios.atualizar (requisicao.getSessao ().getUsuarioId (),
+                                     new Document ("propriedadeId", propriedadeId));
 
         return Resposta.json (200, new Document ("message", "Convite aceito.")
                                      .append ("propriedadeId", propriedadeId)
