@@ -1,4 +1,4 @@
-package protocolo.mensagens;
+package protocolo.mensagens.ping;
 
 import protocolo.Pedido;
 
