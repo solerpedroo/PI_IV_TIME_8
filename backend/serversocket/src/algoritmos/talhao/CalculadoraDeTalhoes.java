@@ -1,10 +1,10 @@
-package algoritmos;
+package algoritmos.talhao;
 
 import protocolo.Resposta;
 import protocolo.RespostaDeErro;
-import protocolo.mensagens.PedidoDeResumoDeTalhoes;
-import protocolo.mensagens.RespostaDeResumoDeTalhoes;
-import protocolo.mensagens.TalhaoParaResumo;
+import protocolo.mensagens.talhao.PedidoDeResumoDeTalhoes;
+import protocolo.mensagens.talhao.RespostaDeResumoDeTalhoes;
+import protocolo.mensagens.talhao.TalhaoParaResumo;
 
 /*
     Soma area e conta talhoes que a API ja leu. Nao valida nome nem cultura:
